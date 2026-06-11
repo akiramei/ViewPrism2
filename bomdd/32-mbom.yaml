@@ -1,0 +1,267 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: M-BOM
+
+# 受入3条件(method-v1 §3): 完全性 / 無矛盾性 / Control Plan 列
+# FMEA は要求台帳の counterexamples を種に作成し、受入(CP)を狙い撃つ
+
+mbom:
+  manufacturing_units:
+    - id: M-SLN-000
+      ebom_refs: [E-DOMAIN-001]
+      artifact:
+        path: ViewPrism2.sln / Directory.Build.props / .editorconfig
+        type: dotnet-solution
+      interface_contract:
+        structure: "src/ViewPrism2.Core, src/ViewPrism2.Infrastructure, src/ViewPrism2.App, tests/ViewPrism2.Tests(ADR-0002)"
+        tfm: net10.0(App のみ net10.0 + UseWPF/UseWindowsForms なし、Avalonia)
+        nullable: enable(全プロジェクト)
+        warnings: TreatWarningsAsErrors=true
+        di: Microsoft.Extensions.DependencyInjection で App 起動時に合成
+      invariants:
+        - 依存方向 App → Infrastructure → Core のみ(逆参照・飛び越し禁止)
+      acceptance_refs: [CP-L1-SMOKE]
+      fmea_refs: []
+
+    - id: M-CORE-001
+      ebom_refs: [E-DOMAIN-001, E-HASH-006]
+      artifact:
+        path: src/ViewPrism2.Core(Models/, Common/)
+        type: dotnet-classlib
+      interface_contract:
+        entities: "ImageRecord, Tag, TagType(enum Simple/Textual/Numeric), TextualTagSettings, NumericTagSettings, ImageTag, SyncFolder, View, ViewCondition, ConditionOperator(enum Exists/Equals/Between/Regexp/In), HierarchyNode, NodeGraph 型(GraphNode, NodeKind), ImageStatus(enum Normal/Missing/Deleted/Pending), ScanSummary, AppSettings"
+        ids: "static IdGenerator.NewId() → Guid.NewGuid().ToString(\"D\")(小文字 36 字)"
+        clock: "IClock 抽象(UtcNowIso(): string、形式 yyyy-MM-ddTHH:mm:ss.fffZ)— テストで差し替え可能に"
+        hash: "FileHasher.ComputeSha256(Stream) → 小文字 hex 64 字"
+        path: "PathNormalizer.ToRelative(root, fullPath) → 正規形 / PathNormalizer.Equals(a,b) → case-insensitive"
+        format: "ByteSizeFormatter.Format(long) → \"1023 B\" / \"1.0 KB\"(1024 進・小数 1 桁・GB 上限)"
+        errors: "Result<T> + ErrorCode(enum: DuplicateTagName, DuplicateFolderPath, ValidationError, NotFound, CircularReference, ScanInProgress, IoError, InvalidRegex)"
+      invariants:
+        - INV-001 / INV-002 / INV-005 / INV-007(エンティティ生成時に強制)
+        - 日時文字列は IClock 経由でのみ生成(DateTime.Now 直呼び禁止)
+      acceptance_refs: [CP-UTIL-005]
+      fmea_refs: [FMEA-010]
+
+    - id: M-EVAL-002
+      ebom_refs: [E-EVAL-002]
+      artifact:
+        path: src/ViewPrism2.Core/Services/ConditionEvaluator.cs
+        type: dotnet-classlib
+      interface_contract:
+        signature: "IReadOnlySet<string> Evaluate(IEnumerable<ImageWithTags> images, IReadOnlyList<ViewCondition> conditions)  // OC-1"
+        semantics: "仕様 §2.3 演算子表+エッジケース規則の完全実装。status=Normal 以外は入力前に除外済みでも再度除外(防御)"
+        warnings: "無視した条件・不正 regex は IReadOnlyList<EvalWarning> として併せて返す(UI 通知用)"
+      invariants:
+        - INV-007 数値比較は double.TryParse(InvariantCulture)
+        - 例外を外へ漏らさない
+      acceptance_refs: [CP-EVAL-001, CP-NFR-001]
+      fmea_refs: [FMEA-001, FMEA-006]
+
+    - id: M-GRAPH-003
+      ebom_refs: [E-GRAPH-003]
+      artifact:
+        path: src/ViewPrism2.Core/Services/NodeGraphBuilder.cs(+PathConditionConverter)
+        type: dotnet-classlib
+      interface_contract:
+        build: "GraphNode BuildGraph(IReadOnlyList<HierarchyNode> hierarchy, IReadOnlyDictionary<string,Tag> tags, ITagValueSource values)  // OC-2。values は status=Normal の distinct 値のみ返す契約"
+        path2cond: "IReadOnlyList<ViewCondition> BuildConditions(IReadOnlyList<GraphNode> pathFromRoot)  // OC-3"
+        home: "GraphNode? ResolveHome(GraphNode root, string? homeTagId)  // 解決不能なら null(呼び出し側がルートへ)"
+      invariants:
+        - INV-004 入力階層に循環があっても無限ループしない(検出して当該枝を打ち切り+警告)
+        - INV-008 参照切れタグのノードはスキップ
+        - INV-010 値抽出は ITagValueSource 契約により Normal のみ
+      acceptance_refs: [CP-GRAPH-002]
+      fmea_refs: [FMEA-008]
+
+    - id: M-SORT-004
+      ebom_refs: [E-SORT-004]
+      artifact:
+        path: src/ViewPrism2.Core/Services/ImageSorter.cs
+        type: dotnet-classlib
+      interface_contract:
+        signature: "IReadOnlyList<ImageRecord> Sort(IEnumerable<ImageRecord> images, SortField field, SortDirection direction)  // OC-4"
+        semantics: "name=OrdinalIgnoreCase / created_date・modified_date=序数(ISO 8601) / file_size=数値。二次キー id 昇順"
+      invariants:
+        - 安定: 同一入力で常に同一出力
+      acceptance_refs: [CP-SORT-003]
+      fmea_refs: []
+
+    - id: M-SCAN-005
+      ebom_refs: [E-SCAN-005, E-RELINK-007]
+      artifact:
+        path: src/ViewPrism2.Core/Services/ScanJudge.cs + src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + RelinkService.cs
+        type: dotnet-classlib
+      interface_contract:
+        judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。Decision = Skip | UpdateMeta | AddNormal | AddPending(candidateId)"
+        scan: "Task<Result<ScanSummary>> ScanAsync(string folderId, IProgress<int>? progress, CancellationToken ct)  // 仕様 §2.1 手順 1〜6"
+        relink_candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId)  // relative_path 昇順"
+        relink_commit: "Task<Result> CommitRelinkAsync(string missingImageId, string pendingImageId)  // id 不変・pending 行削除"
+      invariants:
+        - INV-009 ファイルへ書き込まない
+        - 遷移は仕様 §2.1 遷移表のみ。スキャン二重起動は ErrorCode.ScanInProgress
+        - 読み取り不能ファイルはスキップ+警告(summary.skipped へ計上)
+      acceptance_refs: [CP-SCAN-004]
+      fmea_refs: [FMEA-004, FMEA-011]
+
+    - id: M-DB-007
+      ebom_refs: [E-DB-010]
+      artifact:
+        path: src/ViewPrism2.Infrastructure/Database/(Schema.sql 相当の DDL 定数, MigrationRunner.cs, *Repository.cs)
+        type: dotnet-classlib
+      interface_contract:
+        open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
+        schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE"
+        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value"
+        cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
+      invariants:
+        - 接続は単一共有+SemaphoreSlim シリアル化(K-SQLITE)
+        - migrations テーブル契約は REQ-004 のとおり
+      acceptance_refs: [CP-DB-006]
+      fmea_refs: [FMEA-003, FMEA-005]
+
+    - id: M-THUMB-008
+      ebom_refs: [E-THUMB-020]
+      artifact:
+        path: src/ViewPrism2.Infrastructure/Imaging/ThumbnailService.cs
+        type: dotnet-classlib
+      interface_contract:
+        get: "Task<string?> GetOrCreateAsync(string absoluteImagePath)  // 戻り値=サムネイルファイルパス、失敗時 null(キャッシュ記録なし)"
+        cache_key: "MD5(absoluteImagePath.ToLowerInvariant()) の hex + 元拡張子が .png なら .png、それ以外 .jpg"
+        params: "K-SKIA の定型どおり(長辺 256・inside・拡大なし・PNG/JPEG q80)"
+        resolution: "Task<(int w,int h)?> GetDimensionsAsync(path)  // SKCodec、フルデコードなし"
+      invariants:
+        - INV-009 元画像へ書き込まない
+        - 読み取り不能キャッシュは削除して再生成
+      acceptance_refs: [CP-THUMB-007]
+      fmea_refs: [FMEA-012]
+
+    - id: M-CACHE-009
+      ebom_refs: [E-CACHE-011]
+      artifact:
+        path: src/ViewPrism2.Core/Services/ImageMemoryCache.cs
+        type: dotnet-classlib
+      interface_contract:
+        signature: "Task<T> GetOrAddAsync<T>(string key, Func<Task<T>> loader)  // OC-6。容量 50・TTL 3 分・LRU。IClock 注入"
+        metrics: "LoadCount プロパティ(受入用)"
+      acceptance_refs: [CP-CACHE-008]
+      fmea_refs: [FMEA-007]
+
+    - id: M-SET-010
+      ebom_refs: [E-SETTINGS-013]
+      artifact:
+        path: src/ViewPrism2.Infrastructure/Settings/SettingsStore.cs
+        type: dotnet-classlib
+      interface_contract:
+        schema: "AppSettings { Locale=\"ja\", WindowX/Y/Width=1200/Height=800/IsMaximized=false, GridColumns=4, LastViewId=null }"
+        io: "Load(): 破損・欠落時は既定値(例外なし、破損時はバックアップ .bak に退避して再生成)/ Save(): インデント付き JSON・UTF-8"
+        path: "%APPDATA%/ViewPrism2/settings.json"
+      acceptance_refs: [CP-SET-009]
+      fmea_refs: [FMEA-009]
+
+    - id: M-I18N-011
+      ebom_refs: [E-I18N-014, E-I18N-ASSETS-027]
+      artifact:
+        path: src/ViewPrism2.Core/Services/LocalizationService.cs + src/ViewPrism2.App/Assets/i18n/{ja,en}.json
+        type: dotnet-classlib + assets
+      interface_contract:
+        resolve: "string T(string key, IReadOnlyDictionary<string,string>? args = null)  // OC-8。要求ロケール→ja→キー文字列"
+        switch: "SetLocale(string locale) → CultureChanged イベント発火(UI が一斉再バインド)"
+        assets: "K-I18N の規約・対象ネームスペースに従い原典から変換。V1 画面の新規キーは ja 正・en 併記"
+      acceptance_refs: [CP-I18N-010, CP-UI-G5]
+      fmea_refs: []
+
+    - id: M-VIEWSVC-012
+      ebom_refs: [E-VIEWSVC-009, E-TAGSVC-008]
+      artifact:
+        path: src/ViewPrism2.Core/Services/(TagService.cs, ViewService.cs)+ Infrastructure のリポジトリ呼び出し
+        type: dotnet-classlib
+      interface_contract:
+        tags: "CRUD+Validate(color 形式・名前空白・numeric 範囲・循環)+TagImageAsync(UPSERT)+TagImagesAsync(原子バッチ)+UntagImagesAsync(冪等)+GetAllWithUsageAsync(name 昇順 OrdinalIgnoreCase+使用数)"
+        views: "CRUD+条件/階層ノード CRUD+MoveNode(循環拒否)+TouchModified(本体・条件・階層の変更で modified_at 更新)+GetFavorites/GetRecent(limit=10 既定・同値 id 昇順)"
+      invariants:
+        - INV-003 / INV-004 / INV-006
+      acceptance_refs: [CP-TAG-011, CP-VIEW-012]
+      fmea_refs: [FMEA-002, FMEA-003]
+
+    - id: M-UI-013
+      ebom_refs: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]
+      artifact:
+        path: src/ViewPrism2.App/(Views/, ViewModels/)
+        type: avalonia-app
+      interface_contract:
+        shell: "左: ビュー一覧(お気に入り/最近)+NodeGraph ツリー / 中央: グリッド⇔リスト切替+ツールバー(列数・ソート・表示切替)/ 右: 詳細パネル。メニュー: 同期フォルダ管理・タグ管理・設定(言語)"
+        viewmodels: "選択(Ctrl トグル・選択順)・空状態・ノード選択→評価呼び出しは ViewModel ロジックとして unit 検査可能に分離(OC 系を UI から呼ぶだけにする)"
+        design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ"
+      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-L1-SMOKE]
+      fmea_refs: [FMEA-013]
+
+    - id: M-UI-014
+      ebom_refs: [E-UI-VIEWER-024]
+      artifact:
+        path: src/ViewPrism2.App/(Views/ViewerWindow.axaml, ViewModels/ViewerViewModel.cs)
+        type: avalonia-app
+      interface_contract:
+        nav: "ViewerViewModel(IReadOnlyList<ImageRecord> ordered, int startIndex): Next()/Prev() は端で停止、CurrentPositionText=\"n / total\"  // unit 検査対象"
+        keys: "Right/PageDown=Next, Left/PageUp=Prev, Escape=Close(KeyBindings)"
+        display: "ウィンドウフィット(縮小のみ)。ロードは ImageMemoryCache 経由"
+      acceptance_refs: [CP-UI-G4]
+      fmea_refs: [FMEA-002]
+
+    - id: M-HARNESS-015        # 治具は製品と同格に管理
+      ebom_refs: []
+      artifact:
+        path: tests/ViewPrism2.Tests
+        type: dotnet-test(xunit.v3)
+      verifies: [M-CORE-001, M-EVAL-002, M-GRAPH-003, M-SORT-004, M-SCAN-005, M-DB-007, M-THUMB-008, M-CACHE-009, M-SET-010, M-I18N-011, M-VIEWSVC-012, M-UI-014]
+      interface_contract:
+        traits: "各テストに [Trait(\"cp\", \"CP-xxx\")] を付与し Control Plan へトレース"
+        fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
+        l2: "スキーマ同値(新規 DB vs マイグレーション適用 DB)・サムネイル出力メタデータ検査を含む"
+
+# 調達部品表(これ以外のパッケージ採用はずる報告対象)
+procurement:
+  - { package: Avalonia,                                   version: 12.0.4,  rationale: "ADR-0001 UI 基盤",            license: MIT,        substitutable: false }
+  - { package: Avalonia.Desktop,                           version: 12.0.4,  rationale: "デスクトップホスト",           license: MIT,        substitutable: false }
+  - { package: Avalonia.Themes.Fluent,                     version: 12.0.4,  rationale: "標準テーマ(ライト)",         license: MIT,        substitutable: false }
+  - { package: Avalonia.Fonts.Inter,                       version: 12.0.4,  rationale: "K-DESIGN 指定フォント",        license: MIT,        substitutable: false }
+  - { package: Avalonia.Diagnostics,                       version: 12.0.4,  rationale: "Debug 構成のみ参照可",         license: MIT,        substitutable: true }
+  - { package: CommunityToolkit.Mvvm,                      version: 8.4.2,   rationale: "ADR-0005 MVVM",               license: MIT,        substitutable: false }
+  - { package: Microsoft.Data.Sqlite,                      version: 10.0.9,  rationale: "ADR-0003 SQLite ドライバ",     license: MIT,        substitutable: false }
+  - { package: Dapper,                                     version: 2.1.79,  rationale: "ADR-0003 マッピング",          license: Apache-2.0, substitutable: false }
+  - { package: SkiaSharp,                                  version: 3.119.4, rationale: "ADR-0004 画像処理",            license: MIT,        substitutable: false }
+  - { package: Microsoft.Extensions.DependencyInjection,   version: 10.0.*,  rationale: "ADR-0002 DI",                 license: MIT,        substitutable: false }
+  - { package: Microsoft.Extensions.Logging,               version: 10.0.*,  rationale: "ログ抽象",                     license: MIT,        substitutable: false }
+  - { package: Serilog.Extensions.Logging,                 version: 9.*,     rationale: "ログ実装ブリッジ",             license: Apache-2.0, substitutable: false }
+  - { package: Serilog.Sinks.File,                         version: 7.*,     rationale: "ファイルログ(日次・7 世代)",  license: Apache-2.0, substitutable: false }
+  - { package: xunit.v3,                                   version: 3.2.2,   rationale: "ADR-0007 受入ハーネス",        license: Apache-2.0, substitutable: false }
+
+# FMEA(要求台帳 counterexamples 由来。受入 CP を狙い撃つ)
+fmea:
+  - { id: FMEA-001, unit: M-EVAL-002,  failure_mode: "numeric 値の辞書順比較('9'>'10')",                          effect: "between/equals の結果不正",            targeted_by: CP-EVAL-001 }
+  - { id: FMEA-002, unit: M-UI-014,    failure_mode: "一覧端でのループ・例外(空一覧含む)",                        effect: "ビューア位置喪失/クラッシュ",          targeted_by: CP-UI-G4 }
+  - { id: FMEA-003, unit: M-DB-007,    failure_mode: "タグ削除カスケード漏れ(孤児 image_tags・幽霊ノード)",        effect: "NodeGraph 構築例外・件数水増し",        targeted_by: CP-DB-006 }
+  - { id: FMEA-004, unit: M-SCAN-005,  failure_mode: "リネームを新規+missing と誤判定",                            effect: "タグ関連の喪失",                        targeted_by: CP-SCAN-004 }
+  - { id: FMEA-005, unit: M-DB-007,    failure_mode: "FK 無効の接続が混入",                                         effect: "カスケード不発・整合性破壊",            targeted_by: CP-DB-006 }
+  - { id: FMEA-006, unit: M-EVAL-002,  failure_mode: "不正 regex・ReDoS パターンで例外/フリーズ",                   effect: "ビュー表示不能",                        targeted_by: CP-EVAL-001 }
+  - { id: FMEA-007, unit: M-CACHE-009, failure_mode: "キャッシュ無制限増殖",                                        effect: "メモリ枯渇クラッシュ",                  targeted_by: CP-CACHE-008 }
+  - { id: FMEA-008, unit: M-GRAPH-003, failure_mode: "循環階層・参照切れタグで無限ループ/例外",                     effect: "ビューが開けない",                      targeted_by: CP-GRAPH-002 }
+  - { id: FMEA-009, unit: M-SET-010,   failure_mode: "破損 settings.json で起動不能",                               effect: "アプリ使用不能",                        targeted_by: CP-SET-009 }
+  - { id: FMEA-010, unit: M-CORE-001,  failure_mode: "ID 大文字混入・日時形式揺れ(ローカル時刻/桁数)",             effect: "同一判定・時系列ソート破壊",            targeted_by: CP-UTIL-005 }
+  - { id: FMEA-011, unit: M-SCAN-005,  failure_mode: "ロックファイル・ジャンクションでスキャン全体停止/無限再帰",   effect: "スキャン不能",                          targeted_by: CP-SCAN-004 }
+  - { id: FMEA-012, unit: M-THUMB-008, failure_mode: "壊れた画像で例外伝播/小画像の拡大",                            effect: "一覧表示停止・画質劣化",                targeted_by: CP-THUMB-007 }
+  - { id: FMEA-013, unit: M-UI-013,    failure_mode: "仮想化なしの素朴な ItemsControl 実装",                         effect: "1 万件で UI フリーズ",                  targeted_by: CP-UI-G1(+probe P-01) }
+
+# 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
+silence_sweep:
+  - { dimension: エラー語彙,                     decision: specified,  where: M-CORE-001 interface_contract.errors, note: "Result<T>+ErrorCode 8 種で全列挙。UI 表示文言は i18n キー error.<code>" }
+  - { dimension: 並行実行(スキャン中の UI 操作), decision: specified,  where: M-SCAN-005 / M-DB-007,               note: "スキャンは同時 1 フォルダ(ScanInProgress)。UI 操作は許可され、DB アクセスは単一接続シリアル化で整合" }
+  - { dimension: DB 同時アクセス(プロセス内),    decision: specified,  where: M-DB-007,                            note: "単一共有接続+SemaphoreSlim(G2' AUDIT-103 解消)" }
+  - { dimension: ログ・診断,                     decision: specified,  where: procurement(Serilog),               note: "%APPDATA%/ViewPrism2/logs/app-.log 日次ローリング 7 世代。レベル: Information 以上、警告系(スキップ・無視条件)は Warning" }
+  - { dimension: NodeGraph 構造変化時の選択状態,  decision: specified,  where: M-UI-013,                            note: "再構築後に旧選択ノード id が解決できなければルート選択へ(REQ-037 と同じフォールバック)— G2' AUDIT-101 解消" }
+  - { dimension: リスト列幅の配分,                decision: specified,  where: M-UI-013,                            note: "width は star 値(name=2*、他=1*)。削除済みタグ列はスキップし残り列の star で全幅按分 — G2' AUDIT-102 解消" }
+  - { dimension: 丸め方式(サムネイル寸法),       decision: specified,  where: K-SKIA,                              note: "Round half away from zero・最小 1px" }
+  - { dimension: グリッド性能(1 万件),           decision: exploratory, note: "probe P-01 で観測。固定オラクルに入れない(仕様 §4)" }
+  - { dimension: アクセシビリティ,                decision: exploratory, note: "probe P-02 で観測のみ" }
+  - { dimension: テーマ(ダーク),                 decision: out-of-scope, note: "V1 はライトのみ(仕様 §4)" }
+  - { dimension: インストーラ/配布,              decision: out-of-scope, note: "チャーター・仕様 §4 のとおり" }

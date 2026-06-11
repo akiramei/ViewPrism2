@@ -1,0 +1,125 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: K-BOM
+
+# 製造装置が参照する外部/設計知識。K-BOM に無い判断で埋めた箇所は CHEAT として報告対象。
+
+kbom:
+  - id: K-SQLITE
+    category: external_tool_convention
+    subject: Microsoft.Data.Sqlite + Dapper の使用規約
+    managed_knowledge:
+      - "接続文字列: Data Source=<dbPath>。接続確立ごとに必ず PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; を発行する(バンドル既定値に依存しない)"
+      - "接続戦略: アプリ全体で単一の SqliteConnection を共有し、SemaphoreSlim(1,1) でシリアル化する(ADR-0003)"
+      - "トランザクション: connection.BeginTransaction() を使い、バッチ操作・マイグレーションは必ず 1 トランザクション"
+      - "パラメータは常に名前付きバインド(@name)。文字列連結による SQL 組み立て禁止"
+      - "relative_path・path 列の case-insensitive 比較は列定義に COLLATE NOCASE を付けて実現する(クエリ毎の LOWER() ではなく)"
+      - "BOOLEAN は INTEGER 0/1 で格納。Dapper のマッピングは bool ⇔ INTEGER で自動"
+      - "日時は TEXT(ISO 8601 UTC)で格納し、DateTime 型へはマップしない(文字列のまま保持し、表示層でのみパース)— 形式の往復劣化防止"
+      - "スキーマ同値検査は PRAGMA table_info / index_list / foreign_key_list で行う"
+    risk_if_implicit: |
+      PRAGMA を接続毎に発行しないと FK が無効な接続が混入し、カスケード(REQ-028)が静かに壊れる。
+      日時を DateTime にマップすると ToString() の文化圏依存で INV-002 が壊れる。
+    source_reference: "https://learn.microsoft.com/dotnet/standard/data/sqlite/ / ADR-0003"
+
+  - id: K-SKIA
+    category: external_tool_command
+    subject: SkiaSharp によるデコード・リサイズ・エンコードの定型
+    managed_knowledge:
+      - "デコード: SKBitmap.Decode(stream)。null が返ったら『壊れた画像』として扱う(例外を投げない)"
+      - "解像度取得(REQ-043): SKCodec.Create(path) → codec.Info.Width/Height(フルデコード不要)"
+      - "inside-fit 縮小: scale = Min(1.0, 256.0/width, 256.0/height)。scale==1.0 なら原寸のまま再エンコード(拡大禁止)"
+      - "リサイズ: bitmap.Resize(new SKImageInfo(newW, newH), SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))。newW/newH は Round half away from zero で整数化し最小 1px"
+      - "エンコード: SKImage.FromBitmap(...).Encode(SKEncodedImageFormat.Png, 100) / (SKEncodedImageFormat.Jpeg, 80)"
+      - "GIF/WebP/BMP も SKBitmap.Decode で先頭フレームがデコードされる。アニメーション対応は不要"
+      - "EXIF Orientation は適用しない(仕様 §4 で宣言済み。SKCodec の origin を無視してよい)"
+      - "SKBitmap/SKImage/SKData は IDisposable。using で確実に破棄(ネイティブメモリ)"
+    risk_if_implicit: |
+      フィットの丸め方式・最小 1px・拡大禁止を規定しないと工場ごとに寸法が 1px ずれて L2 検査が不安定になる。
+      Dispose 漏れはネイティブメモリリーク(大量サムネイル生成でクラッシュ)。
+    source_reference: "https://learn.microsoft.com/dotnet/api/skiasharp / ADR-0004"
+
+  - id: K-AVALONIA
+    category: external_tool_convention
+    subject: Avalonia 12 の実装イディオム
+    managed_knowledge:
+      - "プロジェクト: Avalonia / Avalonia.Desktop / Avalonia.Themes.Fluent / Avalonia.Fonts.Inter。AppBuilder.Configure<App>().UsePlatformDetect()"
+      - "バインディング: x:DataType を指定したコンパイル済みバインディングを既定とする(typo の実行時検出漏れ防止)"
+      - "グリッド仮想化: ListBox + ItemsPanel に WrapPanel ではなく、ItemsControl では仮想化されない。仮想化が必要な一覧は ListBox(VirtualizingStackPanel 既定)を行単位で使うか ItemsRepeater を使う。グリッドは『1 行 = N セル』の行リスト化で VirtualizingStackPanel に載せる方式を既定とする"
+      - "キーボード: Window.KeyBindings + KeyGesture(例 Escape, Right, Left, PageUp, PageDown)。ViewModel の ICommand に結線"
+      - "画像表示: Avalonia.Media.Imaging.Bitmap をファイル/ストリームから生成し Image.Source へ。UI スレッド外でのデコードは Task.Run、Source 代入は Dispatcher.UIThread 経由"
+      - "ダイアログ: Window.ShowDialog<TResult>(owner)。ファイル/フォルダ選択は StorageProvider.OpenFolderPickerAsync"
+      - "ウィンドウ状態の保存: Window.Position/ClientSize/WindowState を Closing で読み settings.json へ(REQ-052)"
+      - "多重起動防止: 名前付き Mutex(Global\\ViewPrism2)で判定し、2 つ目はプロセス終了(既存アクティブ化は V1 ではベストエフォート)"
+      - "動的 i18n: 文言は LocalizationService 経由のバインディング(INotifyPropertyChanged で一斉更新)。XAML 直書き文字列禁止"
+    risk_if_implicit: |
+      仮想化の実現方式は Avalonia では自明でなく、工場ごとに ItemsControl 直置き(仮想化なし)を選んで
+      1 万件で UI が固まる事故が典型(REQ-041 の中核リスク)。
+    source_reference: "https://docs.avaloniaui.net/(Avalonia 12)/ ADR-0001"
+
+  - id: K-MVVM
+    category: design_system
+    subject: CommunityToolkit.Mvvm + DI の定型
+    managed_knowledge:
+      - "ViewModel は ObservableObject 継承、状態は [ObservableProperty]、操作は [RelayCommand](非同期は async Task メソッドに付与)"
+      - "DI: Microsoft.Extensions.DependencyInjection。App 起動時に ServiceCollection へ Core サービス(シングルトン)と ViewModel(トランジェント)を登録"
+      - "ViewModel から View への参照禁止。ダイアログ表示は IDialogService 抽象を介す"
+      - "コレクションは ObservableCollection<T>(差分更新)。一覧全置換は AvaloniaList でも可"
+      - "I/O を伴う処理は ViewModel から async で呼び、UI スレッドをブロックしない(ConfigureAwait は App 層では既定のまま)"
+    risk_if_implicit: "INPC 手書き・コードビハインド肥大・UI スレッドブロックなど工場ごとの我流が混入する。"
+    source_reference: "https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/ / ADR-0005"
+
+  - id: K-REGEX
+    category: external_tool_convention
+    subject: .NET Regex の使用規約と JS 方言差
+    managed_knowledge:
+      - "生成: new Regex(pattern, RegexOptions.None, TimeSpan.FromSeconds(1))。大文字小文字は区別(原典 JS RegExp の既定と同じ)"
+      - "判定: regex.IsMatch(value)(部分一致。アンカーはパターン側の責任)"
+      - "ArgumentException(不正パターン)と RegexMatchTimeoutException は捕捉し『条件不成立+警告』に変換(REQ-031)"
+      - "JS→.NET 方言差(タグ値検索で実用上影響する範囲): JS の (?<name>) は .NET でも同義 / JS の \\d \\w は .NET では Unicode 既定(RegexOptions.ECMAScript は使わない。V1 は .NET 既定セマンティクスを正とする)"
+      - "パターン長上限 1024 文字。超過は入力時に拒否"
+    risk_if_implicit: "ReDoS パターンで UI フリーズ。タイムアウト未設定が典型事故。"
+    source_reference: "https://learn.microsoft.com/dotnet/standard/base-types/regular-expressions"
+
+  - id: K-I18N
+    category: design_system
+    subject: 翻訳リソースの形式と原典資産の変換規則
+    managed_knowledge:
+      - "ファイル: src/ViewPrism2.App/Assets/i18n/ja.json・en.json。UTF-8(BOM なし)"
+      - "形式: フラットな { \"namespace.key\": \"文言\" }。原典のネスト JSON はドット連結でフラット化して変換"
+      - "プレースホルダ: {name} 形式を維持。解決器は string.Replace ベースで {key} を引数辞書から置換(未指定プレースホルダはそのまま残す)"
+      - "V1 で取り込む原典ネームスペース: common / navigation / toolbar / tag / image / collection / view / directory / settings / sort / file / modals / error / success(viewer 拡張系・workspace 系は V2 以降)"
+      - "フォールバック実装: 要求ロケール → ja → キー文字列(REQ-050)。en に無いキーは ja を表示してよい(エラーにしない)"
+      - "新規キー(V1 で新設する文言: 空状態・再リンクダイアログ等)は ja を正とし en を併記。キーは <画面>.<要素> 規約"
+    risk_if_implicit: "キー体系・プレースホルダ構文が工場ごとに分岐し、資産変換が手作業化する。"
+    source_reference: "原典 view-prism/messages/ja.json・en.json / ADR-0006"
+
+  - id: K-WINFS
+    category: external_tool_convention
+    subject: Windows ファイルシステムの取り扱い
+    managed_knowledge:
+      - "列挙: new EnumerationOptions { RecurseSubdirectories = include_subfolders, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint }(リパースポイント=ジャンクション/シンボリックリンクを辿らない — 仕様 §4)"
+      - "タイムスタンプ: FileInfo.LastWriteTimeUtc / CreationTimeUtc を使用し、ToString(\"yyyy-MM-ddTHH:mm:ss.fffZ\") ではなく共通フォーマッタ(E-DOMAIN-001)で ISO 8601 化"
+      - "読み取り: FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete) — 他プロセスのロックと共存"
+      - "IOException / UnauthorizedAccessException はファイル単位で捕捉してスキップ+警告ログ(スキャン全体を落とさない)"
+      - "長パス: .NET の長パスサポートに依存(Windows 10 1607+ / .NET Core 系は既定対応)。それでも失敗するパスはスキップ+警告"
+      - "パス結合・正規化は Path.GetFullPath / Path.GetRelativePath を使い、表示・格納時に '\\' → '/' 置換(INV-005)"
+    risk_if_implicit: "ジャンクション再帰で無限ループ、ロック競合でスキャン全体クラッシュ、が典型事故。"
+    source_reference: "https://learn.microsoft.com/dotnet/api/system.io"
+
+  - id: K-DESIGN
+    category: design_system
+    subject: デザイントークン(V1 最小セット)
+    managed_knowledge:
+      - "テーマ: Fluent(ライトのみ。ダーク不要 — 仕様 §4)"
+      - "アクセント色: #3B82F6 / 危険操作: #DC2626 / 警告: #D97706 / テキスト主: #1F2937 / テキスト弱: #6B7280 / 境界線: #E5E7EB / 背景: #FFFFFF / パネル背景: #F9FAFB"
+      - "余白: 4px グリッド(4/8/12/16/24)。ウィンドウ既定 1200×800・最小 900×600"
+      - "グリッドセル: 正方形、列数 3/4/5/6(既定 4)、セル間ギャップ 8px。ファイル名はセル下部 1 行・中央寄せ・溢れは末尾省略(…)"
+      - "選択表示: アクセント色の 2px 枠+右上に選択順バッジ(アクセント色円形・白文字・1 起点)"
+      - "空状態: 中央配置・テキスト弱色・アイコンなしで可"
+      - "プレースホルダサムネイル: パネル背景色+'?' グリフ(テキスト弱色)"
+      - "フォント: Inter(同梱)/ 本文 14px / 見出し 16px / キャプション 12px"
+      - "タグ色見本: 16px 円形スウォッチ。color=NULL のタグは境界線色のリング表示"
+    risk_if_implicit: "工場が『自然な寸法・配色』を独自に埋め、golden 承認のたびに微妙なズレの指摘往復が発生する(BomDD Loop3/4 の実証どおり)。"
+    source_reference: "ADR-0001 / 原典 UI(Tailwind 系の慣用値を踏襲)"

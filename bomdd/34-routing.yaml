@@ -1,0 +1,43 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Routing
+
+routing:
+  id: ROUTING-V1CORE-001
+  purpose: ViewPrism2 V1 コア(タグ×仮想ビュー画像管理デスクトップアプリ)を BOM のみから製造する
+  factory_isolation: 製造装置には製造パッケージ(20-spec.md / 30〜34 / 40 / docs/adr/)のみ供与。原典 view-prism ソース・設計対話・41 固定オラクル・42 探索プローブは非開示
+  cheat_report: BOM/K-BOM/Control Plan から導けなかった判断は実装を止めず全件 cheat-log 形式で報告する(分類 C1〜C6)
+  steps:
+    - order: 1
+      id: ROUTE-READ
+      name: 製造パッケージを読む
+      input: [bomdd/20-spec.md, bomdd/30-ebom.yaml, bomdd/31-kbom.yaml, bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/40-work-order.md, docs/adr/]
+      output: [実装計画(製造単位の着手順)]
+    - order: 2
+      id: ROUTE-SCAFFOLD
+      name: ソリューション骨格を作る(M-SLN-000)
+      input: [M-SLN-000, procurement]
+      output: [ViewPrism2.sln, 4 プロジェクト, パッケージ参照]
+    - order: 3
+      id: ROUTE-MANUFACTURE-CORE
+      name: 核を製造する(unit 受入とセットで。1 単位 = 実装+当該 CP テスト緑)
+      input: [M-CORE-001, M-EVAL-002, M-GRAPH-003, M-SORT-004, M-CACHE-009, M-SET-010, M-I18N-011, M-DB-007, M-SCAN-005, M-VIEWSVC-012]
+      output: [src/ViewPrism2.Core, src/ViewPrism2.Infrastructure, tests/ViewPrism2.Tests(CP-EVAL/GRAPH/SORT/SCAN/TAG/VIEW/DB/CACHE/SET/I18N/UTIL/NFR)]
+    - order: 4
+      id: ROUTE-MANUFACTURE-SURFACE
+      name: 表面を製造する(K-BOM 参照必須: K-AVALONIA / K-MVVM / K-DESIGN / K-SKIA / K-I18N)
+      input: [M-THUMB-008, M-UI-013, M-UI-014]
+      output: [src/ViewPrism2.App 一式, Assets/i18n/{ja,en}.json, CP-THUMB テスト]
+    - order: 5
+      id: ROUTE-SELF-ACCEPTANCE
+      name: 自己受入(緑が納品条件。自己受入緑≠合格)
+      command:
+        - dotnet build ViewPrism2.sln -c Release
+        - dotnet test tests/ViewPrism2.Tests -c Release
+        - "L1 スモーク: アプリ起動→フィクスチャフォルダ登録→スキャン→グリッド表示(CP-L1-SMOKE 手順)"
+      output: [受入ログ(CP 別の結果一覧)]
+    - order: 6
+      id: ROUTE-CHEAT-REPORT
+      name: ずる報告+As-Built 情報を提出する
+      output: [cheat-report(全件・cheat-log 形式), 実装サマリ(製造単位→成果物パス対応表)]

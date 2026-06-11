@@ -1,0 +1,32 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Exploratory Probes    # ★設計者のみ。製造装置に渡さない
+
+# 規律: 合否を出さない。沈黙次元(32-mbom.yaml silence_sweep の exploratory 行)の値・分散を観測して記録するだけ。
+
+exploratory_probes:
+  - id: P-01
+    scenario: "ダミー画像 10,000 件(DB 直接投入+実サムネイル 500 件)でグリッド表示・スクロール・列数切替・ビュー切替を操作"
+    dimension: 大規模ライブラリでの UI 応答性(初期表示時間・スクロール体感・メモリ使用量)
+    sweep_ref: "silence_sweep: グリッド性能(1 万件)"
+    observed:
+      factory-01: ~
+  - id: P-02
+    scenario: "キーボードのみで主要操作(フォルダ登録→スキャン→ノード選択→画像選択→ビューア)を試みる"
+    dimension: アクセシビリティ(フォーカス遷移・操作可能性)
+    sweep_ref: "silence_sweep: アクセシビリティ"
+    observed:
+      factory-01: ~
+  - id: P-03
+    scenario: "スキャン実行中にタグ付け・ビュー編集・グリッド操作を並行して行う"
+    dimension: 並行操作時の体感(ブロッキング・遅延)と整合性(specified の範囲外の観測)
+    sweep_ref: "silence_sweep: 並行実行"
+    observed:
+      factory-01: ~
+  - id: P-04
+    scenario: "エラー通知(不正 regex・スキャンスキップ)の表示形態を観察"
+    dimension: 通知 UI の形態・文言(BOM は『非モーダル+ログ』までしか固定していない)
+    sweep_ref: "20-spec.md §2.3(通知形態の詳細は未固定)"
+    observed:
+      factory-01: ~

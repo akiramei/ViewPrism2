@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+*.user
+*.binlog
+TestResults/
+
+# IDE
+.vs/
+.idea/
+
+# 実行時生成物
+logs/
+*.db
+*.db-shm
+*.db-wal

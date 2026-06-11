@@ -1,0 +1,480 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Requirements
+
+# 根拠精度の規律(playbook §2):
+#   rationale は「受入の深さと許容差を決められる精度」まで掘る。
+#   出典: 原典 view-prism のリバース調査(2026-06-11)。証拠は 20-spec.md のトレース表参照。
+#   原典で未実装(スキーマのみ存在等)の要素は要求に含めない(20-spec.md §6 カバレッジ監査で分類)。
+
+requirements:
+  # ============================================================
+  # 基盤(DB・ID・日時) REQ-001〜
+  # ============================================================
+  - id: REQ-001
+    statement: "全エンティティの主キーは UUIDv4(小文字 hex、ハイフン区切り 36 文字)の TEXT で採番する"
+    rationale: |
+      原典は uuidv4() による採番(image-repository.ts:742、tag-repository.ts:113)。
+      連番でないため工場・スレッド間で衝突せず、移行オラクル作成時も ID を pattern(正規表現)で検査できる。
+      受入: ID は ^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ に一致(unit/exact)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "大文字 UUID が混入し、文字列比較で同一エンティティが別物と判定される"
+
+  - id: REQ-002
+    statement: "全日時カラムは ISO 8601 拡張形式の UTC 文字列(YYYY-MM-DDTHH:mm:ss.fffZ、ミリ秒3桁、literal Z)で格納する"
+    rationale: |
+      原典は new Date().toISOString() で統一(manager.ts:65 ほか)。文字列ソートが時系列ソートと一致するため
+      modified_at DESC 等のクエリが正しく動く。受入: 形式は正規表現で exact 検査(unit)。非 Z・ローカル時刻は不合格。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "ローカルタイムゾーンで格納され、「最近使ったビュー」の並びが時系列と食い違う"
+      - "小数秒の桁数が揺れて文字列ソートが時系列と一致しなくなる"
+
+  - id: REQ-003
+    statement: "SQLite データベースは journal_mode=WAL、foreign_keys=ON で開く"
+    rationale: |
+      原典 manager.ts:126-129。FK 制約はタグ削除カスケード(REQ-028)の前提。WAL は読み書き並行性のため。
+      受入: PRAGMA 値の照会で exact(L2 メタデータ検査)。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "SQLite PRAGMA 仕様 https://www.sqlite.org/pragma.html"
+    counterexamples:
+      - "foreign_keys が OFF のままタグ削除し、孤児 image_tags 行が残る"
+
+  - id: REQ-004
+    statement: "スキーマ変更はマイグレーション基盤で管理する: migrations テーブル(id TEXT PK, executed_at)に適用履歴を記録し、新規 DB は最新スキーマで作成して全マイグレーション ID を適用済みとしてマークする"
+    rationale: |
+      原典 manager.ts:52-87,137-144 と同方式。未適用分のみを ID 順に適用し、各マイグレーションはトランザクション内で実行。
+      受入: (a)新規 DB 作成後の migrations 行数 = 定義済みマイグレーション数、(b)旧スキーマ DB に適用後のスキーマが新規作成 DB と一致(L2)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "新規 DB でマイグレーションが再実行され ALTER TABLE が重複エラーになる"
+
+  - id: REQ-005
+    statement: "DB ファイルはユーザーデータ領域 %APPDATA%/ViewPrism2/data/viewprism.db に配置する"
+    rationale: |
+      原典は app.getPath('userData')/data/viewprism.db(main.ts:63-64)。.NET では Environment.SpecialFolder.ApplicationData 配下。
+      受入: 初回起動後のファイル存在(L1)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "実行ファイルと同じフォルダに DB が作られ、Program Files 配下で書き込み拒否になる"
+
+  # ============================================================
+  # 同期フォルダ・スキャン REQ-010〜
+  # ============================================================
+  - id: REQ-010
+    statement: "ユーザーは同期フォルダを登録・編集・削除・無効化できる(name、path、include_subfolders 既定 true、exclude_patterns、is_active 既定 true)。path はシステム内で一意(大文字小文字無視)で、重複登録は明示エラーで拒否する。name の重複は許可する"
+    rationale: |
+      原典 sync_folders テーブル(manager.ts:293-302)。path は絶対パス、削除時は配下の images が CASCADE 削除される
+      (FK ON DELETE CASCADE、manager.ts:189)。exclude_patterns は原典の解釈実装が未確認(unknown)のため、
+      V1 では「ファイル名の完全一致(大文字小文字無視)」と意図的に確定する(glob/regex は対象外)。
+      受入: CRUD 各操作後の DB 状態と重複パス拒否を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "同期フォルダ削除後も images 行が残り、ビューに幽霊画像が表示される"
+
+  - id: REQ-011
+    statement: "対応画像形式は拡張子 .jpg/.jpeg/.png/.gif/.bmp/.webp の 6 種で、拡張子を小文字に正規化して判定する(マジックバイト検査はしない)"
+    rationale: |
+      原典 scanner.ts:10,522。判定が拡張子のみであることは仕様(高速性優先)。
+      受入: 大文字拡張子(.JPG)が登録され、対象外(.txt、.svg)が無視されることを unit で exact 検査。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - ".JPG(大文字)がスキャン対象から漏れる"
+      - "拡張子だけ .jpg の非画像ファイルでサムネイル生成がクラッシュし、スキャン全体が停止する"
+
+  - id: REQ-012
+    statement: "スキャンは増分方式とする: (a)新規ファイルは登録、(b)DB に normal で存在するが物理に無いファイルは missing へ、(c)同一相対パスで内容が変わったファイルはハッシュ・サイズ・更新日時を更新、(d)新規ファイルのハッシュが同一フォルダ内の missing 画像と一致する場合は pending(candidate_link_id 付き)で登録する。一致する missing 画像が複数ある場合は id 昇順の先頭を candidate_link_id とする"
+    rationale: |
+      原典 scanner.ts:114-472、file-verifier.ts:201-217。タグ等の関連は image_id に紐づくため、
+      ファイル移動・リネームを安易に新規+削除と扱うとタグが失われる。それを防ぐ pending/再リンクが本質。
+      判定の優先順序は 20-spec.md §2.1 の番号付き規則に従う(同時成立時の曖昧さを排除)。
+      読み取り不能ファイル(ロック等)は DB を変更せずスキップし警告ログ、次回スキャンで再試行する。
+      受入: 4 ケースそれぞれの前後 DB 状態を固定フィクスチャで exact 検査(unit〜L2)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "ファイルをリネームしただけでタグが全て失われる(missing+新規扱い)"
+      - "別フォルダの同一ハッシュ画像が再リンク候補になり、無関係なタグが移植される"
+
+  - id: REQ-013
+    statement: "ファイルハッシュは SHA-256(ファイル全体、出力は小文字 hex 64 文字)とする"
+    rationale: |
+      原典 file-verifier.ts:125-141。再リンク判定(REQ-012)と重複検出の基礎。全体ハッシュであることが
+      部分一致誤判定を防ぐ。受入: 既知バイト列のハッシュ値を exact 検査(unit、テストベクタ: 空ファイル =
+      e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "先頭 N バイトのみのハッシュで、異なる画像が同一と判定され誤リンクされる"
+
+  - id: REQ-014
+    statement: "images.relative_path は同期フォルダ起点の相対パスで、区切りはスラッシュ(/)に統一し、先頭・末尾にスラッシュを付けない。パス比較は大文字小文字を区別しない"
+    rationale: |
+      原典 file-verifier.ts:77-94、比較は SQLite LOWER()(Windows ファイルシステムが case-insensitive のため)。
+      受入: バックスラッシュ入力が正規化されること、大文字小文字違いのパスが同一視されることを unit で exact 検査。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "区切り文字の混在で同一ファイルが二重登録される"
+
+  - id: REQ-015
+    statement: "スキャン完了時(異常終了時も含む)に sync_folders.last_scan を現在時刻で更新し、スキャン結果サマリ(追加/欠落/保留/更新の各件数)を返す"
+    rationale: |
+      原典 scanner.ts:430-436(finally 句)、464-471。受入: スキャン後の last_scan 更新と件数の exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "スキャン中の例外で last_scan が更新されず、毎回フルスキャン相当になる"
+
+  - id: REQ-016
+    statement: "画像ステータスは normal/missing/deleted/pending の 4 値とし、一覧・ビュー・グリッド・NodeGraph の値抽出は常に normal のみを対象にする。deleted は V1 では予約値とし、deleted へ遷移させる操作は実装しない(遷移の全列挙は 20-spec.md §2.1 の遷移表)"
+    rationale: |
+      原典 shared/types/images.ts:7、image-repository.ts:50,107,162(既定検索が normal のみ)、611,679(deleted 除外)。
+      missing=物理消失(再リンク待ち)、deleted=論理削除、pending=再リンク候補確定待ち。
+      受入: 各ステータスの画像を用意し、既定一覧に normal のみ現れることを exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "missing 画像がグリッドに表示され、開くとエラーになる"
+
+  - id: REQ-017
+    statement: "ユーザーは missing 画像に対する再リンク候補(同一フォルダ内・ハッシュ一致の pending 画像)を確認し、確定すると missing 側レコードが pending 側のパス情報で上書きされて normal に戻り、pending 側レコードは削除される。候補が複数ある場合は relative_path 昇順で提示し、各候補に相対パス・サイズ・更新日時を表示する"
+    rationale: |
+      原典 file-verifier.ts:387-439、image-repository.ts:581-736。候補は同一 sync_folder_id 内に限定
+      (フォルダが違えば同一ハッシュでも別ファイルと扱う)。受入: 再リンク前後の DB 状態
+      (タグ関連が image_id ごと保持されること)を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "再リンク後に元 image_id が変わり、タグ・ビュー条件の参照が切れる"
+
+  # ============================================================
+  # タグ REQ-020〜
+  # ============================================================
+  - id: REQ-020
+    statement: "タグは simple(値なし)/textual(文字列値)/numeric(数値)の 3 種類とし、image_tags.value には simple=NULL、textual=文字列、numeric=数値の文字列表現を格納する"
+    rationale: |
+      原典 shared/types/tags.ts:20-38、tag-repository.ts:299-359。numeric の比較は数値として行う
+      (格納は TEXT、比較時に REAL へ変換)。受入: 3 種それぞれの付与→取得ラウンドトリップを exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "numeric 値が文字列比較され '9' > '10' と判定される"
+
+  - id: REQ-021
+    statement: "タグ名はシステム全体で一意(大文字小文字は区別する)。重複名での作成・改名は一意制約違反として明示的なエラー(DuplicateTagName)を返す"
+    rationale: |
+      原典 migration009(UNIQUE 制約)、DuplicateTagNameError(tag-repository.ts:188-192)。
+      SQLite の UNIQUE 既定照合(BINARY)に従い case-sensitive。空文字・空白のみの名前は拒否する。
+      受入: 重複作成がエラーコードで拒否されることを exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "重複タグが作成でき、タグ選択 UI に同名が 2 つ並ぶ"
+
+  - id: REQ-022
+    statement: "タグは parent_id による単一親の階層を持てる。親タグ削除時、子タグの parent_id は NULL になる(子は削除しない)。自分自身・子孫を親に指定する循環は拒否する"
+    rationale: |
+      原典 manager.ts:204(FK)。循環防止は原典に明示実装が無い(unknown)が、無いと階層表示が無限ループする
+      ため本実装では要求化する(原典からの意図的差分)。受入: 循環指定の拒否と親削除時の SET NULL を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "A→B→A の親子を設定でき、タグツリー描画が無限ループする"
+
+  - id: REQ-023
+    statement: "タグは color(#RRGGBB 形式、NULL 可)と description(NULL 可)を持つ。color は形式バリデーションを行い、不正形式は拒否する"
+    rationale: |
+      原典 manager.ts:199-201、ColorPicker.tsx:17-71(プリセットは #RRGGBB)。
+      受入: 正常形式の保存と不正形式(例 'red'、'#GGG')の拒否を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "CSS 色名が保存され、描画側のパースが失敗して既定色にフォールバックしない"
+
+  - id: REQ-024
+    statement: "textual タグは定義済み値リスト(predefined_values、文字列配列、順序保持)を任意で持てる。値の付与は定義済みリストに限定しない(自由入力可)"
+    rationale: |
+      原典 textual_tag_settings(manager.ts:207-212)、推奨であって強制でない(tag-repository.test.ts:51-70)。
+      順序はユーザーが D&D で並べ替えるため保持必須。受入: 配列順序のラウンドトリップを exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "定義済み値の並びが保存のたびに辞書順に戻る"
+
+  - id: REQ-025
+    statement: "numeric タグは min/max/step/unit(いずれも NULL 可)の設定を持てる。min/max が設定されている場合、範囲外の値の付与は拒否する"
+    rationale: |
+      原典 numeric_tag_settings(manager.ts:214-222)。範囲バリデーションは原典で明示実装が未確認(unknown)だが、
+      設定の存在意義から本実装では要求化する(原典からの意図的差分)。
+      受入: 境界値(min ちょうど=可、min-step=不可)を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "min=1,max=5 の評価タグに 100 が付与できる"
+
+  - id: REQ-026
+    statement: "画像へのタグ付与は UPSERT 動作とする: 同一(image_id, tag_id)への再付与は値の上書きであり、重複行は作らない"
+    rationale: |
+      原典 INSERT OR REPLACE(tag-repository.ts:477-485)、PK(image_id, tag_id)。
+      受入: 二重付与後の行数=1 と値上書きを exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "二重付与で UNIQUE 違反エラーがユーザーに露出する"
+
+  - id: REQ-027
+    statement: "複数画像への一括タグ付与・解除は単一トランザクションで行い、1 件でも失敗したら全体をロールバックする"
+    rationale: |
+      原典 tag-management.service.ts:160-200(withTransaction)。部分適用は「どこまで付いたか分からない」状態を生む。
+      受入: 故意に失敗を混ぜたバッチで 0 件適用を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "100 枚中 50 枚だけタグが付き、ユーザーが残りを特定できない"
+
+  - id: REQ-028
+    statement: "タグ削除時のカスケード規則: image_tags は削除(CASCADE)、view_conditions.tag_id は NULL 化(SET NULL)、view_tag_hierarchies の該当ノードは削除(CASCADE)、子タグの parent_id は NULL 化"
+    rationale: |
+      原典 manager.ts:204,231-232,261,277。FK 制約で DB レベルに固定する。
+      受入: タグ削除後の 4 テーブルの状態を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "タグ削除後もビュー階層に幽霊ノードが残り NodeGraph 構築が例外を投げる"
+
+  - id: REQ-029
+    statement: "タグ一覧は name 昇順(大文字小文字を無視した序数比較、同値時は id 昇順)で返し、各タグの使用数(distinct image_id 数)を取得できる"
+    rationale: |
+      原典 tag-repository.ts:252(ORDER BY name)、COUNT(DISTINCT image_id)。
+      受入: 既知データでの並びと件数を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "同一画像に同一タグの値違いが二重計上され使用数が水増しされる"
+
+  # ============================================================
+  # ビュー・NodeGraph REQ-030〜
+  # ============================================================
+  - id: REQ-030
+    statement: "ユーザーはビュー(name 必須、description、is_favorite 既定 false、sort_field、sort_direction、display_columns、home_tag_id)を作成・更新・削除できる"
+    rationale: |
+      原典 views テーブル(manager.ts:236-248)。ビュー削除時は view_conditions/view_tag_hierarchies が CASCADE 削除。
+      受入: CRUD 後の DB 状態を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "ビュー削除後に view_conditions の孤児行が残る"
+
+  - id: REQ-031
+    statement: "ビュー条件の演算子は 5 種で、全条件を AND で評価する: exists(タグが付いている)、equals(値が完全一致)、between(数値が value 以上 value2 以下、両端含む)、regexp(値が正規表現にマッチ)、in(値が JSON 配列のいずれかに一致)。対象タグが付与されていない画像は、いずれの演算子でも条件不成立とする(exists は false)"
+    rationale: |
+      原典 view-search.service.ts:104-201。OR・group_id・field 条件はスキーマに存在するが原典で評価未実装のため
+      V1 要求から除外(カバレッジ監査で out-of-scope 宣言)。between は数値変換後の比較で両端含む。
+      エッジケースを確定する: simple タグ(value=NULL)への equals/regexp/in は不成立(UI は simple タグに exists
+      のみ提示)。数値変換できない値(空文字含む)は equals/between の数値比較で不成立。value が NULL の非 exists
+      条件は評価から除外(無視)し警告ログ。regexp は .NET の System.Text.RegularExpressions(マッチタイムアウト
+      1 秒)とし、不正パターン・タイムアウトは条件不成立+警告(ログ+非モーダル通知)。例外でクラッシュしない。
+      原典は JS RegExp — 方言差は K-BOM で管理。
+      受入: 演算子ごとのテストベクタ(境界値・エッジケース含む)で exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "between が上端を含まず、min=1,max=5 の検索で 5 が漏れる"
+      - "JS の正規表現方言(例 (?<name>) 以外の独自構文)を移植して .NET Regex が例外を投げる"
+
+  - id: REQ-032
+    statement: "views.modified_at はビュー本体の更新だけでなく、所属する条件・タグ階層の変更時にも現在時刻へ更新する"
+    rationale: |
+      原典 view-repository.ts:307。「最近使ったビュー」(REQ-033)の並びの根拠。
+      受入: 条件変更→modified_at 更新を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "階層を編集しても並びが変わらず、ユーザーが編集したビューを見つけられない"
+
+  - id: REQ-033
+    statement: "お気に入りビュー一覧は is_favorite=true を name 昇順で、最近使ったビューは modified_at 降順で limit 件(既定 10)返す。いずれも同値時は id 昇順で安定させる"
+    rationale: |
+      原典 view-repository.ts:492、ipc/views/index.ts:61。「最近」はアクセス日時でなく modified_at 基準である点が仕様。
+      受入: 既知データで並びを exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "閲覧しただけで modified_at が更新され、編集していないビューが先頭に来る"
+
+  - id: REQ-034
+    statement: "ビューはタグ階層(view_tag_hierarchies)を持つ: 各ノードは tag_id 必須、parent_id(NULL=ルート)、position(同一親内の表示順、0 起点昇順)、alias(表示名上書き)、condition_type(equals/range/pattern/values/NULL)と condition_value(JSON)を持つ。ノード移動時、自分自身・子孫への移動は拒否する"
+    rationale: |
+      原典 manager.ts:265-279、view-tag-hierarchy-repository.ts:526-563(循環チェック)。
+      condition_value スキーマ: equals={value}、range={valueFrom,valueTo}、pattern={pattern}、values={values[]}。
+      受入: ノード CRUD・移動・循環拒否を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "ノードを自分の子の下に移動でき、階層が浮遊する"
+
+  - id: REQ-035
+    statement: "タグ階層から NodeGraph を構築する: simple タグ→単一ノード、textual タグ→タグ名ノード+その配下に値ノード群(status=normal の画像に付与された distinct 値。predefined_values 外の自由入力値も含む)、値が 1 つだけの場合は『タグ名: 値』の一体型ノードに統合、numeric タグ→単一ノード。子ノードは position 昇順に並べる。NodeGraph は表示のたびにタグ付け状態から再構築する(キャッシュする場合はタグ付け・階層変更で無効化)"
+    rationale: |
+      原典 src/lib/nodeGraph/utils.ts:20-219(6 ノード型、mergeTextTagWithSingleValue)。
+      値ノードの並びは distinct 値の昇順(序数)。値抽出の対象は REQ-016 に従い status=normal のみ。
+      distinct 値が 0 件の textual タグ名ノードも表示・選択可能とし、選択時は exists 条件として評価する
+      (結果が 0 件なら空状態表示)。受入: 階層+タグ付け状態の固定フィクスチャから期待ノードツリーを
+      exact 検査(unit)。一体型統合の閾値(値 0/1/2 件)は境界テスト必須。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "値が 0 件の textual タグで値ノードが空のまま展開され、クリックすると空フォルダ地獄になる"
+      - "値が 1→2 件に増えた瞬間のノード構造変化で選択状態が壊れる"
+
+  - id: REQ-036
+    statement: "NodeGraph 上でノードを選択すると、ルートからそのノードまでのパス上の全ノードの条件を AND 結合して画像を絞り込む: simple/textual タグ名ノード=exists、値ノード・一体型ノード=equals(その値)、numeric ノード=condition_type に応じた条件"
+    rationale: |
+      原典 utils.ts:228-308(buildConditionsFromPath)。「タグ階層をフォルダのように辿る」中核体験。
+      受入: パス選択→生成条件列→絞り込み結果を 1 本の固定フィクスチャで exact 検査(unit〜L2)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "親ノードの exists 条件が落ち、子ノード選択時に親タグなし画像が混入する"
+
+  - id: REQ-037
+    statement: "ビューに home_tag_id が設定されている場合、ビューを開いたとき該当階層ノードまで自動的にナビゲートする。ノードが見つからない場合はルートから開始する"
+    rationale: |
+      原典 useNodeGraph.ts:86-110、utils.ts:316-354。受入: 設定あり/なし/参照切れの 3 ケースで初期選択ノードを
+      exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "home_tag_id の参照先が削除済みでビューが開けなくなる"
+
+  - id: REQ-038
+    statement: "ビュー内の画像一覧は sort_field(name/created_date/modified_date/file_size のいずれか、既定 name)と sort_direction(asc/desc、既定 asc)で整列する。同値の場合の二次キーは id 昇順とする(安定ソート)"
+    rationale: |
+      原典は sort_field をスキーマに持つが候補値・既定・二次キーが不明確(unknown)のため、本実装で確定させる
+      (意図的差分)。name は大文字小文字を無視した序数比較(Windows ファイル名のセマンティクスに合わせる)。
+      受入: 各フィールド×方向のテストベクタで exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "同名ファイルの並びが実行ごとに変わり、ビューアの「次の画像」が不安定になる"
+
+  # ============================================================
+  # 表示・サムネイル・ビューア REQ-040〜
+  # ============================================================
+  - id: REQ-040
+    statement: "サムネイルは長辺 256px(アスペクト比保持、元画像より拡大しない)で生成し、PNG 入力は PNG、それ以外は JPEG 品質 80 で出力する。キャッシュは %APPDATA%/ViewPrism2/thumbnails/ に画像絶対パスの MD5 をファイル名として保存し、存在すれば再生成しない。生成失敗時はキャッシュへ記録せず(次回表示時に再試行)プレースホルダを表示し、読み取り不能なキャッシュファイルは削除して再生成する"
+    rationale: |
+      原典 ipc/images/thumbnails/index.ts:11-45(fit:'inside', withoutEnlargement, PNG=圧縮9/JPEG=80、MD5(path))。
+      受入: 出力寸法(長辺 256 以下・比率維持±1px)、フォーマット、キャッシュヒット時の再生成なしを L2 検査。
+      画質そのものは golden 不要(寸法・形式のみ検査)。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "SkiaSharp / ImageSharp の resize API 仕様(Phase 3 の ADR で確定)"
+    counterexamples:
+      - "256 未満の小画像が拡大されてボケる"
+      - "ファイル更新後も古いサムネイルが表示され続ける(キャッシュキーがパスのみ依存)— 原典同様の既知制約として許容"
+
+  - id: REQ-041
+    statement: "グリッド表示: 列数は 3/4/5/6 から選択(既定 4)、セルは正方形サムネイル+ファイル名、クリックで選択(Ctrl+クリックで個別トグルの複数選択、選択順の番号を表示)、ダブルクリックで画像詳細を開く。画像 0 件時は中央に空状態メッセージを表示する。大量件数(目安 100 件以上)でも UI 仮想化によりスクロールが滑らかであること"
+    rationale: |
+      原典 ImageGrid.tsx:23,43-50、VirtualizedGrid.tsx。仮想化は Avalonia の仮想化パネルで実現(実装方式は自由)。
+      受入: 選択ロジックは unit(ViewModel)、描画は golden+承認者。性能は探索プローブ(1 万件で操作可能)。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "Avalonia ItemsControl 仮想化(12.0)ドキュメント"
+    counterexamples:
+      - "Ctrl+クリックが範囲選択になり、選択順番号が振り直される"
+
+  - id: REQ-042
+    statement: "リスト表示: ビューの display_columns に従い列を構成する。列は基本列(name/size/modified_date)とタグ列(tag:{tagId}、その画像の当該タグ値を表示)から成り、既定は name/size/modified_date の 3 列"
+    rationale: |
+      原典 ImageList.tsx:33-35,102-119、DisplayColumn 型(type/key/label/width)。width は原典が Tailwind クラスのため
+      本実装では論理値(star/px)に置き換える(意図的差分、E-BOM で型を確定)。
+      受入: 列構成のラウンドトリップは unit、描画は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "Avalonia DataGrid/ListBox 列定義"
+    counterexamples:
+      - "タグ列の対象タグが削除され、列ヘッダが空文字で表示される"
+
+  - id: REQ-043
+    statement: "画像詳細パネル: ファイル名、ファイルサイズ(B/KB/MB/GB、1024 進、小数 1 桁)、解像度(幅×高さ px)、作成日時・更新日時(ロケール書式)、ノート(images.notes、編集可)、付与タグ一覧(タグ名+値)を表示する。選択画像が無い場合はプレースホルダ(『画像を選択してください』)を表示する"
+    rationale: |
+      原典 ImageDetailModal.tsx:177-289。レーティング(5 つ星)は原典の格納先が不明(unknown)のため V1 から除外し
+      カバレッジ監査に記録。受入: 表示値の整形ロジックは unit(テストベクタ: 1023B→'1023 B'、1024B→'1.0 KB')、
+      画面は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 UI(ImageDetailModal)のレイアウト"
+    counterexamples:
+      - "ノート編集が保存されず、詳細を開き直すと消えている"
+
+  - id: REQ-044
+    statement: "基本ビューア(単一画像表示): 画像をウィンドウ内に表示し、→/PageDown で次の画像、←/PageUp で前の画像、Esc または閉じるボタンで閉じる。表示順は呼び出し元の一覧(REQ-038 の整列結果)に従い、端で停止する(ループしない)"
+    rationale: |
+      原典 useViewerNavigation.ts:163-170 ほか(原典の Esc は未実装だが本実装では標準 UX として追加 — 意図的差分)。
+      見開き・スクロール・タグ制御・ページ送りモードは V1 外。原典の既定 noResize(原寸)に対し、本実装はウィンドウ
+      フィット(縮小のみ、拡大なし)を既定とする(意図的差分: ズーム未実装のため原寸では大画像が見切れる)。
+      受入: ナビゲーションロジック(端の停止、現在位置)は unit、描画は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "Avalonia Image コントロール / KeyBinding"
+    counterexamples:
+      - "末尾画像で → を押すと先頭にループし、スライド閲覧中に位置を見失う"
+
+  - id: REQ-045
+    statement: "フルサイズ画像の表示はメモリキャッシュ(上限 50 枚、LRU、有効期限 3 分)を経由し、同一画像の再表示でファイル再読込しない"
+    rationale: |
+      原典 ProxyImage.tsx:8-34。ビューア前後送りの体感速度の根拠。上限値は原典準拠。
+      受入: キャッシュヒット/エビクションのロジックを unit で exact 検査(読み込み回数のカウント)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "キャッシュ無制限でメモリ不足クラッシュ(10MB×数百枚)"
+
+  # ============================================================
+  # i18n・設定 REQ-050〜
+  # ============================================================
+  - id: REQ-050
+    statement: "UI 文言は日本語(既定)と英語の 2 言語をリソース化する。キーが片方の言語に欠落している場合は日本語へフォールバックし、例外を投げない"
+    rationale: |
+      原典 i18n.config.ts:2-3(ja 既定)、i18n/request.ts:39-45(フォールバック)。原典の ja.json/en.json(699 キー)
+      から V1 該当分を変換して流用する(K-BOM 資産)。受入: 欠落キーのフォールバック動作を unit で exact 検査。
+      訳文の自然さは golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 messages/ja.json・messages/en.json"
+    counterexamples:
+      - "欠落キーで生のキー文字列('settings.title')が画面に露出する"
+
+  - id: REQ-051
+    statement: "言語設定は設定ファイルに永続化し、変更は即時(再起動不要)で UI 全体に反映する"
+    rationale: |
+      原典は再起動必須(language.ts:40-43)だが、これは Next.js の制約由来。Avalonia は動的リソース切替が可能なため
+      即時反映を要求とする(意図的差分・UX 改善)。受入: 切替後の画面文言を golden+承認者、永続化は unit。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "Avalonia 動的リソース / ResourceDictionary 切替"
+    counterexamples:
+      - "切替後に開いたダイアログだけ旧言語で表示される"
+
+  - id: REQ-052
+    statement: "アプリ設定(言語、ウィンドウサイズ・位置、グリッド列数、最後に開いたビュー)は %APPDATA%/ViewPrism2/settings.json に JSON で永続化し、起動時に復元する。設定ファイル破損時は既定値で起動する(クラッシュしない)"
+    rationale: |
+      原典は locale のみ永続化(language.ts:7)、ウィンドウは固定 1200x800(main.ts:109-110)。
+      本実装ではデスクトップアプリの標準 UX としてウィンドウ状態等も保存する(意図的差分)。
+      受入: 保存→再起動→復元のラウンドトリップと破損ファイル耐性を unit で exact 検査。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "壊れた settings.json で起動不能になる"

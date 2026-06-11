@@ -1,0 +1,99 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Fixed Oracle          # ★設計者のみ。製造装置に渡さない
+
+# 規律: 仕様化済み契約だけを合否に入れる。製造開始前に凍結し、収束ループ中は不変。
+# Control Plan のベクタ(工場開示)と重なるが、本オラクルは複合シナリオ+隠しケースを含む別집合。
+
+fixed_oracle:
+  frozen_since: "tag:loop-v1-r1(2026-06-11、製造開始前に凍結。収束ループ中は不変)"
+  self_test: |
+    凍結前セルフテスト: 各ケースの期待値が 20-spec.md の節番号から導出できることを設計者が逐条確認(2026-06-11 実施)。
+    期待値が仕様から書けないケースは発見されなかった(全件 spec_ref 付き)。
+    実行治具は工場が納品する tests/ViewPrism2.Tests の公開 API を設計者が直接呼ぶ追加テストとして実装する。
+  equivalence_rules:
+    - id: EQ-001
+      compares: [エラーコード(ErrorCode enum), 状態遷移後の DB 行の値, 出力 id 集合(順不同), 整列出力の id 順序]
+      ignores: [ID の具体値(pattern のみ検査), 日時の具体値(形式のみ検査), ログ文言, UI 通知の文言・形態]
+      normalization: id 集合は整列して比較。パスは正規形へ変換して比較
+      rationale: ID・日時は生成時刻依存で BOM は値を固定していない(形式のみ仕様化)
+    - id: EQ-002
+      compares: [サムネイル出力の寸法(±1px)・エンコード形式]
+      ignores: [バイト列・画質・メタデータの細部]
+      normalization: 出力を再デコードして寸法・形式を取得
+      rationale: 画質はライブラリ実装依存で仕様化していない(寸法・形式のみ契約)
+
+  cases:
+    - id: S-01
+      scenario: "リネーム追跡 E2E: フォルダ登録→画像 3 枚スキャン→1 枚にタグ 2 種+ノート→ファイル名変更→再スキャン→候補確認→再リンク確定"
+      contract_expectation: "再スキャン後: 旧行=missing+新行=pending(candidate=旧行 id)。確定後: 旧 image_id のまま relative_path 更新・status=normal・タグ 2 種とノート残存・pending 行消滅・candidate_link_id=NULL"
+      spec_ref: §2.1(規則 3a・遷移表・REQ-017)
+      equivalence_ref: EQ-001
+      depth: unit〜L2
+    - id: S-02
+      scenario: "NodeGraph 構造遷移: textual タグの distinct 値を 0→1→2 件と増やしながら 3 回構築"
+      contract_expectation: "0 件=タグ名ノードのみ / 1 件=一体型『タグ名: 値』+階層子がその配下 / 2 件=値ノード 2 個に階層子が複製。値は序数昇順"
+      spec_ref: §2.4 REQ-035
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-03
+      scenario: "条件評価複合: 画像 6 枚(タグ未付与/simple のみ/numeric '5'/'5.0'/'abc'/textual 'Red')に [exists(simple), between(1,5), equals('red')] を個別評価"
+      contract_expectation: "between: '5'と'5.0' が成立・'abc' 不成立・未付与不成立。equals('red'): 'Red' 不成立(case-sensitive)。exists: simple のみ成立"
+      spec_ref: §2.3 演算子表+エッジケース規則
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-04
+      scenario: "ReDoS 耐性: regexp 条件にカタストロフィックパターン '(a+)+$' + 入力 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!' を 28 文字タグ値で評価"
+      contract_expectation: "1 秒タイムアウト→条件不成立+警告 1 件。プロセスはハング・クラッシュしない"
+      spec_ref: §2.3(K-REGEX)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-05
+      scenario: "マイグレーション同値: 初版 DDL 相当の空 DB に全マイグレーション適用 vs 新規作成 DB"
+      contract_expectation: "PRAGMA table_info/foreign_key_list/index_list が全テーブルで一致。migrations 行数一致"
+      spec_ref: §2.0・REQ-004
+      equivalence_ref: EQ-001
+      depth: L2
+    - id: S-06
+      scenario: "設定破損起動: settings.json に不正 JSON を書き込んで Load"
+      contract_expectation: "既定値(ja/1200x800/列 4)で返り、例外なし。.bak 退避+正常ファイル再生成"
+      spec_ref: §2.7 REQ-052
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-07
+      scenario: "バッチ原子性: 3 画像へ numeric タグ(min=1,max=5)を value=3 で一括付与。うち 1 画像は事前に削除済み id を混入"
+      contract_expectation: "全体ロールバック(0 件適用)+NotFound 系エラー。残り 2 画像にも付与されない"
+      spec_ref: §2.2 REQ-027
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-08
+      scenario: "整列安定性: 同名(大文字小文字違い)・同サイズの画像 4 枚を name asc → file_size desc → name asc の順で 3 回整列"
+      contract_expectation: "各整列で同値グループ内は id 昇順。3 回目の出力は 1 回目と完全一致"
+      spec_ref: §2.3 REQ-038
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-09
+      scenario: "i18n フォールバック連鎖: locale=en で en 欠落キー(ja のみ存在)と両方欠落キーを解決"
+      contract_expectation: "前者=ja 文言 / 後者=キー文字列。例外なし"
+      spec_ref: §2.7 REQ-050
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-10
+      scenario: "サムネイル境界: 100x50 png(小画像)と 256x256 ちょうどの jpg を生成"
+      contract_expectation: "100x50 → 100x50 png(拡大なし)/ 256x256 → 256x256 jpg(scale=1.0)"
+      spec_ref: §2.5 REQ-040(K-SKIA 丸め規則)
+      equivalence_ref: EQ-002
+      depth: L2
+    - id: S-11
+      scenario: "タグ削除の波及: ビュー条件・ビュー階層・子タグ・画像付与を持つタグを削除し、当該ビューを開いて NodeGraph 構築+条件評価"
+      contract_expectation: "構築・評価とも例外なし。階層から該当ノード消滅、条件は tag_id=NULL となり評価から無視(警告)、子タグはルート化"
+      spec_ref: §2.2 REQ-028・INV-008・§2.3 エッジケース
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-12
+      scenario: "ホームタグ参照切れ: home_tag_id が指す階層ノードを削除後にビューを開く"
+      contract_expectation: "ルートから開始。エラー表示なし"
+      spec_ref: §2.4 REQ-037
+      equivalence_ref: EQ-001
+      depth: unit

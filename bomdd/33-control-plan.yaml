@@ -1,0 +1,244 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Control Plan
+
+# 深さの梯子(method-v1 §5): 核=unit(exact)。表面=L2 以上、知覚=G(golden+承認者)。
+# L0 文字列照合・pixel-exact は不採用(例外: ISO 8601 日時・UUID・ハッシュ hex は仕様化された正規形のため exact 可)
+
+control_plan:
+  depth_ladder:
+    unit: "xunit.v3 による純粋ロジック・サービスの exact 検査(tests/ViewPrism2.Tests、Trait cp=CP-xxx)"
+    L1: "ビルド成功+アプリ起動+主要画面表示+フィクスチャフォルダのスキャン正常系 1 本(スモーク)"
+    L2: "成果物メタデータ検査(SQLite スキーマの PRAGMA 照合、サムネイル出力の寸法・形式)"
+    L3: "実行時計測(NFR: Stopwatch による評価器レイテンシ)"
+    G: "承認者 maintainer による golden チェックリスト(20-spec.md §2.6 G-1〜G-5)の目視承認"
+
+  characteristics:
+    - id: CP-UTIL-005
+      characteristic: 共通ユーティリティ(ID・日時・ハッシュ・パス正規化・サイズ整形)が正規形を厳守する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-UTIL-005)
+      oracle: 下記ベクタの完全一致
+      approver: automated
+      test_vectors:
+        - "IdGenerator: 1000 回生成 → 全て ^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$、重複なし"
+        - "IClock.UtcNowIso: ^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$ に一致"
+        - "Sha256: 空ストリーム → e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 / 'abc'(UTF-8) → ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        - "PathNormalizer: (root=C:\\pics, full=C:\\pics\\Sub\\a.JPG) → 'Sub/a.JPG' / Equals('sub/a.jpg','SUB/A.JPG')=true"
+        - "ByteSizeFormatter: 0→'0 B' / 1023→'1023 B' / 1024→'1.0 KB' / 1048576→'1.0 MB' / 1073741824→'1.0 GB' / 1099511627776→'1024.0 GB'"
+
+    - id: CP-EVAL-001
+      characteristic: 条件評価器が演算子 5 種・AND 結合・全エッジケース規則(仕様 §2.3)を満たす
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-EVAL-001)
+      oracle: 固定フィクスチャ(画像 8 枚×タグ 4 種)に対する出力 id 集合の完全一致
+      approver: automated
+      test_vectors:
+        - "exists: タグ付与あり→含む / なし→含まない"
+        - "equals(textual): 'red'=='red' / 'Red'!='red'(case-sensitive)"
+        - "equals(numeric): '5'=='5.0'(数値一致) / 変換不能値('abc','')→不成立"
+        - "between: 値 1 と 5 が境界、value=1,value2=5 → 1 含む・5 含む・0/6 含まない / '9' と '10' の数値順(FMEA-001)"
+        - "regexp: '^IMG_\\d+' が IMG_001 にマッチ / 不正パターン '(' → 不成立+EvalWarning / タイムアウトパターン → 不成立+Warning"
+        - "in: '[\"a\",\"b\"]' に 'a' 一致・'c' 不一致"
+        - "タグ未付与画像: 全演算子で不成立"
+        - "simple タグ+equals: 不成立"
+        - "value=NULL の equals 条件: 条件無視+Warning、他条件は評価継続"
+        - "AND: 2 条件のうち 1 つのみ成立 → 含まない"
+
+    - id: CP-GRAPH-002
+      characteristic: NodeGraph 構築・パス→条件変換・ホームタグ解決が仕様 §2.4 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-GRAPH-002)
+      oracle: 期待ノード木(型・表示名・親子・順序)と期待条件列の完全一致
+      approver: automated
+      test_vectors:
+        - "simple タグノード: 単一ノード+階層子の接続"
+        - "textual 値 0 件: タグ名ノードのみ・選択時 exists 条件"
+        - "textual 値 1 件: 一体型ノード『タグ名: 値』+ 階層子はその配下"
+        - "textual 値 2 件: 値ノード 2 個(序数昇順)+ 階層子は各値ノード配下に複製"
+        - "値抽出: missing/pending 画像のみに付いた値は現れない(status=Normal 限定)"
+        - "predefined_values 外の自由入力値が値ノードに現れる"
+        - "condition_type=values 制限: 制限内の値のみ展開"
+        - "パス→条件: [root, simpleタグ, 値ノード] → [exists, equals] の AND 列"
+        - "numeric ノード(range): between(valueFrom, valueTo) を生成"
+        - "循環階層入力: 無限ループせず警告付きで枝打ち切り(FMEA-008)"
+        - "参照切れタグのノード: スキップ"
+        - "ホームタグ: 解決可→該当ノード / 不能→null / homeTagId=null→null"
+
+    - id: CP-SORT-003
+      characteristic: 整列器が field×direction・安定性・OrdinalIgnoreCase を満たす
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-SORT-003)
+      oracle: 期待 id 列との完全一致
+      approver: automated
+      test_vectors:
+        - "name asc: ['b.jpg','A.jpg'] → A,b(case 無視)"
+        - "file_size desc / created_date asc / modified_date desc 各 1 本"
+        - "同値(同名): id 昇順。同一入力 2 回で同一出力(安定)"
+        - "空集合・1 件: 例外なし"
+
+    - id: CP-SCAN-004
+      characteristic: スキャン判定・遷移表・再リンクが仕様 §2.1 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-SCAN-004。一時ディレクトリ+実ファイル+:memory: 相当 DB)
+      oracle: 判定結果と前後 DB 状態の完全一致
+      approver: automated
+      test_vectors:
+        - "規則(1): パス一致・サイズ/日時一致 → Skip"
+        - "規則(2): サイズ変化 → UpdateMeta(hash 再計算・status 不変)"
+        - "規則(3b): 新規 → AddNormal / 初回スキャンは missing 一致でも AddNormal"
+        - "規則(3a): 2 回目スキャン・同フォルダ同ハッシュ missing あり → AddPending(候補複数時 id 昇順先頭)"
+        - "missing 検出: normal で物理なし → missing"
+        - "pending 清掃: pending で物理なし → 行削除"
+        - "対象拡張子: .JPG(大文字)対象 / .txt・.svg 対象外"
+        - "exclude_patterns: 'Thumbs.db' 完全一致除外(大文字小文字無視)"
+        - "ロックファイル: スキップ+summary.skipped 計上、DB 不変(FMEA-011)"
+        - "リネームシナリオ(FMEA-004): タグ付き normal → ファイル名変更 → スキャン → missing+pending → 再リンク確定 → 同一 image_id でタグ残存・新パス・pending 行消滅"
+        - "再リンク候補列挙: relative_path 昇順"
+        - "二重起動: 2 本目が ErrorCode.ScanInProgress"
+        - "last_scan: 完了後に更新(例外パスでも)"
+
+    - id: CP-TAG-011
+      characteristic: タグ管理(検証・UPSERT・バッチ原子性・カスケード)が仕様 §2.2 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TAG-011。一時 SQLite)
+      oracle: 操作後の DB 状態・エラーコードの完全一致
+      approver: automated
+      test_vectors:
+        - "重複名作成 → DuplicateTagName / 'Tag' と 'tag' は別名として許可(case-sensitive)"
+        - "空白のみの名前 → ValidationError"
+        - "color '#1A2b3c' 受理 / 'red'・'#GGG' 拒否 / NULL 可"
+        - "numeric min=1,max=5: 1・5 受理 / 0・6 拒否 / 設定なしは任意"
+        - "predefined_values 順序ラウンドトリップ"
+        - "UPSERT: 同一 (image,tag) 再付与 → 行数 1・値上書き"
+        - "解除の冪等: 存在しない付与の解除 → 成功(no-op)"
+        - "バッチ 3 画像中 1 失敗 → 全ロールバック(0 適用)"
+        - "循環: 自己親・孫を親 → CircularReference"
+        - "タグ削除: image_tags 消滅 / view_conditions.tag_id NULL / 階層ノード消滅 / 子 parent_id NULL(FMEA-003)"
+        - "使用数: 値違い 2 行不可(UPSERT)前提で distinct image 数"
+
+    - id: CP-VIEW-012
+      characteristic: ビュー管理(CRUD・modified_at 規則・一覧・階層ノード)が仕様 §2.3/2.4 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-VIEW-012。一時 SQLite)
+      oracle: DB 状態・並び順の完全一致
+      approver: automated
+      test_vectors:
+        - "name 空白のみ → ValidationError"
+        - "ビュー削除 → 条件・階層ノードが連鎖削除(孤児ゼロ)"
+        - "条件追加・階層ノード移動・alias 変更 → modified_at 更新 / 取得(閲覧)では不変"
+        - "お気に入り: name 昇順 / 最近: modified_at 降順 limit 10・同値 id 昇順"
+        - "ノード移動: 自己・子孫へ → CircularReference"
+        - "display_columns ラウンドトリップ(basic+tag 列)"
+
+    - id: CP-DB-006
+      characteristic: スキーマ・PRAGMA・マイグレーション契約が仕様 §2.0・REQ-003〜005 と一致する
+      classification: core
+      depth: L2
+      tolerance: "スキーマ同値(テーブル・列・型・既定値・FK・索引・COLLATE)。PRAGMA 値 exact"
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-DB-006)
+      oracle: PRAGMA table_info/foreign_key_list/index_list の比較+migrations 行数検査
+      approver: automated
+      test_vectors:
+        - "新規 DB: journal_mode=wal / foreign_keys=1"
+        - "新規 DB: migrations 行数 = 定義数、全 id 記録済み"
+        - "v0(初版 DDL のみ)DB に全マイグレーション適用 → 新規 DB とスキーマ同値"
+        - "FK 実動: タグ削除カスケード(FMEA-003,005)/ フォルダ削除で images 連鎖削除"
+        - "sync_folders.path UNIQUE(case-insensitive): 'C:/a' と 'c:/A' で 2 件目拒否"
+
+    - id: CP-THUMB-007
+      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致する
+      classification: surface
+      depth: L2
+      tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact"
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp)
+      oracle: 出力ファイルのデコード結果(寸法・形式)とファイル存在・再生成有無
+      approver: automated
+      test_vectors:
+        - "1920x1080 jpg → 256x144 jpg(±1px)"
+        - "100x50 png → 100x50 png(拡大なし・PNG のまま)(FMEA-012)"
+        - "gif/bmp/webp → jpg 出力"
+        - "キャッシュヒット: 2 回目呼び出しでファイル mtime 不変(再生成なし)"
+        - "壊れた jpg → null 返却・キャッシュファイルなし・例外なし(FMEA-012)"
+        - "キャッシュファイル破損(0 バイト化)→ 削除+再生成"
+
+    - id: CP-CACHE-008
+      characteristic: 画像メモリキャッシュの LRU・TTL・上限が REQ-045 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-CACHE-008。FakeClock 注入)
+      oracle: LoadCount と保持キー集合の完全一致
+      approver: automated
+      test_vectors:
+        - "同一キー 2 回 → LoadCount=1"
+        - "51 個投入 → 最終アクセス最古の 1 個が破棄(FMEA-007)"
+        - "TTL: 3 分経過(FakeClock)後の取得 → 再ロード"
+
+    - id: CP-SET-009
+      characteristic: 設定ストアのラウンドトリップ・破損耐性が REQ-052 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-SET-009。一時ディレクトリ)
+      oracle: 保存→読込の値一致と破損時の既定値復帰
+      approver: automated
+      test_vectors:
+        - "全項目ラウンドトリップ(locale/ウィンドウ/列数/LastViewId)"
+        - "壊れた JSON('{{{')→ 既定値+.bak 退避+再生成、例外なし(FMEA-009)"
+        - "ファイル欠落 → 既定値"
+
+    - id: CP-I18N-010
+      characteristic: i18n 解決器のフォールバック・補間が REQ-050 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-I18N-010。テスト用ミニ辞書)
+      oracle: 解決文字列の完全一致
+      approver: automated
+      test_vectors:
+        - "en に存在 → en 文言 / en 欠落 → ja 文言 / 両方欠落 → キー文字列"
+        - "補間: 'Hello {name}' + {name=Tom} → 'Hello Tom' / 引数欠落 → '{name}' のまま"
+        - "SetLocale → CultureChanged 発火 1 回"
+
+    - id: CP-NFR-001
+      characteristic: 条件評価 1,000 画像(各 5 タグ)× 3 条件 ≦ 200ms(NFR-001)
+      classification: core
+      depth: L3
+      tolerance: "3 回計測の中央値 ≦ 200ms(Release・ウォームアップ 1 回後)"
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-NFR-001、カテゴリ perf)
+      oracle: Stopwatch 計測値の判定
+      approver: automated
+
+    - id: CP-L1-SMOKE
+      characteristic: ビルド+起動+正常系 1 本のスモーク(unit 緑のまま表面全滅の盲点対策)
+      classification: surface
+      depth: L1
+      tolerance: "全手順成功"
+      fixture: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示"
+      oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並ぶこと"
+      approver: factory self-acceptance(最終確認は maintainer)
+
+    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-5 ----
+    # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
+    # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
+    - { id: CP-UI-G1, characteristic: "グリッド・シェル・NodeGraph ツリーの描画と操作(G-1)",  classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G3, characteristic: "詳細パネルの全項目表示・ノート保存(G-3)",              classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G4, characteristic: "ビューアのフィット表示・ナビゲーション・端停止(G-4)",   classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }

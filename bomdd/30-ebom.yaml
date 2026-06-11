@@ -1,0 +1,282 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: E-BOM
+
+# 規律(method-v1 §2):
+#   - 核/表面で型分け。核は requirement_refs 必須、表面は external_source_ref 必須
+#   - 木でなくグラフ(woven 部品に owner/consumers)
+#   - 表面の変更は defect でなく知識更新
+
+ebom:
+  items:
+    # ---------- 核(core) ----------
+    - id: E-DOMAIN-001
+      name: ドメインモデル(エンティティ・値型・エラー語彙)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-001, REQ-002, REQ-016, REQ-020]
+      kbom_refs: []
+      depends_on: []
+      graph_edges:                    # woven: ほぼ全部品が参照する
+        owner: E-DOMAIN-001
+        consumers: [E-EVAL-002, E-GRAPH-003, E-SORT-004, E-SCAN-005, E-TAGSVC-008, E-VIEWSVC-009, E-DB-010, E-UI-SHELL-021]
+      invariants:
+        - INV-001 ID は UUIDv4 小文字・生成後不変
+        - INV-002 日時は ISO 8601 UTC(ミリ秒 3 桁・literal Z)
+        - INV-007 numeric タグ値は InvariantCulture 文字列で保持
+      acceptance_refs: [CP-UTIL-005]
+
+    - id: E-EVAL-002
+      name: 条件評価器(演算子 5 種・AND 結合・エッジケース規則)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-031, REQ-016]
+      kbom_refs: [K-REGEX]
+      depends_on: [E-DOMAIN-001]
+      invariants:
+        - INV-007 数値比較は常に数値として行う(辞書順比較禁止)
+        - INV-010 評価対象は status=normal のみ
+        - 例外でクラッシュしない(不正 regex・型不一致は不成立)
+      acceptance_refs: [CP-EVAL-001, CP-NFR-001]
+
+    - id: E-GRAPH-003
+      name: NodeGraph 構築器+パス→条件変換+ホームタグ解決
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-035, REQ-036, REQ-037, REQ-034]
+      kbom_refs: []
+      depends_on: [E-DOMAIN-001, E-EVAL-002]
+      invariants:
+        - INV-004 階層に循環なし(構築器は循環入力でも停止しない=検出して拒否)
+        - INV-008 参照切れノードはフォールバック(ルートへ)
+        - INV-010 値抽出は status=normal のみ
+      acceptance_refs: [CP-GRAPH-002]
+
+    - id: E-SORT-004
+      name: 整列器(sort_field×direction・安定ソート)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-038, REQ-029, REQ-033]
+      depends_on: [E-DOMAIN-001]
+      invariants:
+        - 同値時の二次キーは id 昇順(全ソートで安定)
+        - name は OrdinalIgnoreCase
+      acceptance_refs: [CP-SORT-003]
+
+    - id: E-SCAN-005
+      name: スキャン判定器+スキャンサービス+ステータス遷移
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016]
+      kbom_refs: [K-WINFS]
+      depends_on: [E-DOMAIN-001, E-HASH-006, E-DB-010]
+      invariants:
+        - INV-009 画像ファイルへ書き込まない(読み取り専用)
+        - 遷移は仕様 §2.1 遷移表の 6 パターンのみ
+        - スキャン二重起動禁止(同一フォルダ)
+      acceptance_refs: [CP-SCAN-004]
+
+    - id: E-HASH-006
+      name: ハッシュ計算+パス正規化+サイズ整形(共通ユーティリティ)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-013, REQ-014, REQ-043]
+      depends_on: []
+      graph_edges:
+        owner: E-HASH-006
+        consumers: [E-SCAN-005, E-RELINK-007, E-THUMB-020]
+      invariants:
+        - INV-005 relative_path は正規形のみ・比較は case-insensitive
+      acceptance_refs: [CP-UTIL-005]
+
+    - id: E-RELINK-007
+      name: 再リンク(候補検索+確定処理)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-017]
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      invariants:
+        - INV-001 missing 側 image_id 不変(タグ・関連の保全)
+      acceptance_refs: [CP-SCAN-004]
+
+    - id: E-TAGSVC-008
+      name: タグ管理サービス(CRUD・UPSERT 付与・バッチ・カスケード・バリデーション)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-020, REQ-021, REQ-022, REQ-023, REQ-024, REQ-025, REQ-026, REQ-027, REQ-028, REQ-029]
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      invariants:
+        - INV-003 (image_id, tag_id) は高々 1 行
+        - INV-004 タグ階層に循環なし
+        - INV-006 バッチは全適用か無適用
+      acceptance_refs: [CP-TAG-011]
+
+    - id: E-VIEWSVC-009
+      name: ビュー管理サービス(CRUD・modified_at 規則・お気に入り/最近・階層ノード管理)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-030, REQ-032, REQ-033, REQ-034]
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      invariants:
+        - INV-002 modified_at はビュー本体・条件・階層の変更で更新、閲覧では不変
+        - INV-004 ビュー階層ノードの移動で循環を作らない
+      acceptance_refs: [CP-VIEW-012]
+
+    - id: E-DB-010
+      name: 永続化層(スキーマ DDL・マイグレーションランナー・リポジトリ群)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-003, REQ-004, REQ-005, REQ-028]
+      kbom_refs: [K-SQLITE]
+      depends_on: [E-DOMAIN-001]
+      graph_edges:                    # woven: 全サービスの土台
+        owner: E-DB-010
+        consumers: [E-SCAN-005, E-RELINK-007, E-TAGSVC-008, E-VIEWSVC-009]
+      invariants:
+        - FK 規則は仕様 §2.0 のとおり(CASCADE/SET NULL)
+        - 新規 DB = 最新スキーマ+全マイグレーション既適用マーク
+        - 接続ごとに PRAGMA journal_mode=WAL・foreign_keys=ON を明示発行
+      acceptance_refs: [CP-DB-006]
+
+    - id: E-CACHE-011
+      name: 画像メモリキャッシュ(LRU 50 枚・TTL 3 分)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-045]
+      depends_on: []
+      invariants:
+        - 上限超過時は最終アクセスが最古のものから破棄
+      acceptance_refs: [CP-CACHE-008]
+
+    - id: E-SETTINGS-013
+      name: 設定ストア(settings.json・破損耐性)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-052]
+      depends_on: []
+      invariants:
+        - 破損ファイルで例外を外に漏らさない(既定値+再生成)
+      acceptance_refs: [CP-SET-009]
+
+    - id: E-I18N-014
+      name: i18n 解決器(フォールバック・補間・動的切替通知)
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-050, REQ-051]
+      kbom_refs: [K-I18N]
+      depends_on: []
+      invariants:
+        - INV-008 欠落キーで例外を投げない(ja → キー文字列の順でフォールバック)
+      acceptance_refs: [CP-I18N-010]
+
+    # ---------- 表面(surface) ----------
+    - id: E-THUMB-020
+      name: サムネイル生成サービス
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-040]
+      external_source_ref: K-SKIA
+      kbom_refs: [K-SKIA]
+      depends_on: [E-HASH-006]
+      invariants:
+        - INV-009 元画像へ書き込まない
+        - 失敗時もスキャン・一覧を停止させない
+      acceptance_refs: [CP-THUMB-007]
+
+    - id: E-UI-SHELL-021
+      name: シェル UI(メインウィンドウ・ナビゲーション・同期フォルダ管理・スキャン実行/結果表示)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-010, REQ-015, REQ-052]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-SCAN-005, E-SETTINGS-013, E-I18N-014]
+      invariants:
+        - 多重起動禁止(2 つ目は既存をアクティブ化)
+      acceptance_refs: [CP-UI-G1, CP-L1-SMOKE]
+
+    - id: E-UI-GRID-022
+      name: グリッド/リスト表示(仮想化・選択・空状態)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-041, REQ-042]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-SORT-004, E-THUMB-020, E-EVAL-002]
+      invariants:
+        - 選択ロジックは ViewModel に置き unit 検査可能にする(OC 系)
+      acceptance_refs: [CP-UI-G1, CP-UI-G2]
+
+    - id: E-UI-DETAIL-023
+      name: 画像詳細パネル(メタデータ・ノート編集・タグ一覧)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-043]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-TAGSVC-008, E-HASH-006]
+      acceptance_refs: [CP-UI-G3]
+
+    - id: E-UI-VIEWER-024
+      name: 基本画像ビューア(フィット表示・キーボードナビゲーション)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-044, REQ-045]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM]
+      depends_on: [E-CACHE-011, E-SORT-004]
+      invariants:
+        - ナビゲーション(端で停止・現在位置)は ViewModel で unit 検査可能にする
+      acceptance_refs: [CP-UI-G4]
+
+    - id: E-UI-NODEGRAPH-025
+      name: NodeGraph ツリー UI+ビュー編集 UI(条件・階層・列設定)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-030, REQ-034, REQ-035, REQ-036, REQ-037]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-GRAPH-003, E-VIEWSVC-009]
+      acceptance_refs: [CP-UI-G1]
+
+    - id: E-UI-TAGS-026
+      name: タグ管理 UI(一覧・編集ダイアログ・色選択・定義済み値並べ替え)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-TAGSVC-008]
+      acceptance_refs: [CP-UI-G1]
+
+    - id: E-I18N-ASSETS-027
+      name: 翻訳資産(ja.json / en.json)
+      classification: surface
+      rationale_type: design-token
+      requirement_refs: [REQ-050]
+      external_source_ref: "原典 view-prism messages/ja.json・en.json(変換規則は K-I18N)"
+      kbom_refs: [K-I18N]
+      depends_on: [E-I18N-014]
+      acceptance_refs: [CP-UI-G5]
+
+    - id: E-DESIGN-028
+      name: デザイントークン(配色・余白・寸法・タイポグラフィ)
+      classification: surface
+      rationale_type: design-token
+      requirement_refs: [REQ-041]
+      external_source_ref: K-DESIGN
+      kbom_refs: [K-DESIGN]
+      depends_on: []
+      graph_edges:
+        owner: E-DESIGN-028
+        consumers: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
+      acceptance_refs: [CP-UI-G1]
+
+# NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
+nfr_targets:
+  - id: NFR-001
+    statement: 条件評価(OC-1)は 1,000 画像(各 5 タグ付与)× 3 条件で 200ms 以内(3 回計測の中央値、Release ビルド)
+    requirement_refs: [REQ-031]
+    verified_by: CP-NFR-001
+  # グリッド 1 万件のスクロール性能は仕様 §4 のとおり探索プローブ(P-01)で観測(固定目標値にしない)
