@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M-SLN-000: App は Run 1 では起動可能な最小スタブ(UI 本体は後続 Run)。
+       パッケージは procurement(32-mbom.yaml)の固定バージョンのみ。 -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <!-- CHEAT-002: Avalonia.Diagnostics 12.0.4 は NuGet に存在しない(最新 11.3.17)。
+         substitutable: true かつ Debug 限定の診断用途のため参照を見送り(Run 1 の App はスタブ)。 -->
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ViewPrism2.Core\ViewPrism2.Core.csproj" />
+    <ProjectReference Include="..\ViewPrism2.Infrastructure\ViewPrism2.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ViewPrism2.App.App"
+             RequestedThemeVariant="Light">
+  <!-- K-DESIGN: テーマは Fluent(ライトのみ。ダーク不要 — 仕様 §4) -->
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+</Application>

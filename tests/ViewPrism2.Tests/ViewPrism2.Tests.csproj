@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M-HARNESS-015 / ADR-0007: xunit.v3 + Microsoft.Testing.Platform。
+       xunit.v3 は MTP 内蔵のため追加ランナーパッケージ不要。
+       TestingPlatformDotnetTestSupport=true で `dotnet test` から MTP 実行に接続する。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ViewPrism2.Core\ViewPrism2.Core.csproj" />
+    <ProjectReference Include="..\..\src\ViewPrism2.Infrastructure\ViewPrism2.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

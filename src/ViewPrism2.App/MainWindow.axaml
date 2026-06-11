@@ -1,0 +1,9 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ViewPrism2.App.MainWindow"
+        Title="ViewPrism2"
+        Width="1200" Height="800"
+        MinWidth="900" MinHeight="600">
+  <!-- K-DESIGN: ウィンドウ既定 1200×800・最小 900×600。UI 本体は後続 Run(M-UI-013) -->
+  <Grid />
+</Window>

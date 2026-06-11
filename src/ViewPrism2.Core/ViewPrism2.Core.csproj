@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ADR-0002: Core は BCL のみ(UI・DB・画像ライブラリへの参照禁止) -->
+</Project>

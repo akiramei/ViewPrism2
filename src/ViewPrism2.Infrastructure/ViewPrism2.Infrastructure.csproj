@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ADR-0002: Infrastructure → Core のみ参照。
+       Run 1 は SettingsStore のみのため調達パッケージ参照は不要(BCL の System.Text.Json を使用)。
+       SQLite/Dapper/SkiaSharp/Serilog は該当製造単位(M-DB-007 / M-THUMB-008 等)の Run で追加する。 -->
+  <ItemGroup>
+    <ProjectReference Include="..\ViewPrism2.Core\ViewPrism2.Core.csproj" />
+  </ItemGroup>
+</Project>
