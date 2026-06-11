@@ -161,10 +161,30 @@ public sealed class GraphNode
 
     public string? TagId { get; init; }
 
+    /// <summary>展開元タグの種別(ルートは null)。パス→条件変換(OC-3)が参照する。</summary>
+    public TagType? TagType { get; init; }
+
     /// <summary>値ノード・一体型ノードの値。</summary>
     public string? Value { get; init; }
 
+    /// <summary>展開元の階層ノードの値条件種別(numeric ノードの条件生成に使用、REQ-036)。</summary>
+    public HierarchyConditionType? ConditionType { get; init; }
+
+    /// <summary>展開元の階層ノードの condition_value JSON(仕様 §2.4 のスキーマ)。</summary>
+    public string? ConditionValue { get; init; }
+
     public List<GraphNode> Children { get; } = [];
+}
+
+/// <summary>再リンク候補の表示情報(REQ-017)。relative_path 昇順で列挙される。</summary>
+public sealed record RelinkCandidate
+{
+    public required string ImageId { get; init; }
+    public required string RelativePath { get; init; }
+    public long FileSize { get; init; }
+
+    /// <summary>ISO 8601 UTC 文字列(INV-002)。</summary>
+    public required string ModifiedDate { get; init; }
 }
 
 /// <summary>スキャン完了サマリ(REQ-015)。</summary>
