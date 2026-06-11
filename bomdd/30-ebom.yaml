@@ -185,7 +185,7 @@ ebom:
       acceptance_refs: [CP-THUMB-007]
 
     - id: E-UI-SHELL-021
-      name: シェル UI(メインウィンドウ・ナビゲーション・同期フォルダ管理・スキャン実行/結果表示)
+      name: シェル UI(メインウィンドウ・タブナビゲーション(タグ/画像+設定)・同期フォルダ管理・スキャン実行/結果表示)— v1.2 タブ式に改訂
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-010, REQ-015, REQ-052]
@@ -231,24 +231,37 @@ ebom:
       acceptance_refs: [CP-UI-G4]
 
     - id: E-UI-NODEGRAPH-025
-      name: NodeGraph ツリー UI+ビュー編集 UI(条件・階層・列設定)
+      name: タグタブ中央+画像タブ左 — ビュー階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D 追加)と NodeGraph ナビゲーションツリー — v1.2 改訂
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-030, REQ-034, REQ-035, REQ-036, REQ-037]
-      external_source_ref: K-AVALONIA
+      external_source_ref: "原典 BaseViewHandler/TagTreeItem/HierarchyTreeView(仕様 §2.6 v1.2)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-GRAPH-003, E-VIEWSVC-009]
-      acceptance_refs: [CP-UI-G1]
+      acceptance_refs: [CP-UI-G6]
 
     - id: E-UI-TAGS-026
-      name: タグ管理 UI(一覧・編集ダイアログ・色選択・定義済み値並べ替え)
+      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)— v1.2 改訂
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029]
-      external_source_ref: K-AVALONIA
+      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030]
+      external_source_ref: "原典 TagManagementPanel/ViewManagementPanel(仕様 §2.6 v1.2)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-TAGSVC-008]
-      acceptance_refs: [CP-UI-G1]
+      depends_on: [E-TAGSVC-008, E-VIEWSVC-009]
+      acceptance_refs: [CP-UI-G6]
+
+    - id: E-UI-TAGASSIGN-029
+      name: タグ付与パネル(画像タブ右・タグ編集モード。現在タグ/追加/適用、numeric 固定値/連番ダイアログ)— v1.2 追加(ずる裁定)
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-046, REQ-026, REQ-027]
+      external_source_ref: "原典 TaggingPanel/NumericTagDialog/ImageTagChip(仕様 §2.6 v1.2)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-TAGSVC-008, E-UI-GRID-022]
+      invariants:
+        - 適用は REQ-027 の原子バッチ(部分適用を残さない)
+        - 適用対象計算・連番計算は ViewModel で unit 検査可能にする
+      acceptance_refs: [CP-TAGUI-013, CP-UI-G7]
 
     - id: E-I18N-ASSETS-027
       name: 翻訳資産(ja.json / en.json)

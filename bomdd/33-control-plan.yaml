@@ -234,11 +234,30 @@ control_plan:
       oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並ぶこと"
       approver: factory self-acceptance(最終確認は maintainer)
 
-    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-5 ----
+    - id: CP-TAGUI-013
+      characteristic: タグ付与パネルの ViewModel ロジック(v1.2 追加・REQ-046)
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TAGUI-013)
+      oracle: 適用結果の DB 状態・計算値の完全一致
+      approver: automated
+      test_vectors:
+        - "共通タグ算出: 3 画像中 2 画像のみ持つタグは『現在のタグ』に出ない"
+        - "連番: 選択順 [C,A,B]・開始値 5 → C=5, A=6, B=7(id 順でない — FMEA-014)"
+        - "固定値: 全選択画像に同値"
+        - "numeric min=1,max=5 で 6 を入力 → ダイアログ内拒否・適用 0 件"
+        - "適用中 1 件失敗 → 全ロールバック(REQ-027)"
+        - "解除: 現在タグの × → 当該タグのみ選択画像全件から解除"
+        - "選択 0 件: プレースホルダ状態フラグ"
+
+    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-7(v1.2) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
-    - { id: CP-UI-G1, characteristic: "グリッド・シェル・NodeGraph ツリーの描画と操作(G-1)",  classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G1, characteristic: "シェル(タブ構成)+グリッドの描画と操作(G-1)",          classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G3, characteristic: "詳細パネルの全項目表示・ノート保存(G-3)",              classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G4, characteristic: "ビューアのフィット表示・ナビゲーション・端停止(G-4)",   classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止(G-4)",         classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }

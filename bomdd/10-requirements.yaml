@@ -385,7 +385,7 @@ requirements:
       - "ファイル更新後も古いサムネイルが表示され続ける(キャッシュキーがパスのみ依存)— 原典同様の既知制約として許容"
 
   - id: REQ-041
-    statement: "グリッド表示: 列数は 3/4/5/6 から選択(既定 4)、セルは正方形サムネイル+ファイル名、クリックで選択(Ctrl+クリックで個別トグルの複数選択、選択順の番号を表示)、ダブルクリックで画像詳細を開く。画像 0 件時は中央に空状態メッセージを表示する。大量件数(目安 100 件以上)でも UI 仮想化によりスクロールが滑らかであること"
+    statement: "グリッド表示: 列数は 3/4/5/6 から選択(既定 4)、セルは正方形サムネイル+ファイル名、クリックで選択(Ctrl+クリックで個別トグルの複数選択、選択順の番号を表示)、ダブルクリックでビューア(REQ-044)を起動する(タグ編集モード中はダブルクリック無効)。画像 0 件時は中央に空状態メッセージを表示する。大量件数(目安 100 件以上)でも UI 仮想化によりスクロールが滑らかであること"
     rationale: |
       原典 ImageGrid.tsx:23,43-50、VirtualizedGrid.tsx。仮想化は Avalonia の仮想化パネルで実現(実装方式は自由)。
       受入: 選択ロジックは unit(ViewModel)、描画は golden+承認者。性能は探索プローブ(1 万件で操作可能)。
@@ -441,6 +441,22 @@ requirements:
     classification_hint: core
     counterexamples:
       - "キャッシュ無制限でメモリ不足クラッシュ(10MB×数百枚)"
+
+  - id: REQ-046
+    statement: "タグ付与パネル: 画像タブの「タグ編集」モードで右パネルに表示し、選択画像の現在タグ一覧(個別解除可)と全タグからの追加(検索可)を提供する。「適用」で選択画像全件へ一括付与。textual タグは候補値ドロップダウン+自由入力で値を指定、numeric タグは値入力ダイアログで「全画像に同じ値」(固定値)または「選択順に連番」(開始値+i)を選択して適用する。選択 0 件時はプレースホルダを表示する"
+    rationale: |
+      製造 Run3 のずる裁定で発覚した E-BOM の欠落(タグ付与 UI 不在)への補正(2026-06-11、loop-v1 収束)。
+      原典: TaggingPanel.tsx(Current/Add タブ・適用ボタン)、NumericTagDialog.tsx:64-128(fixed/sequential)、
+      ImageTagChip.tsx(値編集・解除)。付与・解除の意味論は REQ-026(UPSERT)/REQ-027(原子バッチ)に従う。
+      候補値ドロップダウン+自由入力は REQ-024(候補値は入力補助)の UI 化(原典は手入力のみ — 意図的差分)。
+      受入: ViewModel ロジック(適用対象計算・連番 startValue+i・解除・numeric 範囲検証の伝搬)は unit、
+      画面は golden(G-7)+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 view-prism TaggingPanel/NumericTagDialog(K-AVALONIA/K-DESIGN)"
+    counterexamples:
+      - "連番適用が選択順でなく id 順に振られ、ユーザーの意図した順序と食い違う"
+      - "numeric 範囲外の値が一括適用で 1 件だけ失敗し、部分適用が残る(REQ-027 違反)"
 
   # ============================================================
   # i18n・設定 REQ-050〜

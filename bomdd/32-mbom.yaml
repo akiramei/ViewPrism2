@@ -190,11 +190,25 @@ mbom:
         path: src/ViewPrism2.App/(Views/, ViewModels/)
         type: avalonia-app
       interface_contract:
-        shell: "左: ビュー一覧(お気に入り/最近)+NodeGraph ツリー / 中央: グリッド⇔リスト切替+ツールバー(列数・ソート・表示切替)/ 右: 詳細パネル。メニュー: 同期フォルダ管理・タグ管理・設定(言語)"
-        viewmodels: "選択(Ctrl トグル・選択順)・空状態・ノード選択→評価呼び出しは ViewModel ロジックとして unit 検査可能に分離(OC 系を UI から呼ぶだけにする)"
+        shell: "v1.2(仕様 §2.6): 上部タブ『タグ』『画像』+『設定』。タグタブ=3 ペイン(ビュー管理/階層エディタ(バッチ保存)/タグパレット+作成ダイアログ)。画像タブ=左(フォルダ+ビュー+NodeGraph ツリー+全画像入口)/ツールバー(表示切替・列数・ソート・タグ編集モード)/中央グリッド・リスト/右パネル(詳細⇔タグ付与切替)"
+        viewmodels: "選択(Ctrl トグル・選択順)・空状態・ノード選択→評価呼び出し・階層編集のダーティ追跡は ViewModel ロジックとして unit 検査可能に分離(OC 系を UI から呼ぶだけにする)"
         design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ"
-      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-L1-SMOKE]
+      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-UI-G6, CP-L1-SMOKE]
       fmea_refs: [FMEA-013]
+
+    - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)
+      ebom_refs: [E-UI-TAGASSIGN-029]
+      artifact:
+        path: src/ViewPrism2.App/(ViewModels/TaggingPanelViewModel.cs, Views/ 内タグ付与パネル+数値値ダイアログ)
+        type: avalonia-app
+      interface_contract:
+        panel: "TaggingPanelViewModel(selectedImages): CurrentTags(共通タグ+解除)/ AvailableTags(検索)/ ApplyAsync(原子バッチ)。選択 0 件はプレースホルダ"
+        numeric: "NumericValueDialog: モード=固定値|連番(開始値+選択順 i)。min/max/step 検証をダイアログ内で実施し範囲外は適用前に拒否"
+        textual: "候補値ドロップダウン(predefined_values 順)+自由入力"
+      invariants:
+        - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
+      acceptance_refs: [CP-TAGUI-013, CP-UI-G7]
+      fmea_refs: [FMEA-014]
 
     - id: M-UI-014
       ebom_refs: [E-UI-VIEWER-024]
@@ -251,6 +265,7 @@ fmea:
   - { id: FMEA-011, unit: M-SCAN-005,  failure_mode: "ロックファイル・ジャンクションでスキャン全体停止/無限再帰",   effect: "スキャン不能",                          targeted_by: CP-SCAN-004 }
   - { id: FMEA-012, unit: M-THUMB-008, failure_mode: "壊れた画像で例外伝播/小画像の拡大",                            effect: "一覧表示停止・画質劣化",                targeted_by: CP-THUMB-007 }
   - { id: FMEA-013, unit: M-UI-013,    failure_mode: "仮想化なしの素朴な ItemsControl 実装",                         effect: "1 万件で UI フリーズ",                  targeted_by: CP-UI-G1(+probe P-01) }
+  - { id: FMEA-014, unit: M-UI-016,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:
