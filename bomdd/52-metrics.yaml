@@ -1,0 +1,34 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Metrics
+
+# 二軸品質(method-v1 §6): 決定性(工場間ばらつき)と正しさ(受入)は独立に測る。
+# 本ループは単一工場(チャーター: 実用適用)のため、ばらつき測定は対象外。
+
+metrics:
+  factory_runs: 4                  # Run1 骨格+純粋コア / Run2 DB+スキャン+サービス / Run3 表面 / Run4 収束再製造
+  fixed_oracle:
+    cases: 12                      # S-01〜S-12(tag loop-v1-r1 で凍結、ループ中不変)
+    after_run3: "12/12 PASS"
+    after_run4: "11/12 → 治具修理(JIG-001)後 12/12 PASS。製品起因の乖離 0"
+  self_acceptance:
+    tests_final: 190               # unit/L2/L3(+オラクル治具 20)
+    build_warnings: 0              # TreatWarningsAsErrors
+    regressions_across_runs: 0
+  interventions: 0                 # 製造中の設計者介入(隔離は全 Run で維持。質問往復ゼロ)
+  cheats:
+    total: 66                      # Run1: 13 / Run2: 21 / Run3: 18 / Run4: 14
+    blocker: 0
+    friction: 8                    # 裁定済み(51-cheat-log.md)
+    minor: 58
+    distribution: "核(ドメインロジック)の挙動乖離 0。すべて表面(UI 構成・未規定次元)と契約転記漏れに集中"
+  targeted_fix_success:            # 収束ループの狙い撃ち補正が 1 回で受入緑になったか
+    run4_targets: [シェルのタブ化, タグタブ3ペイン, タグ付与パネル(REQ-046), ビューア起動経路, 階層バッチ保存]
+    result: "5/5 — fresh re-run 1 回で全受入緑(自己受入+オラクル)"
+  new_unspecified_found_in_convergence: 2   # views.description 契約欠落(CHEAT-053)/ view_conditions 編集 UI の行き先(CHEAT-056)
+  jig_defects: 1                   # JIG-001: オラクル S-05 フィクスチャの現行コード結合(偽陽性)→ 凍結スナップショット化で修理
+  nfr:
+    NFR-001: "PASS — 条件評価 1,000 画像×3 条件、200ms 制限を大幅充足(CP-NFR-001、3 回中央値)"
+  golden_pending: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-UI-G4, CP-UI-G5, CP-UI-G6, CP-UI-G7]   # 承認者 maintainer
+  probes_pending: [P-01, P-02, P-03, P-04]   # 探索プローブ(golden 承認と併せて実施可)

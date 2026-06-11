@@ -1,0 +1,39 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: As-Built
+
+as_built:
+  date: 2026-06-11
+  bom_version: "v1.2(commit 1399d6c。凍結オラクルは tag loop-v1-r1 のまま不変)"
+  factory:
+    id: factory-01
+    model: claude(隔離サブエージェント、単一工場)
+    supplied_package: [bomdd/20-spec.md, bomdd/30-ebom.yaml, bomdd/31-kbom.yaml, bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/34-routing.yaml, bomdd/40-work-order.md, docs/adr/, bomdd/assets/i18n/(Run3 以降)]
+    not_supplied: [原典 view-prism ソース, 設計対話, bomdd/41-fixed-oracle.yaml, bomdd/42-exploratory-probes.yaml, tests/ViewPrism2.Oracle/]
+    runs:
+      - { run: 1, commit: b3733e8, scope: "M-SLN-000 / M-CORE-001 / M-EVAL-002 / M-SORT-004 / M-CACHE-009 / M-SET-010 / M-I18N-011(コア)" }
+      - { run: 2, commit: 269438f, scope: "M-GRAPH-003 / M-DB-007 / M-SCAN-005 / M-VIEWSVC-012" }
+      - { run: 3, commit: c3c593f, scope: "M-THUMB-008 / M-UI-013 / M-UI-014 / i18n 資産統合" }
+      - { run: 4, commit: 41d2f97, scope: "収束再製造(BOM v1.2): タブ式シェル / タグタブ 3 ペイン / M-UI-016 タグ付与 / migration 001" }
+  artifacts:
+    solution: ViewPrism2.sln(src/Core・Infrastructure・App + tests/Tests・Oracle)
+    runtime: ".NET 10.0.100 / Avalonia 12.0.4 / Microsoft.Data.Sqlite 10.0.9 / Dapper 2.1.79 / SkiaSharp 3.119.4 / CommunityToolkit.Mvvm 8.4.2 / xunit.v3 3.2.2"
+  inspection_results:
+    build: "Release・警告 0(TreatWarningsAsErrors)"
+    unit_l2_l3: "tests/ViewPrism2.Tests 190/190 PASS(CP トレース: Trait cp=CP-xxx)"
+    fixed_oracle: "tests/ViewPrism2.Oracle 20/20 PASS(S-01〜S-12。JIG-001 修理後)"
+    l1_smoke: "工場(UI Automation+in-process)+設計者(実起動 6 秒生存)とも PASS"
+    nfr: "CP-NFR-001 PASS"
+  cheat_log_ref: bomdd/51-cheat-log.md(総数 66・blocker 0・裁定済み)
+  metrics_ref: bomdd/52-metrics.yaml
+
+  # golden 承認記録(CP-UI-G1〜G7 — 承認者 maintainer。AUDIT-303 形式)
+  golden_approvals:
+    - { cp_id: CP-UI-G1, date: ~, approver: maintainer, verdict: pending, notes: "シェル(タブ構成)+グリッド" }
+    - { cp_id: CP-UI-G2, date: ~, approver: maintainer, verdict: pending, notes: "リスト表示" }
+    - { cp_id: CP-UI-G3, date: ~, approver: maintainer, verdict: pending, notes: "詳細パネル+ノート保存" }
+    - { cp_id: CP-UI-G4, date: ~, approver: maintainer, verdict: pending, notes: "ビューア(ダブルクリック起動・端停止)" }
+    - { cp_id: CP-UI-G5, date: ~, approver: maintainer, verdict: pending, notes: "ja/en 即時切替" }
+    - { cp_id: CP-UI-G6, date: ~, approver: maintainer, verdict: pending, notes: "タグタブ 3 ペイン+ダイアログ+バッチ保存" }
+    - { cp_id: CP-UI-G7, date: ~, approver: maintainer, verdict: pending, notes: "タグ付与パネル(固定値/連番)" }
