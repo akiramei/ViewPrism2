@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ViewPrism2.App.ViewModels"
+             x:Class="ViewPrism2.App.Views.TaggingPanelView"
+             x:DataType="vm:TaggingPanelViewModel">
+  <!-- タグ付与パネル(M-UI-016、REQ-046、G-7): 現在のタグ(共通タグ+解除)/ タグを追加(検索+適用) -->
+  <Panel>
+    <!-- 選択 0 件のプレースホルダ(仕様 §2.6) -->
+    <TextBlock Text="{Binding Loc[image.feature.selectImagesForTagging]}" IsVisible="{Binding !HasSelection}"
+               Foreground="{StaticResource TextMutedBrush}"
+               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,24" TextWrapping="Wrap" />
+
+    <DockPanel IsVisible="{Binding HasSelection}" Margin="12">
+      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectionCountText}"
+                 Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,0,0,8" />
+
+      <!-- 適用(下部固定) -->
+      <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0">
+        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}"
+                   FontSize="12" TextWrapping="Wrap" />
+        <Button Content="{Binding Loc[tagging.apply]}" Command="{Binding ApplyCommand}"
+                IsEnabled="{Binding CanApply}" HorizontalAlignment="Stretch" />
+      </StackPanel>
+
+      <Grid RowDefinitions="Auto,Auto,8,Auto,Auto,Auto,Auto">
+        <!-- 現在のタグ(共通タグ。各行に解除×) -->
+        <TextBlock Grid.Row="0" Text="{Binding Loc[tagging.currentTags]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+        <Panel Grid.Row="1">
+          <ItemsControl ItemsSource="{Binding CurrentTags}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CurrentTagRowViewModel">
+                <DockPanel Margin="0,2">
+                  <Button DockPanel.Dock="Right" Classes="mini" Content="✕"
+                          Command="{Binding $parent[UserControl].((vm:TaggingPanelViewModel)DataContext).RemoveTagCommand}"
+                          CommandParameter="{Binding}" />
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
+                             IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                    <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                             IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding ValueText}" IsVisible="{Binding HasValue}"
+                               Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </DockPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding Loc[tagging.noCommonTags]}" IsVisible="{Binding HasNoCurrentTags}"
+                     Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+        </Panel>
+
+        <!-- タグを追加(全タグ+検索) -->
+        <TextBlock Grid.Row="3" Text="{Binding Loc[tag.addTag]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+        <TextBox Grid.Row="4" Text="{Binding SearchText}" PlaceholderText="{Binding Loc[tag.searchTags]}"
+                 Margin="0,0,0,4" />
+        <ListBox Grid.Row="5" ItemsSource="{Binding AvailableTags}" SelectedItem="{Binding SelectedTag}"
+                 MaxHeight="200" Background="Transparent">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:AvailableTagRowViewModel">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
+                         IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                         IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding TypeText}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- textual: 候補値ドロップダウン+自由入力(REQ-046)。numeric は適用時にダイアログ -->
+        <StackPanel Grid.Row="6" Spacing="4" Margin="0,8,0,0">
+          <ComboBox ItemsSource="{Binding CandidateValues}" SelectedItem="{Binding SelectedCandidate}"
+                    IsVisible="{Binding IsTextualSelected}" HorizontalAlignment="Stretch" />
+          <TextBox Text="{Binding ValueText}" IsVisible="{Binding IsTextualSelected}"
+                   PlaceholderText="{Binding Loc[tag.enterValue]}" />
+          <TextBlock Text="{Binding Loc[tagging.numericDialog.title]}" IsVisible="{Binding IsNumericSelected}"
+                     Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+        </StackPanel>
+      </Grid>
+    </DockPanel>
+  </Panel>
+</UserControl>

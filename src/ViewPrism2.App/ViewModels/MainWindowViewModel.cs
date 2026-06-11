@@ -10,8 +10,11 @@ using ViewPrism2.Core.Services;
 namespace ViewPrism2.App.ViewModels;
 
 /// <summary>
-/// シェルのルート ViewModel(M-UI-013、E-UI-SHELL-021)。
-/// 左=ビュー一覧(お気に入り/最近)+NodeGraph ツリー / 中央=グリッド⇔リスト / 右=詳細パネル。
+/// シェルのルート ViewModel(M-UI-013 v1.2、E-UI-SHELL-021)。
+/// 上部タブナビゲーション「タグ」「画像」+右端「設定」(仕様 §2.6 v1.2)。
+/// 画像タブ: 左=同期フォルダ+ビュー(お気に入り/最近)+NodeGraph+「全画像」固定入口 /
+/// ツールバー(表示切替・列数・ソート・タグ編集モード)/ 中央=グリッド⇔リスト /
+/// 右=詳細パネル⇔タグ付与パネル切替。
 /// ノード選択 → パス→条件変換(OC-3)→ 条件評価(OC-1)→ 整列(OC-4)は Core を呼ぶだけにする(K-MVVM)。
 /// </summary>
 public sealed partial class MainWindowViewModel : ObservableObject
@@ -32,6 +35,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Dictionary<string, Tag> _tagById = new(StringComparer.Ordinal);
     private IReadOnlyList<ViewCondition> _viewConditions = [];
     private bool _suppressEvaluation;
+    private bool _imagesTabStale;
 
     public MainWindowViewModel(
         ISyncFolderRepository folders,
@@ -46,6 +50,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LocalizationService localization,
         AppSettings settings,
         IWindowService windows,
+        FolderManagementViewModel folderPane,
+        TagsTabViewModel tagsTab,
+        TaggingPanelViewModel tagging,
         ILogger<MainWindowViewModel>? logger = null)
     {
         _folders = folders;
@@ -66,11 +73,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
             GridColumns = Math.Clamp(settings.GridColumns, 3, 6),
         };
         Detail = new DetailPanelViewModel(images, tags, thumbnails, localization);
+        FolderPane = folderPane;
+        TagsTab = tagsTab;
+        Tagging = tagging;
 
         AllImagesItem = new ViewListItemViewModel(null, localization.T("view.allImages"));
         Browser.SelectionChanged += async (_, _) => await OnSelectionChangedAsync();
         Browser.OpenItemRequested += (_, item) => OpenViewer(item);
         Detail.NotesSaved += (_, _) => StatusMessage = localization.T("success.saved");
+        FolderPane.DataChanged += async (_, _) => await ReloadAsync();
+        TagsTab.DataChanged += (_, _) => _imagesTabStale = true;
+        Tagging.Applied += async (_, _) => await OnTaggingAppliedAsync();
         localization.CultureChanged += (_, _) => AllImagesItem.DisplayName = localization.T("view.allImages");
     }
 
@@ -79,6 +92,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ImageBrowserViewModel Browser { get; }
 
     public DetailPanelViewModel Detail { get; }
+
+    /// <summary>画像タブ左の同期フォルダ(コレクション)ペイン(仕様 §2.6 v1.2)。</summary>
+    public FolderManagementViewModel FolderPane { get; }
+
+    /// <summary>タグタブ(3 ペイン)。</summary>
+    public TagsTabViewModel TagsTab { get; }
+
+    /// <summary>タグ付与パネル(M-UI-016。タグ編集モード時に右パネルへ表示)。</summary>
+    public TaggingPanelViewModel Tagging { get; }
 
     public ViewListItemViewModel AllImagesItem { get; }
 
@@ -89,6 +111,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<ViewListItemViewModel> Recents { get; } = [];
 
     public ObservableCollection<GraphNodeViewModel> TreeRoots { get; } = [];
+
+    /// <summary>選択中タブ(0=タグ / 1=画像)。初期は画像タブ。</summary>
+    [ObservableProperty]
+    private int _selectedTabIndex = 1;
 
     [ObservableProperty]
     private GraphNodeViewModel? _selectedTreeNode;
@@ -104,11 +130,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isTreeEmpty;
 
+    /// <summary>「タグ編集」モード(REQ-046): 右パネルがタグ付与へ切替、ダブルクリックのビューア起動は無効。</summary>
+    [ObservableProperty]
+    private bool _isTagEditMode;
+
+    public bool IsTagsTabSelected => SelectedTabIndex == 0;
+
+    public bool IsImagesTabSelected => SelectedTabIndex == 1;
+
     public View? CurrentView => SelectedViewItem?.View;
 
-    /// <summary>起動時初期化: ビュー一覧の読込+最後に開いたビュー(REQ-052)または全画像を選択。</summary>
+    /// <summary>起動時初期化: フォルダ・ビュー一覧の読込+最後に開いたビュー(REQ-052)または全画像を選択。</summary>
     public async Task InitializeAsync()
     {
+        await FolderPane.LoadAsync();
         await ReloadViewListsAsync();
 
         var last = _settings.LastViewId is { } lastId
@@ -133,19 +168,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Task Refresh() => ReloadAsync();
 
     [RelayCommand]
+    private void ShowTagsTab() => SelectedTabIndex = 0;
+
+    [RelayCommand]
+    private void ShowImagesTab() => SelectedTabIndex = 1;
+
+    [RelayCommand]
     private async Task SelectViewListItem(ViewListItemViewModel item) => await SelectViewItemAsync(item);
 
     [RelayCommand]
     private async Task OpenFolderManagement()
     {
         await _windows.ShowFolderManagementAsync();
-        await ReloadAsync();
-    }
-
-    [RelayCommand]
-    private async Task OpenTagManagement()
-    {
-        await _windows.ShowTagManagementAsync();
+        await FolderPane.LoadAsync();
         await ReloadAsync();
     }
 
@@ -155,58 +190,38 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await _windows.ShowSettingsAsync();
     }
 
-    [RelayCommand]
-    private async Task NewView()
-    {
-        if (await _windows.ShowViewEditorAsync(null))
-        {
-            await ReloadViewListsAsync();
-        }
-    }
-
-    [RelayCommand]
-    private async Task EditView(ViewListItemViewModel item)
-    {
-        if (item.View is null)
-        {
-            return;
-        }
-
-        if (await _windows.ShowViewEditorAsync(item.View))
-        {
-            await ReloadAsync();
-        }
-    }
-
-    [RelayCommand]
-    private async Task DeleteView(ViewListItemViewModel item)
-    {
-        if (item.View is not { } view)
-        {
-            return;
-        }
-
-        var message = _localization.T("common.confirmDelete", new Dictionary<string, string> { ["name"] = view.Name });
-        if (!await _windows.ConfirmAsync(_localization.T("view.deleteConfirmTitle"), message))
-        {
-            return;
-        }
-
-        await _views.DeleteAsync(view.Id);
-        if (string.Equals(CurrentView?.Id, view.Id, StringComparison.Ordinal))
-        {
-            await SelectViewItemAsync(AllImagesItem);
-        }
-
-        await ReloadViewListsAsync();
-    }
-
     /// <summary>終了時の永続化(REQ-052): グリッド列数・最後に開いたビュー id を設定へ書き戻す。</summary>
     public void CaptureSettings()
     {
         _settings.GridColumns = Browser.GridColumns;
         _settings.LastViewId = CurrentView?.Id;
         _settings.Locale = _localization.CurrentLocale;
+    }
+
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsTagsTabSelected));
+        OnPropertyChanged(nameof(IsImagesTabSelected));
+        if (value == 0)
+        {
+            _ = TagsTab.EnsureLoadedAsync();
+        }
+        else if (_imagesTabStale)
+        {
+            // タグタブでの永続変更(タグ・ビュー・階層)を画像タブへ反映
+            _imagesTabStale = false;
+            _ = ReloadAsync();
+        }
+    }
+
+    partial void OnIsTagEditModeChanged(bool value)
+    {
+        // タグ編集モード中はダブルクリックのビューア起動無効(REQ-041 v1.2)
+        Browser.SuppressOpenItem = value;
+        if (value)
+        {
+            SyncTaggingSelection();
+        }
     }
 
     partial void OnSelectedTreeNodeChanged(GraphNodeViewModel? value)
@@ -220,6 +235,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task OnSelectionChangedAsync()
     {
         await Detail.SetEntryAsync(Browser.LastSelected?.Entry, _tagById);
+        if (IsTagEditMode)
+        {
+            SyncTaggingSelection();
+        }
+    }
+
+    /// <summary>タグ付与パネルへ選択(選択順)を供給する(REQ-046 / FMEA-014: 連番は選択順)。</summary>
+    private void SyncTaggingSelection()
+    {
+        Tagging.SetSelection(Browser.Selection.Select(i => i.Entry).ToList());
+    }
+
+    /// <summary>タグ付与適用後: 基礎データを読み直し、選択を選択順のまま復元する。</summary>
+    private async Task OnTaggingAppliedAsync()
+    {
+        var selectedIds = Browser.Selection.Select(i => i.Record.Id).ToList();
+        var nodeId = SelectedTreeNode?.Node.HierarchyNodeId;
+        var nodeValue = SelectedTreeNode?.Node.Value;
+
+        var item = CurrentView is null ? AllImagesItem : FindViewItem(CurrentView.Id) ?? AllImagesItem;
+        await SelectViewItemAsync(item, nodeId, nodeValue);
+        Browser.RestoreSelection(selectedIds);
     }
 
     private void OpenViewer(ImageItemViewModel item)
@@ -402,5 +439,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         _entries = entries;
+        Tagging.UpdateTags(_tagById);
     }
 }

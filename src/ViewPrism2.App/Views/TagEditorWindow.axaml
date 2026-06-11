@@ -27,6 +27,24 @@
       <TextBlock Text="{Binding Loc[tag.editor.typeCannotChange]}" IsVisible="{Binding !TypeEditable}"
                  FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
       <TextBlock Text="{Binding Loc[tag.editor.color]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <!-- カラー: プリセット+hex 表示(仕様 §2.6 v1.2) -->
+      <TextBlock Text="{Binding Loc[tag.colorPicker.presetColors]}" FontSize="11"
+                 Foreground="{StaticResource TextMutedBrush}" />
+      <ItemsControl ItemsSource="{x:Static vm:TagEditorViewModel.ColorPresets}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ColorPresetViewModel">
+            <Button Padding="0" Margin="2" Width="20" Height="20" CornerRadius="10"
+                    Background="{Binding Hex}"
+                    Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).PickColorCommand}"
+                    CommandParameter="{Binding}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
       <DockPanel>
         <Ellipse DockPanel.Dock="Right" Width="16" Height="16" Margin="8,0,0,0"
                  Fill="{Binding Color, FallbackValue=Transparent}" VerticalAlignment="Center" />
@@ -50,7 +68,7 @@
         </Grid>
       </StackPanel>
 
-      <!-- textual 定義済み値(REQ-024: 順序保持) -->
+      <!-- textual 定義済み値(REQ-024: 順序保持。D&D または ↑↓ で並べ替え — 仕様 §2.6 v1.2) -->
       <StackPanel IsVisible="{Binding IsTextual}" Spacing="8">
         <TextBlock Text="{Binding Loc[tag.editor.optionsConfig]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
         <DockPanel>
@@ -58,8 +76,12 @@
                   Command="{Binding AddPredefinedValueCommand}" Margin="8,0,0,0" />
           <TextBox Text="{Binding NewValueText}" PlaceholderText="{Binding Loc[tag.options.newOptionPlaceholder]}" />
         </DockPanel>
-        <ListBox ItemsSource="{Binding PredefinedValues}" SelectedItem="{Binding SelectedPredefinedValue}"
-                 MaxHeight="140" />
+        <ListBox x:Name="ValuesList" ItemsSource="{Binding PredefinedValues}"
+                 SelectedItem="{Binding SelectedPredefinedValue}"
+                 MaxHeight="140" DragDrop.AllowDrop="True"
+                 PointerPressed="OnValuePressed" />
+        <TextBlock Text="{Binding Loc[tag.options.dragToReorder]}" FontSize="11"
+                   Foreground="{StaticResource TextMutedBrush}" />
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Button Content="↑" Command="{Binding MoveValueUpCommand}" />
           <Button Content="↓" Command="{Binding MoveValueDownCommand}" />

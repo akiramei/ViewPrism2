@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.ViewEditDialog"
+        x:DataType="vm:ViewEditDialogViewModel"
+        Width="420" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ビュー作成/編集ダイアログ(仕様 §2.6 v1.2): 名前(必須)+説明(+お気に入り) -->
+  <StackPanel Margin="16" Spacing="8">
+    <TextBlock x:Name="TitleText" FontSize="16" />
+    <TextBlock Text="{Binding Loc[view.viewName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+    <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[view.viewNamePlaceholder]}" />
+    <TextBlock Text="{Binding Loc[view.description]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+    <TextBox Text="{Binding Description}" PlaceholderText="{Binding Loc[view.descriptionPlaceholder]}"
+             AcceptsReturn="True" MinHeight="64" TextWrapping="Wrap" />
+    <CheckBox IsChecked="{Binding IsFavorite}" Content="{Binding Loc[view.favorite]}" />
+    <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+               FontSize="12" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Content="{Binding Loc[common.cancel]}" Click="OnCancelClick" MinWidth="80" />
+      <Button Content="{Binding Loc[common.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
+    </StackPanel>
+  </StackPanel>
+</Window>

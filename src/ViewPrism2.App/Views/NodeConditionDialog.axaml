@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.NodeConditionDialog"
+        x:DataType="vm:NodeConditionDialogViewModel"
+        Width="400" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- 階層ノードの条件設定(仕様 §2.6 v1.2 / §2.4): textual=equals/pattern/values、numeric=equals/range -->
+  <StackPanel Margin="16" Spacing="8">
+    <TextBlock Text="{Binding Loc[hierarchy.conditionDialog.title]}" FontSize="16" />
+    <TextBlock Text="{Binding TagName}" Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+
+    <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType}"
+              HorizontalAlignment="Stretch">
+      <ComboBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:ConditionTypeOption">
+          <TextBlock Text="{Binding Label}" />
+        </DataTemplate>
+      </ComboBox.ItemTemplate>
+    </ComboBox>
+
+    <StackPanel IsVisible="{Binding IsEquals}" Spacing="4">
+      <TextBlock Text="{Binding Loc[viewEditor.value]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding EqualsValueText}" PlaceholderText="{Binding Loc[tag.enterValue]}" />
+    </StackPanel>
+
+    <StackPanel IsVisible="{Binding IsRange}" Spacing="4">
+      <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc[viewEditor.value]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" />
+        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Loc[viewEditor.value2]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" />
+        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding RangeFromText}"
+                 PlaceholderText="{Binding Loc[tag.enterNumericValue]}" />
+        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding RangeToText}"
+                 PlaceholderText="{Binding Loc[tag.enterNumericValue]}" />
+      </Grid>
+    </StackPanel>
+
+    <StackPanel IsVisible="{Binding IsPattern}" Spacing="4">
+      <TextBlock Text="{Binding Loc[hierarchy.conditionType.pattern]}" FontSize="12"
+                 Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding PatternText}" PlaceholderText="^IMG_\d+" />
+    </StackPanel>
+
+    <StackPanel IsVisible="{Binding IsValues}" Spacing="4">
+      <TextBlock Text="{Binding Loc[hierarchy.conditionValuesHint]}" FontSize="12"
+                 Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding ValuesText}" AcceptsReturn="True" MinHeight="80" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+               FontSize="12" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Content="{Binding Loc[common.cancel]}" Click="OnCancelClick" MinWidth="80" />
+      <Button Content="{Binding Loc[common.ok]}" Click="OnOkClick" MinWidth="80" />
+    </StackPanel>
+  </StackPanel>
+</Window>

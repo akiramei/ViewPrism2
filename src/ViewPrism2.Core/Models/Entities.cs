@@ -100,6 +100,10 @@ public sealed record View
 {
     public required string Id { get; init; }
     public required string Name { get; init; }
+
+    /// <summary>説明(REQ-030。v1.2 ビュー作成/編集ダイアログ=名前+説明)。null 可。</summary>
+    public string? Description { get; init; }
+
     public bool IsFavorite { get; init; }
     public SortField SortField { get; init; } = SortField.Name;
     public SortDirection SortDirection { get; init; } = SortDirection.Asc;

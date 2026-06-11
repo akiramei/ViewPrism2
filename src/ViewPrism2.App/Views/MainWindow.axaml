@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:v="using:ViewPrism2.App.Views"
         xmlns:c="using:ViewPrism2.App.Controls"
         x:Class="ViewPrism2.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -10,25 +11,16 @@
         FontSize="14"
         Foreground="{StaticResource TextPrimaryBrush}"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- K-DESIGN: ウィンドウ既定 1200×800・最小 900×600 / 本文 14px / 見出し 16px / キャプション 12px -->
+  <!-- K-DESIGN: ウィンドウ既定 1200×800・最小 900×600 / 本文 14px / 見出し 16px / キャプション 12px
+       シェル v1.2(仕様 §2.6): 上部タブナビゲーション「タグ」「画像」+右端「設定」 -->
 
   <Window.Resources>
-    <!-- 左ペインのビュー一覧項目(全画像/お気に入り/最近 共通) -->
+    <!-- 左ペインのビュー一覧項目(全画像/お気に入り/最近 共通。編集/削除はタグタブ側) -->
     <DataTemplate x:Key="NavItemTemplate" x:DataType="vm:ViewListItemViewModel">
       <Border Classes="navItem" Classes.selected="{Binding IsSelected}"
               Background="Transparent" PointerPressed="OnViewItemPressed">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" IsVisible="{Binding IsUserView}">
-            <Button Classes="mini" Content="✎"
-                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).EditViewCommand}"
-                    CommandParameter="{Binding}" />
-            <Button Classes="mini" Content="✕"
-                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DeleteViewCommand}"
-                    CommandParameter="{Binding}" />
-          </StackPanel>
-          <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-        </DockPanel>
+        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
       </Border>
     </DataTemplate>
   </Window.Resources>
@@ -86,22 +78,39 @@
     <Style Selector="Border.listRow.selected">
       <Setter Property="Background" Value="#1F3B82F6" />
     </Style>
-    <Style Selector="TreeViewItem">
+    <Style Selector="TreeView#NodeTree TreeViewItem">
       <Setter Property="IsExpanded" Value="True" />
+    </Style>
+    <!-- タブナビゲーション(v1.2): 選択タブはアクセント下線+主文字色 -->
+    <Style Selector="Button.tab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="16,8" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="Button.tab.selected">
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
   </Window.Styles>
 
   <DockPanel>
-    <!-- メニュー: 同期フォルダ管理・タグ管理・設定(言語)(M-UI-013) -->
-    <Menu DockPanel.Dock="Top" Background="{StaticResource PanelBrush}">
-      <MenuItem Header="{Binding Loc[menu.manage]}">
-        <MenuItem Header="{Binding Loc[folder.management]}" Command="{Binding OpenFolderManagementCommand}" />
-        <MenuItem Header="{Binding Loc[tag.tagManagement]}" Command="{Binding OpenTagManagementCommand}" />
-      </MenuItem>
-      <MenuItem Header="{Binding Loc[common.settings]}">
-        <MenuItem Header="{Binding Loc[settings.general.language]}" Command="{Binding OpenSettingsCommand}" />
-      </MenuItem>
-    </Menu>
+    <!-- 上部タブナビゲーション: 「タグ」「画像」+右端「設定」(仕様 §2.6 v1.2) -->
+    <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Classes="tab" Content="{Binding Loc[navigation.settings]}"
+                Command="{Binding OpenSettingsCommand}" Margin="0,0,8,0" />
+        <StackPanel Orientation="Horizontal">
+          <Button Classes="tab" Classes.selected="{Binding IsTagsTabSelected}"
+                  Content="{Binding Loc[navigation.tags]}" Command="{Binding ShowTagsTabCommand}" />
+          <Button Classes="tab" Classes.selected="{Binding IsImagesTabSelected}"
+                  Content="{Binding Loc[navigation.images]}" Command="{Binding ShowImagesTabCommand}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
 
     <!-- ステータスバー(非モーダル通知、REQ-031 警告等) -->
     <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
@@ -110,214 +119,257 @@
                  FontSize="12" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis" />
     </Border>
 
-    <Grid ColumnDefinitions="240,1,*,1,280">
-      <!-- 左: ビュー一覧(お気に入り/最近)+ NodeGraph ツリー -->
-      <DockPanel Grid.Column="0" Background="{StaticResource PanelBrush}">
-        <StackPanel DockPanel.Dock="Top">
-          <ContentControl Content="{Binding AllImagesItem}" ContentTemplate="{StaticResource NavItemTemplate}"
-                          Margin="0,8,0,0" />
-          <TextBlock Classes="sectionHeader" Text="{Binding Loc[view.favorite]}" />
-          <ItemsControl ItemsSource="{Binding Favorites}" ItemTemplate="{StaticResource NavItemTemplate}" />
-          <TextBlock Classes="sectionHeader" Text="{Binding Loc[view.recent]}" />
-          <ItemsControl ItemsSource="{Binding Recents}" ItemTemplate="{StaticResource NavItemTemplate}" />
-          <Button Content="{Binding Loc[view.newView]}" Command="{Binding NewViewCommand}"
-                  Margin="12,8" HorizontalAlignment="Stretch" />
-          <TextBlock Classes="sectionHeader" Text="{Binding Loc[navigation.hierarchy]}" />
-        </StackPanel>
-        <Panel>
-          <TreeView x:Name="NodeTree" ItemsSource="{Binding TreeRoots}"
-                    SelectionChanged="OnTreeSelectionChanged" Background="Transparent">
-            <TreeView.ItemTemplate>
-              <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:GraphNodeViewModel">
-                <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
-              </TreeDataTemplate>
-            </TreeView.ItemTemplate>
-          </TreeView>
-          <TextBlock Text="{Binding Loc[nodeGraph.empty]}" IsVisible="{Binding IsTreeEmpty}"
-                     Foreground="{StaticResource TextMutedBrush}" FontSize="12"
-                     Margin="12,4" TextWrapping="Wrap" />
-        </Panel>
-      </DockPanel>
+    <Panel>
+      <!-- ===== タグタブ(3 ペイン、G-6) ===== -->
+      <v:TagsTabView DataContext="{Binding TagsTab}"
+                     IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsTagsTabSelected}" />
 
-      <Border Grid.Column="1" Background="{StaticResource BorderLineBrush}" />
+      <!-- ===== 画像タブ ===== -->
+      <Grid ColumnDefinitions="240,1,*,1,280" IsVisible="{Binding IsImagesTabSelected}">
+        <!-- 左: 同期フォルダ(コレクション)+ビュー(お気に入り/最近)+NodeGraph+「全画像」固定入口 -->
+        <DockPanel Grid.Column="0" Background="{StaticResource PanelBrush}">
+          <StackPanel DockPanel.Dock="Top">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="mini" Content="{Binding Loc[menu.manage]}"
+                      Command="{Binding OpenFolderManagementCommand}" Margin="0,12,12,4" />
+              <TextBlock Classes="sectionHeader" Text="{Binding Loc[navigation.collections]}" />
+            </DockPanel>
+            <ItemsControl ItemsSource="{Binding FolderPane.Folders}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FolderRowViewModel">
+                  <StackPanel Margin="12,2">
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Classes="mini" Content="⟳"
+                              IsEnabled="{Binding !IsScanning}"
+                              Command="{Binding ScanCommand}" />
+                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding RowMessage}" IsVisible="{Binding RowMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Foreground="{StaticResource TextMutedBrush}" FontSize="11"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Classes="mini" Content="{Binding Loc[folder.add]}"
+                    Command="{Binding FolderPane.AddFolderCommand}" Margin="12,2,12,0"
+                    HorizontalAlignment="Left" />
+            <TextBlock Text="{Binding FolderPane.StatusMessage}"
+                       IsVisible="{Binding FolderPane.StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       Foreground="{StaticResource DangerBrush}" FontSize="11" Margin="12,2" TextWrapping="Wrap" />
 
-      <!-- 中央: ツールバー+グリッド⇔リスト -->
-      <DockPanel Grid.Column="2">
-        <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
-          <StackPanel Orientation="Horizontal" Spacing="8" Margin="8">
-            <TextBlock Text="{Binding Loc[toolbar.columns]}" VerticalAlignment="Center" FontSize="12"
-                       Foreground="{StaticResource TextMutedBrush}" />
-            <ComboBox ItemsSource="{Binding Browser.ColumnOptions}"
-                      SelectedItem="{Binding Browser.GridColumns}" MinWidth="64" />
-            <TextBlock Text="{Binding Loc[view.sortBy]}" VerticalAlignment="Center" FontSize="12"
-                       Foreground="{StaticResource TextMutedBrush}" />
-            <ComboBox ItemsSource="{Binding Browser.SortFieldOptions}"
-                      SelectedItem="{Binding Browser.SelectedSortFieldOption}" MinWidth="110">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SortFieldOption">
-                  <TextBlock Text="{Binding Label}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ComboBox ItemsSource="{Binding Browser.SortDirectionOptions}"
-                      SelectedItem="{Binding Browser.SelectedSortDirectionOption}" MinWidth="90">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SortDirectionOption">
-                  <TextBlock Text="{Binding Label}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ToggleButton IsChecked="{Binding !Browser.IsListMode}" Content="{Binding Loc[toolbar.grid]}" />
-            <ToggleButton IsChecked="{Binding Browser.IsListMode}" Content="{Binding Loc[toolbar.list]}" />
-            <Button Content="{Binding Loc[toolbar.refresh]}" Command="{Binding RefreshCommand}" />
+            <ContentControl Content="{Binding AllImagesItem}" ContentTemplate="{StaticResource NavItemTemplate}"
+                            Margin="0,8,0,0" />
+            <TextBlock Classes="sectionHeader" Text="{Binding Loc[view.favorite]}" />
+            <ItemsControl ItemsSource="{Binding Favorites}" ItemTemplate="{StaticResource NavItemTemplate}" />
+            <TextBlock Classes="sectionHeader" Text="{Binding Loc[view.recent]}" />
+            <ItemsControl ItemsSource="{Binding Recents}" ItemTemplate="{StaticResource NavItemTemplate}" />
+            <TextBlock Classes="sectionHeader" Text="{Binding Loc[navigation.hierarchy]}" />
           </StackPanel>
-        </Border>
+          <Panel>
+            <TreeView x:Name="NodeTree" ItemsSource="{Binding TreeRoots}"
+                      SelectionChanged="OnTreeSelectionChanged" Background="Transparent">
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:GraphNodeViewModel">
+                  <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+            <TextBlock Text="{Binding Loc[nodeGraph.empty]}" IsVisible="{Binding IsTreeEmpty}"
+                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"
+                       Margin="12,4" TextWrapping="Wrap" />
+          </Panel>
+        </DockPanel>
 
-        <Panel x:Name="ContentHost" SizeChanged="OnContentSizeChanged">
-          <!-- グリッド(REQ-041): 1 行 = N セルの行リストを ListBox(VirtualizingStackPanel)に載せる(K-AVALONIA) -->
-          <ListBox Classes="plain" ItemsSource="{Binding Browser.Rows}"
-                   IsVisible="{Binding !Browser.IsListMode}">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:GridRowViewModel">
-                <ItemsControl ItemsSource="{Binding Cells}">
+        <Border Grid.Column="1" Background="{StaticResource BorderLineBrush}" />
+
+        <!-- 中央: ツールバー+グリッド⇔リスト -->
+        <DockPanel Grid.Column="2">
+          <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="8">
+              <TextBlock Text="{Binding Loc[toolbar.columns]}" VerticalAlignment="Center" FontSize="12"
+                         Foreground="{StaticResource TextMutedBrush}" />
+              <ComboBox ItemsSource="{Binding Browser.ColumnOptions}"
+                        SelectedItem="{Binding Browser.GridColumns}" MinWidth="64" />
+              <TextBlock Text="{Binding Loc[view.sortBy]}" VerticalAlignment="Center" FontSize="12"
+                         Foreground="{StaticResource TextMutedBrush}" />
+              <ComboBox ItemsSource="{Binding Browser.SortFieldOptions}"
+                        SelectedItem="{Binding Browser.SelectedSortFieldOption}" MinWidth="110">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SortFieldOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <ComboBox ItemsSource="{Binding Browser.SortDirectionOptions}"
+                        SelectedItem="{Binding Browser.SelectedSortDirectionOption}" MinWidth="90">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SortDirectionOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <ToggleButton IsChecked="{Binding !Browser.IsListMode}" Content="{Binding Loc[toolbar.grid]}" />
+              <ToggleButton IsChecked="{Binding Browser.IsListMode}" Content="{Binding Loc[toolbar.list]}" />
+              <!-- タグ編集モードトグル(REQ-046): 右パネルが詳細⇔タグ付与に切替 -->
+              <ToggleButton IsChecked="{Binding IsTagEditMode}" Content="{Binding Loc[toolbar.tagEdit]}" />
+              <Button Content="{Binding Loc[toolbar.refresh]}" Command="{Binding RefreshCommand}" />
+            </StackPanel>
+          </Border>
+
+          <Panel x:Name="ContentHost" SizeChanged="OnContentSizeChanged">
+            <!-- グリッド(REQ-041): 1 行 = N セルの行リストを ListBox(VirtualizingStackPanel)に載せる(K-AVALONIA) -->
+            <ListBox Classes="plain" ItemsSource="{Binding Browser.Rows}"
+                     IsVisible="{Binding !Browser.IsListMode}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:GridRowViewModel">
+                  <ItemsControl ItemsSource="{Binding Cells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ImageItemViewModel">
+                        <Border Classes="cellFrame" Classes.selected="{Binding IsSelected}"
+                                Margin="4" Background="Transparent" PointerPressed="OnCellPressed">
+                          <StackPanel Width="{Binding Browser.CellSize}">
+                            <!-- 正方形セル+プレースホルダ(パネル背景+'?' グリフ — K-DESIGN) -->
+                            <Grid Height="{Binding Browser.CellSize}">
+                              <Border Background="{StaticResource PanelBrush}" />
+                              <TextBlock Text="?" Foreground="{StaticResource TextMutedBrush}" FontSize="24"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                              <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="Uniform" />
+                              <!-- 選択順バッジ: アクセント色円形・白文字・1 起点(K-DESIGN / G-1) -->
+                              <Border IsVisible="{Binding IsSelected}" Background="{StaticResource AccentBrush}"
+                                      CornerRadius="10" Width="20" Height="20"
+                                      HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4">
+                                <TextBlock Text="{Binding SelectionOrderText}" Foreground="White" FontSize="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                              </Border>
+                            </Grid>
+                            <!-- ファイル名: セル下部 1 行・中央寄せ・末尾省略(K-DESIGN / G-1) -->
+                            <TextBlock Text="{Binding FileName}" FontSize="12" TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="2" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- リスト(REQ-042): display_columns に従う列構成+ヘッダ -->
+            <DockPanel IsVisible="{Binding Browser.IsListMode}">
+              <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
+                      BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
+                <ItemsControl ItemsSource="{Binding Browser.Columns}" Margin="8,0">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                       <StackPanel Orientation="Horizontal" />
                     </ItemsPanelTemplate>
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ImageItemViewModel">
-                      <Border Classes="cellFrame" Classes.selected="{Binding IsSelected}"
-                              Margin="4" Background="Transparent" PointerPressed="OnCellPressed">
-                        <StackPanel Width="{Binding Browser.CellSize}">
-                          <!-- 正方形セル+プレースホルダ(パネル背景+'?' グリフ — K-DESIGN) -->
-                          <Grid Height="{Binding Browser.CellSize}">
-                            <Border Background="{StaticResource PanelBrush}" />
-                            <TextBlock Text="?" Foreground="{StaticResource TextMutedBrush}" FontSize="24"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="Uniform" />
-                            <!-- 選択順バッジ: アクセント色円形・白文字・1 起点(K-DESIGN / G-1) -->
-                            <Border IsVisible="{Binding IsSelected}" Background="{StaticResource AccentBrush}"
-                                    CornerRadius="10" Width="20" Height="20"
-                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4">
-                              <TextBlock Text="{Binding SelectionOrderText}" Foreground="White" FontSize="12"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                          </Grid>
-                          <!-- ファイル名: セル下部 1 行・中央寄せ・末尾省略(K-DESIGN / G-1) -->
-                          <TextBlock Text="{Binding FileName}" FontSize="12" TextAlignment="Center"
-                                     TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="2" />
-                        </StackPanel>
-                      </Border>
+                    <DataTemplate x:DataType="vm:ListColumnViewModel">
+                      <TextBlock Text="{Binding Header}" Width="{Binding PixelWidth}" FontSize="12"
+                                 Foreground="{StaticResource TextMutedBrush}" Margin="0,6"
+                                 TextTrimming="CharacterEllipsis" />
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-
-          <!-- リスト(REQ-042): display_columns に従う列構成+ヘッダ -->
-          <DockPanel IsVisible="{Binding Browser.IsListMode}">
-            <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
-                    BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
-              <ItemsControl ItemsSource="{Binding Browser.Columns}" Margin="8,0">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ListColumnViewModel">
-                    <TextBlock Text="{Binding Header}" Width="{Binding PixelWidth}" FontSize="12"
-                               Foreground="{StaticResource TextMutedBrush}" Margin="0,6"
-                               TextTrimming="CharacterEllipsis" />
+              </Border>
+              <ListBox Classes="plain" ItemsSource="{Binding Browser.ListItems}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ImageItemViewModel">
+                    <Border Classes="listRow" Classes.selected="{Binding IsSelected}"
+                            PointerPressed="OnCellPressed">
+                      <ItemsControl ItemsSource="{Binding ListCells}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ListCellViewModel">
+                            <TextBlock Text="{Binding Text}" Width="{Binding Column.PixelWidth}"
+                                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </Border>
-            <ListBox Classes="plain" ItemsSource="{Binding Browser.ListItems}">
-              <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:ImageItemViewModel">
-                  <Border Classes="listRow" Classes.selected="{Binding IsSelected}"
-                          PointerPressed="OnCellPressed">
-                    <ItemsControl ItemsSource="{Binding ListCells}">
-                      <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                          <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                      </ItemsControl.ItemsPanel>
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ListCellViewModel">
-                          <TextBlock Text="{Binding Text}" Width="{Binding Column.PixelWidth}"
-                                     TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </Border>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </DockPanel>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
 
-          <!-- 空状態(仕様 §2.6): 中央配置・テキスト弱色(K-DESIGN) -->
-          <TextBlock Text="{Binding Browser.EmptyMessage}" IsVisible="{Binding Browser.IsEmpty}"
-                     Foreground="{StaticResource TextMutedBrush}"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <!-- 空状態(仕様 §2.6): 中央配置・テキスト弱色(K-DESIGN) -->
+            <TextBlock Text="{Binding Browser.EmptyMessage}" IsVisible="{Binding Browser.IsEmpty}"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Panel>
+        </DockPanel>
+
+        <Border Grid.Column="3" Background="{StaticResource BorderLineBrush}" />
+
+        <!-- 右パネル: 通常時=詳細(REQ-043 / G-3)、タグ編集モード時=タグ付与(REQ-046 / G-7) -->
+        <Panel Grid.Column="4">
+          <ScrollViewer Background="{StaticResource PanelBrush}" IsVisible="{Binding !IsTagEditMode}">
+            <Panel>
+              <!-- 選択 0 件のプレースホルダ(仕様 §2.6) -->
+              <TextBlock Text="{Binding Loc[detail.selectImagePrompt]}" IsVisible="{Binding !Detail.HasImage}"
+                         Foreground="{StaticResource TextMutedBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,24" />
+              <StackPanel IsVisible="{Binding Detail.HasImage}" Margin="12" Spacing="8">
+                <TextBlock Text="{Binding Loc[detail.title]}" FontSize="16" />
+                <Grid Height="160">
+                  <Border Background="{StaticResource AppBackgroundBrush}"
+                          BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1" />
+                  <c:ThumbnailImage SourcePath="{Binding Detail.AbsolutePath}" Stretch="Uniform" Margin="4" />
+                </Grid>
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Loc[common.fileName]}" Classes="sectionHeader" Margin="0" />
+                  <TextBlock Text="{Binding Detail.FileName}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Loc[common.size]}" Classes="sectionHeader" Margin="0" />
+                  <TextBlock Text="{Binding Detail.SizeText}" />
+                  <TextBlock Text="{Binding Loc[detail.resolution]}" Classes="sectionHeader" Margin="0" />
+                  <TextBlock Text="{Binding Detail.ResolutionText}" />
+                  <TextBlock Text="{Binding Loc[common.createdDate]}" Classes="sectionHeader" Margin="0" />
+                  <TextBlock Text="{Binding Detail.CreatedText}" />
+                  <TextBlock Text="{Binding Loc[common.modifiedDate]}" Classes="sectionHeader" Margin="0" />
+                  <TextBlock Text="{Binding Detail.ModifiedText}" />
+                </StackPanel>
+                <TextBlock Text="{Binding Loc[detail.notes]}" Classes="sectionHeader" Margin="0" />
+                <TextBox Text="{Binding Detail.Notes}" AcceptsReturn="True" MinHeight="64" TextWrapping="Wrap" />
+                <Button Content="{Binding Loc[common.save]}" Command="{Binding Detail.SaveNotesCommand}"
+                        HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding Loc[navigation.tags]}" Classes="sectionHeader" Margin="0" />
+                <ItemsControl ItemsSource="{Binding Detail.Tags}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DetailTagViewModel">
+                      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+                        <!-- タグ色見本: 16px 円形スウォッチ。color=NULL は境界線色のリング(K-DESIGN) -->
+                        <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
+                                 IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                        <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                                 IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ValueText}" Foreground="{StaticResource TextMutedBrush}"
+                                   IsVisible="{Binding HasValue}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Panel>
+          </ScrollViewer>
+
+          <Border Background="{StaticResource PanelBrush}" IsVisible="{Binding IsTagEditMode}">
+            <v:TaggingPanelView DataContext="{Binding Tagging}" />
+          </Border>
         </Panel>
-      </DockPanel>
-
-      <Border Grid.Column="3" Background="{StaticResource BorderLineBrush}" />
-
-      <!-- 右: 詳細パネル(REQ-043 / G-3) -->
-      <ScrollViewer Grid.Column="4" Background="{StaticResource PanelBrush}">
-        <Panel>
-          <!-- 選択 0 件のプレースホルダ(仕様 §2.6) -->
-          <TextBlock Text="{Binding Loc[detail.selectImagePrompt]}" IsVisible="{Binding !Detail.HasImage}"
-                     Foreground="{StaticResource TextMutedBrush}"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,24" />
-          <StackPanel IsVisible="{Binding Detail.HasImage}" Margin="12" Spacing="8">
-            <TextBlock Text="{Binding Loc[detail.title]}" FontSize="16" />
-            <Grid Height="160">
-              <Border Background="{StaticResource AppBackgroundBrush}"
-                      BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1" />
-              <c:ThumbnailImage SourcePath="{Binding Detail.AbsolutePath}" Stretch="Uniform" Margin="4" />
-            </Grid>
-            <StackPanel Spacing="4">
-              <TextBlock Text="{Binding Loc[common.fileName]}" Classes="sectionHeader" Margin="0" />
-              <TextBlock Text="{Binding Detail.FileName}" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding Loc[common.size]}" Classes="sectionHeader" Margin="0" />
-              <TextBlock Text="{Binding Detail.SizeText}" />
-              <TextBlock Text="{Binding Loc[detail.resolution]}" Classes="sectionHeader" Margin="0" />
-              <TextBlock Text="{Binding Detail.ResolutionText}" />
-              <TextBlock Text="{Binding Loc[common.createdDate]}" Classes="sectionHeader" Margin="0" />
-              <TextBlock Text="{Binding Detail.CreatedText}" />
-              <TextBlock Text="{Binding Loc[common.modifiedDate]}" Classes="sectionHeader" Margin="0" />
-              <TextBlock Text="{Binding Detail.ModifiedText}" />
-            </StackPanel>
-            <TextBlock Text="{Binding Loc[detail.notes]}" Classes="sectionHeader" Margin="0" />
-            <TextBox Text="{Binding Detail.Notes}" AcceptsReturn="True" MinHeight="64" TextWrapping="Wrap" />
-            <Button Content="{Binding Loc[common.save]}" Command="{Binding Detail.SaveNotesCommand}"
-                    HorizontalAlignment="Right" />
-            <TextBlock Text="{Binding Loc[navigation.tags]}" Classes="sectionHeader" Margin="0" />
-            <ItemsControl ItemsSource="{Binding Detail.Tags}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:DetailTagViewModel">
-                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
-                    <!-- タグ色見本: 16px 円形スウォッチ。color=NULL は境界線色のリング(K-DESIGN) -->
-                    <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
-                             IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
-                    <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
-                             IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding ValueText}" Foreground="{StaticResource TextMutedBrush}"
-                               IsVisible="{Binding HasValue}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </Panel>
-      </ScrollViewer>
-    </Grid>
+      </Grid>
+    </Panel>
   </DockPanel>
 </Window>

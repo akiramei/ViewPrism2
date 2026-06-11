@@ -124,6 +124,22 @@ public partial class App : Application
         // View 層サービスと ViewModel(K-MVVM: ViewModel はトランジェント)
         services.AddSingleton<WindowService>();
         services.AddSingleton<IWindowService>(sp => sp.GetRequiredService<WindowService>());
+        services.AddTransient(sp => new FolderManagementViewModel(
+            sp.GetRequiredService<ISyncFolderRepository>(),
+            sp.GetRequiredService<ScanService>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<IWindowService>()));
+        services.AddTransient(sp => new TagsTabViewModel(
+            sp.GetRequiredService<ViewService>(),
+            sp.GetRequiredService<TagService>(),
+            sp.GetRequiredService<ITagRepository>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<IWindowService>()));
+        services.AddTransient(sp => new TaggingPanelViewModel(
+            sp.GetRequiredService<TagService>(),
+            sp.GetRequiredService<ITagRepository>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<IWindowService>()));
         services.AddTransient(sp => new MainWindowViewModel(
             sp.GetRequiredService<ISyncFolderRepository>(),
             sp.GetRequiredService<IImageRepository>(),
@@ -137,6 +153,9 @@ public partial class App : Application
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<AppSettings>(),
             sp.GetRequiredService<IWindowService>(),
+            sp.GetRequiredService<FolderManagementViewModel>(),
+            sp.GetRequiredService<TagsTabViewModel>(),
+            sp.GetRequiredService<TaggingPanelViewModel>(),
             sp.GetRequiredService<ILogger<MainWindowViewModel>>()));
 
         return services.BuildServiceProvider();

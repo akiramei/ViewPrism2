@@ -96,19 +96,6 @@ public sealed class WindowService : IWindowService
         await window.ShowDialog(Owner);
     }
 
-    public async Task ShowTagManagementAsync()
-    {
-        if (Owner is null)
-        {
-            return;
-        }
-
-        var vm = new TagManagementViewModel(_tagService, _localization, this);
-        var window = new TagManagementWindow { DataContext = vm };
-        await vm.LoadAsync();
-        await window.ShowDialog(Owner);
-    }
-
     public async Task ShowSettingsAsync()
     {
         if (Owner is null)
@@ -135,18 +122,43 @@ public sealed class WindowService : IWindowService
         return await window.ShowDialog<bool?>(Owner) == true;
     }
 
-    public async Task<bool> ShowViewEditorAsync(View? existing)
+    public async Task<bool> ShowViewEditDialogAsync(View? existing)
     {
         if (Owner is null)
         {
             return false;
         }
 
-        var vm = new ViewEditorViewModel(existing, _viewService, _tags, _localization);
-        var window = new ViewEditorWindow { DataContext = vm };
-        await vm.LoadAsync();
-        await window.ShowDialog(Owner);
-        return vm.Changed;
+        var vm = new ViewEditDialogViewModel(existing, _viewService, _localization);
+        var window = new ViewEditDialog { DataContext = vm };
+        vm.Saved += (_, _) => window.Close(true);
+        return await window.ShowDialog<bool?>(Owner) == true;
+    }
+
+    public async Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(
+        Tag tag, NumericTagSettings? settings, int selectionCount)
+    {
+        if (Owner is null)
+        {
+            return null;
+        }
+
+        var vm = new NumericValueDialogViewModel(tag, settings, selectionCount, _localization);
+        var window = new NumericValueDialog { DataContext = vm };
+        return await window.ShowDialog<IReadOnlyList<string>?>(Owner);
+    }
+
+    public async Task<NodeConditionResult?> ShowNodeConditionDialogAsync(
+        Tag tag, HierarchyConditionType? currentType, string? currentValueJson)
+    {
+        if (Owner is null)
+        {
+            return null;
+        }
+
+        var vm = new NodeConditionDialogViewModel(tag, currentType, currentValueJson, _localization);
+        var window = new NodeConditionDialog { DataContext = vm };
+        return await window.ShowDialog<NodeConditionResult?>(Owner);
     }
 
     public async Task ShowRelinkAsync(string folderId)

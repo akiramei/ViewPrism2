@@ -48,8 +48,9 @@ public sealed class S05MigrationEquivalenceTests : IDisposable
         var freshMigrationCount = CountMigrations(freshPath);
 
         // 初版 DDL のみの DB(migrations マークなし)→ Open で未適用分が全適用される
+        // 治具修理(2026-06-11): v0 は現行 DatabaseSchema.LatestDdl からの導出を止め、凍結スナップショットに固定
         var v0Path = NewDbPath();
-        ExecuteRaw(v0Path, DatabaseSchema.LatestDdl); // V1 の初版 DDL = LatestDdl(マイグレーション台帳は空)
+        ExecuteRaw(v0Path, V0SchemaFixture.InitialDdl);
         using (DatabaseManager.Open(v0Path, new SystemClock()))
         {
         }

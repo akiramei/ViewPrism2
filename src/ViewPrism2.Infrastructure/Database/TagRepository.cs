@@ -186,6 +186,32 @@ public sealed class TagRepository : ITagRepository
         });
     }
 
+    public Task TagImagesWithValuesAsync(string tagId, IReadOnlyList<(string ImageId, string? Value)> assignments)
+    {
+        ArgumentNullException.ThrowIfNull(assignments);
+        // INV-006: 単一トランザクション、失敗時全ロールバック(REQ-046 連番適用)
+        return _db.RunAsync(async conn =>
+        {
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                foreach (var (imageId, value) in assignments)
+                {
+                    await conn.ExecuteAsync(
+                        UpsertImageTagSql, new { ImageId = imageId, TagId = tagId, Value = value }, tx)
+                        .ConfigureAwait(false);
+                }
+
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        });
+    }
+
     public Task UntagImagesAsync(IReadOnlyList<string> imageIds, string tagId)
     {
         ArgumentNullException.ThrowIfNull(imageIds);

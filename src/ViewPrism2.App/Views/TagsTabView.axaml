@@ -1,0 +1,196 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ViewPrism2.App.ViewModels"
+             x:Class="ViewPrism2.App.Views.TagsTabView"
+             x:DataType="vm:TagsTabViewModel">
+  <!-- タグタブ(3 ペイン、仕様 §2.6 v1.2 / G-6):
+       左=ビュー管理 / 中央=階層構造エディタ(バッチ保存) / 右=タグパレット -->
+
+  <UserControl.Styles>
+    <Style Selector="TreeView#HierarchyTree TreeViewItem" x:DataType="vm:EditNodeViewModel">
+      <!-- 展開/折畳(仕様 §2.6 のノード操作)を VM の状態と同期 -->
+      <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+    </Style>
+    <Style Selector="Button.mini.homeOn">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.nodeName.home">
+      <!-- ホームタグ設定中ノードの強調表示(G-6) -->
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Border.typeChip">
+      <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="6,1" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="240,1,*,1,300">
+    <!-- 左: ビュー管理(新規ビュー・一覧・編集/削除・選択) -->
+    <DockPanel Grid.Column="0" Background="{StaticResource PanelBrush}">
+      <TextBlock DockPanel.Dock="Top" Classes="sectionHeader" Text="{Binding Loc[view.viewManagement]}" />
+      <Button DockPanel.Dock="Top" Content="{Binding Loc[view.newView]}" Command="{Binding NewViewCommand}"
+              Margin="12,4,12,8" HorizontalAlignment="Stretch" />
+      <Panel>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Views}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ViewRowViewModel">
+                <Border Classes="navItem" Classes.selected="{Binding IsSelected}"
+                        Background="Transparent" PointerPressed="OnViewRowPressed">
+                  <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                      <Button Classes="mini" Content="✎"
+                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).EditViewCommand}"
+                              CommandParameter="{Binding}" />
+                      <Button Classes="mini" Content="✕"
+                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).DeleteViewCommand}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                  </DockPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <TextBlock Text="{Binding Loc[view.noViews]}" IsVisible="{Binding IsViewsEmpty}"
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="12,4" TextWrapping="Wrap" />
+      </Panel>
+    </DockPanel>
+
+    <Border Grid.Column="1" Background="{StaticResource BorderLineBrush}" />
+
+    <!-- 中央: 階層構造エディタ(バッチ保存/キャンセル+ダーティ追跡) -->
+    <DockPanel Grid.Column="2">
+      <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
+        <DockPanel Margin="8">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+            <Button Content="{Binding Loc[common.save]}" Command="{Binding Editor.SaveCommand}" MinWidth="80" />
+            <Button Content="{Binding Loc[common.cancel]}" Command="{Binding Editor.CancelCommand}" MinWidth="80" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{Binding Loc[view.hierarchyStructure]}" FontSize="16" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Editor.ViewName}" Foreground="{StaticResource TextMutedBrush}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,8,8,8">
+        <Button Content="{Binding Loc[viewEditor.addRootNode]}" Command="{Binding AddRootNodeCommand}"
+                IsEnabled="{Binding Editor.HasView}" />
+        <Button Content="{Binding Loc[viewEditor.addChildNode]}" Command="{Binding AddChildNodeCommand}"
+                IsEnabled="{Binding Editor.HasView}" />
+        <TextBlock Text="{Binding Editor.StatusMessage}" Foreground="{StaticResource DangerBrush}"
+                   FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+      <Panel x:Name="TreeHost" Background="Transparent" DragDrop.AllowDrop="True">
+        <!-- 空状態(仕様 §2.6): ビュー未選択 / 階層ノード 0 件 -->
+        <TextBlock Text="{Binding Loc[view.selectViewPlease]}" IsVisible="{Binding !Editor.HasView}"
+                   Foreground="{StaticResource TextMutedBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <StackPanel IsVisible="{Binding Editor.IsTreeEmpty}" Spacing="4"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Loc[view.noTagsAdded]}" Foreground="{StaticResource TextMutedBrush}"
+                     TextAlignment="Center" />
+          <TextBlock Text="{Binding Loc[hierarchy.dropToAdd]}" Foreground="{StaticResource TextMutedBrush}"
+                     FontSize="12" TextAlignment="Center" />
+        </StackPanel>
+        <TreeView x:Name="HierarchyTree" ItemsSource="{Binding Editor.Roots}"
+                  SelectionChanged="OnHierarchySelectionChanged" Background="Transparent">
+          <TreeView.ItemTemplate>
+            <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:EditNodeViewModel">
+              <StackPanel Spacing="0" Background="Transparent">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                    <Button Classes="mini" Content="✎"
+                            Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.BeginAliasEditCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="mini" Content="★" Classes.homeOn="{Binding IsHome}"
+                            Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.ToggleHomeCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="mini" Content="⚙" IsVisible="{Binding CanHaveCondition}"
+                            Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.EditConditionCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="mini" Content="✕"
+                            Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.DeleteNodeCommand}"
+                            CommandParameter="{Binding}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="★" Foreground="{StaticResource AccentBrush}" IsVisible="{Binding IsHome}"
+                               VerticalAlignment="Center" />
+                    <!-- 別名のインライン編集(仕様 §2.6) -->
+                    <TextBlock Classes="nodeName" Classes.home="{Binding IsHome}" Text="{Binding DisplayName}"
+                               IsVisible="{Binding !IsEditingAlias}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBox Text="{Binding AliasEditText}" IsVisible="{Binding IsEditingAlias}"
+                             MinWidth="120" FontSize="12" Padding="4,2"
+                             KeyDown="OnAliasKeyDown" LostFocus="OnAliasLostFocus" />
+                  </StackPanel>
+                </DockPanel>
+                <TextBlock Text="{Binding ConditionSummary}" IsVisible="{Binding HasCondition}"
+                           Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="16,0,0,0"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </TreeDataTemplate>
+          </TreeView.ItemTemplate>
+        </TreeView>
+      </Panel>
+    </DockPanel>
+
+    <Border Grid.Column="3" Background="{StaticResource BorderLineBrush}" />
+
+    <!-- 右: タグパレット(検索・追加・一覧。D&D/ボタンで階層へ追加) -->
+    <DockPanel Grid.Column="4" Background="{StaticResource PanelBrush}">
+      <TextBlock DockPanel.Dock="Top" Classes="sectionHeader" Text="{Binding Loc[navigation.tagPalette]}" />
+      <DockPanel DockPanel.Dock="Top" Margin="12,0,12,8">
+        <Button DockPanel.Dock="Right" Content="{Binding Loc[common.add]}"
+                Command="{Binding Palette.NewTagCommand}" Margin="8,0,0,0" />
+        <TextBox Text="{Binding Palette.SearchText}" PlaceholderText="{Binding Loc[tag.searchTags]}" />
+      </DockPanel>
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding Palette.StatusMessage}"
+                 Foreground="{StaticResource DangerBrush}" FontSize="12" Margin="12,4" TextWrapping="Wrap" />
+      <Panel>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Palette.Tags}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TagPaletteRowViewModel">
+                <Border Classes="navItem" Classes.selected="{Binding IsSelected}"
+                        Background="Transparent" PointerPressed="OnPaletteItemPressed">
+                  <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                      <Button Classes="mini" Content="✎"
+                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Palette.EditCommand}"
+                              CommandParameter="{Binding}" />
+                      <Button Classes="mini" Content="✕"
+                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Palette.DeleteCommand}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <!-- タグ色見本: 16px 円形スウォッチ。color=NULL は境界線色のリング(K-DESIGN) -->
+                      <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
+                               IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                      <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                               IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" />
+                      <Border Classes="typeChip" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding TypeText}" FontSize="11"
+                                   Foreground="{StaticResource TextMutedBrush}" />
+                      </Border>
+                    </StackPanel>
+                  </DockPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <TextBlock Text="{Binding Loc[tag.noTags]}" IsVisible="{Binding Palette.IsEmpty}"
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="12,4" TextWrapping="Wrap" />
+      </Panel>
+    </DockPanel>
+  </Grid>
+</UserControl>

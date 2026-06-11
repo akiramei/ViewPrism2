@@ -40,4 +40,11 @@ public interface IViewRepository
 
     /// <summary>削除する。子ノードの parent_id は FK SET NULL(仕様 §2.0)。</summary>
     Task DeleteNodeAsync(string id);
+
+    /// <summary>
+    /// ビューのタグ階層を一括置換する(v1.2 階層エディタのバッチ保存)。
+    /// 単一トランザクションで全置換し、home_tag_id と modified_at を同時に 1 回だけ更新する
+    /// (REQ-027 の原子性意味論・REQ-032 の「保存時 1 回」)。
+    /// </summary>
+    Task ReplaceHierarchyAsync(string viewId, IReadOnlyList<HierarchyNode> nodes, string? homeNodeId, string modifiedAt);
 }

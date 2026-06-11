@@ -31,7 +31,26 @@
 - **accept(45 件)**: 未規定の補完(JSON 命名・TTL 起点・WindowX/Y 既定・GraphNode フィールド形・migrations V1 構成・MTP 接続設定・i18n 新規 48 キー・通知=ステータスバー等)はすべて工場判断を採用。次版 BOM へ転記対象としてマーク(reports 参照)
 - **note(1 件)**: M-EVAL-002 の戻り値契約(集合のみ vs 警告併返)の矛盾 → EvaluationResult 複合戻り値を採用。M-BOM 次版で interface_contract を実装に合わせて改訂
 
+## Run 4(収束再製造)の裁定 — 2026-06-11 追記
+
+報告 14 件(blocker 0 / friction 2 / minor 12)。個票は bomdd/reports/factory-run-04.md。
+
+| # | 内容 | 裁定 |
+|---|---|---|
+| CHEAT-053 (friction) | views.description がスキーマ契約(M-DB-007)に欠落 → migration 001-views-description で追加 | **accept** — 仕様 §2.0/REQ-030 には存在しており M-BOM への転記漏れ(設計側帰属 C1)。初の実マイグレーションとして REQ-004 機構の実証にもなった。教訓: CP-DB-006 のスキーマ同値検査は「自分自身との同値」のみで仕様列挙との照合が無い → 次ループで照合ベクタの追加を検討 |
+| CHEAT-056 (friction) | view_conditions の直接編集 UI が仕様 v1.2 から消えたため撤去 | **accept** — V1 では階層ノード条件(condition_type)が同じ用途を担い、原典のタグタブにも直接編集は無い。view_conditions テーブル・評価器(REQ-031)は NodeGraph パス評価で使用継続。直接編集 UI は後続ループ候補として申し送り |
+| minor 12 件 | レイアウト微調整・新規 i18n キー・UI Automation 代替スモーク等 | **accept** 一括(reports 参照) |
+
+## 検査器(治具)の欠陥記録 — 2026-06-11
+
+- **JIG-001**: オラクル S-05 の v0 フィクスチャが現行 `DatabaseSchema.LatestDdl` から導出されており、
+  Run 4 でマイグレーションが初めて実在した際に「v0 なのに最新列を持つ」矛盾フィクスチャとなり偽陽性 FAIL。
+  → 凍結スナップショット(tests/ViewPrism2.Oracle/V0SchemaFixture.cs)に固定して修理。
+  **オラクルのケース定義・期待値(41)は不変**。製品の退行はゼロ(修理後 S-01〜S-12 全 PASS)。
+  BomDD method-v1 の「検査器側の暗黙知(jig-side implicit knowledge)」の実例として記録。
+
 ## 凍結オラクルとの関係
-固定オラクル S-01〜S-12 は **12/12 PASS**(2026-06-11、tag loop-v1-r1 凍結のまま不変)。
-ずるはすべて表面(UI 構成・未規定次元)に集中し、核(ドメインロジック)の挙動乖離はゼロ —
+固定オラクル S-01〜S-12 は Run 3 後・Run 4 後(治具修理後)とも **12/12 PASS**
+(tag loop-v1-r1 凍結のまま不変)。Run 4 後の唯一の FAIL は上記 JIG-001(治具側)で、製品起因の乖離はゼロ。
+ずるはすべて表面(UI 構成・未規定次元)と契約転記漏れに集中し、核(ドメインロジック)の挙動乖離はゼロ —
 BomDD の「ずるは表面側に現れる」観測と整合。

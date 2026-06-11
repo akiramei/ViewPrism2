@@ -57,13 +57,19 @@ public sealed class CpL1SmokeTests : IDisposable
 
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
 
-        public Task ShowTagManagementAsync() => Task.CompletedTask;
-
         public Task ShowSettingsAsync() => Task.CompletedTask;
 
         public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
 
-        public Task<bool> ShowViewEditorAsync(View? existing) => Task.FromResult(false);
+        public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);
+
+        public Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(
+            Tag tag, NumericTagSettings? settings, int selectionCount)
+            => Task.FromResult<IReadOnlyList<string>?>(null);
+
+        public Task<NodeConditionResult?> ShowNodeConditionDialogAsync(
+            Tag tag, HierarchyConditionType? currentType, string? currentValueJson)
+            => Task.FromResult<NodeConditionResult?>(null);
 
         public Task ShowRelinkAsync(string folderId) => Task.CompletedTask;
 
@@ -96,10 +102,14 @@ public sealed class CpL1SmokeTests : IDisposable
         var thumbnails = new ThumbnailService(_thumbDir);
         var viewService = new ViewService(_db.Views, _db.Clock);
         var tagService = new TagService(_db.Tags);
+        var windows = new StubWindowService();
         var vm = new MainWindowViewModel(
             _db.Folders, _db.Images, _db.Tags, viewService,
             new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
-            new ImageSorter(), thumbnails, localization, new AppSettings(), new StubWindowService());
+            new ImageSorter(), thumbnails, localization, new AppSettings(), windows,
+            new FolderManagementViewModel(_db.Folders, scan, localization, windows),
+            new TagsTabViewModel(viewService, tagService, _db.Tags, localization, windows),
+            new TaggingPanelViewModel(tagService, _db.Tags, localization, windows));
 
         // --- 起動初期化 → 全画像グリッド ---
         await vm.InitializeAsync();
@@ -154,5 +164,35 @@ public sealed class CpL1SmokeTests : IDisposable
 
         vm.SelectedTreeNode = root; // ルート=ビュー条件のみ(無条件)→ 全 3 枚
         Assert.Equal(3, vm.Browser.SortedItems.Count);
+
+        // --- v1.2 シェル: タブ切替(タグタブの遅延読込)+タグ編集モード(右パネル切替+ビューア無効) ---
+        Assert.True(vm.IsImagesTabSelected); // 初期は画像タブ
+        vm.SelectedTabIndex = 0;
+        Assert.True(vm.IsTagsTabSelected);
+        var waitedTab = 0;
+        while (vm.TagsTab.Views.Count == 0 && waitedTab < 100)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+            waitedTab++;
+        }
+
+        Assert.Contains(vm.TagsTab.Views, r => r.View.Id == view.Value.Id);
+        Assert.Contains(vm.TagsTab.Palette.Tags, r => r.Tag.Id == tag.Value.Id);
+
+        vm.SelectedTabIndex = 1;
+        vm.IsTagEditMode = true; // タグ付与パネルへ切替(REQ-046)
+        Assert.True(vm.Browser.SuppressOpenItem); // タグ編集モード中はダブルクリック無効(REQ-041 v1.2)
+        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, isDoubleClick: false);
+        var waitedTagging = 0;
+        while (!vm.Tagging.HasSelection && waitedTagging < 100)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+            waitedTagging++;
+        }
+
+        Assert.True(vm.Tagging.HasSelection);
+        Assert.Contains(vm.Tagging.CurrentTags, r => r.Tag.Id == tag.Value.Id); // 付与済み「色」が現在タグに出る
+        vm.IsTagEditMode = false;
+        Assert.False(vm.Browser.SuppressOpenItem);
     }
 }

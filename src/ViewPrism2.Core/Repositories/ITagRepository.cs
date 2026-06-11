@@ -36,6 +36,12 @@ public interface ITagRepository
     /// <summary>一括付与。単一トランザクション、失敗時全ロールバック(REQ-027 / INV-006)。</summary>
     Task TagImagesAsync(IReadOnlyList<string> imageIds, string tagId, string? value);
 
+    /// <summary>
+    /// 画像ごとに異なる値での一括付与(REQ-046 の連番適用)。UPSERT 意味論(REQ-026)。
+    /// 単一トランザクション、失敗時全ロールバック(REQ-027 / INV-006)。
+    /// </summary>
+    Task TagImagesWithValuesAsync(string tagId, IReadOnlyList<(string ImageId, string? Value)> assignments);
+
     /// <summary>一括解除。単一トランザクション・冪等(REQ-027)。</summary>
     Task UntagImagesAsync(IReadOnlyList<string> imageIds, string tagId);
 

@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.NumericValueDialog"
+        x:DataType="vm:NumericValueDialogViewModel"
+        Width="380" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- numeric タグの値入力(REQ-046): 固定値|選択順連番。min/max/step はダイアログ内検証 -->
+  <StackPanel Margin="16" Spacing="8">
+    <TextBlock Text="{Binding Loc[tagging.numericDialog.title]}" FontSize="16" />
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <TextBlock Text="{Binding TagName}" />
+      <TextBlock Text="{Binding SelectionCountText}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"
+                 VerticalAlignment="Center" />
+    </StackPanel>
+    <TextBlock Text="{Binding ConstraintText}" IsVisible="{Binding HasConstraint}"
+               Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+
+    <RadioButton GroupName="mode" IsChecked="{Binding IsFixed, Mode=OneWay}" Click="OnFixedChecked"
+                 Content="{Binding Loc[tagging.numericDialog.fixed]}" />
+    <TextBox Text="{Binding FixedValueText}" IsEnabled="{Binding IsFixed}"
+             PlaceholderText="{Binding Loc[tag.enterNumericValue]}" Margin="24,0,0,0" />
+
+    <RadioButton GroupName="mode" IsChecked="{Binding IsSequential, Mode=OneWay}" Click="OnSequentialChecked"
+                 Content="{Binding Loc[tagging.numericDialog.sequential]}" />
+    <DockPanel Margin="24,0,0,0">
+      <TextBlock DockPanel.Dock="Left" Text="{Binding Loc[tagging.numericDialog.startValue]}"
+                 FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                 VerticalAlignment="Center" Margin="0,0,8,0" />
+      <TextBox Text="{Binding StartValueText}" IsEnabled="{Binding IsSequential}"
+               PlaceholderText="{Binding Loc[tag.enterNumericValue]}" />
+    </DockPanel>
+
+    <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+               FontSize="12" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Content="{Binding Loc[common.cancel]}" Click="OnCancelClick" MinWidth="80" />
+      <Button Content="{Binding Loc[tagging.apply]}" Click="OnApplyClick" MinWidth="80" />
+    </StackPanel>
+  </StackPanel>
+</Window>

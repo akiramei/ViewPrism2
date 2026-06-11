@@ -1,20 +1,15 @@
-namespace ViewPrism2.Infrastructure.Database;
-
-/// <summary>スキーマ変更 1 件(REQ-004)。Id 昇順で適用される。</summary>
-public sealed record Migration(string Id, string Sql);
+namespace ViewPrism2.Oracle;
 
 /// <summary>
-/// スキーマ DDL 定数(M-DB-007)。列・FK・既定値は仕様 §2.0 準拠。
-/// path/relative_path は COLLATE NOCASE(K-SQLITE)。sync_folders.path に UNIQUE。
-/// 日時は TEXT(ISO 8601 UTC)、BOOLEAN は INTEGER 0/1。
+/// v0(初版)DDL の凍結スナップショット(Run 1 当時の DatabaseSchema.LatestDdl の複製)。
+/// 治具修理(2026-06-11): S-05 が現行の DatabaseSchema.LatestDdl から v0 を導出していたため、
+/// マイグレーション(001-views-description)導入後に「v0 なのに最新列を持つ」矛盾フィクスチャとなり
+/// 偽陽性 FAIL を出した。オラクルのフィクスチャは現行コードに結合せず、本スナップショットに固定する。
+/// 以後この定数は変更しない(真の v0 を表す)。
 /// </summary>
-public static class DatabaseSchema
+internal static class V0SchemaFixture
 {
-    /// <summary>
-    /// 最新スキーマの DDL(migrations テーブル以外)。新規 DB はこれを 1 回で適用する(REQ-004)。
-    /// V1 時点では初版 DDL と同一(<see cref="Migrations"/> は空)。
-    /// </summary>
-    public const string LatestDdl = """
+    public const string InitialDdl = """
         CREATE TABLE sync_folders (
             id                 TEXT    NOT NULL PRIMARY KEY,
             name               TEXT    NOT NULL,
@@ -80,8 +75,7 @@ public static class DatabaseSchema
             sort_direction  TEXT    NOT NULL DEFAULT 'asc',
             display_columns TEXT    NULL,
             home_tag_id     TEXT    NULL,
-            modified_at     TEXT    NOT NULL,
-            description     TEXT    NULL
+            modified_at     TEXT    NOT NULL
         );
 
         CREATE TABLE view_conditions (
@@ -106,16 +100,4 @@ public static class DatabaseSchema
         );
         CREATE INDEX idx_view_tag_hierarchies_view ON view_tag_hierarchies(view_id);
         """;
-
-    /// <summary>
-    /// 既存 DB への増分マイグレーション(REQ-004: 未適用分を ID 昇順で適用、各々 1 トランザクション)。
-    /// スキーマ変更時はここへ追記し、LatestDdl も併せて更新する。
-    /// 注意: ALTER TABLE ADD COLUMN は末尾に列を足すため、LatestDdl 側でも同じ列順(末尾)になるよう定義し、
-    /// 新規 DB とマイグレーション適用 DB のスキーマ同値(CP-DB-006)を保つ。
-    /// </summary>
-    public static IReadOnlyList<Migration> Migrations { get; } =
-    [
-        // v1.2: ビュー作成/編集ダイアログ=名前+説明(REQ-030 の description を views へ追加)
-        new("001-views-description", "ALTER TABLE views ADD COLUMN description TEXT NULL;"),
-    ];
 }

@@ -22,14 +22,15 @@ public sealed class ViewService
 
     // ---- ビュー本体(REQ-030/032) ----
 
-    /// <summary>ビュー作成。name 必須(空白のみ拒否)。</summary>
+    /// <summary>ビュー作成。name 必須(空白のみ拒否)。description は v1.2 ダイアログの「説明」(null 可)。</summary>
     public async Task<Result<View>> CreateAsync(
         string name,
         bool isFavorite = false,
         SortField sortField = SortField.Name,
         SortDirection sortDirection = SortDirection.Asc,
         string? displayColumns = null,
-        string? homeTagId = null)
+        string? homeTagId = null,
+        string? description = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -40,6 +41,7 @@ public sealed class ViewService
         {
             Id = IdGenerator.NewId(),
             Name = name,
+            Description = description,
             IsFavorite = isFavorite,
             SortField = sortField,
             SortDirection = sortDirection,
@@ -84,6 +86,9 @@ public sealed class ViewService
 
     /// <summary>取得(閲覧)。modified_at は更新しない(REQ-032)。</summary>
     public Task<View?> GetAsync(string id) => _views.GetByIdAsync(id);
+
+    /// <summary>全ビュー一覧(閲覧。v1.2 タグタブ「ビュー管理」の供給元)。modified_at は更新しない。</summary>
+    public Task<IReadOnlyList<View>> GetAllAsync() => _views.GetAllAsync();
 
     /// <summary>お気に入り一覧: is_favorite=true を name 昇順(同値 id 昇順)(REQ-033)。</summary>
     public async Task<IReadOnlyList<View>> GetFavoritesAsync()
@@ -257,6 +262,62 @@ public sealed class ViewService
 
     /// <summary>階層一覧(閲覧)。modified_at は更新しない。</summary>
     public Task<IReadOnlyList<HierarchyNode>> GetHierarchyAsync(string viewId) => _views.GetHierarchyAsync(viewId);
+
+    /// <summary>
+    /// タグ階層の一括置換保存(v1.2 階層エディタのバッチ保存)。
+    /// メモリ内編集の結果を単一トランザクションで全置換し、ホームタグ(home_tag_id=階層ノード id)と
+    /// modified_at を保存時に 1 回だけ更新する(REQ-032)。循環・不正親参照は拒否(INV-004)。
+    /// </summary>
+    public async Task<Result> SaveHierarchyAsync(
+        string viewId, IReadOnlyList<HierarchyNode> nodes, string? homeNodeId)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        if (await _views.GetByIdAsync(viewId).ConfigureAwait(false) is null)
+        {
+            return Result.Fail(ErrorCode.NotFound, "ビューが存在しません。");
+        }
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (!string.Equals(node.ViewId, viewId, StringComparison.Ordinal))
+            {
+                return Result.Fail(ErrorCode.ValidationError, "別ビューのノードが含まれています。");
+            }
+
+            if (!ids.Add(node.Id))
+            {
+                return Result.Fail(ErrorCode.ValidationError, "ノード id が重複しています。");
+            }
+        }
+
+        var byId = nodes.ToDictionary(n => n.Id, StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (node.ParentId is { } parentId && !byId.ContainsKey(parentId))
+            {
+                return Result.Fail(ErrorCode.ValidationError, "親ノードが集合内に存在しません。");
+            }
+
+            // 自己・祖先経路に自分が現れたら循環(INV-004)
+            var seen = new HashSet<string>(StringComparer.Ordinal) { node.Id };
+            var cursor = node.ParentId;
+            while (cursor is not null)
+            {
+                if (!seen.Add(cursor))
+                {
+                    return Result.Fail(ErrorCode.CircularReference, "階層に循環があります。");
+                }
+
+                cursor = byId[cursor].ParentId;
+            }
+        }
+
+        // 参照切れホームは保存しない(REQ-037 のフォールバック方針に合わせて null 化。エラーにしない)
+        var home = homeNodeId is not null && byId.ContainsKey(homeNodeId) ? homeNodeId : null;
+        await _views.ReplaceHierarchyAsync(viewId, nodes, home, _clock.UtcNowIso()).ConfigureAwait(false);
+        return Result.Ok();
+    }
 
     /// <summary>modified_at 更新(REQ-032: 本体・条件・階層のいずれの変更でも更新)。</summary>
     private Task TouchAsync(string viewId) => _views.SetModifiedAtAsync(viewId, _clock.UtcNowIso());

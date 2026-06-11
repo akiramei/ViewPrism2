@@ -28,13 +28,28 @@ public sealed class TagTypeOption : ObservableObject
     public string Label => _localization.T(_labelKey);
 }
 
+/// <summary>カラープリセットの 1 色(v1.2 タグ作成ダイアログ: プリセット+hex 表示)。</summary>
+public sealed record ColorPresetViewModel(string Hex);
+
 /// <summary>
-/// タグ編集ダイアログ(E-UI-TAGS-026、REQ-021〜025)。
-/// 名前・種別(既存は変更不可)・色(#RRGGBB)・説明・numeric 設定(min/max/step/unit)・
-/// textual 定義済み値(順序保持の並べ替え、REQ-024)。検証は TagService(core)に委譲する。
+/// タグ編集ダイアログ(E-UI-TAGS-026、REQ-021〜025、v1.2 §2.6)。
+/// 名前・種別(既存は変更不可)・カラー(プリセット+hex 表示)・説明・
+/// numeric 設定(min/max/step/unit)・textual 定義済み値(追加・削除・並べ替え、REQ-024)。
+/// 検証は TagService(core)に委譲する。
 /// </summary>
 public sealed partial class TagEditorViewModel : ObservableObject
 {
+    /// <summary>
+    /// プリセットカラー(原典 colorPicker の 18 カテゴリに対応する Material 500 値。
+    /// K-DESIGN に定義が無いため工場判断 — cheat-log 参照)。
+    /// </summary>
+    public static readonly IReadOnlyList<ColorPresetViewModel> ColorPresets =
+    [
+        new("#F44336"), new("#E91E63"), new("#9C27B0"), new("#673AB7"), new("#3F51B5"), new("#2196F3"),
+        new("#03A9F4"), new("#00BCD4"), new("#009688"), new("#4CAF50"), new("#8BC34A"), new("#CDDC39"),
+        new("#FFEB3B"), new("#FFC107"), new("#FF9800"), new("#795548"), new("#9E9E9E"), new("#607D8B"),
+    ];
+
     private readonly TagService _tagService;
     private readonly ITagRepository _tags;
     private readonly LocalizationService _localization;
@@ -167,6 +182,21 @@ public sealed partial class TagEditorViewModel : ObservableObject
 
     [RelayCommand]
     private void MoveValueDown() => MoveSelected(+1);
+
+    /// <summary>プリセットカラーの選択(hex 表示欄へ反映)。</summary>
+    [RelayCommand]
+    private void PickColor(ColorPresetViewModel preset) => Color = preset.Hex;
+
+    /// <summary>候補値の D&D 並べ替え(順序保持、REQ-024。View 層の Drop ハンドラから呼ぶ)。</summary>
+    public void MoveValue(int fromIndex, int toIndex)
+    {
+        if (fromIndex >= 0 && fromIndex < PredefinedValues.Count &&
+            toIndex >= 0 && toIndex < PredefinedValues.Count &&
+            fromIndex != toIndex)
+        {
+            PredefinedValues.Move(fromIndex, toIndex);
+        }
+    }
 
     [RelayCommand]
     private async Task SaveAsync()

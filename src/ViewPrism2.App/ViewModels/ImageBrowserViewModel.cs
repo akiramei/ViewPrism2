@@ -194,6 +194,10 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
     [ObservableProperty]
     private double _cellSize = 180;
 
+    /// <summary>タグ編集モード中はダブルクリックのビューア起動を無効化する(REQ-041 v1.2)。</summary>
+    [ObservableProperty]
+    private bool _suppressOpenItem;
+
     /// <summary>空状態判定(仕様 §2.6: 画像 0 件 → 中央メッセージ)。</summary>
     public bool IsEmpty => _items.Count == 0;
 
@@ -261,7 +265,12 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
 
         if (isDoubleClick)
         {
-            OpenItemRequested?.Invoke(this, item);
+            // タグ編集モード中はビューア起動無効(REQ-041 v1.2)
+            if (!SuppressOpenItem)
+            {
+                OpenItemRequested?.Invoke(this, item);
+            }
+
             return;
         }
 
@@ -280,6 +289,28 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
     public void ClearSelection()
     {
         ClearSelectionCore();
+        SelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 画像集合の差し替え後に旧選択を選択順のまま復元する(タグ付与適用後の継続操作用)。
+    /// 見つからない id は読み飛ばす(INV-008 のフォールバック方針)。
+    /// </summary>
+    public void RestoreSelection(IReadOnlyList<string> imageIdsInOrder)
+    {
+        ArgumentNullException.ThrowIfNull(imageIdsInOrder);
+        ClearSelectionCore();
+        var byId = _items.ToDictionary(i => i.Record.Id, StringComparer.Ordinal);
+        foreach (var id in imageIdsInOrder)
+        {
+            if (byId.TryGetValue(id, out var item) && !item.IsSelected)
+            {
+                _selection.Add(item);
+                item.IsSelected = true;
+                item.SelectionOrder = _selection.Count;
+            }
+        }
+
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 

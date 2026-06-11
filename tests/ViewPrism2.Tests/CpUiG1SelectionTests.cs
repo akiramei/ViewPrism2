@@ -110,6 +110,38 @@ public sealed class CpUiG1SelectionTests
     }
 
     [Fact]
+    public void タグ編集モード中はダブルクリックでビューアを開かない()
+    {
+        // REQ-041 v1.2: ダブルクリック=ビューア起動(タグ編集モード中は無効)
+        var browser = WithImages("a.jpg", "b.jpg");
+        var items = browser.SortedItems;
+        var openedCount = 0;
+        browser.OpenItemRequested += (_, _) => openedCount++;
+
+        browser.SuppressOpenItem = true;
+        browser.HandleItemPointer(items[0], ctrl: false, isDoubleClick: true);
+        Assert.Equal(0, openedCount);
+
+        browser.SuppressOpenItem = false;
+        browser.HandleItemPointer(items[0], ctrl: false, isDoubleClick: true);
+        Assert.Equal(1, openedCount);
+    }
+
+    [Fact]
+    public void RestoreSelectionは選択順を保って復元し見つからないidは読み飛ばす()
+    {
+        var browser = WithImages("a.jpg", "b.jpg", "c.jpg");
+        var items = browser.SortedItems;
+
+        browser.RestoreSelection([items[2].Record.Id, "missing-id", items[0].Record.Id]);
+
+        Assert.Equal(1, items[2].SelectionOrder);
+        Assert.Equal(2, items[0].SelectionOrder);
+        Assert.False(items[1].IsSelected);
+        Assert.Equal(2, browser.Selection.Count);
+    }
+
+    [Fact]
     public void 画像0件で空状態になる()
     {
         var browser = NewBrowser();

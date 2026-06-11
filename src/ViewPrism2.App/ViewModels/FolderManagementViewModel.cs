@@ -120,6 +120,9 @@ public sealed partial class FolderManagementViewModel : ObservableObject
 
     public bool IsEmpty => Folders.Count == 0;
 
+    /// <summary>フォルダ・スキャン状態の永続変更があった(画像タブの再読込用、v1.2 左ペイン埋め込み)。</summary>
+    public event EventHandler? DataChanged;
+
     public async Task LoadAsync()
     {
         Folders.Clear();
@@ -156,6 +159,7 @@ public sealed partial class FolderManagementViewModel : ObservableObject
 
         StatusMessage = null;
         await LoadAsync();
+        DataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task ScanAsync(FolderRowViewModel row)
@@ -193,6 +197,8 @@ public sealed partial class FolderManagementViewModel : ObservableObject
                 row.Apply(updated);
                 row.LastScanText = FormatLastScan(updated.LastScan);
             }
+
+            DataChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -207,6 +213,7 @@ public sealed partial class FolderManagementViewModel : ObservableObject
 
         await _folders.DeleteAsync(row.Folder.Id);
         await LoadAsync();
+        DataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public Task OpenRelinkAsync(FolderRowViewModel row) => _windows.ShowRelinkAsync(row.Folder.Id);
@@ -220,6 +227,7 @@ public sealed partial class FolderManagementViewModel : ObservableObject
         };
         await _folders.UpdateAsync(updated);
         row.Apply(updated);
+        DataChanged?.Invoke(this, EventArgs.Empty); // is_active は表示対象に影響(REQ-010)
     }
 
     public async Task SavePatternsAsync(FolderRowViewModel row)

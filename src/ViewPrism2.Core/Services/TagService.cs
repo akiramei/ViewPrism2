@@ -196,6 +196,35 @@ public sealed class TagService
         }
     }
 
+    /// <summary>
+    /// 画像ごとに異なる値での一括付与(REQ-046 の連番適用)。
+    /// 全値を適用前に検証し(REQ-025 範囲)、1 件でも不正なら 0 件適用。
+    /// 適用は単一トランザクション、失敗時全ロールバック(REQ-027 / INV-006)。
+    /// </summary>
+    public async Task<Result> TagImagesWithValuesAsync(
+        string tagId, IReadOnlyList<(string ImageId, string? Value)> assignments)
+    {
+        ArgumentNullException.ThrowIfNull(assignments);
+        foreach (var (_, value) in assignments)
+        {
+            var validated = await ValidateValueAsync(tagId, value).ConfigureAwait(false);
+            if (!validated.IsSuccess)
+            {
+                return validated; // 1 件でも不正 → 適用 0 件
+            }
+        }
+
+        try
+        {
+            await _tags.TagImagesWithValuesAsync(tagId, assignments).ConfigureAwait(false);
+            return Result.Ok();
+        }
+        catch (DbException)
+        {
+            return Result.Fail(ErrorCode.NotFound, "画像またはタグが存在しないため、バッチ全体を取り消しました。");
+        }
+    }
+
     /// <summary>一括解除。冪等(無い行の解除はエラーにしない)・単一トランザクション(REQ-026/027)。</summary>
     public async Task<Result> UntagImagesAsync(IReadOnlyList<string> imageIds, string tagId)
     {
