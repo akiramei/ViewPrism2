@@ -37,3 +37,28 @@ as_built:
     - { cp_id: CP-UI-G5, date: ~, approver: maintainer, verdict: pending, notes: "ja/en 即時切替" }
     - { cp_id: CP-UI-G6, date: ~, approver: maintainer, verdict: pending, notes: "タグタブ 3 ペイン+ダイアログ+バッチ保存" }
     - { cp_id: CP-UI-G7, date: ~, approver: maintainer, verdict: pending, notes: "タグ付与パネル(固定値/連番)" }
+
+  # 変更オーダー(Phase 7。納品後の再入口)
+  eco:
+    - id: ECO-001
+      date: 2026-06-11
+      type: documentation(spec/E-BOM 記述明確化)
+      summary: "§2.1 スキャン手順の番号付けが実行順を誤示唆 → missing 化(手順4/5)が判定(手順3)より先である旨を明文化"
+      origin: "原典 porting-spec(RVP-SCAN-003 / 02§1 / 06§2)との突き合わせで検出。コード ScanService.cs:117-143 と 固定オラクル S-01 は当初から正しい順序"
+      changed: [20-spec.md §2.1, 30-ebom.yaml E-SCAN-005 不変条件]
+      impact: "製造物(code/test/golden)・固定オラクル(tag loop-v1-r1)とも無変更。再製造/回帰/移行なし"
+      ref: bomdd/60-change-order.md
+
+  # 設計者側リバース入力(原典 source-grounded。工場非開示は維持)
+  reverse_input:
+    location: "C:/Demo/source/repos/view-prism/docs/porting-spec/(01〜11+README)"
+    nature: "原典 view-prism のソースコードを一次情報にした移植仕様。RVP-* トレース表・互換ポリシー台帳・E-BOM/K-BOM/CP 候補・未裁定項目を含む"
+    v1_cross_check:
+      date: 2026-06-11
+      result: "V1 コアは原典準拠を確認(拡張子・同一性判定 hash+size+mtime・image_tags 単一値・状態モデル・missing 先行スキャン)。検出差分は §2.1 プローズ忠実度のみ(→ ECO-001)"
+      note: "原典リバース資料が V1 仕様の微細なズレを見つける検査器として機能"
+    forward_use:
+      role: "V2 以降の source-grounded 入力(再発掘不要の起点)"
+      v2_seed: "Loop V2(ビューア拡張)= RVP-UI-003(normal/scroll/spread/custom)。以降: 類似検索/マージ/リンク修復/作業スペース/バックアップ"
+      pre_adjudicate: "製造前に設計者裁定 or 探索プローブへ落とす未確定項目 — RVP-REPAIR-004(relink 候補削除)/ RVP-REPAIR-005(detailed=pHash-only)/ RVP-MERGE-002(値付きタグ衝突)"
+      safety_carryforward: "merge/trash/permanent-delete 導入時に物理ファイル非破壊を woven 安全制約+L3 物理差分 CP へ格上げ(現 V1 は INV-009 分散配置で充足)"

@@ -48,9 +48,12 @@ ViewPrism2 は Windows 向けデスクトップ画像管理アプリケーショ
 - 削除時は配下 images が連鎖削除される(確認ダイアログ必須 — タグ関連も消えるため)
 
 **スキャン (REQ-011〜015)**
+
+> **実行順序(重要・ECO-001 で明確化)**: 以下 1〜6 は論理的記述順であり、実行順は **手順 4・5(missing 化・孤立 pending 削除)を手順 3(各ファイル判定)より先に**適用する。これによりリネーム(旧ファイル消失＋新ファイル出現)を**単一スキャン**で `旧行=missing` ＋ `新行=pending(candidate=旧行 id)` に確定できる(判定規則 3a は missing 化後の DB 状態を参照するため)。実装(ScanService)・固定オラクル S-01・原典挙動(porting-spec RVP-SCAN-003 / 02§1 / 06§2)はいずれもこの順序で一致する。番号は手順の論理的呼称であり実行順位ではない。
+
 1. path 配下を列挙(include_subfolders=true なら再帰)。拡張子(小文字化)∈ {.jpg,.jpeg,.png,.gif,.bmp,.webp} のみ対象 (REQ-011)
 2. 各ファイルの相対パス(スラッシュ統一、先頭末尾スラッシュなし、比較は case-insensitive)を算出 (REQ-014)
-3. 各ファイルを以下の優先順で判定する(最初に成立した規則のみ適用) (REQ-012):
+3. 各ファイルを以下の優先順で判定する(最初に成立した規則のみ適用)。**手順 4・5 を適用済みの DB 状態に対して**判定する(上記実行順序参照) (REQ-012):
    - (1) DB に同一相対パスの行があり、file_size と modified_date がともに一致 → 変更なし(スキップ)
    - (2) DB に同一相対パスの行があり、file_size または modified_date が異なる → SHA-256 再計算し
      hash/file_size/modified_date を更新(status は変更しない)
@@ -60,8 +63,8 @@ ViewPrism2 は Windows 向けデスクトップ画像管理アプリケーショ
      - (3b) それ以外 → status=normal で登録
      (created_date/modified_date はファイルのタイムスタンプの ISO 8601 UTC 変換)
    - 読み取り不能ファイル(ロック・アクセス拒否等)は DB を変更せずスキップし警告ログ。次回スキャンで再試行
-4. DB 上 status=normal で物理ファイルが存在しない行 → status=missing へ更新
-5. 物理ファイルが存在しない status=pending の行 → 行を削除(候補が消えたため)
+4. DB 上 status=normal で物理ファイルが存在しない行 → status=missing へ更新(**手順 3 の判定より先に実行** — 上記実行順序参照)
+5. 物理ファイルが存在しない status=pending の行 → 行を削除(候補が消えたため。**手順 3 より先に実行**)
 6. 完了時(例外時も)last_scan を現在時刻に更新し、サマリ {added, missing, pending, updated, skipped} 件数を返す (REQ-015)
 
 **ステータス遷移の全列挙 (REQ-016)** — 以下以外の遷移は存在しない:

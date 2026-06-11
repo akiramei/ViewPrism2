@@ -32,3 +32,11 @@ metrics:
     NFR-001: "PASS — 条件評価 1,000 画像×3 条件、200ms 制限を大幅充足(CP-NFR-001、3 回中央値)"
   golden_pending: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-UI-G4, CP-UI-G5, CP-UI-G6, CP-UI-G7]   # 承認者 maintainer
   probes_pending: [P-01, P-02, P-03, P-04]   # 探索プローブ(golden 承認と併せて実施可)
+  eco:
+    - id: ECO-001
+      type: documentation
+      changed_artifacts: 2          # 20-spec.md §2.1 / 30-ebom.yaml E-SCAN-005
+      remanufacture: 0              # 製造物無変更(コード/オラクル/テスト/golden)
+      regressions: 0
+      origin: reverse-input(porting-spec RVP-SCAN-003 との突き合わせ)
+      note: "仕様プローズ忠実度の是正。実装・固定オラクル S-01 は当初から正しい"
