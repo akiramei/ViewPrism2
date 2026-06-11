@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 固定オラクル(bomdd/41-fixed-oracle.yaml S-01〜S-12)。設計者側受入。
+       tests/ViewPrism2.Tests の構成を踏襲(xunit.v3 + Microsoft.Testing.Platform)。
+       S ケースはすべて Core/Infrastructure の公開 API で実行するため App は参照しない。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ViewPrism2.Core\ViewPrism2.Core.csproj" />
+    <ProjectReference Include="..\..\src\ViewPrism2.Infrastructure\ViewPrism2.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
