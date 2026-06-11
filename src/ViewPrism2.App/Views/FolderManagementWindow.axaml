@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.FolderManagementWindow"
+        x:DataType="vm:FolderManagementViewModel"
+        Title="{Binding Loc[folder.management]}"
+        Width="760" Height="520"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- 同期フォルダ管理(REQ-010/015): 登録・削除(確認必須)・スキャン+サマリ・再リンク入口 -->
+  <DockPanel Margin="12">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+      <Button DockPanel.Dock="Right" Content="{Binding Loc[folder.add]}" Command="{Binding AddFolderCommand}" />
+      <TextBlock Text="{Binding Loc[folder.management]}" FontSize="16" VerticalAlignment="Center" />
+    </DockPanel>
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" FontSize="12"
+               Foreground="{StaticResource WarnBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+    <Panel>
+      <TextBlock Text="{Binding Loc[folder.empty]}" IsVisible="{Binding IsEmpty}"
+                 Foreground="{StaticResource TextMutedBrush}"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Folders}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:FolderRowViewModel">
+              <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1"
+                      CornerRadius="4" Padding="12" Margin="0,0,0,8">
+                <StackPanel Spacing="8">
+                  <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                      <Button Content="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[toolbar.scan]}"
+                              Command="{Binding ScanCommand}" IsEnabled="{Binding !IsScanning}" />
+                      <Button Content="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[relink.title]}"
+                              Command="{Binding RelinkCommand}" />
+                      <Button Content="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[common.delete]}"
+                              Command="{Binding DeleteCommand}" Foreground="{StaticResource DangerBrush}" />
+                    </StackPanel>
+                    <StackPanel>
+                      <TextBlock Text="{Binding Name}" FontSize="16" />
+                      <TextBlock Text="{Binding Path}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DockPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="16">
+                    <CheckBox IsChecked="{Binding IsActive}"
+                              Content="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[folder.isActive]}" />
+                    <CheckBox IsChecked="{Binding IncludeSubfolders}"
+                              Content="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[folder.includeSubfolders]}" />
+                    <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                               Text="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[folder.lastScan]}" />
+                    <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding LastScanText}" />
+                  </StackPanel>
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="12"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[folder.excludePatterns]}"
+                               Margin="0,0,8,0" />
+                    <Button DockPanel.Dock="Right" Margin="8,0,0,0"
+                            Content="{Binding $parent[Window].((vm:FolderManagementViewModel)DataContext).Loc[common.save]}"
+                            Command="{Binding SavePatternsCommand}" />
+                    <TextBox Text="{Binding ExcludePatternsText}" />
+                  </DockPanel>
+                  <ProgressBar Minimum="0" Maximum="100" Value="{Binding ScanProgress}"
+                               IsVisible="{Binding IsScanning}" />
+                  <TextBlock Text="{Binding RowMessage}" FontSize="12"
+                             Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Panel>
+  </DockPanel>
+</Window>

@@ -13,5 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ViewPrism2.Core\ViewPrism2.Core.csproj" />
     <ProjectReference Include="..\..\src\ViewPrism2.Infrastructure\ViewPrism2.Infrastructure.csproj" />
+    <!-- Run 3: ViewModel ロジック(選択・ナビゲーション・列構成)と L1 スモークの検査対象 -->
+    <ProjectReference Include="..\..\src\ViewPrism2.App\ViewPrism2.App.csproj" />
   </ItemGroup>
 </Project>

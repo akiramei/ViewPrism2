@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.RelinkWindow"
+        x:DataType="vm:RelinkViewModel"
+        Title="{Binding Loc[relink.title]}"
+        Width="720" Height="480"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- 再リンク(REQ-017): missing 選択 → 候補(relative_path 昇順、パス・サイズ・更新日時)→ 確認 → 確定 -->
+  <DockPanel Margin="12">
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <Button DockPanel.Dock="Right" Content="{Binding Loc[relink.commit]}" Command="{Binding CommitCommand}" />
+      <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                 VerticalAlignment="Center" TextWrapping="Wrap" />
+    </DockPanel>
+    <Grid ColumnDefinitions="*,8,*">
+      <DockPanel Grid.Column="0">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[relink.missingImages]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+        <Panel>
+          <TextBlock Text="{Binding Loc[relink.noMissingImages]}" IsVisible="{Binding HasNoMissing}"
+                     Foreground="{StaticResource TextMutedBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <ListBox ItemsSource="{Binding MissingImages}" SelectedItem="{Binding SelectedMissing}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:MissingImageViewModel">
+                <TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Panel>
+      </DockPanel>
+      <DockPanel Grid.Column="2">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[relink.candidates]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+        <Panel>
+          <TextBlock Text="{Binding Loc[relink.noCandidates]}" IsVisible="{Binding HasNoCandidates}"
+                     Foreground="{StaticResource TextMutedBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <ListBox ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:RelinkCandidateViewModel">
+                <StackPanel>
+                  <TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{Binding SizeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Text="{Binding ModifiedText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Panel>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

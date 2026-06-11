@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- ADR-0002: Infrastructure → Core のみ参照。
        Run 2(M-DB-007 / M-SCAN-005)で調達表どおり SQLite/Dapper/Logging を追加。
-       SkiaSharp/Serilog は該当製造単位(M-THUMB-008 / App 合成)の Run で追加する。 -->
+       Run 3(M-THUMB-008)で SkiaSharp を追加。Serilog は App 合成側で参照する。 -->
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.*" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ViewPrism2.Core\ViewPrism2.Core.csproj" />

@@ -68,6 +68,17 @@ public sealed class ImageRepository : IImageRepository
         });
     }
 
+    public Task<IReadOnlyList<ImageRecord>> GetAllNormalAsync()
+    {
+        // INV-010: 既定の画像一覧は status=normal のみ
+        return _db.RunAsync<IReadOnlyList<ImageRecord>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<Row>(
+                $"{SelectColumns} WHERE status = 'normal' ORDER BY id").ConfigureAwait(false);
+            return rows.Select(r => ToEntity(r)!).ToList();
+        });
+    }
+
     public Task UpdateFileMetaAsync(string id, string hash, long fileSize, string modifiedDate)
     {
         // スキャン規則 (2): status は変更しない(REQ-012)

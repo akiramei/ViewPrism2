@@ -41,6 +41,9 @@ public interface ITagRepository
 
     Task<IReadOnlyList<ImageTag>> GetImageTagsAsync(string imageId);
 
+    /// <summary>全付与行(条件評価 OC-1 の入力構築用)。</summary>
+    Task<IReadOnlyList<ImageTag>> GetAllImageTagsAsync();
+
     /// <summary>タグ id → 使用数(COUNT(DISTINCT image_id)、REQ-029)。</summary>
     Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync();
 }

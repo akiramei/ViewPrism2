@@ -222,6 +222,17 @@ public sealed class TagRepository : ITagRepository
         });
     }
 
+    public Task<IReadOnlyList<ImageTag>> GetAllImageTagsAsync()
+    {
+        return _db.RunAsync<IReadOnlyList<ImageTag>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<ImageTag>(
+                "SELECT image_id AS ImageId, tag_id AS TagId, value AS Value FROM image_tags ORDER BY image_id, tag_id")
+                .ConfigureAwait(false);
+            return rows.ToList();
+        });
+    }
+
     public Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync()
     {
         // 使用数 = COUNT(DISTINCT image_id)(REQ-029)

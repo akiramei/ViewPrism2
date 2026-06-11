@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.TagManagementWindow"
+        x:DataType="vm:TagManagementViewModel"
+        Title="{Binding Loc[tag.tagManagement]}"
+        Width="560" Height="480"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- タグ管理(E-UI-TAGS-026): name 昇順一覧+使用数+16px 円形スウォッチ(K-DESIGN) -->
+  <DockPanel Margin="12">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+      <Button DockPanel.Dock="Right" Content="{Binding Loc[tag.newTag]}" Command="{Binding NewTagCommand}" />
+      <TextBlock Text="{Binding Loc[tag.tagManagement]}" FontSize="16" VerticalAlignment="Center" />
+    </DockPanel>
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" FontSize="12"
+               Foreground="{StaticResource WarnBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+    <Panel>
+      <TextBlock Text="{Binding Loc[tag.list.empty]}" IsVisible="{Binding IsEmpty}"
+                 Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Tags}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TagRowViewModel">
+              <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1" Padding="4,8">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{Binding $parent[Window].((vm:TagManagementViewModel)DataContext).Loc[common.edit]}"
+                            Command="{Binding $parent[Window].((vm:TagManagementViewModel)DataContext).EditCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Content="{Binding $parent[Window].((vm:TagManagementViewModel)DataContext).Loc[common.delete]}"
+                            Command="{Binding $parent[Window].((vm:TagManagementViewModel)DataContext).DeleteCommand}"
+                            CommandParameter="{Binding}" Foreground="{StaticResource DangerBrush}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <!-- 色見本: 16px 円形。color=NULL は境界線色のリング(K-DESIGN) -->
+                    <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
+                             IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                    <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                             IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding TypeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding UsageText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                               VerticalAlignment="Center" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Panel>
+  </DockPanel>
+</Window>

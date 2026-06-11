@@ -1,0 +1,158 @@
+using CommunityToolkit.Mvvm.Input;
+using SkiaSharp;
+using ViewPrism2.App.Services;
+using ViewPrism2.App.ViewModels;
+using ViewPrism2.Core.Common;
+using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Services;
+using ViewPrism2.Infrastructure.I18n;
+using ViewPrism2.Infrastructure.Imaging;
+using ViewPrism2.Infrastructure.Scanning;
+using Xunit;
+
+namespace ViewPrism2.Tests;
+
+/// <summary>
+/// CP-L1-SMOKE(in-process 部分): フォルダ登録 → スキャン → シェル VM のグリッド表示 →
+/// サムネイル生成 → NodeGraph 選択 → 詳細パネル、の正常系 1 本を実サービス+実 DB で通す。
+/// プロセス起動・ウィンドウ生成の確認は Release ビルド後の手動起動で実施し報告書に記録する。
+/// </summary>
+[Trait("cp", "CP-L1-SMOKE")]
+public sealed class CpL1SmokeTests : IDisposable
+{
+    private readonly TempDb _db = new();
+    private readonly string _root;
+    private readonly string _thumbDir;
+
+    public CpL1SmokeTests()
+    {
+        _root = Path.Combine(Path.GetTempPath(), "ViewPrism2.Tests", Guid.NewGuid().ToString("D"));
+        _thumbDir = Path.Combine(_root, "thumbs");
+        Directory.CreateDirectory(Path.Combine(_root, "files"));
+    }
+
+    public void Dispose()
+    {
+        _db.Dispose();
+        try
+        {
+            if (Directory.Exists(_root))
+            {
+                Directory.Delete(_root, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private sealed class StubWindowService : IWindowService
+    {
+        public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(true);
+
+        public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
+
+        public Task ShowFolderManagementAsync() => Task.CompletedTask;
+
+        public Task ShowTagManagementAsync() => Task.CompletedTask;
+
+        public Task ShowSettingsAsync() => Task.CompletedTask;
+
+        public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
+
+        public Task<bool> ShowViewEditorAsync(View? existing) => Task.FromResult(false);
+
+        public Task ShowRelinkAsync(string folderId) => Task.CompletedTask;
+
+        public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
+        {
+        }
+    }
+
+    [Fact]
+    public async Task フォルダ登録からグリッド表示までの正常系1本()
+    {
+        // --- フィクスチャフォルダ(実画像 3 枚) ---
+        var files = Path.Combine(_root, "files");
+        ImageFixtures.WriteEncoded(Path.Combine(files, "photo1.jpg"), 800, 600, SKEncodedImageFormat.Jpeg);
+        ImageFixtures.WriteEncoded(Path.Combine(files, "photo2.png"), 320, 240, SKEncodedImageFormat.Png);
+        ImageFixtures.WriteBmp(Path.Combine(files, "photo3.bmp"), 64, 64);
+
+        // --- フォルダ登録 → スキャン ---
+        var folder = new SyncFolder { Id = IdGenerator.NewId(), Name = "smoke", Path = files };
+        Assert.True((await _db.Folders.AddAsync(folder)).IsSuccess);
+
+        var scan = new ScanService(_db.Folders, _db.Images, _db.Clock);
+        var scanResult = await scan.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken);
+        Assert.True(scanResult.IsSuccess, scanResult.Message);
+        Assert.Equal(3, scanResult.Value!.Added);
+
+        // --- 実サービス合成(App と同じ構成。i18n は実資産を読む) ---
+        var localization = new LocalizationService(
+            I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var thumbnails = new ThumbnailService(_thumbDir);
+        var viewService = new ViewService(_db.Views, _db.Clock);
+        var tagService = new TagService(_db.Tags);
+        var vm = new MainWindowViewModel(
+            _db.Folders, _db.Images, _db.Tags, viewService,
+            new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
+            new ImageSorter(), thumbnails, localization, new AppSettings(), new StubWindowService());
+
+        // --- 起動初期化 → 全画像グリッド ---
+        await vm.InitializeAsync();
+        Assert.False(vm.Browser.IsEmpty);
+        Assert.Equal(3, vm.Browser.SortedItems.Count);
+        Assert.Single(vm.Browser.Rows); // 既定 4 列 × 3 枚 = 1 行
+        Assert.Equal("photo1.jpg", vm.Browser.SortedItems[0].FileName); // name asc
+
+        // --- サムネイル生成(「サムネイルが並ぶ」の in-process 確認) ---
+        foreach (var item in vm.Browser.SortedItems)
+        {
+            var thumb = await thumbnails.GetOrCreateAsync(item.AbsolutePath);
+            Assert.NotNull(thumb);
+            Assert.True(File.Exists(thumb));
+        }
+
+        // --- 選択 → 詳細パネル(REQ-043) ---
+        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, isDoubleClick: false);
+        var waited = 0;
+        while (!vm.Detail.HasImage && waited < 100)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+            waited++;
+        }
+
+        Assert.True(vm.Detail.HasImage);
+        Assert.Equal("photo1.jpg", vm.Detail.FileName);
+        Assert.NotEqual(string.Empty, vm.Detail.SizeText);
+
+        // --- タグ付け → ビュー+階層 → NodeGraph 選択 → 絞り込み ---
+        var tag = await tagService.CreateAsync("色", TagType.Textual);
+        Assert.True(tag.IsSuccess);
+        var imageId = vm.Browser.SortedItems[0].Record.Id;
+        Assert.True((await tagService.TagImageAsync(imageId, tag.Value!.Id, "赤")).IsSuccess);
+
+        var view = await viewService.CreateAsync("スモークビュー");
+        Assert.True(view.IsSuccess);
+        Assert.True((await viewService.AddNodeAsync(view.Value!.Id, tag.Value.Id, null, 0)).IsSuccess);
+
+        await vm.ReloadAsync();
+        var viewItem = vm.Recents.First(i => i.View?.Id == view.Value.Id);
+        await ((IAsyncRelayCommand)vm.SelectViewListItemCommand).ExecuteAsync(viewItem);
+
+        Assert.Single(vm.TreeRoots);
+        var root = vm.TreeRoots[0];
+        Assert.Single(root.Children); // distinct 値 1 件 → 一体型「色: 赤」(REQ-035)
+        Assert.Equal("色: 赤", root.Children[0].DisplayName);
+
+        vm.SelectedTreeNode = root.Children[0];
+        var filtered = Assert.Single(vm.Browser.SortedItems); // equals(赤) で 1 枚に絞られる
+        Assert.Equal(imageId, filtered.Record.Id);
+
+        vm.SelectedTreeNode = root; // ルート=ビュー条件のみ(無条件)→ 全 3 枚
+        Assert.Equal(3, vm.Browser.SortedItems.Count);
+    }
+}

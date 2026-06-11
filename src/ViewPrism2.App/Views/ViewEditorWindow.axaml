@@ -1,0 +1,103 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:m="using:ViewPrism2.Core.Models"
+        x:Class="ViewPrism2.App.Views.ViewEditorWindow"
+        x:DataType="vm:ViewEditorViewModel"
+        Title="{Binding Loc[view.editView]}"
+        Width="640" Height="560"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ビュー編集(E-UI-NODEGRAPH-025): 基本情報・タグ階層・絞り込み条件。
+       循環拒否・modified_at 規則は ViewService(core)が担保(REQ-032/034) -->
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="8">
+      <TextBlock Text="{Binding Loc[view.basicInformation]}" FontSize="16" />
+      <TextBlock Text="{Binding Loc[view.viewName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="{Binding Loc[common.save]}"
+                Command="{Binding SaveBasicCommand}" Margin="8,0,0,0" />
+        <CheckBox DockPanel.Dock="Right" IsChecked="{Binding IsFavorite}"
+                  Content="{Binding Loc[view.favorite]}" Margin="8,0,0,0" />
+        <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[view.enterViewName]}" />
+      </DockPanel>
+
+      <StackPanel IsEnabled="{Binding IsPersisted}" Spacing="8">
+        <TextBlock Text="{Binding Loc[view.hierarchyStructure]}" FontSize="16" Margin="0,8,0,0" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ComboBox ItemsSource="{Binding AllTags}" SelectedItem="{Binding SelectedTag}" MinWidth="140"
+                    PlaceholderText="{Binding Loc[viewEditor.selectTag]}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="m:Tag">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBox Text="{Binding AliasText}" PlaceholderText="{Binding Loc[viewEditor.alias]}" MinWidth="100" />
+          <Button Content="{Binding Loc[viewEditor.addRootNode]}" Command="{Binding AddRootNodeCommand}" />
+          <Button Content="{Binding Loc[viewEditor.addChildNode]}" Command="{Binding AddChildNodeCommand}" />
+          <Button Content="{Binding Loc[common.delete]}" Command="{Binding DeleteNodeCommand}"
+                  Foreground="{StaticResource DangerBrush}" />
+        </StackPanel>
+        <Panel MinHeight="120">
+          <TextBlock Text="{Binding Loc[view.noHierarchy]}" Foreground="{StaticResource TextMutedBrush}"
+                     FontSize="12" IsVisible="{Binding !Roots.Count}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <TreeView ItemsSource="{Binding Roots}"
+                    SelectionChanged="OnNodeSelectionChanged" MaxHeight="180">
+            <TreeView.ItemTemplate>
+              <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:HierarchyNodeViewModel">
+                <TextBlock Text="{Binding DisplayName}" />
+              </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+            <TreeView.Styles>
+              <Style Selector="TreeViewItem">
+                <Setter Property="IsExpanded" Value="True" />
+              </Style>
+            </TreeView.Styles>
+          </TreeView>
+        </Panel>
+
+        <TextBlock Text="{Binding Loc[view.filterConditionsOptional]}" FontSize="16" Margin="0,8,0,0" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ComboBox ItemsSource="{Binding AllTags}" SelectedItem="{Binding SelectedConditionTag}" MinWidth="120"
+                    PlaceholderText="{Binding Loc[viewEditor.selectTag]}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="m:Tag">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ComboBox ItemsSource="{Binding OperatorOptions}" SelectedItem="{Binding SelectedOperator}" MinWidth="100">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:OperatorOption">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBox Text="{Binding ConditionValue}" PlaceholderText="{Binding Loc[viewEditor.value]}" MinWidth="80" />
+          <TextBox Text="{Binding ConditionValue2}" PlaceholderText="{Binding Loc[viewEditor.value2]}" MinWidth="80" />
+          <Button Content="{Binding Loc[common.add]}" Command="{Binding AddConditionCommand}" />
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding Conditions}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ConditionRowViewModel">
+              <DockPanel Margin="0,2">
+                <Button DockPanel.Dock="Right" Content="✕"
+                        Command="{Binding $parent[Window].((vm:ViewEditorViewModel)DataContext).DeleteConditionCommand}"
+                        CommandParameter="{Binding}" Padding="6,0" />
+                <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" />
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+                 FontSize="12" TextWrapping="Wrap" />
+      <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick"
+              HorizontalAlignment="Right" MinWidth="80" />
+    </StackPanel>
+  </ScrollViewer>
+</Window>

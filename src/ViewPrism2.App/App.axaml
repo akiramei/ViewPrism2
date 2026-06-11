@@ -2,7 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="ViewPrism2.App.App"
              RequestedThemeVariant="Light">
-  <!-- K-DESIGN: テーマは Fluent(ライトのみ。ダーク不要 — 仕様 §4) -->
+  <!-- K-DESIGN: テーマは Fluent(ライトのみ。ダーク不要 — 仕様 §4)。
+       デザイントークン(E-DESIGN-028)は K-DESIGN の値のみ使用する。 -->
+  <Application.Resources>
+    <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#DC2626" />
+    <SolidColorBrush x:Key="WarnBrush" Color="#D97706" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1F2937" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#6B7280" />
+    <SolidColorBrush x:Key="BorderLineBrush" Color="#E5E7EB" />
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PanelBrush" Color="#F9FAFB" />
+  </Application.Resources>
   <Application.Styles>
     <FluentTheme />
   </Application.Styles>

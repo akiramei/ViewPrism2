@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.TagEditorWindow"
+        x:DataType="vm:TagEditorViewModel"
+        Width="440" SizeToContent="Height"
+        MaxHeight="640"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- タグ編集(REQ-021〜025): 名前・種別(既存は変更不可)・色・説明・型別設定 -->
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="8">
+      <TextBlock x:Name="TitleText" FontSize="16" />
+      <TextBlock Text="{Binding Loc[tag.editor.name]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[tag.editor.namePlaceholder]}" />
+      <TextBlock Text="{Binding Loc[tag.editor.typeLabel]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType}"
+                IsEnabled="{Binding TypeEditable}" HorizontalAlignment="Stretch">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:TagTypeOption">
+            <TextBlock Text="{Binding Label}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Text="{Binding Loc[tag.editor.typeCannotChange]}" IsVisible="{Binding !TypeEditable}"
+                 FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <TextBlock Text="{Binding Loc[tag.editor.color]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <DockPanel>
+        <Ellipse DockPanel.Dock="Right" Width="16" Height="16" Margin="8,0,0,0"
+                 Fill="{Binding Color, FallbackValue=Transparent}" VerticalAlignment="Center" />
+        <TextBox Text="{Binding Color}" PlaceholderText="#3B82F6" />
+      </DockPanel>
+      <TextBlock Text="{Binding Loc[tag.editor.description]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding Description}" PlaceholderText="{Binding Loc[tag.editor.descriptionPlaceholder]}" />
+
+      <!-- numeric 設定(REQ-025) -->
+      <StackPanel IsVisible="{Binding IsNumeric}" Spacing="8">
+        <TextBlock Text="{Binding Loc[tag.editor.numericRange]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+        <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc[tag.editor.minValue]}" FontSize="12" />
+          <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Loc[tag.editor.maxValue]}" FontSize="12" />
+          <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding MinText}" PlaceholderText="{Binding Loc[tag.editor.noLimit]}" />
+          <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding MaxText}" PlaceholderText="{Binding Loc[tag.editor.noLimit]}" />
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Loc[tag.editor.step]}" FontSize="12" Margin="0,8,0,0" />
+          <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Loc[tag.editor.unit]}" FontSize="12" Margin="0,8,0,0" />
+          <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding StepText}" />
+          <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Unit}" />
+        </Grid>
+      </StackPanel>
+
+      <!-- textual 定義済み値(REQ-024: 順序保持) -->
+      <StackPanel IsVisible="{Binding IsTextual}" Spacing="8">
+        <TextBlock Text="{Binding Loc[tag.editor.optionsConfig]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="{Binding Loc[tag.options.add]}"
+                  Command="{Binding AddPredefinedValueCommand}" Margin="8,0,0,0" />
+          <TextBox Text="{Binding NewValueText}" PlaceholderText="{Binding Loc[tag.options.newOptionPlaceholder]}" />
+        </DockPanel>
+        <ListBox ItemsSource="{Binding PredefinedValues}" SelectedItem="{Binding SelectedPredefinedValue}"
+                 MaxHeight="140" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Content="↑" Command="{Binding MoveValueUpCommand}" />
+          <Button Content="↓" Command="{Binding MoveValueDownCommand}" />
+          <Button Content="{Binding Loc[common.delete]}" Command="{Binding RemovePredefinedValueCommand}" />
+        </StackPanel>
+      </StackPanel>
+
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+                 FontSize="12" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="{Binding Loc[tag.editor.cancel]}" Click="OnCancelClick" MinWidth="80" />
+        <Button Content="{Binding Loc[tag.editor.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

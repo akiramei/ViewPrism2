@@ -12,6 +12,9 @@ public interface IImageRepository
     /// <summary>フォルダ配下の全行(全ステータス)。スキャン手順 1〜5 の基礎データ(仕様 §2.1)。</summary>
     Task<IReadOnlyList<ImageRecord>> GetByFolderAsync(string syncFolderId);
 
+    /// <summary>status=normal の全画像(INV-010: 既定の画像一覧・ビュー評価の対象)。表示系の供給元。</summary>
+    Task<IReadOnlyList<ImageRecord>> GetAllNormalAsync();
+
     /// <summary>スキャン規則 (2): hash/file_size/modified_date のみ更新(status は変更しない)。</summary>
     Task UpdateFileMetaAsync(string id, string hash, long fileSize, string modifiedDate);
 

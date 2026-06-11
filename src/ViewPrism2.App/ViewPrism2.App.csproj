@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- M-SLN-000: App は Run 1 では起動可能な最小スタブ(UI 本体は後続 Run)。
-       パッケージは procurement(32-mbom.yaml)の固定バージョンのみ。 -->
+  <!-- M-UI-013 / M-UI-014: Avalonia シェル+ビューア。
+       パッケージは procurement(32-mbom.yaml)の固定バージョンのみ。
+       Avalonia.Diagnostics 12.0.4 は NuGet 未発行のため参照しない(Run 1 CHEAT-002)。 -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
@@ -11,8 +12,15 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
-    <!-- CHEAT-002: Avalonia.Diagnostics 12.0.4 は NuGet に存在しない(最新 11.3.17)。
-         substitutable: true かつ Debug 限定の診断用途のため参照を見送り(Run 1 の App はスタブ)。 -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.*" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.*" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- K-I18N: 翻訳資産(設計者供与の原典変換+V1 新規キー)。出力へコピーし実行時に読込む -->
+    <None Include="Assets\i18n\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ViewPrism2.Core\ViewPrism2.Core.csproj" />

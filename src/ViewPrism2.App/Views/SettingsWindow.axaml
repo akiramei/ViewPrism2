@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="{Binding Loc[settings.title]}"
+        Width="400" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- 設定(言語)(REQ-050/051、G-5): 切替は即時反映+settings.json 永続化 -->
+  <StackPanel Margin="16" Spacing="8">
+    <TextBlock Text="{Binding Loc[settings.general.title]}" FontSize="16" />
+    <TextBlock Text="{Binding Loc[settings.general.language]}" FontSize="12"
+               Foreground="{StaticResource TextMutedBrush}" />
+    <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
+              HorizontalAlignment="Stretch">
+      <ComboBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:LanguageOption">
+          <TextBlock Text="{Binding Label}" />
+        </DataTemplate>
+      </ComboBox.ItemTemplate>
+    </ComboBox>
+    <TextBlock Text="{Binding Loc[settings.general.languageDescription]}" FontSize="12"
+               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+    <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick"
+            HorizontalAlignment="Right" MinWidth="80" />
+  </StackPanel>
+</Window>

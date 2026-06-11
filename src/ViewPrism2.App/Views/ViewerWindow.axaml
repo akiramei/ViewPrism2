@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.ViewerWindow"
+        x:DataType="vm:ViewerViewModel"
+        Title="{Binding Title}"
+        Width="1000" Height="700"
+        MinWidth="400" MinHeight="300"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ビューア(M-UI-014、REQ-044、G-4): ウィンドウフィット(縮小のみ・拡大なし=DownOnly)。
+       キー: Right/PageDown=次、Left/PageUp=前、Escape=閉じる。端で停止。 -->
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Right" Command="{Binding NextCommand}" />
+    <KeyBinding Gesture="PageDown" Command="{Binding NextCommand}" />
+    <KeyBinding Gesture="Left" Command="{Binding PrevCommand}" />
+    <KeyBinding Gesture="PageUp" Command="{Binding PrevCommand}" />
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </Window.KeyBindings>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,1,0,0">
+      <DockPanel Margin="12,4">
+        <Button DockPanel.Dock="Right" Command="{Binding CloseCommand}" Content="✕" Padding="8,2" />
+        <Button DockPanel.Dock="Left" Command="{Binding PrevCommand}" Content="←" Padding="8,2" />
+        <Button DockPanel.Dock="Left" Command="{Binding NextCommand}" Content="→" Padding="8,2" Margin="8,0,0,0" />
+        <!-- 現在位置/総数(REQ-044) -->
+        <TextBlock Text="{Binding CurrentPositionText}" HorizontalAlignment="Center"
+                   VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+      </DockPanel>
+    </Border>
+    <Image x:Name="ImageView" Stretch="Uniform" StretchDirection="DownOnly" Margin="8" />
+  </DockPanel>
+</Window>
