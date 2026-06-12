@@ -51,6 +51,16 @@ as_built:
     verdict: "Loop V1 (loop-v1-core) 完了"
     carryover_to_v2: "golden_findings GF-01〜05(minor)・porting-spec 未裁定(RVP-REPAIR-004/005・RVP-MERGE-002)・非破壊原則の woven 格上げ・探索プローブ P-01〜04 は未実施(合否なし・観測のみ。実施時に 42 へ記録)"
 
+  # Phase 6 引き渡し(2026-06-12)
+  handover:
+    date: 2026-06-12
+    service_bom_ref: bomdd/53-service-bom.yaml
+    summary: "S-BOM(保守部品表)作成。外部知識 8 パック(K-BOM)+プラットフォーム 3 源(.NET/SDK・Windows・工場 AI モデル)を監視対象に、版ピンと既知の罠(ECO-002 DF-2/DF-3/DF-4 の根因含む)を逆引き台帳化。部品 14 行(kbom 依存を持つ core 4+surface 10)に再検査深さ・治具・交換判断を割付"
+    pinned_versions: "Avalonia 12.0.4 / SkiaSharp 3.119.4 / Microsoft.Data.Sqlite 10.0.9 / Dapper 2.1.79 / CommunityToolkit.Mvvm 8.4.2(exact)。MS.Extensions.* 10.0.*・Serilog 9.*/7.* は浮動・SDK は global.json なし(SB-F-01 で V2 申し送り)"
+    health_revalidation: "再開時(2026-06-12)に Release 警告0・unit 234/234・凍結オラクル 20/20 PASS を再確認 — As-Built の inspection_results は現在も成立"
+    findings: "SB-F-01(依存ピン浮動面 — exact 化 or restore 後スモーク明文化を V2 裁定)/ SB-F-02(ネイティブアセットの起動ゲート — 監視手順へ織込済)"
+    status: "Phase 6 完了。Loop V1 の全成果物(00〜53)が揃い、納品・保守監視の起点が確立"
+
   # golden 所見(承認と独立の minor 指摘。裁定: V2 へ申し送り — 2026-06-12 承認者了承)
   golden_findings:
     - { id: GF-01, date: 2026-06-12, area: "G-6 タグ作成ダイアログ", finding: "候補値を追加するとウィンドウ高さが伸長し続け、上限到達後はスクロールバー表示(TagEditorWindow の SizeToContent=Height 起因)", disposition: "V2 で修正 — ダイアログ高さを固定し候補値リスト内部のみスクロール" }

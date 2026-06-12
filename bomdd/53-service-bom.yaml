@@ -1,0 +1,341 @@
+bomdd:
+  product: ViewPrism2
+  experiment: loop-v1-core
+  layer: Service BOM
+
+# Service BOM(保守部品表 — 一般的な SBOM=Software Bill of Materials とは別物)。
+# 概念・劣化イベント→影響分析の手順は ../../BomDD/method/s-bom-template.md(Loop6 実証)。
+# 価値は被覆でなく「絞り込み」: 外部知識の劣化イベントを逆引きし、影響部品・再検査深さ・
+#   交換判断を最小に導く。核(外部知識非依存)は原則巻き込まない。
+#
+# 劣化イベント → 影響分析 手順(発生時):
+#   1. 外部知識の変化(NuGet 版・.NET/SDK 版・OS 挙動・デザイン言語・工場 AI モデル)を受領。
+#   2. watched_externals を逆引きし、その知識に依存する部品(affected_parts)だけを影響範囲とする。
+#   3. 各影響部品の reinspect_depth を実行(治具は items.reinspect_on_change を参照)。
+#   4. 合格→「K-BOM更新のみ(再認証)」/ 不合格→「再製造必要」/ 依存なし→「交換不要」。
+#   5. degradation_events へ {id, event, affected, reinspection_result, decision} を追記。
+#
+# 基準ビルド(この S-BOM が保証する稼働 build):
+#   as_built_ref: AB-loop-v1-core-factory-01(50-as-built.yaml / Run5=f7d6cf7、BOM v1.3)
+#   検査基準: 凍結オラクル 20/20(tag loop-v1-r1)・unit 234/234・Release 警告 0・golden G1〜G7 approved
+
+service_bom:
+  as_built_ref: AB-loop-v1-core-factory-01
+  baseline_build:
+    commit: f7d6cf7
+    bom_version: "v1.3"
+    target_framework: net10.0
+    sdk_observed: "10.0.100(global.json なし — 実装環境の SDK に追従。これ自体が浮動面)"
+    build_flags: "TreatWarningsAsErrors=true / Nullable=enable / LangVersion=latest"
+    health_revalidated: "2026-06-12 再開時に再実行 — Release 警告0・unit 234/234・凍結オラクル 20/20 PASS"
+
+  # ── 監視対象の外部知識(劣化イベントの発生源)。S-BOM の主機能=ここからの逆引き ──
+  watched_externals:
+    - kbom: K-AVALONIA
+      dependency: "Avalonia / Avalonia.Desktop / Avalonia.Themes.Fluent / Avalonia.Fonts.Inter"
+      pinned_version: "12.0.4"
+      pin_status: exact
+      drift_source: "Avalonia の minor/major 更新(レンダリング・仮想化・バインディング・入力イベントの挙動変化)"
+      reinspect_depth: G   # 描画/バインディング/入力の劣化は unit に出ず golden/L1 で顕在化(ECO-002 実証)
+      known_traps:
+        - "仮想化は自明でない: ItemsControl 直置き=仮想化なしで 1 万件フリーズ(REQ-041 中核リスク)。グリッドは『1 行=N セル』の行リスト化で VirtualizingStackPanel に載せる方式を維持"
+        - "ECO-002 DF-3: CompiledBindings はインデクサ Item[] の PropertyChanged 通知では再評価されない → 文言は名前付きプロパティ経由で公開(ロケール切替時に全ラベル切替を L1 スモークで確認)"
+        - "ECO-002 DF-4: ClickCount(ダブルクリック判定)が環境依存 → DoubleClickDetector で補完。Avalonia 更新時はダブルクリック起動(G-4)を要再確認"
+        - "調達制約: Avalonia.Diagnostics 12.0.4 は NuGet 未発行のため参照しない(Run1 CHEAT-002)。更新時に発行状況が変われば再評価"
+      affected_parts: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
+
+    - kbom: K-MVVM
+      dependency: "CommunityToolkit.Mvvm(+ Microsoft.Extensions.DependencyInjection)"
+      pinned_version: "8.4.2(MS.Ext.DI は 10.0.* 浮動)"
+      pin_status: "exact(CommunityToolkit)/ floating(MS.Ext.DI=10.0.*)"
+      drift_source: "ソースジェネレータ(ObservableProperty/RelayCommand)の生成コード変化・DI コンテナ挙動変化"
+      reinspect_depth: G   # VM ロジックは unit、しかし生成バインディングの実挙動は golden/L1
+      known_traps:
+        - "INPC 手書き・コードビハインド肥大・UI スレッドブロックは工場我流の典型(本 build は ObservableObject+RelayCommand に統一)"
+        - "MS.Extensions.* が 10.0.* 浮動 → restore で patch が静かに上がりうる(下記 findings:SB-F-01)"
+      affected_parts: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
+
+    - kbom: K-SKIA
+      dependency: "SkiaSharp"
+      pinned_version: "3.119.4"
+      pin_status: exact
+      drift_source: "Skia のデコード/リサイズ/エンコード挙動・ネイティブアセット・サンプリング既定値の変化"
+      reinspect_depth: L2  # 出力寸法・形式の成果物メタデータ検査(CP-THUMB-007)
+      known_traps:
+        - "Dispose 漏れ=ネイティブメモリリーク(大量サムネイルでクラッシュ)。SKBitmap/SKImage/SKData は using で確実に破棄"
+        - "フィット丸め(Round half away from zero・最小 1px・拡大禁止)を規定しないと工場間で寸法 1px ずれ → L2 不安定"
+        - "壊れた画像は Decode が null(例外でなく)。null=『壊れた画像』扱いの契約を維持"
+      affected_parts: [E-THUMB-020]
+
+    - kbom: K-SQLITE
+      dependency: "Microsoft.Data.Sqlite + Dapper"
+      pinned_version: "Microsoft.Data.Sqlite 10.0.9 / Dapper 2.1.79"
+      pin_status: exact
+      drift_source: "ADO.NET プロバイダのバンドル既定値・型マッピング・Dapper の動的マッピング挙動の変化"
+      reinspect_depth: L2  # スキーマ同値(PRAGMA 照合)+ FK 実動(CP-DB-006)
+      known_traps:
+        - "ECO-002 DF-2(under-inclusion・CHEAT-R01): Dapper × 空 image_tags で COUNT(*) 列が BLOB 化 → TagRepository.GetUsageCountsAsync を dynamic 化で回避。集計クエリ追加/更新時は空集合ケースを要検証"
+        - "PRAGMA(journal_mode=WAL・foreign_keys=ON)は接続毎に明示発行(バンドル既定に依存しない)。怠ると FK 無効接続が混入しカスケード(REQ-028)が静かに壊れる"
+        - "日時は TEXT(ISO 8601 UTC)で保持し DateTime にマップしない(文化圏依存の往復劣化防止 INV-002)"
+      affected_parts: [E-DB-010]
+
+    - kbom: K-REGEX
+      dependency: ".NET BCL System.Text.RegularExpressions"
+      pinned_version: "net10.0(BCL — 実行時/SDK に追従)"
+      pin_status: "runtime-implicit"
+      drift_source: ".NET メジャー更新(Unicode テーブル・既定セマンティクス・ReDoS 緩和の変化)"
+      reinspect_depth: unit  # CP-EVAL-001(+ CP-NFR-001 L3 で評価器レイテンシ)
+      known_traps:
+        - "ReDoS で UI フリーズ → 生成時に TimeSpan.FromSeconds(1) のタイムアウト必須。RegexMatchTimeoutException は『不成立+警告』へ変換(REQ-031)"
+        - "JS→.NET 方言差: \\d \\w は .NET では Unicode 既定。RegexOptions.ECMAScript は使わない(.NET 既定セマンティクスを正とする)"
+      affected_parts: [E-EVAL-002]
+
+    - kbom: K-WINFS
+      dependency: ".NET BCL System.IO + Windows ファイルシステム挙動"
+      pinned_version: "net10.0 / Windows(BCL+OS に追従)"
+      pin_status: "runtime/OS-implicit"
+      drift_source: ".NET メジャー更新・Windows 列挙/長パス/ロック挙動の変化"
+      reinspect_depth: unit  # CP-SCAN-004(一時ディレクトリ+実ファイル)
+      known_traps:
+        - "ジャンクション/シンボリックリンク再帰で無限ループ → EnumerationOptions で ReparsePoint を AttributesToSkip。IgnoreInaccessible=true"
+        - "ロック競合でスキャン全体クラッシュ → IOException/UnauthorizedAccessException はファイル単位で捕捉しスキップ+警告"
+        - "パスは '\\\\' → '/' 置換で正規化(INV-005)。長パスは .NET の既定対応に依存、失敗パスはスキップ"
+      affected_parts: [E-SCAN-005]
+
+    - kbom: K-I18N
+      dependency: "翻訳資産フォーマット(自己定義 flat JSON。原典 view-prism messages からの変換規則)"
+      pinned_version: "アプリ内定義(外部ライブラリなし)"
+      pin_status: "self-defined"
+      drift_source: "原典 view-prism の messages 構造変更(V2 リバース時)・新規キー追加・プレースホルダ構文変更"
+      reinspect_depth: "unit(解決器 CP-I18N-010)+ G(切替の実反映 CP-UI-G5)"
+      known_traps:
+        - "キー体系(<画面>.<要素>)・プレースホルダ {name} 構文・フォールバック(要求ロケール→ja→キー文字列)を逸脱すると資産変換が手作業化"
+        - "GF-05(V2 申し送り): textual 条件サマリに System.Text.Json 既定の Unicode エスケープ(男=\\u7537)が露出 — 表示整形で解消予定(保存値の JSON 契約は正常)"
+      affected_parts: [E-I18N-014, E-I18N-ASSETS-027]
+
+    - kbom: K-DESIGN
+      dependency: "デザイントークン(配色・余白・寸法・タイポ。原典 UI=Tailwind 系慣用値を踏襲)"
+      pinned_version: "ADR-0001 / 31-kbom K-DESIGN(V1 最小セット)"
+      pin_status: "design-knowledge"
+      drift_source: "デザイン言語の改訂・原典 UI の更新・Fluent テーマの版変化"
+      reinspect_depth: G   # 知覚次元は golden+承認者のみが判定可
+      known_traps:
+        - "工場が『自然な寸法・配色』を独自に埋めると golden 承認のたびに微差の指摘往復(BomDD Loop3/4 実証)。トークンは K-DESIGN に固定"
+        - "V2 申し送り所見: GF-02(グリッド行背景色)/ GF-03(ホームタグ★→家アイコン)/ GF-04(パレット選択視覚の弱さ)/ GF-01(タグ作成ダイアログ高さ伸長)"
+      affected_parts: [E-DESIGN-028, E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
+
+  # ── プラットフォーム横断の劣化源(個別 K-BOM に閉じない) ──
+  platform_externals:
+    - id: PX-DOTNET
+      external: ".NET ランタイム/SDK"
+      pinned: "net10.0 / SDK 10.0.100(global.json なし=浮動)"
+      drift_source: "10.0.x patch / 10→11 メジャー更新"
+      blast_radius: "全部品(BCL)。明示依存は K-REGEX(E-EVAL-002)・K-WINFS(E-SCAN-005)・K-SQLITE 経由 ADO.NET(E-DB-010)"
+      reinspect: "まず unit 234 全件(自動安全網)→ 緑なら L1 スモーク → 表面は spot golden。赤なら逆引きで部品特定"
+      decision_default: "patch: unit 緑で K-BOM更新のみ / メジャー: 全 golden 再認証を要検討"
+
+    - id: PX-OS
+      external: "Windows"
+      pinned: "Windows 11(開発機 10.0.26200)。V1 は Windows のみ(方針3)"
+      drift_source: "Windows メジャー更新・FS/入力挙動変化"
+      blast_radius: "K-WINFS(E-SCAN-005)・入力/ウィンドウ管理(E-UI-SHELL-021 多重起動 Mutex・ウィンドウ状態保存)"
+      reinspect: "CP-SCAN-004(unit)+ L1 スモーク(起動・スキャン・ウィンドウ状態)"
+      decision_default: "unit+スモーク緑で K-BOM更新のみ"
+
+    - id: PX-AIMODEL
+      external: "製造工場の AI モデル(隔離サブエージェント)"
+      pinned: "Run5=f7d6cf7 時点のモデル(単一工場 factory-01)"
+      drift_source: "工場モデルの更新 — 再製造/ECO 時に別モデルが沈黙次元を別判断で埋めうる"
+      blast_radius: "再製造で触れる全表面部品(沈黙次元=K-BOM 未規定箇所の工場判断)"
+      reinspect: "再製造後は必ず 凍結オラクル(回帰)+ unit + L1 スモーク + 影響 golden。ずる申告と沈黙次元の差分を 51-cheat-log で確認"
+      decision_default: "凍結オラクル回帰ゼロが交換可否の絶対条件(tag loop-v1-r1 不変)"
+
+  # ── 部品別 S-BOM 行(逆引きの被参照側。core は kbom 依存を持つもののみ収録) ──
+  # core で kbom_refs を持たない部品(E-DOMAIN-001/E-SORT-004/E-HASH-006/E-RELINK-007/
+  #   E-TAGSVC-008/E-VIEWSVC-009/E-GRAPH-003/E-CACHE-011/E-SETTINGS-013)は外部知識非依存 →
+  #   S-BOM 非収録(交換不要が既定。.NET メジャー更新時のみ PX-DOTNET の全 unit 安全網で被覆)。
+  items:
+    - id: SB-DB-010
+      part_ref: E-DB-010
+      classification: core
+      external_deps: [{ kbom_ref: K-SQLITE, version: "MDS 10.0.9 / Dapper 2.1.79" }]
+      acceptance_depth: L2
+      reinspect_on_change:
+        - { cp_ref: CP-DB-006, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-DB-006) — PRAGMA table_info/foreign_key_list/index_list 照合+migrations 行数+FK 実動" }
+      ai_model_drift: "再製造時は Dapper 動的マッピングの空集合ケース(DF-2)を要再検証"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-EVAL-002
+      part_ref: E-EVAL-002
+      classification: core
+      external_deps: [{ kbom_ref: K-REGEX, version: "net10.0 BCL" }]
+      acceptance_depth: unit
+      reinspect_on_change:
+        - { cp_ref: CP-EVAL-001, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-EVAL-001) — 画像 8×タグ 4 の出力 id 集合 exact" }
+        - { cp_ref: CP-NFR-001, fixture: "tests/ViewPrism2.Tests(cp=CP-NFR-001, perf) — 1,000 画像×3 条件 ≦200ms(L3)" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-SCAN-005
+      part_ref: E-SCAN-005
+      classification: core
+      external_deps: [{ kbom_ref: K-WINFS, version: "net10.0 BCL / Windows" }]
+      acceptance_depth: unit
+      reinspect_on_change:
+        - { cp_ref: CP-SCAN-004, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-SCAN-004) — 一時ディレクトリ+実ファイル+DB。遷移表 6 パターン・リネーム再リンク・ロック・拡張子" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-I18N-014
+      part_ref: E-I18N-014
+      classification: core
+      external_deps: [{ kbom_ref: K-I18N, version: "アプリ内定義" }]
+      acceptance_depth: unit
+      reinspect_on_change:
+        - { cp_ref: CP-I18N-010, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-I18N-010) — フォールバック・補間・CultureChanged 発火" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-THUMB-020
+      part_ref: E-THUMB-020
+      classification: surface
+      external_deps: [{ kbom_ref: K-SKIA, version: "3.119.4" }]
+      acceptance_depth: L2
+      reinspect_on_change:
+        - { cp_ref: CP-THUMB-007, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007) — 1920x1080 jpg/100x50 png/壊れ jpg/gif/bmp/webp。寸法±1px・形式・キャッシュ再生成" }
+      ai_model_drift: "再製造時はフィット丸め・最小 1px・拡大禁止・Dispose を要再確認"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-SHELL-021
+      part_ref: E-UI-SHELL-021
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
+      acceptance_depth: G
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G1, fixture: "実アプリ+フィクスチャ画像(コレクション 2 つ以上) — 承認者目視" }
+        - { cp_ref: CP-L1-SMOKE, fixture: "Release ビルド+起動→スキャン→グリッド→ビューア→ja/en 切替→タグ作成(golden 対象経路を最低 1 回)" }
+      ai_model_drift: "再製造時は多重起動 Mutex・ウィンドウ状態保存・タブ/コレクションスコープ(v1.3)を要再確認"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-GRID-022
+      part_ref: E-UI-GRID-022
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
+      acceptance_depth: G   # 選択ロジックは unit(VM)・仮想化/描画は golden
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G1, fixture: "実アプリ — レスポンシブ列・Ctrl/SHIFT 選択(v1.3)" }
+        - { cp_ref: CP-UI-G2, fixture: "実アプリ — リスト表示の列構成・行選択" }
+        - { cp_ref: CP-L1-SMOKE, fixture: "起動→スキャン→グリッド表示(仮想化が崩れていないか= 1 万件相当で確認は P-01 プローブ)" }
+      ai_model_drift: "再製造時は仮想化方式(行リスト化)維持・列数 clamp(⌊幅/220⌋,2,8)・SHIFT union を要再確認"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-DETAIL-023
+      part_ref: E-UI-DETAIL-023
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
+      acceptance_depth: G
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G3, fixture: "実アプリ — 詳細パネル全項目表示・ノート保存" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-VIEWER-024
+      part_ref: E-UI-VIEWER-024
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+      acceptance_depth: G   # ナビゲーション(端停止・現在位置)は unit(VM)・起動経路/背景クリックは golden
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G4, fixture: "実アプリ — ダブルクリック起動(DF-4)・フィット表示・端停止・背景クリック閉じる(v1.3)" }
+      ai_model_drift: "再製造時は DoubleClickDetector(ClickCount 環境依存補完)を要再確認"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-NODEGRAPH-025
+      part_ref: E-UI-NODEGRAPH-025
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
+      acceptance_depth: G
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G6, fixture: "実アプリ — 階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D)+NodeGraph ツリー" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-TAGS-026
+      part_ref: E-UI-TAGS-026
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
+      acceptance_depth: G
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G6, fixture: "実アプリ — タグパレット/ビュー管理(検索・作成/編集ダイアログ・色選択・候補値並べ替え)" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-UI-TAGASSIGN-029
+      part_ref: E-UI-TAGASSIGN-029
+      classification: surface
+      external_deps:
+        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-MVVM, version: "8.4.2" }
+        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
+      acceptance_depth: G   # 適用対象計算・連番計算は unit(CP-TAGUI-013)・UI 操作は golden
+      reinspect_on_change:
+        - { cp_ref: CP-TAGUI-013, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-TAGUI-013) — 共通タグ算出・連番・固定値・原子バッチ(unit)" }
+        - { cp_ref: CP-UI-G7, fixture: "実アプリ — 現在タグ/追加/適用・numeric 固定値/連番ダイアログ" }
+      ai_model_drift: "再製造時は適用の原子バッチ(REQ-027 全適用/無適用)を要再確認"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-I18N-ASSETS-027
+      part_ref: E-I18N-ASSETS-027
+      classification: surface
+      external_deps: [{ kbom_ref: K-I18N, version: "原典 messages 変換" }]
+      acceptance_depth: G
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G5, fixture: "実アプリ — ja/en 切替の即時反映・生キー露出なし" }
+      ai_model_drift: ~
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+    - id: SB-DESIGN-028
+      part_ref: E-DESIGN-028
+      classification: surface
+      external_deps: [{ kbom_ref: K-DESIGN, version: "ADR-0001" }]
+      acceptance_depth: G
+      reinspect_on_change:
+        - { cp_ref: CP-UI-G1, fixture: "実アプリ — 配色・余白・寸法・タイポの目視(woven: 全 UI 部品の consumer)" }
+      ai_model_drift: "再製造時は工場が独自寸法を埋めていないか(沈黙次元)を golden で要確認"
+      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+
+  # ── Phase 6 引き渡し時の保守所見(劣化監視の運用に関わる発見) ──
+  findings:
+    - id: SB-F-01
+      severity: minor
+      area: 依存ピンの浮動面
+      finding: "Microsoft.Extensions.DependencyInjection/Logging が 10.0.* 、Serilog.Extensions.Logging が 9.* 、Serilog.Sinks.File が 7.* の浮動参照。さらに global.json 不在で SDK も実装環境追従。restore のたびに patch/minor が無告知で上がりうる(=非監視の劣化面)"
+      recommendation: "(a) これら 4 参照を exact ピンへ、または (b) 浮動を許容し restore 後の L1 スモークを劣化検出網として明文化。SDK は global.json 固定を検討。V2 起案時にいずれか裁定"
+      disposition: "V2 申し送り(機能影響なし。保守容易性の改善)"
+    - id: SB-F-02
+      severity: info
+      area: ネイティブアセット
+      finding: "SkiaSharp はネイティブランタイムを伴う(win-x64)。Avalonia も同様。版更新時はネイティブアセットの解決もスモーク確認が要る"
+      recommendation: "K-SKIA/K-AVALONIA 更新イベントでは L1 スモークの起動成功(ネイティブ DLL ロード)を最初のゲートにする"
+      disposition: "監視手順へ織り込み済み(本ファイル watched_externals.reinspect_depth)"
+
+# ── 劣化イベントの記録(発生時に追記。手順はファイル冒頭) ──
+# 現時点で外部知識の劣化イベントは未発生(基準ビルド確立のみ)。
+# ECO-001/002 は劣化イベントではなく要求是正/golden 収束のため eco(50-as-built)側に記録済み。
+degradation_events: []
