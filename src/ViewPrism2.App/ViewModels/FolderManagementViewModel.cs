@@ -55,6 +55,22 @@ public sealed partial class FolderRowViewModel : ObservableObject
     [ObservableProperty]
     private string? _rowMessage;
 
+    /// <summary>コレクションとして選択中(REQ-053 v1.3/CR-2: 選択スコープの表示)。</summary>
+    [ObservableProperty]
+    private bool _isSelected;
+
+    /// <summary>normal 画像数(REQ-053 v1.3/CR-8: コレクション項目に画像数を表示)。</summary>
+    [ObservableProperty]
+    private int _imageCount;
+
+    /// <summary>画像数の表示文言(i18n: collection.sidebar.imageCount)。</summary>
+    public string ImageCountText => _owner.FormatImageCount(ImageCount);
+
+    partial void OnImageCountChanged(int value) => OnPropertyChanged(nameof(ImageCountText));
+
+    /// <summary>言語切替時の表示文言更新(DF-3)。</summary>
+    public void RefreshTexts() => OnPropertyChanged(nameof(ImageCountText));
+
     [RelayCommand]
     private Task ScanAsync() => _owner.ScanAsync(this);
 
@@ -109,9 +125,26 @@ public sealed partial class FolderManagementViewModel : ObservableObject
         _localization = localization;
         _windows = windows;
         Loc = new LocalizationProxy(localization);
+        localization.CultureChanged += (_, _) =>
+        {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+            foreach (var row in Folders)
+            {
+                row.RefreshTexts();
+            }
+        };
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
+
+    /// <summary>画像数の表示文言(REQ-053/CR-8)。</summary>
+    public string FormatImageCount(int count)
+        => _localization.T("collection.sidebar.imageCount", new Dictionary<string, string>
+        {
+            ["count"] = count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        });
 
     public ObservableCollection<FolderRowViewModel> Folders { get; } = [];
 

@@ -70,7 +70,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Loc = new LocalizationProxy(localization);
         Browser = new ImageBrowserViewModel(localization, sorter)
         {
-            GridColumns = Math.Clamp(settings.GridColumns, 3, 6),
+            // 表示モードの復元(REQ-052 v1.3/CR-6)
+            IsListMode = string.Equals(settings.DisplayMode, "list", StringComparison.Ordinal),
         };
         Detail = new DetailPanelViewModel(images, tags, thumbnails, localization);
         FolderPane = folderPane;
@@ -80,14 +81,31 @@ public sealed partial class MainWindowViewModel : ObservableObject
         AllImagesItem = new ViewListItemViewModel(null, localization.T("view.allImages"));
         Browser.SelectionChanged += async (_, _) => await OnSelectionChangedAsync();
         Browser.OpenItemRequested += (_, item) => OpenViewer(item);
+        Browser.PropertyChanged += (_, e) =>
+        {
+            // 中央ペインの表示合成(コレクション未選択の空状態 — REQ-053)を再評価する
+            if (e.PropertyName is nameof(ImageBrowserViewModel.IsListMode) or nameof(ImageBrowserViewModel.IsEmpty))
+            {
+                NotifyContentPaneChanged();
+            }
+        };
         Detail.NotesSaved += (_, _) => StatusMessage = localization.T("success.saved");
         FolderPane.DataChanged += async (_, _) => await ReloadAsync();
         TagsTab.DataChanged += (_, _) => _imagesTabStale = true;
         Tagging.Applied += async (_, _) => await OnTaggingAppliedAsync();
-        localization.CultureChanged += (_, _) => AllImagesItem.DisplayName = localization.T("view.allImages");
+        localization.CultureChanged += (_, _) =>
+        {
+            AllImagesItem.DisplayName = localization.T("view.allImages");
+
+            // DF-3(K-AVALONIA の罠): コンパイル済みバインディングはインデクサ('Item[]')の
+            // PropertyChanged では再評価されない。Loc 自体(名前付きプロパティ)を差し替えて
+            // 全文言バインディングを確実に再評価させる
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     public ImageBrowserViewModel Browser { get; }
 
@@ -116,6 +134,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedTabIndex = 1;
 
+    /// <summary>
+    /// 選択中コレクション(同期フォルダ)id(REQ-053 v1.3/CR-2: コレクション=選択スコープ)。
+    /// null=未選択(中央に選択を促す空状態)。settings へ永続化・復元する(CR-5)。
+    /// </summary>
+    [ObservableProperty]
+    private string? _selectedCollectionId;
+
     [ObservableProperty]
     private GraphNodeViewModel? _selectedTreeNode;
 
@@ -138,12 +163,32 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsImagesTabSelected => SelectedTabIndex == 1;
 
+    /// <summary>コレクション選択済みか(REQ-053: 未選択時は中央に選択を促す空状態)。</summary>
+    public bool IsCollectionSelected => SelectedCollectionId is not null;
+
+    /// <summary>グリッドペインの表示(コレクション選択済み かつ グリッドモード)。</summary>
+    public bool ShowGridPane => IsCollectionSelected && !Browser.IsListMode;
+
+    /// <summary>リストペインの表示(コレクション選択済み かつ リストモード)。</summary>
+    public bool ShowListPane => IsCollectionSelected && Browser.IsListMode;
+
+    /// <summary>画像 0 件の空状態メッセージ(コレクション選択済みのときのみ)。</summary>
+    public bool ShowEmptyMessage => IsCollectionSelected && Browser.IsEmpty;
+
+    /// <summary>コレクション未選択の空状態(選択を促す、REQ-053)。</summary>
+    public bool ShowCollectionPrompt => !IsCollectionSelected;
+
     public View? CurrentView => SelectedViewItem?.View;
 
-    /// <summary>起動時初期化: フォルダ・ビュー一覧の読込+最後に開いたビュー(REQ-052)または全画像を選択。</summary>
+    /// <summary>
+    /// 起動時初期化: フォルダ・ビュー一覧の読込+最後に選択したコレクション(REQ-052 v1.3/CR-5)と
+    /// 最後に開いたビュー(REQ-052)を復元する(解決不能なら未選択/全画像)。
+    /// </summary>
     public async Task InitializeAsync()
     {
         await FolderPane.LoadAsync();
+        SelectedCollectionId = _settings.LastCollectionId;
+        ValidateSelectedCollection();
         await ReloadViewListsAsync();
 
         var last = _settings.LastViewId is { } lastId
@@ -159,9 +204,69 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var nodeId = SelectedTreeNode?.Node.HierarchyNodeId;
         var nodeValue = SelectedTreeNode?.Node.Value;
 
+        ValidateSelectedCollection();
         await ReloadViewListsAsync();
         var item = currentViewId is null ? AllImagesItem : FindViewItem(currentViewId) ?? AllImagesItem;
         await SelectViewItemAsync(item, nodeId, nodeValue);
+    }
+
+    /// <summary>
+    /// コレクション選択(REQ-053 v1.3/CR-2): 一覧・「全画像」入口・NodeGraph 評価の母集合を
+    /// 当該コレクションの normal 画像へ切り替える。選択中のビュー/ノードは可能なら維持する。
+    /// </summary>
+    [RelayCommand]
+    private async Task SelectCollectionAsync(FolderRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (string.Equals(row.Folder.Id, SelectedCollectionId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        SelectedCollectionId = row.Folder.Id;
+
+        var nodeId = SelectedTreeNode?.Node.HierarchyNodeId;
+        var nodeValue = SelectedTreeNode?.Node.Value;
+        var item = CurrentView is null ? AllImagesItem : FindViewItem(CurrentView.Id) ?? AllImagesItem;
+        await SelectViewItemAsync(item, nodeId, nodeValue);
+    }
+
+    partial void OnSelectedCollectionIdChanged(string? value)
+    {
+        _settings.LastCollectionId = value; // 永続化対象(CR-5。書き出しは CaptureSettings)
+        SyncCollectionRowSelection();
+        OnPropertyChanged(nameof(IsCollectionSelected));
+        NotifyContentPaneChanged();
+    }
+
+    /// <summary>選択中コレクションが一覧から消えた(削除等)場合は未選択へ戻す。</summary>
+    private void ValidateSelectedCollection()
+    {
+        if (SelectedCollectionId is { } id &&
+            FolderPane.Folders.All(r => !string.Equals(r.Folder.Id, id, StringComparison.Ordinal)))
+        {
+            SelectedCollectionId = null;
+        }
+        else
+        {
+            SyncCollectionRowSelection(); // 行再生成後の選択表示の同期
+        }
+    }
+
+    private void SyncCollectionRowSelection()
+    {
+        foreach (var row in FolderPane.Folders)
+        {
+            row.IsSelected = string.Equals(row.Folder.Id, SelectedCollectionId, StringComparison.Ordinal);
+        }
+    }
+
+    private void NotifyContentPaneChanged()
+    {
+        OnPropertyChanged(nameof(ShowGridPane));
+        OnPropertyChanged(nameof(ShowListPane));
+        OnPropertyChanged(nameof(ShowEmptyMessage));
+        OnPropertyChanged(nameof(ShowCollectionPrompt));
     }
 
     [RelayCommand]
@@ -190,11 +295,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await _windows.ShowSettingsAsync();
     }
 
-    /// <summary>終了時の永続化(REQ-052): グリッド列数・最後に開いたビュー id を設定へ書き戻す。</summary>
+    /// <summary>
+    /// 終了時の永続化(REQ-052 v1.3): 表示モード(CR-6)・最後に開いたビュー id・
+    /// 最後に選択したコレクション id(CR-5)を設定へ書き戻す(グリッド列数キーは CR-1 で廃止)。
+    /// </summary>
     public void CaptureSettings()
     {
-        _settings.GridColumns = Browser.GridColumns;
+        _settings.DisplayMode = Browser.IsListMode ? "list" : "grid";
         _settings.LastViewId = CurrentView?.Id;
+        _settings.LastCollectionId = SelectedCollectionId;
         _settings.Locale = _localization.CurrentLocale;
     }
 
@@ -330,15 +439,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Browser.SetColumns(view.DisplayColumns, _tagById);
         Browser.SetSort(view.SortField, view.SortDirection);
 
-        // NodeGraph は表示のたびに再構築(REQ-035)
+        // NodeGraph は表示のたびに再構築(REQ-035)。値抽出の母集合は選択中コレクションの
+        // normal 画像に限る(REQ-053 v1.3/CR-2: _entries はコレクションスコープ適用済み)
         var hierarchy = await _views.GetHierarchyAsync(view.Id);
-        var values = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        foreach (var tagId in hierarchy.Select(n => n.TagId).Distinct(StringComparer.Ordinal))
-        {
-            values[tagId] = await _images.GetDistinctNormalTagValuesAsync(tagId);
-        }
+        var valueIndex = TagValueIndex.Build(_entries.Select(e => e.ToImageWithTags()));
 
-        var result = _graphBuilder.BuildGraph(hierarchy, _tagById, TagValueIndex.FromValues(values));
+        var result = _graphBuilder.BuildGraph(hierarchy, _tagById, valueIndex);
         if (result.Warnings.Count > 0)
         {
             StatusMessage = result.Warnings[0].Message;
@@ -402,7 +508,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Browser.SetImages(matched);
     }
 
-    /// <summary>status=normal の全画像+タグ付け状態を読み込む(INV-010。is_active=false のフォルダは対象外)。</summary>
+    /// <summary>
+    /// 選択中コレクションの status=normal 画像+タグ付け状態を読み込む(INV-010、REQ-053 v1.3/CR-2)。
+    /// コレクション未選択時は母集合を空にする。is_active=false のフォルダは対象外(REQ-010)。
+    /// あわせてコレクション一覧の画像数表示(CR-8)を更新する。
+    /// </summary>
     private async Task LoadBaseDataAsync()
     {
         var folders = await _folders.GetAllAsync();
@@ -416,9 +526,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
         var normals = await _images.GetAllNormalAsync();
+
+        // コレクション項目の画像数(REQ-053/CR-8: normal 画像数 = 当該コレクションの表示母集合)
+        var countByFolder = normals
+            .GroupBy(r => r.SyncFolderId, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        foreach (var row in FolderPane.Folders)
+        {
+            row.ImageCount = countByFolder.TryGetValue(row.Folder.Id, out var count) ? count : 0;
+        }
+
         var entries = new List<ImageEntry>(normals.Count);
         foreach (var record in normals)
         {
+            if (SelectedCollectionId is null ||
+                !string.Equals(record.SyncFolderId, SelectedCollectionId, StringComparison.Ordinal))
+            {
+                continue; // REQ-053: 母集合は選択中コレクションのみ(横断表示なし)
+            }
+
             if (!activeById.TryGetValue(record.SyncFolderId, out var folder))
             {
                 continue; // REQ-010: is_active=false は表示対象外

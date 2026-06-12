@@ -134,21 +134,30 @@
                       Command="{Binding OpenFolderManagementCommand}" Margin="0,12,12,4" />
               <TextBlock Classes="sectionHeader" Text="{Binding Loc[navigation.collections]}" />
             </DockPanel>
+            <!-- コレクション=選択スコープ(REQ-053 v1.3/CR-2): クリックで選択し一覧の母集合を切替。
+                 各項目は名前+画像数+スキャン中表示、パスはツールチップ(CR-8) -->
             <ItemsControl ItemsSource="{Binding FolderPane.Folders}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:FolderRowViewModel">
-                  <StackPanel Margin="12,2">
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Classes="mini" Content="⟳"
-                              IsEnabled="{Binding !IsScanning}"
-                              Command="{Binding ScanCommand}" />
-                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                    </DockPanel>
-                    <TextBlock Text="{Binding RowMessage}" IsVisible="{Binding RowMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
-                               Foreground="{StaticResource TextMutedBrush}" FontSize="11"
-                               TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
+                  <Border Classes="navItem" Classes.selected="{Binding IsSelected}"
+                          Background="Transparent" PointerPressed="OnCollectionPressed"
+                          ToolTip.Tip="{Binding Path}">
+                    <StackPanel>
+                      <DockPanel>
+                        <Button DockPanel.Dock="Right" Classes="mini" Content="⟳"
+                                IsEnabled="{Binding !IsScanning}"
+                                Command="{Binding ScanCommand}" />
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding ImageCountText}"
+                                   Foreground="{StaticResource TextMutedBrush}" FontSize="11"
+                                   VerticalAlignment="Center" Margin="4,0" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                      </DockPanel>
+                      <TextBlock Text="{Binding RowMessage}" IsVisible="{Binding RowMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                 Foreground="{StaticResource TextMutedBrush}" FontSize="11"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -187,11 +196,8 @@
         <!-- 中央: ツールバー+グリッド⇔リスト -->
         <DockPanel Grid.Column="2">
           <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
+            <!-- 列数セレクタは v1.3/CR-1 で撤去(列数はレスポンシブ自動算出 — REQ-041) -->
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="8">
-              <TextBlock Text="{Binding Loc[toolbar.columns]}" VerticalAlignment="Center" FontSize="12"
-                         Foreground="{StaticResource TextMutedBrush}" />
-              <ComboBox ItemsSource="{Binding Browser.ColumnOptions}"
-                        SelectedItem="{Binding Browser.GridColumns}" MinWidth="64" />
               <TextBlock Text="{Binding Loc[view.sortBy]}" VerticalAlignment="Center" FontSize="12"
                          Foreground="{StaticResource TextMutedBrush}" />
               <ComboBox ItemsSource="{Binding Browser.SortFieldOptions}"
@@ -221,7 +227,7 @@
           <Panel x:Name="ContentHost" SizeChanged="OnContentSizeChanged">
             <!-- グリッド(REQ-041): 1 行 = N セルの行リストを ListBox(VirtualizingStackPanel)に載せる(K-AVALONIA) -->
             <ListBox Classes="plain" ItemsSource="{Binding Browser.Rows}"
-                     IsVisible="{Binding !Browser.IsListMode}">
+                     IsVisible="{Binding ShowGridPane}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:GridRowViewModel">
                   <ItemsControl ItemsSource="{Binding Cells}">
@@ -262,7 +268,7 @@
             </ListBox>
 
             <!-- リスト(REQ-042): display_columns に従う列構成+ヘッダ -->
-            <DockPanel IsVisible="{Binding Browser.IsListMode}">
+            <DockPanel IsVisible="{Binding ShowListPane}">
               <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
                       BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
                 <ItemsControl ItemsSource="{Binding Browser.Columns}" Margin="8,0">
@@ -305,7 +311,13 @@
             </DockPanel>
 
             <!-- 空状態(仕様 §2.6): 中央配置・テキスト弱色(K-DESIGN) -->
-            <TextBlock Text="{Binding Browser.EmptyMessage}" IsVisible="{Binding Browser.IsEmpty}"
+            <TextBlock Text="{Binding Browser.EmptyMessage}" IsVisible="{Binding ShowEmptyMessage}"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+            <!-- コレクション未選択の空状態(REQ-053 v1.3/CR-2: 選択を促す) -->
+            <TextBlock Text="{Binding Loc[collection.pleaseSelectCollection]}"
+                       IsVisible="{Binding ShowCollectionPrompt}"
                        Foreground="{StaticResource TextMutedBrush}"
                        HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Panel>

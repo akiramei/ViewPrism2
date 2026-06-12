@@ -24,6 +24,7 @@ public static class ErrorMessages
         ErrorCode.ScanInProgress => "error.scanInProgress",
         ErrorCode.IoError => "error.ioError",
         ErrorCode.InvalidRegex => "error.invalidRegex",
+        ErrorCode.Database => "error.database",
         _ => "error.validationError",
     };
 }

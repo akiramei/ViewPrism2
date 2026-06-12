@@ -40,6 +40,12 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings = settings;
         _store = store;
         Loc = new LocalizationProxy(localization);
+        localization.CultureChanged += (_, _) =>
+        {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
 
         Languages =
         [
@@ -50,7 +56,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             l => string.Equals(l.Locale, localization.CurrentLocale, StringComparison.Ordinal)) ?? Languages[0];
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     public IReadOnlyList<LanguageOption> Languages { get; }
 

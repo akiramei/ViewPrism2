@@ -1,3 +1,4 @@
+using System.Globalization;
 using Dapper;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
@@ -261,13 +262,28 @@ public sealed class TagRepository : ITagRepository
 
     public Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync()
     {
-        // 使用数 = COUNT(DISTINCT image_id)(REQ-029)
+        // 使用数 = COUNT(DISTINCT image_id)(REQ-029)。
+        // v1.3/ECO-002 DF-2 根本修正: image_tags が空のとき COUNT 列に型親和性が無く
+        // Microsoft.Data.Sqlite が列型を BLOB(byte[])と報告するため、Dapper の型付き
+        // レコード(UsageRow)materialization が空リーダーで失敗していた(UI 未処理例外でクラッシュ)。
+        // 行ごとに値を読む dynamic オーバーロードに切り替え(型付きデシリアライザを構築しない)、
+        // 値は Convert で long 化する。GROUP BY は空集合で 0 行のため安全。
         return _db.RunAsync<IReadOnlyDictionary<string, int>>(async conn =>
         {
-            var rows = await conn.QueryAsync<UsageRow>(
+            var rows = await conn.QueryAsync(
                 "SELECT tag_id AS TagId, COUNT(DISTINCT image_id) AS UsageCount FROM image_tags GROUP BY tag_id")
                 .ConfigureAwait(false);
-            return rows.ToDictionary(r => r.TagId, r => (int)r.UsageCount, StringComparer.Ordinal);
+            var result = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var row in rows)
+            {
+                var dict = (IDictionary<string, object?>)row;
+                if (dict["TagId"] is string tagId)
+                {
+                    result[tagId] = Convert.ToInt32(dict["UsageCount"], CultureInfo.InvariantCulture);
+                }
+            }
+
+            return result;
         });
     }
 
@@ -277,8 +293,6 @@ public sealed class TagRepository : ITagRepository
     private sealed record TextualRow(string TagId, string PredefinedValues);
 
     private sealed record NumericRow(string TagId, double? Min, double? Max, double? Step, string? Unit);
-
-    private sealed record UsageRow(string TagId, long UsageCount);
 
     private static Tag? ToEntity(Row? row)
     {

@@ -113,14 +113,18 @@ public sealed partial class ImageItemViewModel : ObservableObject
 }
 
 /// <summary>
-/// グリッド⇔リスト表示の中核 ViewModel(M-UI-013、REQ-041/042、E-UI-GRID-022)。
-/// 選択(クリック=単一、Ctrl+クリック=トグル+選択順バッジ)・空状態判定・列数 3〜6・整列を
+/// グリッド⇔リスト表示の中核 ViewModel(M-UI-013 v1.3、REQ-041/042、E-UI-GRID-022)。
+/// 選択(クリック=単一、Ctrl+クリック=トグル+選択順バッジ、SHIFT+クリック=範囲 union)・
+/// 空状態判定・レスポンシブ自動列(clamp(⌊幅/220⌋, 2, 8) — v1.3/ECO-002 CR-1)・整列を
 /// UI から分離して unit 検査可能にする。描画は XAML 側(surface)。
 /// </summary>
 public sealed partial class ImageBrowserViewModel : ObservableObject
 {
     /// <summary>セル間ギャップ(K-DESIGN: 8px)。</summary>
     public const double CellGap = 8;
+
+    /// <summary>レスポンシブ列算出の基準セル幅(仕様 §2.6 v1.3: 列数 = clamp(⌊幅/220px⌋, 2, 8))。</summary>
+    public const double ResponsiveCellWidth = 220;
 
     private readonly LocalizationService _localization;
     private readonly ImageSorter _sorter;
@@ -137,10 +141,11 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
         _sorter = sorter;
         _columnSpecs = DisplayColumnParser.Parse(null, _tagById);
 
+        // v1.3/ECO-002 CR-4(REQ-038): created_date は UI ソート軸から除外。
+        // SortField 列挙・整列実装・DB 既存値の受理は温存(後方互換は _legacySortField で扱う)
         SortFieldOptions =
         [
             new(localization, SortField.Name, "sort.name"),
-            new(localization, SortField.CreatedDate, "common.createdDate"),
             new(localization, SortField.ModifiedDate, "common.modifiedDate"),
             new(localization, SortField.FileSize, "sort.size"),
         ];
@@ -161,9 +166,6 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
         RebuildColumns();
     }
 
-    /// <summary>列数の選択肢(REQ-041: 3/4/5/6、既定 4)。</summary>
-    public IReadOnlyList<int> ColumnOptions { get; } = [3, 4, 5, 6];
-
     public IReadOnlyList<SortFieldOption> SortFieldOptions { get; }
 
     public IReadOnlyList<SortDirectionOption> SortDirectionOptions { get; }
@@ -174,11 +176,18 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
 
     public ObservableCollection<ListColumnViewModel> Columns { get; } = [];
 
+    /// <summary>
+    /// グリッド列数(REQ-041 v1.3/CR-1): コンテンツ幅から自動算出 — clamp(⌊幅/220px⌋, 2, 8)。
+    /// 固定の列数セレクタは置かない。幅が未供給(レイアウト前)の間は暫定値 4。
+    /// </summary>
     [ObservableProperty]
     private int _gridColumns = 4;
 
     [ObservableProperty]
     private bool _isListMode;
+
+    /// <summary>DB 既存値 created_date 等、UI 選択肢に無い整列フィールドの後方互換(REQ-038 v1.3)。</summary>
+    private SortField? _legacySortField;
 
     [ObservableProperty]
     private SortFieldOption _selectedSortFieldOption;
@@ -212,9 +221,13 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
     /// <summary>最後に選択されたアイテム(詳細パネルの表示対象)。</summary>
     public ImageItemViewModel? LastSelected => _selection.Count > 0 ? _selection[^1] : null;
 
-    public SortField SortField => SelectedSortFieldOption.Value;
+    public SortField SortField => _legacySortField ?? SelectedSortFieldOption.Value;
 
     public SortDirection SortDirection => SelectedSortDirectionOption.Value;
+
+    /// <summary>レスポンシブ列算出(仕様 §2.6 v1.3/CR-1): 列数 = clamp(⌊コンテンツ幅/220px⌋, 2, 8)。</summary>
+    public static int ComputeColumns(double contentWidth)
+        => Math.Clamp((int)Math.Floor(contentWidth / ResponsiveCellWidth), 2, 8);
 
     public event EventHandler? SelectionChanged;
 
@@ -248,18 +261,32 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
         RebuildListCells();
     }
 
-    /// <summary>ソート初期値の設定(ビュー定義から。ビュー定義は変更しない=閲覧扱い、REQ-032)。</summary>
+    /// <summary>
+    /// ソート初期値の設定(ビュー定義から。ビュー定義は変更しない=閲覧扱い、REQ-032)。
+    /// UI 選択肢に無いフィールド(DB 既存値 created_date — REQ-038 v1.3 後方互換)は
+    /// 従来どおり整列に使い、選択肢へは追加しない。
+    /// </summary>
     public void SetSort(SortField field, SortDirection direction)
     {
-        SelectedSortFieldOption = SortFieldOptions.First(o => o.Value == field);
+        var option = SortFieldOptions.FirstOrDefault(o => o.Value == field);
+        SelectedSortFieldOption = option ?? SortFieldOptions[0];
         SelectedSortDirectionOption = SortDirectionOptions.First(o => o.Value == direction);
+
+        var legacy = option is null ? field : (SortField?)null;
+        if (_legacySortField != legacy)
+        {
+            _legacySortField = legacy;
+            Resort();
+        }
     }
 
     /// <summary>
-    /// アイテムへのポインタ操作(REQ-041): クリック=単一選択 / Ctrl+クリック=トグル(選択順バッジ)/
-    /// ダブルクリック=単一画像表示。空状態(アイテムなし)では呼ばれないため何もしない規則も満たす。
+    /// アイテムへのポインタ操作(REQ-041 v1.3): クリック=単一選択 / Ctrl+クリック=トグル(選択順バッジ)/
+    /// SHIFT+クリック=最後の選択アイテムからクリック位置までの index 範囲を既存選択へ追加
+    /// (union・置換しない — v1.3/ECO-002 CR-3)/ ダブルクリック=単一画像表示。
+    /// 空状態(アイテムなし)では呼ばれないため何もしない規則も満たす。
     /// </summary>
-    public void HandleItemPointer(ImageItemViewModel item, bool ctrl, bool isDoubleClick)
+    public void HandleItemPointer(ImageItemViewModel item, bool ctrl, bool shift, bool isDoubleClick)
     {
         ArgumentNullException.ThrowIfNull(item);
 
@@ -274,7 +301,11 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
             return;
         }
 
-        if (ctrl)
+        if (shift)
+        {
+            RangeSelect(item);
+        }
+        else if (ctrl)
         {
             ToggleSelect(item);
         }
@@ -339,6 +370,46 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
         item.SelectionOrder = 1;
     }
 
+    /// <summary>
+    /// SHIFT+クリックの範囲選択(REQ-041 v1.3/CR-3 — 原典 useImageSelection 方式):
+    /// 最後の選択アイテムからクリック位置までの一覧 index 範囲を既存選択へ union する(置換しない)。
+    /// 新規選択分の選択順は index 昇順で末尾へ追番。選択が空のときはクリック項目のみ追加。
+    /// </summary>
+    private void RangeSelect(ImageItemViewModel item)
+    {
+        var anchor = LastSelected;
+        if (anchor is null)
+        {
+            // 既存選択なし: 範囲の縮退 = クリック項目のみを追加
+            AddToSelection(item);
+            return;
+        }
+
+        var from = _items.IndexOf(anchor);
+        var to = _items.IndexOf(item);
+        if (from < 0 || to < 0)
+        {
+            return; // 並び替え直後等で解決できない場合は何もしない(INV-008 のフォールバック方針)
+        }
+
+        var lower = Math.Min(from, to);
+        var upper = Math.Max(from, to);
+        for (var i = lower; i <= upper; i++)
+        {
+            if (!_items[i].IsSelected)
+            {
+                AddToSelection(_items[i]);
+            }
+        }
+    }
+
+    private void AddToSelection(ImageItemViewModel item)
+    {
+        _selection.Add(item);
+        item.IsSelected = true;
+        item.SelectionOrder = _selection.Count;
+    }
+
     private void ToggleSelect(ImageItemViewModel item)
     {
         if (item.IsSelected)
@@ -384,11 +455,19 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
 
     partial void OnViewportWidthChanged(double value)
     {
+        // レスポンシブ自動列(REQ-041 v1.3/CR-1): コンテンツ幅から列数を再算出する
+        GridColumns = ComputeColumns(value);
         UpdateCellSize();
         UpdateColumnWidths();
     }
 
-    partial void OnSelectedSortFieldOptionChanged(SortFieldOption value) => Resort();
+    partial void OnSelectedSortFieldOptionChanged(SortFieldOption value)
+    {
+        // ユーザー操作・初期化のどちらでも、選択肢が確定したら後方互換フィールドは解除する
+        // (SetSort の created_date 経路は選択肢設定後に _legacySortField を再設定する)
+        _legacySortField = null;
+        Resort();
+    }
 
     partial void OnSelectedSortDirectionOptionChanged(SortDirectionOption value) => Resort();
 
@@ -409,7 +488,7 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
     private void RebuildRows()
     {
         Rows.Clear();
-        var columns = Math.Clamp(GridColumns, 3, 6);
+        var columns = Math.Max(1, GridColumns);
         for (var i = 0; i < _items.Count; i += columns)
         {
             Rows.Add(new GridRowViewModel(_items.Skip(i).Take(columns).ToList()));
@@ -432,7 +511,7 @@ public sealed partial class ImageBrowserViewModel : ObservableObject
             return;
         }
 
-        var columns = Math.Clamp(GridColumns, 3, 6);
+        var columns = Math.Max(1, GridColumns);
         // セル間ギャップ 8px(K-DESIGN)+選択枠 2px ぶんの余裕(列ごとに 4px)を除いた正方形辺
         var available = ViewportWidth - CellGap * (columns + 1) - 4 * columns;
         if (available > columns)

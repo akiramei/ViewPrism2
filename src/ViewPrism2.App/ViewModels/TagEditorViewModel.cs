@@ -63,6 +63,12 @@ public sealed partial class TagEditorViewModel : ObservableObject
         _tags = tags;
         _localization = localization;
         Loc = new LocalizationProxy(localization);
+        localization.CultureChanged += (_, _) =>
+        {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
 
         TypeOptions =
         [
@@ -81,7 +87,7 @@ public sealed partial class TagEditorViewModel : ObservableObject
         }
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     public IReadOnlyList<TagTypeOption> TypeOptions { get; }
 

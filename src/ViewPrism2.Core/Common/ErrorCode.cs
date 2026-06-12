@@ -11,4 +11,7 @@ public enum ErrorCode
     ScanInProgress,
     IoError,
     InvalidRegex,
+
+    /// <summary>データベース操作の失敗(v1.3/ECO-002 DF-2: DB 例外の Result 変換用に追加)。</summary>
+    Database,
 }

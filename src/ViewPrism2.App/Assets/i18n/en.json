@@ -137,6 +137,7 @@
   "error.ioError": "File I/O failed",
   "error.notFound": "Target not found",
   "error.scanInProgress": "A scan is already in progress",
+  "error.unhandled": "An unexpected error occurred. See the application log for details.",
   "error.validationError": "Invalid input",
   "file.modifiedDate": "Modified Date",
   "file.name": "Name",

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Services;
@@ -47,6 +48,28 @@ public partial class ViewerWindow : Window
     }
 
     private void OnCloseRequested(object? sender, EventArgs e) => Close();
+
+    /// <summary>
+    /// 画像外余白のクリックで閉じる(REQ-044 v1.3/CR-7)。
+    /// 実描画領域(Uniform + DownOnly のフィット計算)は ViewerViewModel.IsBackgroundPoint(純粋関数)。
+    /// </summary>
+    private void OnBackgroundPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel is null || !e.GetCurrentPoint(ImageHost).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var point = e.GetPosition(ImageView);
+        var source = ImageView.Source;
+        if (ViewerViewModel.IsBackgroundPoint(
+                ImageView.Bounds.Width, ImageView.Bounds.Height,
+                source?.Size.Width ?? 0, source?.Size.Height ?? 0,
+                point.X, point.Y))
+        {
+            _viewModel.CloseCommand.Execute(null);
+        }
+    }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

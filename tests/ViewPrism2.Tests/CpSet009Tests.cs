@@ -32,6 +32,7 @@ public sealed class CpSet009Tests : IDisposable
     [Fact]
     public void 全項目ラウンドトリップ()
     {
+        // REQ-052 v1.3: 表示モード(CR-6)・最後に選択したコレクション(CR-5)を含む全キー
         var store = new SettingsStore(_directory);
         var settings = new AppSettings
         {
@@ -41,14 +42,43 @@ public sealed class CpSet009Tests : IDisposable
             WindowWidth = 1600,
             WindowHeight = 900,
             IsMaximized = true,
-            GridColumns = 6,
+            DisplayMode = "list",
             LastViewId = "view-001",
+            LastCollectionId = "col-001",
         };
 
         store.Save(settings);
         var loaded = new SettingsStore(_directory).Load();
 
         Assert.Equal(settings, loaded);
+        Assert.Equal("list", loaded.DisplayMode);
+        Assert.Equal("col-001", loaded.LastCollectionId);
+    }
+
+    [Fact]
+    public void 旧grid_columnsキーは残存しても無視され書き出されない()
+    {
+        // REQ-052 v1.3/CR-1: グリッド列数キーは廃止(残存しても無視)
+        Directory.CreateDirectory(_directory);
+        var store = new SettingsStore(_directory);
+        File.WriteAllText(store.SettingsFilePath, """
+            {
+              "locale": "en",
+              "gridColumns": 6,
+              "lastViewId": "view-001"
+            }
+            """);
+
+        var loaded = store.Load(); // 例外なく読める(旧キーは無視)
+
+        Assert.Equal("en", loaded.Locale);
+        Assert.Equal("view-001", loaded.LastViewId);
+        Assert.Equal(4, loaded.GridColumns); // 旧キーの値 6 は読み込まれない(既定値のまま)
+
+        store.Save(loaded); // 再保存で旧キーは消える(書き出さない)
+        var json = File.ReadAllText(store.SettingsFilePath);
+        Assert.DoesNotContain("gridColumns", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("displayMode", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,7 +105,7 @@ public sealed class CpSet009Tests : IDisposable
     }
 
     [Fact]
-    public void 既定値スキーマ_M_SET_010()
+    public void 既定値スキーマ_M_SET_010_v13()
     {
         var defaults = new AppSettings();
         Assert.Equal("ja", defaults.Locale);
@@ -84,7 +114,8 @@ public sealed class CpSet009Tests : IDisposable
         Assert.Equal(1200, defaults.WindowWidth);
         Assert.Equal(800, defaults.WindowHeight);
         Assert.False(defaults.IsMaximized);
-        Assert.Equal(4, defaults.GridColumns);
+        Assert.Equal("grid", defaults.DisplayMode); // v1.3/CR-6
         Assert.Null(defaults.LastViewId);
+        Assert.Null(defaults.LastCollectionId);     // v1.3/CR-5
     }
 }

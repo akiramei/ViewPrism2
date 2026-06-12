@@ -123,4 +123,41 @@ public sealed class CpUiG4ViewerTests
 
         Assert.Equal(1, raised);
     }
+
+    // ---- 画像外余白クリックで閉じる(REQ-044 v1.3/ECO-002 CR-7)の判定ロジック ----
+    // ホスト 1000×800 に 800×600 画像(縮小なし scale=1)→ 描画領域は (100,100)-(900,700)
+
+    [Theory]
+    [InlineData(50, 400, true)]    // 左余白
+    [InlineData(950, 400, true)]   // 右余白
+    [InlineData(500, 50, true)]    // 上余白
+    [InlineData(500, 750, true)]   // 下余白
+    [InlineData(500, 400, false)]  // 画像中央 → 閉じない
+    [InlineData(100, 100, false)]  // 画像の左上隅(境界は画像側)
+    [InlineData(900, 700, false)]  // 画像の右下隅(境界は画像側)
+    [InlineData(99, 400, true)]    // 境界 1px 外
+    [InlineData(-10, -10, true)]   // ホスト外(マージン側)
+    public void 画像外余白の判定_等倍表示(double x, double y, bool expected)
+    {
+        Assert.Equal(expected, ViewerViewModel.IsBackgroundPoint(1000, 800, 800, 600, x, y));
+    }
+
+    [Fact]
+    public void 画像外余白の判定_縮小フィットと拡大なし()
+    {
+        // 縮小のみ: 2000×1500 画像 → ホスト 1000×800 では scale=0.5 → 1000×750、中央 (0,25)-(1000,775)
+        Assert.False(ViewerViewModel.IsBackgroundPoint(1000, 800, 2000, 1500, 500, 400)); // 画像上
+        Assert.True(ViewerViewModel.IsBackgroundPoint(1000, 800, 2000, 1500, 500, 10));   // 上余白
+        Assert.True(ViewerViewModel.IsBackgroundPoint(1000, 800, 2000, 1500, 500, 790));  // 下余白
+
+        // 拡大なし(DownOnly): 100×100 画像はホスト中央に原寸 (450,350)-(550,450)
+        Assert.False(ViewerViewModel.IsBackgroundPoint(1000, 800, 100, 100, 500, 400));
+        Assert.True(ViewerViewModel.IsBackgroundPoint(1000, 800, 100, 100, 200, 400));
+    }
+
+    [Fact]
+    public void 画像なしは全面が余白扱い()
+    {
+        Assert.True(ViewerViewModel.IsBackgroundPoint(1000, 800, 0, 0, 500, 400));
+    }
 }

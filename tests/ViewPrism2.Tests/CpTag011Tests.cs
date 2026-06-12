@@ -288,4 +288,33 @@ public sealed class CpTag011Tests : IDisposable
         Assert.Equal(0, list[2].UsageCount);
         _ = zero;
     }
+
+    [Fact]
+    public async Task 付与ゼロでも使用数取得がクラッシュしない_DF2根本原因()
+    {
+        // v1.3/ECO-002 DF-2 回帰: image_tags が空のとき COUNT 列の型親和性が無く
+        // Microsoft.Data.Sqlite が BLOB(byte[])を返すため、型付きレコードの materialization が
+        // 空リーダーで失敗していた(タグ作成・保存後のパレット再読込でクラッシュ)。
+        // タグは存在するが付与が 0 件、という textual タグ新規作成直後の状態を再現する。
+        await _service.CreateAsync("性別", TagType.Textual);
+        await _service.CreateAsync("評価", TagType.Numeric);
+
+        var list = await _service.GetAllWithUsageAsync(); // 例外で落ちないこと
+
+        Assert.Equal(["性別", "評価"], list.Select(t => t.Tag.Name).OrderBy(n => n, StringComparer.Ordinal));
+        Assert.All(list, t => Assert.Equal(0, t.UsageCount));
+    }
+
+    [Fact]
+    public async Task textualタグ候補値設定はDB成功で正常完了_DF2()
+    {
+        // DF-2 の TagService.SetTextualSettingsAsync(正常系): 候補値 2 件のラウンドトリップ
+        var tag = (await _service.CreateAsync("性別", TagType.Textual)).Value!;
+
+        var result = await _service.SetTextualSettingsAsync(tag.Id, ["春", "夏", "秋", "冬"]);
+
+        Assert.True(result.IsSuccess);
+        var settings = await _db.Tags.GetTextualSettingsAsync(tag.Id);
+        Assert.Equal(["春", "夏", "秋", "冬"], settings!.PredefinedValues);
+    }
 }

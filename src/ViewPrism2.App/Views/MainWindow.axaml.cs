@@ -11,6 +11,7 @@ namespace ViewPrism2.App.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private readonly DoubleClickDetector _doubleClick = new();
     private MainWindowViewModel? _viewModel;
     private bool _syncingTreeSelection;
 
@@ -74,7 +75,12 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>グリッドセル/リスト行のポインタ操作(REQ-041: クリック・Ctrl+クリック・ダブルクリック)。</summary>
+    /// <summary>
+    /// グリッドセル/リスト行のポインタ操作(REQ-041 v1.3: クリック・Ctrl+クリック・
+    /// SHIFT+クリック範囲 union・ダブルクリック)。
+    /// ダブルクリック判定は ClickCount に加えて自前検出(DoubleClickDetector)で補完する
+    /// (DF-4: ポインタ経路・活性化・微小移動で ClickCount が 2 に達しない事例への堅牢化)。
+    /// </summary>
     private void OnCellPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_viewModel is null ||
@@ -85,8 +91,41 @@ public partial class MainWindow : Window
         }
 
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        var isDouble = e.ClickCount >= 2;
-        _viewModel.Browser.HandleItemPointer(item, ctrl, isDouble);
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        var detected = _doubleClick.ObserveClick(
+            item, (long)e.Timestamp, SystemDoubleClickTimeMs, ctrl || shift);
+        var isDouble = e.ClickCount >= 2 || detected;
+        _viewModel.Browser.HandleItemPointer(item, ctrl, shift, isDouble);
+    }
+
+    /// <summary>OS のダブルクリック時間(ms)。本アプリは Windows 専用(仕様 §1)。</summary>
+    private static double SystemDoubleClickTimeMs
+    {
+        get
+        {
+            try
+            {
+                return GetDoubleClickTime();
+            }
+            catch (EntryPointNotFoundException)
+            {
+                return 500; // 既定値(Windows 標準)
+            }
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+
+    /// <summary>コレクション項目のクリック(REQ-053 v1.3/CR-2: 選択スコープの切替)。</summary>
+    private void OnCollectionPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel is not null &&
+            sender is Control { DataContext: FolderRowViewModel row } control &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        {
+            _viewModel.SelectCollectionCommand.Execute(row);
+        }
     }
 
     private void OnContentSizeChanged(object? sender, SizeChangedEventArgs e)

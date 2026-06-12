@@ -61,13 +61,16 @@ public sealed partial class TaggingPanelViewModel : ObservableObject
         Loc = new LocalizationProxy(localization);
         localization.CultureChanged += (_, _) =>
         {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
             RebuildAvailable();
             RebuildCurrentTags();
             OnPropertyChanged(nameof(SelectionCountText));
         };
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     /// <summary>選択画像全件に付与済みの共通タグ(複数選択時は積集合、REQ-046)。</summary>
     public ObservableCollection<CurrentTagRowViewModel> CurrentTags { get; } = [];

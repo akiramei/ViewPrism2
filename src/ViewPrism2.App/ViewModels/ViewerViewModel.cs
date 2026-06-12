@@ -59,9 +59,30 @@ public sealed partial class ViewerViewModel : ObservableObject
         }
     }
 
-    /// <summary>閉じる(Escape / 閉じるボタン)。</summary>
+    /// <summary>閉じる(Escape / 閉じるボタン / 画像外余白クリック — REQ-044 v1.3/CR-7)。</summary>
     [RelayCommand]
     private void Close() => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// 指定点が「画像外余白」か(REQ-044 v1.3/CR-7 の判定。純粋関数 — unit 検査可能)。
+    /// 画像は Uniform + DownOnly(縮小のみ・拡大なし)で表示領域中央へフィットされる前提。
+    /// 画像なし(寸法 0 以下)は全面が余白。
+    /// </summary>
+    public static bool IsBackgroundPoint(
+        double hostWidth, double hostHeight, double imageWidth, double imageHeight, double x, double y)
+    {
+        if (imageWidth <= 0 || imageHeight <= 0)
+        {
+            return true;
+        }
+
+        var scale = Math.Min(1.0, Math.Min(hostWidth / imageWidth, hostHeight / imageHeight));
+        var renderWidth = imageWidth * scale;
+        var renderHeight = imageHeight * scale;
+        var left = (hostWidth - renderWidth) / 2;
+        var top = (hostHeight - renderHeight) / 2;
+        return x < left || x > left + renderWidth || y < top || y > top + renderHeight;
+    }
 
     private void RaisePositionChanged()
     {

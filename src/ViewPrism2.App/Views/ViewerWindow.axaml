@@ -30,6 +30,10 @@
                    VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
       </DockPanel>
     </Border>
-    <Image x:Name="ImageView" Stretch="Uniform" StretchDirection="DownOnly" Margin="8" />
+    <!-- 画像外余白のクリックで閉じる(REQ-044 v1.3/CR-7 — 背景クリックは原典準拠) -->
+    <Panel x:Name="ImageHost" Background="{StaticResource AppBackgroundBrush}"
+           PointerPressed="OnBackgroundPressed">
+      <Image x:Name="ImageView" Stretch="Uniform" StretchDirection="DownOnly" Margin="8" />
+    </Panel>
   </DockPanel>
 </Window>

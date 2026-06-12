@@ -114,12 +114,20 @@ public sealed class TagService
             return Result.Fail(ErrorCode.ValidationError, "textual タグ以外には定義済み値を設定できません。");
         }
 
-        await _tags.UpsertTextualSettingsAsync(new TextualTagSettings
+        try
         {
-            TagId = tagId,
-            PredefinedValues = predefinedValues,
-        }).ConfigureAwait(false);
-        return Result.Ok();
+            await _tags.UpsertTextualSettingsAsync(new TextualTagSettings
+            {
+                TagId = tagId,
+                PredefinedValues = predefinedValues,
+            }).ConfigureAwait(false);
+            return Result.Ok();
+        }
+        catch (DbException)
+        {
+            // DB 例外を Result へ変換(v1.3/ECO-002 DF-2: 他メソッドとの非対称を是正)
+            return Result.Fail(ErrorCode.Database, "定義済み値の保存に失敗しました。");
+        }
     }
 
     /// <summary>numeric の min/max/step/unit を設定する(REQ-025。すべて null 可)。</summary>

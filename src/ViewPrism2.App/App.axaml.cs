@@ -38,13 +38,33 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var appDataDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ViewPrism2");
+            // データ配置の既定は %APPDATA%/ViewPrism2。CP-L1-SMOKE の隔離実行用に
+            // 環境変数 VIEWPRISM2_DATA_DIR で差し替え可能(未設定時は従来どおり)
+            var appDataDir = Environment.GetEnvironmentVariable("VIEWPRISM2_DATA_DIR")
+                is { Length: > 0 } overrideDir
+                ? overrideDir
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ViewPrism2");
             _provider = ConfigureServices(appDataDir);
 
             ThumbnailImageServiceInit(_provider);
             _settingsStore = _provider.GetRequiredService<SettingsStore>();
             _settings = _provider.GetRequiredService<AppSettings>();
+
+            // DF-1(NFR-002): グローバル例外ハンドラ — UI 例外でプロセスを終了させない。
+            // ログ(%APPDATA%/ViewPrism2/logs/)+非モーダル通知(ステータスバー)
+            var localization = _provider.GetRequiredService<LocalizationService>();
+            var exceptions = _provider.GetRequiredService<GlobalExceptionHandler>();
+            exceptions.FormatNotification = _ => localization.T("error.unhandled");
+            exceptions.NotificationRequested += (_, message) =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (_mainViewModel is not null)
+                    {
+                        _mainViewModel.StatusMessage = message;
+                    }
+                });
+            exceptions.Register();
 
             _mainViewModel = _provider.GetRequiredService<MainWindowViewModel>();
             var window = new MainWindow { DataContext = _mainViewModel };
@@ -78,6 +98,10 @@ public partial class App : Application
             .CreateLogger();
         services.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory(serilog, dispose: true));
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
+
+        // 堅牢性(NFR-002 / DF-1): グローバル例外ハンドラ
+        services.AddSingleton(sp => new GlobalExceptionHandler(
+            sp.GetRequiredService<ILogger<GlobalExceptionHandler>>()));
 
         // Core 共通
         services.AddSingleton<IClock, SystemClock>();

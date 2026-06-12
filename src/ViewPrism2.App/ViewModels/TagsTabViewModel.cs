@@ -55,9 +55,15 @@ public sealed partial class TagsTabViewModel : ObservableObject
 
         Editor.Saved += (_, _) => DataChanged?.Invoke(this, EventArgs.Empty);
         Palette.TagsChanged += async (_, _) => await OnTagsChangedAsync();
+        localization.CultureChanged += (_, _) =>
+        {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     public HierarchyEditorViewModel Editor { get; }
 

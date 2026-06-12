@@ -111,11 +111,21 @@ public sealed class CpL1SmokeTests : IDisposable
             new TagsTabViewModel(viewService, tagService, _db.Tags, localization, windows),
             new TaggingPanelViewModel(tagService, _db.Tags, localization, windows));
 
-        // --- 起動初期化 → 全画像グリッド ---
+        // --- 起動初期化: コレクション未選択 → 選択を促す空状態(REQ-053 v1.3/CR-2) ---
         await vm.InitializeAsync();
+        Assert.False(vm.IsCollectionSelected);
+        Assert.True(vm.ShowCollectionPrompt);
+        Assert.True(vm.Browser.IsEmpty); // 母集合は空(横断表示なし)
+
+        // --- コレクション選択 → 当該コレクションの normal 画像が母集合になる ---
+        var collectionRow = vm.FolderPane.Folders.Single(r => r.Folder.Id == folder.Id);
+        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(collectionRow);
+        Assert.True(vm.IsCollectionSelected);
+        Assert.True(collectionRow.IsSelected);
+        Assert.Equal(3, collectionRow.ImageCount); // 項目に画像数(CR-8)
         Assert.False(vm.Browser.IsEmpty);
         Assert.Equal(3, vm.Browser.SortedItems.Count);
-        Assert.Single(vm.Browser.Rows); // 既定 4 列 × 3 枚 = 1 行
+        Assert.Single(vm.Browser.Rows); // 幅未供給時の暫定 4 列 × 3 枚 = 1 行
         Assert.Equal("photo1.jpg", vm.Browser.SortedItems[0].FileName); // name asc
 
         // --- サムネイル生成(「サムネイルが並ぶ」の in-process 確認) ---
@@ -127,7 +137,7 @@ public sealed class CpL1SmokeTests : IDisposable
         }
 
         // --- 選択 → 詳細パネル(REQ-043) ---
-        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, isDoubleClick: false);
+        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, shift: false, isDoubleClick: false);
         var waited = 0;
         while (!vm.Detail.HasImage && waited < 100)
         {
@@ -182,7 +192,7 @@ public sealed class CpL1SmokeTests : IDisposable
         vm.SelectedTabIndex = 1;
         vm.IsTagEditMode = true; // タグ付与パネルへ切替(REQ-046)
         Assert.True(vm.Browser.SuppressOpenItem); // タグ編集モード中はダブルクリック無効(REQ-041 v1.2)
-        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, isDoubleClick: false);
+        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, shift: false, isDoubleClick: false);
         var waitedTagging = 0;
         while (!vm.Tagging.HasSelection && waitedTagging < 100)
         {

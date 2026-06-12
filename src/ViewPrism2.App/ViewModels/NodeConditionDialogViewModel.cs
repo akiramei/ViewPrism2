@@ -47,9 +47,16 @@ public sealed partial class NodeConditionDialogViewModel : ObservableObject
         TypeOptions = options;
         _selectedType = TypeOptions.FirstOrDefault(o => o.Value == currentType) ?? TypeOptions[0];
         LoadCurrent(currentType, currentValueJson);
+
+        localization.CultureChanged += (_, _) =>
+        {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     public string TagName => _tag.Name;
 

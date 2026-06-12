@@ -47,9 +47,15 @@ public sealed partial class RelinkViewModel : ObservableObject
         _localization = localization;
         _windows = windows;
         Loc = new LocalizationProxy(localization);
+        localization.CultureChanged += (_, _) =>
+        {
+            // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
     }
 
-    public LocalizationProxy Loc { get; }
+    public LocalizationProxy Loc { get; private set; }
 
     public ObservableCollection<MissingImageViewModel> MissingImages { get; } = [];
 

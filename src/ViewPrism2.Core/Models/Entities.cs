@@ -201,7 +201,11 @@ public sealed record ScanSummary
     public int Skipped { get; init; }
 }
 
-/// <summary>アプリ設定(REQ-052、M-SET-010 スキーマ)。破損時は既定値で起動。</summary>
+/// <summary>
+/// アプリ設定(REQ-052 v1.3、M-SET-010 スキーマ)。破損時は既定値で起動。
+/// v1.3/ECO-002 CR-1/5/6: グリッド列数キーは廃止(JsonIgnore — 書き出さず、
+/// 旧ファイルに残存していても読み込まず無視する)。表示モード・最後に選択したコレクションを追加。
+/// </summary>
 public sealed record AppSettings
 {
     public string Locale { get; set; } = "ja";
@@ -215,6 +219,19 @@ public sealed record AppSettings
     public int WindowWidth { get; set; } = 1200;
     public int WindowHeight { get; set; } = 800;
     public bool IsMaximized { get; set; }
+
+    /// <summary>
+    /// 廃止(REQ-052 v1.3/CR-1: 列数はレスポンシブ自動算出)。JSON へは読み書きしない。
+    /// プロパティ自体は既存契約(既定値 4)の互換のため温存する。
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public int GridColumns { get; set; } = 4;
+
+    /// <summary>表示モード(REQ-052 v1.3/CR-6): "grid" または "list"。既定 grid。</summary>
+    public string DisplayMode { get; set; } = "grid";
+
     public string? LastViewId { get; set; }
+
+    /// <summary>最後に選択したコレクション(同期フォルダ)id(REQ-052 v1.3/CR-5)。null=未選択。</summary>
+    public string? LastCollectionId { get; set; }
 }
