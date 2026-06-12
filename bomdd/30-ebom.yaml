@@ -186,10 +186,10 @@ ebom:
       acceptance_refs: [CP-THUMB-007]
 
     - id: E-UI-SHELL-021
-      name: シェル UI(メインウィンドウ・タブナビゲーション(タグ/画像+設定)・同期フォルダ管理・スキャン実行/結果表示)— v1.2 タブ式に改訂
+      name: シェル UI(メインウィンドウ・タブナビゲーション(タグ/画像+設定)・コレクション選択スコープ(一覧=名前+画像数+スキャン中)・スキャン実行/結果表示)— v1.3 コレクションファースト(ECO-002 CR-2/5/8)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-010, REQ-015, REQ-052]
+      requirement_refs: [REQ-010, REQ-015, REQ-052, REQ-053]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-SCAN-005, E-SETTINGS-013, E-I18N-014]
@@ -198,7 +198,7 @@ ebom:
       acceptance_refs: [CP-UI-G1, CP-L1-SMOKE]
 
     - id: E-UI-GRID-022
-      name: グリッド/リスト表示(仮想化・選択・空状態)
+      name: グリッド/リスト表示(レスポンシブ自動列・仮想化・選択(Ctrl トグル/SHIFT 範囲 union)・空状態)— v1.3 改訂(ECO-002 CR-1/3/6)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-041, REQ-042]
@@ -207,6 +207,8 @@ ebom:
       depends_on: [E-SORT-004, E-THUMB-020, E-EVAL-002]
       invariants:
         - 選択ロジックは ViewModel に置き unit 検査可能にする(OC 系)
+        - 列数はコンテンツ幅から自動算出(clamp(⌊幅/220px⌋,2,8))。固定列数セレクタを置かない(v1.3)
+        - SHIFT 範囲選択は union(置換しない)・選択順は index 昇順で末尾へ追番(v1.3)
       acceptance_refs: [CP-UI-G1, CP-UI-G2]
 
     - id: E-UI-DETAIL-023
@@ -294,3 +296,7 @@ nfr_targets:
     requirement_refs: [REQ-031]
     verified_by: CP-NFR-001
   # グリッド 1 万件のスクロール性能は仕様 §4 のとおり探索プローブ(P-01)で観測(固定目標値にしない)
+  - id: NFR-002
+    statement: UI 操作起因の未処理例外でプロセスを終了させない — グローバル例外ハンドラで捕捉し、スタック全文をログへ記録+非モーダル通知(仕様 §2.6 堅牢性規則。v1.3/ECO-002 DF-1)
+    requirement_refs: []   # 横断 NFR(個別 REQ に属さない。golden G-6 のクラッシュで顕在化した沈黙次元)
+    verified_by: CP-ROBUST-001

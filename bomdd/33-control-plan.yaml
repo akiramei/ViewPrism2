@@ -91,7 +91,7 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-SCAN-004。一時ディレクトリ+実ファイル+:memory: 相当 DB)
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-SCAN-004。一時ディレクトリ+実ファイル+:memory: 相当 DB)"
       oracle: 判定結果と前後 DB 状態の完全一致
       approver: automated
       test_vectors:
@@ -166,7 +166,7 @@ control_plan:
       classification: surface
       depth: L2
       tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact"
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp)
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp)"
       oracle: 出力ファイルのデコード結果(寸法・形式)とファイル存在・再生成有無
       approver: automated
       test_vectors:
@@ -226,13 +226,22 @@ control_plan:
       approver: automated
 
     - id: CP-L1-SMOKE
-      characteristic: ビルド+起動+正常系 1 本のスモーク(unit 緑のまま表面全滅の盲点対策)
+      characteristic: ビルド+起動+golden 対象経路のスモーク(unit 緑のまま表面全滅の盲点対策。v1.3/ECO-002 P1-6 で経路を深化)
       classification: surface
       depth: L1
       tolerance: "全手順成功"
-      fixture: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示"
-      oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並ぶこと"
+      fixture: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示 → ダブルクリックでビューア起動 → ja/en 切替 → textual タグ(候補値 2 件)作成(golden 対象経路を最低 1 回ずつ踏む)"
+      oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並び、ビューアが開き、言語切替でラベル・ボタンが切り替わり、タグ作成がクラッシュなく完了すること"
       approver: factory self-acceptance(最終確認は maintainer)
+
+    - id: CP-ROBUST-001
+      characteristic: UI 未処理例外の封じ込め — プロセス生存+スタック全文ログ+非モーダル通知(NFR-002・v1.3/ECO-002 DF-1)
+      classification: core
+      depth: L2
+      tolerance: "テスト用の例外注入でプロセスが生存し、ログにスタック全文が記録され、非モーダル通知が出る"
+      fixture: tests/ViewPrism2.Tests(グローバルハンドラへの例外注入)+ L1 スモークで実アプリ確認
+      oracle: テスト判定(+L1 目視)
+      approver: automated
 
     - id: CP-TAGUI-013
       characteristic: タグ付与パネルの ViewModel ロジック(v1.2 追加・REQ-046)
@@ -251,13 +260,13 @@ control_plan:
         - "解除: 現在タグの × → 当該タグのみ選択画像全件から解除"
         - "選択 0 件: プレースホルダ状態フラグ"
 
-    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-7(v1.2) ----
+    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-7(v1.3・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
-    - { id: CP-UI-G1, characteristic: "シェル(タブ構成)+グリッドの描画と操作(G-1)",          classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+グリッド(レスポンシブ列・Ctrl/SHIFT 選択)の描画と操作(G-1・v1.3)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上), oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G3, characteristic: "詳細パネルの全項目表示・ノート保存(G-3)",              classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止(G-4)",         classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止・背景クリック閉じる(G-4・v1.3)", classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }

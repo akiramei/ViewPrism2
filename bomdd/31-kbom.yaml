@@ -52,7 +52,7 @@ kbom:
       - "ダイアログ: Window.ShowDialog<TResult>(owner)。ファイル/フォルダ選択は StorageProvider.OpenFolderPickerAsync"
       - "ウィンドウ状態の保存: Window.Position/ClientSize/WindowState を Closing で読み settings.json へ(REQ-052)"
       - "多重起動防止: 名前付き Mutex(Global\\ViewPrism2)で判定し、2 つ目はプロセス終了(既存アクティブ化は V1 ではベストエフォート)"
-      - "動的 i18n: 文言は LocalizationService 経由のバインディング(INotifyPropertyChanged で一斉更新)。XAML 直書き文字列禁止"
+      - "動的 i18n: 文言は LocalizationService 経由のバインディング。XAML 直書き文字列禁止。罠(v1.3/ECO-002 DF-3): コンパイル済みバインディングはインデクサ('Item[]')の PropertyChanged 通知では再評価されない事例を確認 — 文言は名前付きプロパティ経由で公開する(またはロケール切替時に明示的に再バインド)。言語切替で全ラベル・ボタンが実際に切り替わることを L1 スモークで確認する(CP-L1-SMOKE)"
     risk_if_implicit: |
       仮想化の実現方式は Avalonia では自明でなく、工場ごとに ItemsControl 直置き(仮想化なし)を選んで
       1 万件で UI が固まる事故が典型(REQ-041 の中核リスク)。

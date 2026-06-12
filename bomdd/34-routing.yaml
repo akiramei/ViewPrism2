@@ -26,9 +26,9 @@ routing:
       output: [src/ViewPrism2.Core, src/ViewPrism2.Infrastructure, tests/ViewPrism2.Tests(CP-EVAL/GRAPH/SORT/SCAN/TAG/VIEW/DB/CACHE/SET/I18N/UTIL/NFR)]
     - order: 4
       id: ROUTE-MANUFACTURE-SURFACE
-      name: 表面を製造する(K-BOM 参照必須: K-AVALONIA / K-MVVM / K-DESIGN / K-SKIA / K-I18N)
+      name: "表面を製造する(K-BOM 参照必須: K-AVALONIA / K-MVVM / K-DESIGN / K-SKIA / K-I18N)"
       input: [M-THUMB-008, M-UI-013, M-UI-014]
-      output: [src/ViewPrism2.App 一式, Assets/i18n/{ja,en}.json, CP-THUMB テスト]
+      output: [src/ViewPrism2.App 一式, "Assets/i18n/{ja,en}.json", CP-THUMB テスト]
     - order: 5
       id: ROUTE-SELF-ACCEPTANCE
       name: 自己受入(緑が納品条件。自己受入緑≠合格)

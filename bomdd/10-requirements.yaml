@@ -358,10 +358,13 @@ requirements:
       - "home_tag_id の参照先が削除済みでビューが開けなくなる"
 
   - id: REQ-038
-    statement: "ビュー内の画像一覧は sort_field(name/created_date/modified_date/file_size のいずれか、既定 name)と sort_direction(asc/desc、既定 asc)で整列する。同値の場合の二次キーは id 昇順とする(安定ソート)"
+    statement: "ビュー内の画像一覧は sort_field(UI 選択肢は name/modified_date/file_size、既定 name。DB 既存値 'created_date' は後方互換として受理し従来どおり整列に使える)と sort_direction(asc/desc、既定 asc)で整列する。同値の場合の二次キーは id 昇順とする(安定ソート)"
     rationale: |
       原典は sort_field をスキーマに持つが候補値・既定・二次キーが不明確(unknown)のため、本実装で確定させる
       (意図的差分)。name は大文字小文字を無視した序数比較(Windows ファイル名のセマンティクスに合わせる)。
+      v1.3/ECO-002 CR-4: created_date を UI ソート軸から除外(golden G1③ — リスト基本列と非対称・用途上不要との
+      承認者裁定 2026-06-12。原典のソート軸も「名前/日付/サイズ」の 3 軸 — types/sort.ts)。SortField 列挙と
+      整列実装は温存し UI 選択肢のみ縮小(契約最小変更)。
       受入: 各フィールド×方向のテストベクタで exact 検査(unit)。
     rationale_precision: ok
     classification_hint: core
@@ -387,13 +390,19 @@ requirements:
   - id: REQ-041
     statement: "グリッド表示: 列数は 3/4/5/6 から選択(既定 4)、セルは正方形サムネイル+ファイル名、クリックで選択(Ctrl+クリックで個別トグルの複数選択、選択順の番号を表示)、ダブルクリックでビューア(REQ-044)を起動する(タグ編集モード中はダブルクリック無効)。画像 0 件時は中央に空状態メッセージを表示する。大量件数(目安 100 件以上)でも UI 仮想化によりスクロールが滑らかであること"
     rationale: |
-      原典 ImageGrid.tsx:23,43-50、VirtualizedGrid.tsx。仮想化は Avalonia の仮想化パネルで実現(実装方式は自由)。
-      受入: 選択ロジックは unit(ViewModel)、描画は golden+承認者。性能は探索プローブ(1 万件で操作可能)。
+      v1.3/ECO-002 CR-1・CR-3 改訂: 原典 NewUI 主画面はレスポンシブ自動列で、ユーザー選択の列数 UI を持たない
+      (旧トレース先 ImageGrid.tsx:23,43-50 は旧 UI 系共有部品の props 既定値 — reports/eco-002-origin-analysis.md。
+      porting-spec 03 L96 も列数を現行互換仕様でないと明記)。SHIFT 範囲選択は原典 NewUI 実装
+      useImageSelection.ts:24-34(最後の選択〜クリック位置の範囲を既存選択へ union)を採用(03 L117 の
+      「採用時は受入条件を別途定義」に従い本 REQ で確定)。仮想化は Avalonia の仮想化パネルで実現(実装方式は自由)。
+      受入: 列数算出・選択ロジックは unit(ViewModel)、描画は golden+承認者。性能は探索プローブ(1 万件で操作可能)。
     rationale_precision: ok
     classification_hint: surface
     external_source: "Avalonia ItemsControl 仮想化(12.0)ドキュメント"
     counterexamples:
       - "Ctrl+クリックが範囲選択になり、選択順番号が振り直される"
+      - "SHIFT+クリックが既存選択を置換し、選択順バッジが崩れる"
+      - "ウィンドウを狭めても列数が変わらず、セルが見切れる"
 
   - id: REQ-042
     statement: "リスト表示: ビューの display_columns に従い列を構成する。列は基本列(name/size/modified_date)とタグ列(tag:{tagId}、その画像の当該タグ値を表示)から成り、既定は name/size/modified_date の 3 列"
@@ -420,9 +429,11 @@ requirements:
       - "ノート編集が保存されず、詳細を開き直すと消えている"
 
   - id: REQ-044
-    statement: "基本ビューア(単一画像表示): 画像をウィンドウ内に表示し、→/PageDown で次の画像、←/PageUp で前の画像、Esc または閉じるボタンで閉じる。表示順は呼び出し元の一覧(REQ-038 の整列結果)に従い、端で停止する(ループしない)"
+    statement: "基本ビューア(単一画像表示): 画像をウィンドウ内に表示し、→/PageDown で次の画像、←/PageUp で前の画像、Esc・閉じるボタン・画像外余白のクリックのいずれかで閉じる。表示順は呼び出し元の一覧(REQ-038 の整列結果)に従い、端で停止する(ループしない)"
     rationale: |
       原典 useViewerNavigation.ts:163-170 ほか(原典の Esc は未実装だが本実装では標準 UX として追加 — 意図的差分)。
+      v1.3/ECO-002 CR-7: 背景クリックで閉じるは原典準拠(porting-spec 02§2「ESC または背景クリックで閉じる」)。
+      モーダルオーバーレイからウィンドウ方式への適応として「画像外余白のクリック」で提供する。
       見開き・スクロール・タグ制御・ページ送りモードは V1 外。原典の既定 noResize(原寸)に対し、本実装はウィンドウ
       フィット(縮小のみ、拡大なし)を既定とする(意図的差分: ズーム未実装のため原寸では大画像が見切れる)。
       受入: ナビゲーションロジック(端の停止、現在位置)は unit、描画は golden+承認者。
@@ -485,12 +496,32 @@ requirements:
       - "切替後に開いたダイアログだけ旧言語で表示される"
 
   - id: REQ-052
-    statement: "アプリ設定(言語、ウィンドウサイズ・位置、グリッド列数、最後に開いたビュー)は %APPDATA%/ViewPrism2/settings.json に JSON で永続化し、起動時に復元する。設定ファイル破損時は既定値で起動する(クラッシュしない)"
+    statement: "アプリ設定(言語、ウィンドウサイズ・位置、表示モード(グリッド/リスト)、最後に開いたビュー、最後に選択したコレクション)は %APPDATA%/ViewPrism2/settings.json に JSON で永続化し、起動時に復元する。グリッド列数キーは v1.3 で廃止(残存しても無視)。設定ファイル破損時は既定値で起動する(クラッシュしない)"
     rationale: |
       原典は locale のみ永続化(language.ts:7)、ウィンドウは固定 1200x800(main.ts:109-110)。
       本実装ではデスクトップアプリの標準 UX としてウィンドウ状態等も保存する(意図的差分)。
+      v1.3/ECO-002 CR-1/5/6: グリッド列数を廃止(REQ-041 レスポンシブ化)、表示モードと選択コレクションを追加
+      (porting-spec 02§1「選択中のコレクションは永続化し、次回起動時に復元」・02§2「表示モードはユーザー設定として
+      永続化」— 原典挙動)。
       受入: 保存→再起動→復元のラウンドトリップと破損ファイル耐性を unit で exact 検査。
     rationale_precision: ok
     classification_hint: core
     counterexamples:
       - "壊れた settings.json で起動不能になる"
+
+  # ============================================================
+  # コレクションスコープ REQ-053(v1.3/ECO-002 CR-2 — golden G1④の是正)
+  - id: REQ-053
+    statement: "コレクション(同期フォルダ)は画像閲覧のスコープである: 画像タブはコレクションを 1 つ選択して操作し、一覧・「全画像」入口・ビュー(NodeGraph)評価の母集合は選択中コレクションの status=normal 画像に限られる(複数コレクションの横断表示は行わない)。コレクション一覧の各項目は名前と画像数を表示し、スキャン中はその状態を示す。コレクション未選択時は選択を促す空状態を表示する"
+    rationale: |
+      v1.3/ECO-002 CR-2(golden G1④で検出された V1 仕様の脱落の是正 — reports/eco-002-origin-analysis.md)。
+      原典はコレクション選択を表示の前提とする: porting-spec 02§2「コレクションとビューを選択して画像を表示する」、
+      08 RVP-INV-003(confirmed/preserve の横断不変条件)、03§1 コレクションサイドバー(名前・パス・画像数・
+      スキャン中)。承認者裁定(2026-06-12): コレクションファースト(原典忠実)、横断「全画像」入口は設けない。
+      受入: コレクションフィルタ(選択コレクションの normal のみが母集合)は unit(ViewModel)、
+      サイドバー表示・切替・空状態は golden(G-1)+承認者。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "フォルダ A と B を登録すると、A 選択中でも B の画像が一覧に混ざる"
+      - "コレクションを切り替えても NodeGraph の母集合が前のコレクションのまま"
