@@ -37,8 +37,19 @@ as_built:
     - { cp_id: CP-UI-G3, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "通常モード単一クリック→右パネル詳細を確認" }
     - { cp_id: CP-UI-G4, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "ダブルクリック起動・余白クリックで閉じる を確認(v1.3)" }
     - { cp_id: CP-UI-G5, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "ja/en 切替でラベル・ボタンが即時切替を確認(v1.3)" }
-    - { cp_id: CP-UI-G6, date: ~, approver: maintainer, verdict: pending, notes: "確認済み(2026-06-12): タグ作成クラッシュなし・別名・条件・保存/キャンセルのバッチ・ビュー作成・階層表示/子入替。残: ホームタグの初期遷移(REQ-037)の動作確認のみ(エディタのトグル/強調は確認済み。アイコン疑義は GF-03)。所見 GF-01(ダイアログ高さ)は V2 申し送り" }
+    - { cp_id: CP-UI-G6, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "タグ作成クラッシュなし・別名・条件・保存/キャンセルのバッチ・ビュー作成・階層表示/子入替・ホームタグ(トグル/強調+初期遷移 REQ-037)すべて確認。所見 GF-01(ダイアログ高さ)・GF-03(★アイコン)・GF-04(パレット選択視覚)・GF-05(条件サマリ表示)は V2 申し送り" }
     - { cp_id: CP-UI-G7, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "現在タグ・追加・適用・numeric 固定値/連番・textual 候補値選択 すべて確認" }
+
+  # チャーター完了定義の充足記録(Loop V1 クローズ — 2026-06-12)
+  charter_completion:
+    date: 2026-06-12
+    definition_check:
+      - { criterion: "固定オラクル全通過(現被覆で未観測差分ゼロ)", evidence: "S-01〜S-12 全 PASS(テスト 20/20、tag loop-v1-r1 凍結のまま Run5 後も回帰ゼロ)" }
+      - { criterion: "blocker ずるゼロ", evidence: "ずる計 71(Run1〜5)・blocker 0(51-cheat-log 裁定済み。Run5 CHEAT-R01 は friction/設計側帰属へ裁定)" }
+      - { criterion: "納品物(成果物+bomdd 一式)", evidence: "ViewPrism2.sln(build 警告 0・unit 234/234)+BOM v1.3・オラクル・治具・As-Built・cheat-log・metrics・ECO-001/002・reports" }
+      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G1〜G7 全 7 件 approved(承認者 maintainer、2026-06-12)" }
+    verdict: "Loop V1 (loop-v1-core) 完了"
+    carryover_to_v2: "golden_findings GF-01〜05(minor)・porting-spec 未裁定(RVP-REPAIR-004/005・RVP-MERGE-002)・非破壊原則の woven 格上げ・探索プローブ P-01〜04 は未実施(合否なし・観測のみ。実施時に 42 へ記録)"
 
   # golden 所見(承認と独立の minor 指摘。裁定: V2 へ申し送り — 2026-06-12 承認者了承)
   golden_findings:
