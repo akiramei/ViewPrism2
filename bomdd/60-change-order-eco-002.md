@@ -87,5 +87,7 @@
   - DF-2/DF-4 の確定根本原因: ①Dapper×空 image_tags で COUNT 列が BLOB 化し型付き record 生成が失敗(タグ保存直後のパレット再読込で発火) ②Avalonia 12 の ClickCount が環境依存で 2 に達しない(DoubleClickDetector で補完)
 
 ## 6. 記録
-- As-Built(50): Run5 を runs に追記・eco に ECO-002 / metrics(52): ECO 行 + 欠陥4・要求変更4 / cheat-log(51): Run5 のずるを C6 系で
-- golden: CP-UI-G1〜G7 を再判定し golden_approvals 更新
+- As-Built(50): Run5 を runs に追記・eco に ECO-002 / metrics(52): ECO 行 + 欠陥4・要求変更4 / cheat-log(51): Run5 のずるを C6 系で — **実施済み(2026-06-12、commit 2530ea4)**
+- golden 再判定(2026-06-12・承認者 maintainer): **G1/G3/G4/G5 = approved**(第1回の指摘・不合格は全て解消を実機確認)。
+  G2(再起動で表示モード復元)・G6(階層編集・バッチ保存・ビュー作成)・G7(タグ付与一式)は**確認範囲外のため pending 継続**。
+  新規所見 2 件(GF-01 ダイアログ高さ伸長 / GF-02 グリッド行背景色)は **minor・V2 申し送り**で裁定(50-as-built golden_findings)

@@ -31,7 +31,9 @@ metrics:
   jig_defects: 1                   # JIG-001: オラクル S-05 フィクスチャの現行コード結合(偽陽性)→ 凍結スナップショット化で修理
   nfr:
     NFR-001: "PASS — 条件評価 1,000 画像×3 条件、200ms 制限を大幅充足(CP-NFR-001、3 回中央値)"
-  golden_pending: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-UI-G4, CP-UI-G5, CP-UI-G6, CP-UI-G7]   # 承認者 maintainer
+  golden_approved: [CP-UI-G1, CP-UI-G3, CP-UI-G4, CP-UI-G5]   # 2026-06-12 v1.3 再判定(第1回の指摘は ECO-002 で全解消)
+  golden_pending: [CP-UI-G2(再起動復元のみ), CP-UI-G6(階層編集・バッチ保存・ビュー作成), CP-UI-G7(タグ付与一式)]   # 承認者 maintainer
+  golden_findings_deferred: [GF-01 ダイアログ高さ伸長, GF-02 グリッド行背景色]   # V2 申し送り(50-as-built)
   probes_pending: [P-01, P-02, P-03, P-04]   # 探索プローブ(golden 承認と併せて実施可)
   eco:
     - id: ECO-001

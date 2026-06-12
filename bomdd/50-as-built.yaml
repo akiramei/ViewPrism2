@@ -30,14 +30,20 @@ as_built:
   metrics_ref: bomdd/52-metrics.yaml
 
   # golden 承認記録(CP-UI-G1〜G7 — 承認者 maintainer。AUDIT-303 形式)
+  # 経緯: 第1回判定(2026-06-12 v1.2 ビルド)で G1 指摘 4・G4/G5/G6/G7 不合格 → ECO-002/Run5 → 再判定(同日 v1.3)
   golden_approvals:
-    - { cp_id: CP-UI-G1, date: ~, approver: maintainer, verdict: pending, notes: "シェル(タブ構成)+グリッド" }
-    - { cp_id: CP-UI-G2, date: ~, approver: maintainer, verdict: pending, notes: "リスト表示" }
-    - { cp_id: CP-UI-G3, date: ~, approver: maintainer, verdict: pending, notes: "詳細パネル+ノート保存" }
-    - { cp_id: CP-UI-G4, date: ~, approver: maintainer, verdict: pending, notes: "ビューア(ダブルクリック起動・端停止)" }
-    - { cp_id: CP-UI-G5, date: ~, approver: maintainer, verdict: pending, notes: "ja/en 即時切替" }
-    - { cp_id: CP-UI-G6, date: ~, approver: maintainer, verdict: pending, notes: "タグタブ 3 ペイン+ダイアログ+バッチ保存" }
-    - { cp_id: CP-UI-G7, date: ~, approver: maintainer, verdict: pending, notes: "タグ付与パネル(固定値/連番)" }
+    - { cp_id: CP-UI-G1, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "コレクション絞り込み・画像数表示・列数自動調整・SHIFT 範囲選択 すべて確認(v1.3)。所見 GF-02(行背景色)は承認と独立に V2 申し送り" }
+    - { cp_id: CP-UI-G2, date: ~, approver: maintainer, verdict: pending, notes: "列構成・行選択は第1回(v1.2)で承認済み。v1.3 追加項目〔アプリ再起動で表示モード復元〕のみ未確認" }
+    - { cp_id: CP-UI-G3, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "通常モード単一クリック→右パネル詳細を確認" }
+    - { cp_id: CP-UI-G4, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "ダブルクリック起動・余白クリックで閉じる を確認(v1.3)" }
+    - { cp_id: CP-UI-G5, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "ja/en 切替でラベル・ボタンが即時切替を確認(v1.3)" }
+    - { cp_id: CP-UI-G6, date: ~, approver: maintainer, verdict: pending, notes: "タグ作成・保存のクラッシュなしは確認済み(2026-06-12。DF-2 解消を承認者実機確認)。残: 3 ペイン構成・階層編集(別名/条件/ホームタグ/削除)・バッチ保存/キャンセル・ビュー作成。所見 GF-01(ダイアログ高さ)は V2 申し送り" }
+    - { cp_id: CP-UI-G7, date: ~, approver: maintainer, verdict: pending, notes: "残: タグ編集モードのパネル切替・現在タグ/追加/適用・numeric 固定値/連番・textual 候補値選択" }
+
+  # golden 所見(承認と独立の minor 指摘。裁定: V2 へ申し送り — 2026-06-12 承認者了承)
+  golden_findings:
+    - { id: GF-01, date: 2026-06-12, area: "G-6 タグ作成ダイアログ", finding: "候補値を追加するとウィンドウ高さが伸長し続け、上限到達後はスクロールバー表示(TagEditorWindow の SizeToContent=Height 起因)", disposition: "V2 で修正 — ダイアログ高さを固定し候補値リスト内部のみスクロール" }
+    - { id: GF-02, date: 2026-06-12, area: "G-1 グリッド", finding: "セル選択時に行の背景色も変化し行選択のように見える(行リスト仮想化の ListBox 行選択視覚が Fluent :selected で発現)", disposition: "V2 で修正 — グリッド行の選択視覚を無効化(セル強調枠+バッジのみ)。リスト表示モードの行選択は正として維持" }
 
   # 変更オーダー(Phase 7。納品後の再入口)
   eco:
