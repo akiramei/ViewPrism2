@@ -7,22 +7,23 @@ bomdd:
 # 本ループは単一工場(チャーター: 実用適用)のため、ばらつき測定は対象外。
 
 metrics:
-  factory_runs: 4                  # Run1 骨格+純粋コア / Run2 DB+スキャン+サービス / Run3 表面 / Run4 収束再製造
+  factory_runs: 5                  # Run1 骨格+純粋コア / Run2 DB+スキャン+サービス / Run3 表面 / Run4 収束再製造 / Run5 ECO-002 golden 収束
   fixed_oracle:
     cases: 12                      # S-01〜S-12(tag loop-v1-r1 で凍結、ループ中不変)
     after_run3: "12/12 PASS"
     after_run4: "11/12 → 治具修理(JIG-001)後 12/12 PASS。製品起因の乖離 0"
+    after_run5: "20/20 PASS(テスト数。回帰ゼロ・凍結不変)"
   self_acceptance:
-    tests_final: 190               # unit/L2/L3(+オラクル治具 20)
+    tests_final: 234               # unit/L2/L3(Run5 で +44。オラクル治具 20 は別)
     build_warnings: 0              # TreatWarningsAsErrors
     regressions_across_runs: 0
   interventions: 0                 # 製造中の設計者介入(隔離は全 Run で維持。質問往復ゼロ)
   cheats:
-    total: 66                      # Run1: 13 / Run2: 21 / Run3: 18 / Run4: 14
-    blocker: 0
-    friction: 8                    # 裁定済み(51-cheat-log.md)
-    minor: 58
-    distribution: "核(ドメインロジック)の挙動乖離 0。すべて表面(UI 構成・未規定次元)と契約転記漏れに集中"
+    total: 71                      # Run1: 13 / Run2: 21 / Run3: 18 / Run4: 14 / Run5: 5
+    blocker: 0                     # Run5 CHEAT-R01 は工場自己申告 blocker → 裁定で friction(設計側帰属: 影響分析 under-inclusion)へ再分類(51-cheat-log)
+    friction: 10                   # 裁定済み(51-cheat-log.md)
+    minor: 61
+    distribution: "核(ドメインロジック)の挙動乖離 0。表面(UI 構成・未規定次元)・契約転記漏れ・実装基盤(Dapper materialization)に集中"
   targeted_fix_success:            # 収束ループの狙い撃ち補正が 1 回で受入緑になったか
     run4_targets: [シェルのタブ化, タグタブ3ペイン, タグ付与パネル(REQ-046), ビューア起動経路, 階層バッチ保存]
     result: "5/5 — fresh re-run 1 回で全受入緑(自己受入+オラクル)"
@@ -40,3 +41,16 @@ metrics:
       regressions: 0
       origin: reverse-input(porting-spec RVP-SCAN-003 との突き合わせ)
       note: "仕様プローズ忠実度の是正。実装・固定オラクル S-01 は当初から正しい"
+    - id: ECO-002
+      type: golden-convergence
+      change_requests: 8            # CR-1〜8(golden G1 指摘 4+表面全数突き合わせ 4)
+      defects: 4                    # DF-1〜4(G4/G5/G6/G7)
+      changed_bom_artifacts: 5      # 20/10/30/31/33(v1.3)
+      remanufacture_units: "表面のみ(App+Settings)。核・スキーマ・凍結オラクル不変"
+      regressions: 0                # 凍結オラクル 20/20・既存 unit 190 全緑維持
+      change_miss: 0                # 新規 unit 44 全緑
+      unnecessary_modification: 0   # diff 監査済み(逸脱 4 ファイルは全件申告・裁定済み)
+      impact_prediction: "under-inclusion 1(DF-2 根因が E-DB-010 — 欠陥系 ECO への予測の弱さとして教訓化)"
+      cheats_run5: 5                # 裁定後 blocker 0 / friction 2 / minor 3
+      root_causes_found: "DF-2: Dapper×空 image_tags の COUNT 列 BLOB 化 / DF-4: Avalonia ClickCount の環境依存"
+      pending: "golden CP-UI-G1〜G7 再判定(承認者 maintainer)"

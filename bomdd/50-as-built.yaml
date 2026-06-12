@@ -4,8 +4,8 @@ bomdd:
   layer: As-Built
 
 as_built:
-  date: 2026-06-11
-  bom_version: "v1.2(commit 1399d6c。凍結オラクルは tag loop-v1-r1 のまま不変)"
+  date: 2026-06-12
+  bom_version: "v1.3(commit 0e8d4e8=ECO-002 改訂、Run5=f7d6cf7。凍結オラクルは tag loop-v1-r1 のまま不変)"
   factory:
     id: factory-01
     model: claude(隔離サブエージェント、単一工場)
@@ -16,15 +16,16 @@ as_built:
       - { run: 2, commit: 269438f, scope: "M-GRAPH-003 / M-DB-007 / M-SCAN-005 / M-VIEWSVC-012" }
       - { run: 3, commit: c3c593f, scope: "M-THUMB-008 / M-UI-013 / M-UI-014 / i18n 資産統合" }
       - { run: 4, commit: 41d2f97, scope: "収束再製造(BOM v1.2): タブ式シェル / タグタブ 3 ペイン / M-UI-016 タグ付与 / migration 001" }
+      - { run: 5, commit: f7d6cf7, scope: "ECO-002 golden 駆動の収束(BOM v1.3): CR-1〜8(レスポンシブ列/コレクションスコープ/SHIFT 範囲/ソート軸/永続化/背景クリック)+DF-1〜4(グローバル例外ハンドラ/タグ作成クラッシュ/i18n 再評価/ダブルクリック)" }
   artifacts:
     solution: ViewPrism2.sln(src/Core・Infrastructure・App + tests/Tests・Oracle)
     runtime: ".NET 10.0.100 / Avalonia 12.0.4 / Microsoft.Data.Sqlite 10.0.9 / Dapper 2.1.79 / SkiaSharp 3.119.4 / CommunityToolkit.Mvvm 8.4.2 / xunit.v3 3.2.2"
   inspection_results:
     build: "Release・警告 0(TreatWarningsAsErrors)"
-    unit_l2_l3: "tests/ViewPrism2.Tests 190/190 PASS(CP トレース: Trait cp=CP-xxx)"
-    fixed_oracle: "tests/ViewPrism2.Oracle 20/20 PASS(S-01〜S-12。JIG-001 修理後)"
-    l1_smoke: "工場(UI Automation+in-process)+設計者(実起動 6 秒生存)とも PASS"
-    nfr: "CP-NFR-001 PASS"
+    unit_l2_l3: "tests/ViewPrism2.Tests 234/234 PASS(Run5 で +44。CP トレース: Trait cp=CP-xxx)"
+    fixed_oracle: "tests/ViewPrism2.Oracle 20/20 PASS(S-01〜S-12。Run5 後も回帰ゼロ・tag loop-v1-r1 不変)"
+    l1_smoke: "Run5: 工場が実機 UI 駆動(SendInput/EnumWindows 自前ドライバ+隔離データディレクトリ)で golden 対象経路を踏破(スキャン→グリッド→ビューア→i18n 切替→タグ作成、クラッシュ 0)。textual 候補値保存のみ in-process 代替(IME 合成入力の不安定による)"
+    nfr: "CP-NFR-001 PASS / CP-ROBUST-001 PASS(NFR-002: 例外注入でプロセス生存+ログ+通知)"
   cheat_log_ref: bomdd/51-cheat-log.md(総数 66・blocker 0・裁定済み)
   metrics_ref: bomdd/52-metrics.yaml
 
@@ -48,6 +49,15 @@ as_built:
       changed: [20-spec.md §2.1, 30-ebom.yaml E-SCAN-005 不変条件]
       impact: "製造物(code/test/golden)・固定オラクル(tag loop-v1-r1)とも無変更。再製造/回帰/移行なし"
       ref: bomdd/60-change-order.md
+    - id: ECO-002
+      date: 2026-06-12
+      type: golden-convergence(要求変更 8+欠陥 4 の部分再製造)
+      summary: "golden G1〜G7 の指摘を BOM v1.3 に裁定し fresh 隔離工場 Run5 で収束。出所分析+表面全数突き合わせ(reports/)を実施"
+      origin: "golden 承認(承認者 maintainer)の実機検証。出所帰属: 要求系=Phase 2 リバース品質、製造系=知識欠落/沈黙/検査深さ"
+      changed: [BOM v1.3(20/10/30/31/33), src/ViewPrism2.App ほか(Run5 f7d6cf7)]
+      result: "regression 0(凍結オラクル 20/20)・change miss 0(unit 234/234)・不要改変 0・under-inclusion 1(DF-2 根因が E-DB-010 — 51-cheat-log CHEAT-R01)"
+      ref: bomdd/60-change-order-eco-002.md
+      pending: "golden CP-UI-G1〜G7 の再判定(承認者 maintainer。v1.3 チェックリスト=20-spec.md §2.6)"
 
   # 設計者側リバース入力(原典 source-grounded。工場非開示は維持)
   reverse_input:

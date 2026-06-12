@@ -77,7 +77,14 @@
 
 ## 5. 回帰+変更受入(失敗5分類で帰属)
 - 既存 S-01〜12 失敗 = **regression** / 新規行失敗 = **change miss** / 影響分析外 diff = **unnecessary modification** / 自己受入赤での納品 = **nonconformance**
-- 結果: (Run5 後に記入)
+- **結果(2026-06-12・Run5=commit f7d6cf7)**:
+  - **regression: 0** — 凍結固定オラクル S-01〜S-12 全 PASS(20/20、tag loop-v1-r1 不変)。既存 unit 190 全緑維持
+  - **change miss: 0** — 新規 unit 44 全緑(レスポンシブ列・SHIFT union・コレクションフィルタ・settings ラウンドトリップ・CP-ROBUST-001)。合計 234/234・ビルド警告 0
+  - **data-preservation miss: N/A**(スキーマ・移行なし)
+  - **unnecessary modification: 0** — diff は申告済み影響集合+申告済み逸脱 4 ファイルのみ(設計者 diff 監査済み)
+  - **nonconformance: 0** — 自己受入緑で納品
+  - **影響なし予測の採点: under-inclusion 1 件** — DF-2 の根本原因が「変更しない」と予測した E-DB-010(TagRepository.GetUsageCountsAsync の Dapper materialization)にあった。工場は契約保持の最小修正で対応(CHEAT-R01、51-cheat-log で friction/設計側帰属に裁定)。教訓: 欠陥修正型 ECO では「症状の発火箇所(UI)」と「根本原因の所在」が別レイヤになり得るため、影響なし予測は欠陥系に対して弱い — 次回から DF には予測を「ベストエフォート」と明示する
+  - DF-2/DF-4 の確定根本原因: ①Dapper×空 image_tags で COUNT 列が BLOB 化し型付き record 生成が失敗(タグ保存直後のパレット再読込で発火) ②Avalonia 12 の ClickCount が環境依存で 2 に達しない(DoubleClickDetector で補完)
 
 ## 6. 記録
 - As-Built(50): Run5 を runs に追記・eco に ECO-002 / metrics(52): ECO 行 + 欠陥4・要求変更4 / cheat-log(51): Run5 のずるを C6 系で

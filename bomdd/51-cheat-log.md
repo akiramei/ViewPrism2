@@ -49,8 +49,26 @@
   **オラクルのケース定義・期待値(41)は不変**。製品の退行はゼロ(修理後 S-01〜S-12 全 PASS)。
   BomDD method-v1 の「検査器側の暗黙知(jig-side implicit knowledge)」の実例として記録。
 
+## Run 5(ECO-002 golden 駆動の収束)の裁定 — 2026-06-12 追記
+
+報告 5 件(工場自己申告: blocker 1 / friction 1 / minor 3。裁定後: blocker 0 / friction 2 / minor 3)。
+個票は Run5 納品書(工場最終報告)を一次資料とする。commit f7d6cf7。
+
+| # | 工場申告 | 内容 | 裁定 |
+|---|---|---|---|
+| CHEAT-R01 | blocker | DF-2 の根本原因が変更禁止領域(Infrastructure/Database の TagRepository.GetUsageCountsAsync — Dapper×空 image_tags の materialization 失敗)にあり、影響集合外を最小修正(公開契約保持・dynamic 化) | **friction へ再分類(設計側帰属)** — 真因は設計者の影響分析の **under-inclusion**(E-DB-010 を「変更しない」と予測したが DF-2 の根がそこにあった)。工場の逸脱は申告済み・契約保持・受入達成に不可欠で、受入を欺くものではない。ECO-002 §5 に「影響なし予測の外れ 1 件」として計上。凍結オラクル 20/20 PASS で挙動互換は実証済み |
+| CHEAT-R02 | friction | DoubleClickDetector の閾値に user32!GetDoubleClickTime(P/Invoke、失敗時 500ms) | **accept** — Windows 専用(チャーター)で妥当。K-AVALONIA へ「ClickCount は環境により 2 に達しないことがある(DF-4)」を次版で追記 |
+| CHEAT-R03 | minor | 通知文言キー error.unhandled を新設(既存 error 名前空間へ) | **accept** |
+| CHEAT-R04 | minor | 初回起動の既定コレクション選択は「未選択(プロンプト)」とした(REQ-053 の沈黙次元) | **accept** — コレクションファースト裁定と整合。仕様 §2.6 へ次版で明文化 |
+| CHEAT-R05 | minor | L1 スモーク隔離用に環境変数 VIEWPRISM2_DATA_DIR によるデータディレクトリ上書きを追加(未設定時は従来どおり) | **accept** — 製品挙動不変・検査容易性の向上。仕様 §2.7 へ次版で明文化 |
+
+**特記**: DF-2 の一次切り分け(ECO-002 §1「サービス層は無実」)は不正確だった。既存テストが緑だったのは
+「image_tags に行がある状態」のみを踏んでいたためで、空テーブル(初回タグ作成直後)の経路が未被覆だった。
+検査被覆の教訓として記録(空状態ベクタは CpTag011 に追加済み — Run5)。
+
 ## 凍結オラクルとの関係
-固定オラクル S-01〜S-12 は Run 3 後・Run 4 後(治具修理後)とも **12/12 PASS**
-(tag loop-v1-r1 凍結のまま不変)。Run 4 後の唯一の FAIL は上記 JIG-001(治具側)で、製品起因の乖離はゼロ。
+固定オラクル S-01〜S-12 は Run 3 後・Run 4 後(治具修理後)・**Run 5 後**とも **全 PASS**
+(tag loop-v1-r1 凍結のまま不変。Run 5 後はテスト 20/20)。Run 4 後の唯一の FAIL は上記 JIG-001(治具側)で、製品起因の乖離はゼロ。
 ずるはすべて表面(UI 構成・未規定次元)と契約転記漏れに集中し、核(ドメインロジック)の挙動乖離はゼロ —
-BomDD の「ずるは表面側に現れる」観測と整合。
+BomDD の「ずるは表面側に現れる」観測と整合。Run 5 の CHEAT-R01(リポジトリ materialization)も
+仕様挙動の乖離ではなく実装基盤の欠陥+検査被覆の穴であり、凍結オラクルは退行ゼロを確認した。
