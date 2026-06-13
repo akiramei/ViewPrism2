@@ -96,6 +96,12 @@ public partial class MainWindow : Window
             item, (long)e.Timestamp, SystemDoubleClickTimeMs, ctrl || shift);
         var isDouble = e.ClickCount >= 2 || detected;
         _viewModel.Browser.HandleItemPointer(item, ctrl, shift, isDouble);
+
+        // GF-02(REQ-060(b)): セルクリックを処理済みにして親 ListBox(グリッド行)の行選択を抑止する。
+        // グリッドの選択状態はセル(ImageItemViewModel.IsSelected → cellFrame の枠+バッジ)のみが持ち、
+        // 行 ListBoxItem の :selected 背景が出ないようにする(行リスト仮想化は表示専用)。
+        // リスト表示モードは別ハンドラで行選択視覚を正として維持。
+        e.Handled = true;
     }
 
     /// <summary>OS のダブルクリック時間(ms)。本アプリは Windows 専用(仕様 §1)。</summary>

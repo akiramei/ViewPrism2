@@ -27,9 +27,20 @@
     <Style Selector="ToggleButton.modeToggle">
       <Setter Property="Padding" Value="8,4" />
     </Style>
+    <!-- GF-V2-01: アクティブなモード/開き方向を view-prism と同じく塗りつぶし(アクセント背景+白文字)で
+         一目瞭然にする。:checked の前景も明示し、ContentPresenter にも適用して文字色を確実に白へ。 -->
     <Style Selector="ToggleButton.modeToggle:checked">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
       <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="ToggleButton.modeToggle:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="ToggleButton.modeToggle:checked:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
     </Style>
   </Window.Styles>
 
@@ -45,22 +56,17 @@
                    Foreground="{StaticResource TextMutedBrush}" Margin="8,0" />
 
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <!-- モード切替: 排他トグル 3 連(単一/縦スクロール/見開き) -->
+          <!-- モード切替(GF-V2-01・view-prism 準拠): 単一/縦スクロール/右開き/左開き の上位 4 トグル。
+               仕様 ViewerMode 4 値(normal/scroll/spread-right/spread-left)と直接対応。active な 1 つだけが
+               filled(modeToggle :checked = アクセント背景+白文字)で、現在モード=開き方向が一目瞭然。 -->
           <ToggleButton Classes="modeToggle" IsChecked="{Binding IsNormal, Mode=OneWay}"
                         Command="{Binding SetNormalModeCommand}" Content="{Binding Loc[viewer.mode.normal]}" />
           <ToggleButton Classes="modeToggle" IsChecked="{Binding IsScroll, Mode=OneWay}"
                         Command="{Binding SetScrollModeCommand}" Content="{Binding Loc[viewer.mode.scroll]}" />
-          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsSpread, Mode=OneWay}"
-                        Command="{Binding SetSpreadRightModeCommand}" Content="{Binding Loc[viewer.mode.spread]}" />
-
-          <!-- 見開き選択時のみ有効な開き方向トグル(右開き/左開き) -->
-          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSpread}"
-                      VerticalAlignment="Center">
-            <Button Command="{Binding SetSpreadRightModeCommand}"
-                    Content="{Binding Loc[viewer.openDirection.right]}" Padding="6,2" />
-            <Button Command="{Binding SetSpreadLeftModeCommand}"
-                    Content="{Binding Loc[viewer.openDirection.left]}" Padding="6,2" />
-          </StackPanel>
+          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsSpreadRight, Mode=OneWay}"
+                        Command="{Binding SetSpreadRightModeCommand}" Content="{Binding Loc[viewer.openDirection.right]}" />
+          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsSpreadLeft, Mode=OneWay}"
+                        Command="{Binding SetSpreadLeftModeCommand}" Content="{Binding Loc[viewer.openDirection.left]}" />
 
           <!-- 表示設定=歯車ボタン→Flyout(縦並び: リサイズ/揃え/ギャップ/ページ送り/空白開始) -->
           <Button Content="{Binding Loc[viewer.displaySettings]}" Padding="8,4">

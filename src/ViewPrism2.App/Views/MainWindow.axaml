@@ -67,10 +67,28 @@
         </ControlTemplate>
       </Setter>
     </Style>
+    <!-- GF-02(REQ-060(b)): Fluent テーマの :pointerover/:selected はテンプレート部品(PART_ContentPresenter)に
+         背景を適用する(テンプレート定義値より Style が高優先)。アプリスコープのスタイル(テーマより高優先)で
+         確実に透明化し、ホバー・選択で行が反応しないようにする(エクスプローラー特大アイコンと同じ=画像のみ反応)。
+         リスト表示の行選択視覚は子 Border.listRow.selected が担うため影響しない。 -->
+    <Style Selector="ListBox.plain ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.plain ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
     <Style Selector="Border.cellFrame">
       <Setter Property="BorderThickness" Value="2" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="CornerRadius" Value="2" />
+      <!-- 基底背景はスタイルで透明指定(ヒットテスト可)。ローカル属性にしないのは :pointerover が
+           上書きできるようにするため(ローカル値は Style より高優先) — GF-02 ホバー -->
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <!-- GF-02(maintainer 再目視): ホバーしたセルだけ控えめに反応(エクスプローラー特大アイコン同様)。
+         行は反応しない(セル単位の Border.cellFrame に限定)。8% アクセントの淡い塗り。 -->
+    <Style Selector="Border.cellFrame:pointerover">
+      <Setter Property="Background" Value="#143B82F6" />
     </Style>
     <!-- 選択表示: アクセント色の 2px 枠(K-DESIGN) -->
     <Style Selector="Border.cellFrame.selected">
@@ -244,7 +262,7 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:ImageItemViewModel">
                         <Border Classes="cellFrame" Classes.selected="{Binding IsSelected}"
-                                Margin="4" Background="Transparent" PointerPressed="OnCellPressed">
+                                Margin="4" PointerPressed="OnCellPressed">
                           <StackPanel Width="{Binding Browser.CellSize}">
                             <!-- 正方形セル+プレースホルダ(パネル背景+'?' グリフ — K-DESIGN) -->
                             <Grid Height="{Binding Browser.CellSize}">

@@ -142,6 +142,8 @@ public sealed partial class ViewerViewModel : ObservableObject
             OnPropertyChanged(nameof(IsNormal));
             OnPropertyChanged(nameof(IsScroll));
             OnPropertyChanged(nameof(IsSpread));
+            OnPropertyChanged(nameof(IsSpreadRight));
+            OnPropertyChanged(nameof(IsSpreadLeft));
             OnPropertyChanged(nameof(Direction));
             RaisePositionChanged();
             CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
@@ -153,6 +155,12 @@ public sealed partial class ViewerViewModel : ObservableObject
     public bool IsScroll => Mode == ViewerMode.Scroll;
 
     public bool IsSpread => Mode is ViewerMode.SpreadRight or ViewerMode.SpreadLeft;
+
+    /// <summary>右開きが選択中(GF-V2-01: 方向トグルの選択状態表示)。</summary>
+    public bool IsSpreadRight => Mode == ViewerMode.SpreadRight;
+
+    /// <summary>左開きが選択中(GF-V2-01)。</summary>
+    public bool IsSpreadLeft => Mode == ViewerMode.SpreadLeft;
 
     /// <summary>見開きの開き方向(spread のときのみ意味を持つ)。</summary>
     public SpreadDirection Direction =>

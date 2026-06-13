@@ -3,17 +3,27 @@
         xmlns:vm="using:ViewPrism2.App.ViewModels"
         x:Class="ViewPrism2.App.Views.TagEditorWindow"
         x:DataType="vm:TagEditorViewModel"
-        Width="440" Height="640"
-        SizeToContent="Manual"
+        Width="440" SizeToContent="Height" MaxHeight="820"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
   <!-- タグ編集(REQ-021〜025): 名前・種別(既存は変更不可)・色・説明・型別設定。
-       GF-01(REQ-060(a)): ダイアログは高さ固定(SizeToContent=Manual)。候補値の増加では
-       ウィンドウを伸長させず候補値リスト内部のみスクロールする(ValuesList の MaxHeight)。 -->
-  <ScrollViewer>
-    <StackPanel Margin="16" Spacing="8">
+       GF-01(REQ-060(a)): 外側 ScrollViewer で全体を包まない。SizeToContent=Height で窓は内容に
+       フィットし、候補値リスト(ValuesList)は固定 Height=140 で内部スクロール。リストが固定高のため
+       候補値を追加しても窓は伸長せず(最初から固定サイズ・リスト内でスクロール)、保存/キャンセルは
+       下端固定で常に見える。MaxHeight=820 は小画面の安全網。 -->
+  <DockPanel Margin="16" LastChildFill="True">
+    <!-- 下端固定: エラー文言+保存/キャンセル(候補値が増えても常に見える) -->
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+                 FontSize="12" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="{Binding Loc[tag.editor.cancel]}" Click="OnCancelClick" MinWidth="80" />
+        <Button Content="{Binding Loc[tag.editor.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
+      </StackPanel>
+    </StackPanel>
+    <StackPanel Spacing="8">
       <TextBlock x:Name="TitleText" FontSize="16" />
       <TextBlock Text="{Binding Loc[tag.editor.name]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
       <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[tag.editor.namePlaceholder]}" />
@@ -80,7 +90,7 @@
         </DockPanel>
         <ListBox x:Name="ValuesList" ItemsSource="{Binding PredefinedValues}"
                  SelectedItem="{Binding SelectedPredefinedValue}"
-                 MaxHeight="140" DragDrop.AllowDrop="True"
+                 Height="140" DragDrop.AllowDrop="True"
                  PointerPressed="OnValuePressed" />
         <TextBlock Text="{Binding Loc[tag.options.dragToReorder]}" FontSize="11"
                    Foreground="{StaticResource TextMutedBrush}" />
@@ -91,12 +101,6 @@
         </StackPanel>
       </StackPanel>
 
-      <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
-                 FontSize="12" TextWrapping="Wrap" />
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="{Binding Loc[tag.editor.cancel]}" Click="OnCancelClick" MinWidth="80" />
-        <Button Content="{Binding Loc[tag.editor.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
-      </StackPanel>
     </StackPanel>
-  </ScrollViewer>
+  </DockPanel>
 </Window>
