@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(v2.0 — K-AVALONIA/K-DESIGN にビューア拡張の追補。事前ずる列挙(2026-06-13 クリーンエージェント 65 項目)で慣習分散が確認された次元を固定)"
   layer: K-BOM
 
 # 製造装置が参照する外部/設計知識。K-BOM に無い判断で埋めた箇所は CHEAT として報告対象。
@@ -53,9 +53,18 @@ kbom:
       - "ウィンドウ状態の保存: Window.Position/ClientSize/WindowState を Closing で読み settings.json へ(REQ-052)"
       - "多重起動防止: 名前付き Mutex(Global\\ViewPrism2)で判定し、2 つ目はプロセス終了(既存アクティブ化は V1 ではベストエフォート)"
       - "動的 i18n: 文言は LocalizationService 経由のバインディング。XAML 直書き文字列禁止。罠(v1.3/ECO-002 DF-3): コンパイル済みバインディングはインデクサ('Item[]')の PropertyChanged 通知では再評価されない事例を確認 — 文言は名前付きプロパティ経由で公開する(またはロケール切替時に明示的に再バインド)。言語切替で全ラベル・ボタンが実際に切り替わることを L1 スモークで確認する(CP-L1-SMOKE)"
+      - "罠(v1.3/ECO-002 DF-4): PointerPressedEventArgs.ClickCount によるダブルクリック判定は環境依存で 2 にならない事例がある — DoubleClickDetector(時間+座標の自前判定)で補完する(V1 実装済み。再利用)"
+      # ---- v2.0 追補(ビューア拡張 — 事前ずる列挙で分散が確認された技術判断) ----
+      - "(v2.0) ScrollViewer はカーソルキー・PageUp/Down を自分で消費する — ビューアのキーボードは Window レベルの AddHandler(KeyDownEvent, handler, RoutingStrategies.Tunnel) で受けて e.Handled=true にし、ScrollViewer の既定キー処理に渡さない(scroll モードのキー移動も ViewModel 経由で明示スクロール)"
+      - "(v2.0) フォーカス管理: ビューア本体領域を Focusable=true にし、ウィンドウ表示時と設定 Flyout クローズ時にフォーカスを戻す(矢印キーが効かなくなる事故の定番予防)"
+      - "(v2.0) scroll モードの画像は原寸デコードしない: Bitmap.DecodeToWidth(表示幅 × TopLevel.RenderScaling) を Task.Run 内で実施(高 DPI のぼやけ防止に RenderScaling を忘れない)。normal/spread はフルサイズ表示のため従来どおり ImageMemoryCache(REQ-045)経由"
+      - "(v2.0) Bitmap の破棄: 読み込みウィンドウ外へ出た scroll の Bitmap は破棄するが、必ず Image.Source から外した後に Dispose(描画中 Dispose はネイティブクラッシュ)"
+      - "(v2.0) モード切替の View 構造: ContentControl+DataTemplate(モードごとに UserControl 分割)。非表示モードの視覚ツリーは保持しない(切替時に破棄)"
     risk_if_implicit: |
       仮想化の実現方式は Avalonia では自明でなく、工場ごとに ItemsControl 直置き(仮想化なし)を選んで
       1 万件で UI が固まる事故が典型(REQ-041 の中核リスク)。
+      v2.0: ScrollViewer のキー消費・Bitmap の描画中 Dispose・原寸デコードによるメモリ膨張は
+      ビューア拡張の典型事故(事前ずる列挙 #4/#56/#6 で慣習分散を確認)。
     source_reference: "https://docs.avaloniaui.net/(Avalonia 12)/ ADR-0001"
 
   - id: K-MVVM
@@ -121,5 +130,13 @@ kbom:
       - "プレースホルダサムネイル: パネル背景色+'?' グリフ(テキスト弱色)"
       - "フォント: Inter(同梱)/ 本文 14px / 見出し 16px / キャプション 12px"
       - "タグ色見本: 16px 円形スウォッチ。color=NULL のタグは境界線色のリング表示"
-    risk_if_implicit: "工場が『自然な寸法・配色』を独自に埋め、golden 承認のたびに微妙なズレの指摘往復が発生する(BomDD Loop3/4 の実証どおり)。"
+      # ---- v2.0 追補(ビューア拡張+GF 是正のデザイン規定) ----
+      - "(v2.0) ビューアコントロールバー: ウィンドウ上部に常設(オーバーレイ自動非表示はしない)。左から: モード切替=アイコン付き排他トグル 3 連(単一/縦スクロール/見開き)、見開き選択時のみ有効な開き方向トグル(右開き/左開き)、表示設定=歯車ボタン→Flyout(縦並び: リサイズ/揃え/ギャップ/ページ送り/空白開始)、右端に位置表示+閉じるボタン"
+      - "(v2.0) ギャップ入力: Slider(0〜100px)+現在値の数値表示(REQ-059 の範囲と一致)"
+      - "(v2.0) アイコンは PathIcon+StreamGeometry 直書き(フォントアイコン依存禁止)。モード: 単一=矩形 1 / スクロール=縦 3 連矩形 / 見開き=左右 2 矩形。開き方向: 本+矢印。ホームタグ=家形シルエット(GF-03 — ★は不可)"
+      - "(v2.0) タグパレットの選択中タグ行: アクセント色 12% 不透明の背景+左端 3px アクセントバー(GF-04 — 選択が一目で判別できる強さにする)"
+      - "(v2.0) ビューア位置表示: normal/scroll=「n / total」、見開き=「n-m / total」(1 起点の表示番号。単独ページ時は n / total)"
+      - "(v2.0) 空白ページ(見開き): 背景と同系の無地。枠・アイコン・文言を置かない(仕様 §2.9)"
+      - "(v2.0) scroll の未ロードプレースホルダ: パネル背景色+小スピナー。寸法不明時の仮高さは 300px(ロード後に実寸へ)"
+    risk_if_implicit: "工場が『自然な寸法・配色』を独自に埋め、golden 承認のたびに微妙なズレの指摘往復が発生する(BomDD Loop3/4 の実証どおり)。v2.0: コントロールバー形態・モードアイコン・選択強調は事前ずる列挙(#19-27)で慣習分散を確認済み — 固定して golden 往復を抑止する。"
     source_reference: "ADR-0001 / 原典 UI(Tailwind 系の慣用値を踏襲)"

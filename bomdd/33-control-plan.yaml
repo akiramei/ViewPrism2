@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(v2.0 — CP-VIEWER-014/CP-GF-015/CP-UI-G8 追加・CP-SET-009 拡張・CP-L1-SMOKE 経路深化)"
   layer: Control Plan
 
 # 深さの梯子(method-v1 §5): 核=unit(exact)。表面=L2 以上、知覚=G(golden+承認者)。
@@ -12,7 +12,7 @@ control_plan:
     L1: "ビルド成功+アプリ起動+主要画面表示+フィクスチャフォルダのスキャン正常系 1 本(スモーク)"
     L2: "成果物メタデータ検査(SQLite スキーマの PRAGMA 照合、サムネイル出力の寸法・形式)"
     L3: "実行時計測(NFR: Stopwatch による評価器レイテンシ)"
-    G: "承認者 maintainer による golden チェックリスト(20-spec.md §2.6 G-1〜G-5)の目視承認"
+    G: "承認者 maintainer による golden チェックリスト(20-spec.md §2.6 G-1〜G-8)の目視承認"
 
   characteristics:
     - id: CP-UTIL-005
@@ -199,9 +199,12 @@ control_plan:
       oracle: 保存→読込の値一致と破損時の既定値復帰
       approver: automated
       test_vectors:
-        - "全項目ラウンドトリップ(locale/ウィンドウ/列数/LastViewId)"
+        - "全項目ラウンドトリップ(locale/ウィンドウ/DisplayMode/LastViewId/LastCollectionId — v1.3 スキーマ)"
         - "壊れた JSON('{{{')→ 既定値+.bak 退避+再生成、例外なし(FMEA-009)"
         - "ファイル欠落 → 既定値"
+        - "(v2.0) ビューア設定 7 項目のラウンドトリップ(mode/resizeMode/alignMode/gapMode/customGapPx/pageTurnMode/startWithEmptyPage)"
+        - "(v2.0) customGapPx=9999 や負値・型不正の保存値 → 既定 0 として読む(FMEA-018)。列挙系の不正文字列(mode='xyz')→ 項目単位で既定値"
+        - "(v2.0) v1.3 形式の settings.json(Viewer* キーなし)→ ビューア設定は全て既定値で読める(前方互換)"
 
     - id: CP-I18N-010
       characteristic: i18n 解決器のフォールバック・補間が REQ-050 と一致する
@@ -230,8 +233,8 @@ control_plan:
       classification: surface
       depth: L1
       tolerance: "全手順成功"
-      fixture: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示 → ダブルクリックでビューア起動 → ja/en 切替 → textual タグ(候補値 2 件)作成(golden 対象経路を最低 1 回ずつ踏む)"
-      oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並び、ビューアが開き、言語切替でラベル・ボタンが切り替わり、タグ作成がクラッシュなく完了すること"
+      fixture: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示 → ダブルクリックでビューア起動 → (v2.0)モード切替 normal→scroll→spread-right(各モードで表示+ページ送り 1 回)→ ja/en 切替 → textual タグ(候補値 2 件)作成(golden 対象経路を最低 1 回ずつ踏む)"
+      oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並び、ビューアが開き、(v2.0)3 モードが描画されてページ送りが動き、言語切替でラベル・ボタンが切り替わり、タグ作成がクラッシュなく完了すること"
       approver: factory self-acceptance(最終確認は maintainer)
 
     - id: CP-ROBUST-001
@@ -260,7 +263,49 @@ control_plan:
         - "解除: 現在タグの × → 当該タグのみ選択画像全件から解除"
         - "選択 0 件: プレースホルダ状態フラグ"
 
-    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-7(v1.3・操作経路付き) ----
+    # ---- v2.0 追加(loop-v2-viewer) ----
+    - id: CP-VIEWER-014
+      characteristic: ビューア計算核(ペアリング・送り・追跡・高さ統一・位置記憶)が仕様 §2.9・OC-9〜13 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-VIEWER-014)
+      oracle: OC-9〜13 の入出力ベクタの完全一致
+      approver: automated
+      test_vectors:
+        - "OC-9 右開き通常: index=0,total=5 → (L=1,R=0) / index=4 → (L=空白,R=4)(相方が末尾超)"
+        - "OC-9 左開き通常: index=0 → (L=0,R=1) / index=4,total=5 → (L=4,R=空白)"
+        - "OC-9 空白開始 ON・index=0: 右開き → (L=0,R=空白) / 左開き → (L=空白,R=0)(進行方向側に 1 枚目)"
+        - "OC-9 空白開始 ON・index>0: 通常規則と同じ(特殊配置は index 0 のみ)"
+        - "OC-9 total=1: 右開き → (L=空白,R=0)"
+        - "OC-10 次へ: index=0,step=2,total=10 → 2 / index=7,step=2,total=10 → 9(末尾相方) / index=8,step=2,total=10 → 9(クランプ) / index=9 → 9(停止・変化なし)"
+        - "OC-10 前へ: index=2,step=2 → 0 / index=1,step=2 → 0(クランプ) / index=0 → 0(停止)"
+        - "OC-10 空白開始 ON・index=0・step=2 の次へ → 1(0→1 特殊送り。FMEA-017)/ SHIFT(step=1)では → 1(通常規則と同値)"
+        - "OC-10 singlePage(step=1): index=0 → 1 → 2(偶奇ずれの維持 — 再アラインしない)"
+        - "OC-11 中央最近傍: 3 画像(top/height 指定)+viewport で中央に最も近い index / 同距離 2 枚 → 若い index(M-2)"
+        - "OC-11 境界: スクロール 0(先頭表示)→ 0 / 最下端 → 最終 index"
+        - "OC-12 matchLargerHeight: (800,1000) → 1000、ただし viewport*0.9 上限 / matchSmallerHeight → 800"
+        - "OC-12 片側空白: (800, null) → 800(単独高さ・90% 上限適用) / noResize → null(統一なし — match 系のみの規則)"
+        - "OC-13 操作列: 起動 index=5 → 全モード初期値 5 / scroll で 20 へ → spread-right 切替 → 5(spread の記憶)/ scroll へ戻す → 20(FMEA-020)"
+        - "境界網羅: 全 OC で total=0/1・index=0・index=total-1 のケースを含める"
+
+    - id: CP-GF-015
+      characteristic: 条件サマリ整形(GF-05・REQ-060(e))が仕様 §2.6 の i18n テンプレートと一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-GF-015)
+      oracle: 整形文字列の完全一致(ja ロケール)
+      approver: automated
+      test_vectors:
+        - "equals {\"value\":\"男\"} → '値が一致: 男'(\\u7537 や生 JSON を含まない — 検査は出力に '\\u' と '{' が現れないことも含む)"
+        - "range {\"valueFrom\":10,\"valueTo\":20} → '範囲: 10〜20' / valueFrom のみ → '10 以上' / valueTo のみ → '20 以下'"
+        - "pattern {\"pattern\":\"^IMG\"} → 'パターン: ^IMG'"
+        - "values {\"values\":[\"男\",\"女\"]} → 'いずれか: 男, 女'(区切り ', ')"
+        - "condition_type=NULL → 空文字列(サマリなし)"
+        - "不正 JSON → 例外を投げずフォールバック表示(空文字列)"
+
+    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-8(v2.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
     - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+グリッド(レスポンシブ列・Ctrl/SHIFT 選択)の描画と操作(G-1・v1.3)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上), oracle: 承認者の目視チェック, approver: maintainer }
@@ -270,3 +315,4 @@ control_plan:
     - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }

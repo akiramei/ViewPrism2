@@ -30,3 +30,16 @@ exploratory_probes:
     sweep_ref: "20-spec.md §2.3(通知形態の詳細は未固定)"
     observed:
       factory-01: ~
+  # ---- v2.0 追加(loop-v2-viewer) ----
+  - id: P-05
+    scenario: "実画像 1,000 枚のコレクションで scroll モードを先頭→末尾までスクロールし、spread で 100 ページ送る(メモリ使用量・体感・Bitmap 破棄の効き)"
+    dimension: ビューア大量画像の応答性とメモリ(読み込みウィンドウ・先読み定数は実装定数 — 合否にしない)
+    sweep_ref: "32-mbom silence_sweep: スクロール大量画像の体感"
+    observed:
+      factory-01: ~
+  - id: P-06
+    scenario: "ビューアのコントロールバーを一通り操作(モード切替・設定 Flyout・ギャップ Slider・クリック送り連打・キーリピート押しっぱなし)"
+    dimension: 操作感(クリック判定閾値・キーリピート・設定 UI の使い勝手 — exploratory 宣言次元)
+    sweep_ref: "32-mbom silence_sweep: クリック判定の移動閾値・キーリピート"
+    observed:
+      factory-01: ~

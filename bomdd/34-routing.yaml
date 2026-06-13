@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(v2.0 — ROUTING-V2VIEWER-001 を追加。V1 ルーティングは記録として保持)"
   layer: Routing
 
 routing:
@@ -41,3 +41,45 @@ routing:
       id: ROUTE-CHEAT-REPORT
       name: ずる報告+As-Built 情報を提出する
       output: [cheat-report(全件・cheat-log 形式), 実装サマリ(製造単位→成果物パス対応表)]
+
+# ---- v2.0(loop-v2-viewer)— 既存コードベースへの増分製造 ----
+routing_v2:
+  id: ROUTING-V2VIEWER-001
+  gate_g3_dryrun: "PASS(2026-06-13)— fresh エージェントに製造パッケージ(20/30〜34/40/adr+既存 src)のみ供与し着手可否を質問: 着手可・質問ゼロ(検証候補 7 件は全てパッケージ内で解消、exploratory 宣言次元はずる報告へ分類)。ベースライン 234/234 緑も工場側で実測確認"
+  purpose: ViewPrism2 V2(ビューア拡張+GF 是正)を、V1 完成コードベース+改訂 BOM のみから増分製造する
+  factory_isolation: 製造装置には製造パッケージ(20-spec.md v2.0 / 30〜34 / 40 / docs/adr/)+V1 完成コードベース(src/, tests/ViewPrism2.Tests)のみ供与。原典 view-prism ソース・設計対話・41 固定オラクル・42 探索プローブ・tests/ViewPrism2.Oracle は非開示
+  cheat_report: BOM/K-BOM/Control Plan から導けなかった判断は実装を止めず全件 cheat-log 形式で報告する(分類 C1〜C6)
+  regression_guard: "既存の意味論を変更しない。既存 unit テスト(234 件)の修正・削除は原則禁止 — 仕様改訂に伴い既存テストの期待値変更が必要だと判断した場合は当該テストを変更せず blocked とし、C6 で報告する(例外: CP-SET-009 の v2.0 ベクタ追加は新規テスト追加で対応)"
+  steps:
+    - order: 1
+      id: ROUTE2-READ
+      name: 製造パッケージと V1 コードベースを読む
+      input: [bomdd/20-spec.md(§2.9 中心), bomdd/30-ebom.yaml, bomdd/31-kbom.yaml, bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/40-work-order.md, docs/adr/, 既存 src/]
+      output: [実装計画(増分の着手順)]
+    - order: 2
+      id: ROUTE2-CORE
+      name: ビューア計算核を製造する(unit 受入とセット)
+      input: [M-VIEWERCORE-017]
+      output: [src/ViewPrism2.Core/Services/Viewer/ 一式, tests(CP-VIEWER-014 全ベクタ緑)]
+    - order: 3
+      id: ROUTE2-SETTINGS
+      name: 設定スキーマを拡張する
+      input: [M-SET-010(v2.0 拡張分)]
+      output: [AppSettings Viewer* 7 項目, tests(CP-SET-009 v2.0 ベクタ緑)]
+    - order: 4
+      id: ROUTE2-SURFACE
+      name: "表面を製造する(K-BOM 参照必須: K-AVALONIA v2.0 追補 / K-DESIGN v2.0 追補)"
+      input: [M-UI-018, M-UI-019]
+      output: [ViewerWindow 拡張+モードビュー+コントロールバー, GF 是正(grid/階層エディタ/パレット/ダイアログ), ConditionSummaryFormatter+tests(CP-GF-015 緑)]
+    - order: 5
+      id: ROUTE2-SELF-ACCEPTANCE
+      name: 自己受入(緑が納品条件。自己受入緑≠合格)
+      command:
+        - dotnet build ViewPrism2.sln -c Release
+        - dotnet test tests/ViewPrism2.Tests -c Release   # 既存 234+v2 新規が全緑(回帰ゼロ)
+        - "L1 スモーク: CP-L1-SMOKE v2.0 経路(ビューア 3 モード切替+ページ送り込み)"
+      output: [受入ログ(CP 別の結果一覧)]
+    - order: 6
+      id: ROUTE2-CHEAT-REPORT
+      name: ずる報告+As-Built 情報を提出する
+      output: [cheat-report(全件), 実装サマリ(製造単位→成果物パス対応表)]

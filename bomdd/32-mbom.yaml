@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(v2.0 — M-VIEWERCORE-017/M-UI-018/M-UI-019 追加・M-SET-010 拡張・procurement exact ピン化(SB-F-01)。v1 単位の意味論は不変)"
   layer: M-BOM
 
 # 受入3条件(method-v1 §3): 完全性 / 無矛盾性 / Control Plan 列
@@ -150,14 +150,22 @@ mbom:
     - id: M-SET-010
       ebom_refs: [E-SETTINGS-013]
       artifact:
-        path: src/ViewPrism2.Infrastructure/Settings/SettingsStore.cs
+        path: src/ViewPrism2.Infrastructure/Settings/SettingsStore.cs(+Core/Models AppSettings)
         type: dotnet-classlib
       interface_contract:
-        schema: "AppSettings { Locale=\"ja\", WindowX/Y/Width=1200/Height=800/IsMaximized=false, GridColumns=4, LastViewId=null }"
-        io: "Load(): 破損・欠落時は既定値(例外なし、破損時はバックアップ .bak に退避して再生成)/ Save(): インデント付き JSON・UTF-8"
+        schema: >-
+          AppSettings { Locale="ja", WindowX/Y=null(OS 既定), WindowWidth=1200/Height=800/IsMaximized=false,
+          DisplayMode="grid"(v1.3/CR-6), LastViewId=null, LastCollectionId=null(v1.3/CR-5),
+          GridColumns=4([JsonIgnore]・v1.3/CR-1 廃止プロパティの互換温存) }
+          — v2.0 追加(REQ-059): ViewerMode="normal"("normal"|"scroll"|"spread-right"|"spread-left"),
+          ViewerResizeMode="noResize"("matchLargerHeight"|"matchSmallerHeight"|"noResize"),
+          ViewerAlignMode="middle"("top"|"middle"|"bottom"), ViewerGapMode="tight"("tight"|"loose"),
+          ViewerCustomGapPx=0(int 0〜100。範囲外・型不正の保存値は既定 0 として読む),
+          ViewerPageTurnMode="doublePage"("doublePage"|"singlePage"), ViewerStartWithEmptyPage=false
+        io: "Load(): 破損・欠落時は既定値(例外なし、破損時はバックアップ .bak に退避して再生成)。列挙系の不正文字列も項目単位で既定値へ / Save(): インデント付き JSON・UTF-8"
         path: "%APPDATA%/ViewPrism2/settings.json"
       acceptance_refs: [CP-SET-009]
-      fmea_refs: [FMEA-009]
+      fmea_refs: [FMEA-009, FMEA-018]
 
     - id: M-I18N-011
       ebom_refs: [E-I18N-014, E-I18N-ASSETS-027]
@@ -222,12 +230,71 @@ mbom:
       acceptance_refs: [CP-UI-G4]
       fmea_refs: [FMEA-002]
 
+    # ---------- v2.0 追加(loop-v2-viewer) ----------
+    - id: M-VIEWERCORE-017
+      ebom_refs: [E-VIEWER-CALC-030]
+      artifact:
+        path: src/ViewPrism2.Core/Services/Viewer/(SpreadPairCalculator.cs, PageTurnCalculator.cs, ScrollPositionTracker.cs, SpreadHeightCalculator.cs, ViewerModeMemory.cs, ViewerSettingsModel.cs)
+        type: dotnet-classlib
+      interface_contract:
+        pair: "SpreadPair SpreadPairCalculator.Calculate(int currentIndex, int totalCount, SpreadDirection direction, bool startWithEmptyPage)  // OC-9。SpreadPair { int? LeftIndex, int? RightIndex }(null=空白ページ)。仕様 §2.9 REQ-056 の規則を完全実装"
+        turn: "int PageTurnCalculator.Next(int currentIndex, int totalCount, int step, bool startWithEmptyPage) / int Prev(int currentIndex, int step)  // OC-10。step は呼び出し側が SHIFT/pageTurnMode から解決(SHIFT=1 / doublePage=2 / singlePage=1)。境界規則・空白開始 0→1 規則は §2.9 REQ-057"
+        track: "int ScrollPositionTracker.FindCurrent(IReadOnlyList<(double top, double height)> imageRects, double viewportHeight, double scrollOffset)  // OC-11。画像矩形中心と表示領域中心の距離最小・同距離は若い index"
+        height: "double? SpreadHeightCalculator.Calculate(SKSizeI? left, SKSizeI? right, ResizeMode mode, double viewportHeight)  // OC-12。match 系のみ統一高さ(max/min・片側 null は単独高さ・viewportHeight*0.9 上限)。noResize は null(=統一なし)。SKSizeI 依存を避け独自 (int W,int H) 構造体でも可"
+        memory: "ViewerModeMemory: ctor(initialIndex) で全モード初期化 / int Get(ViewerMode) / void Set(ViewerMode, int)  // OC-13"
+        settings_model: "ViewerSettingsModel: AppSettings の Viewer* 7 項目との変換+列挙の文字列表現(K-I18N とは独立。enum⇔JSON 文字列)"
+        purity: "全クラス純粋計算(I/O・Avalonia 型・DB 依存なし)。Core プロジェクト配置"
+      invariants:
+        - 仕様 §2.9 の規則のみ。端で停止(負値・総数超の index を返さない)
+        - OC-9〜13 の入出力契約を公開 API とする(治具・固定オラクルが直接呼ぶ)
+      acceptance_refs: [CP-VIEWER-014]
+      fmea_refs: [FMEA-015, FMEA-016, FMEA-017, FMEA-020]
+
+    - id: M-UI-018
+      ebom_refs: [E-UI-VIEWER-024]
+      artifact:
+        path: src/ViewPrism2.App/(Views/ViewerWindow.axaml 拡張, ViewModels/ViewerViewModel.cs 拡張, Views/Viewer/ 各モードビュー)
+        type: avalonia-app
+      interface_contract:
+        modes: "normal(既存 V1 表示を維持)/ scroll / spread-right / spread-left。モード描画の切替は ContentControl 等で行い、計算は M-VIEWERCORE-017 のみ経由"
+        controlbar: "ビューア上部コントロールバー: モード切替+表示設定(resizeMode/alignMode/gapMode+customGapPx 数値入力・ページ送りモード・空白ページ開始)。細部レイアウトは K-DESIGN 範囲で製造判断(golden G-8 で承認)"
+        scroll: "ScrollViewer ベース。読み込みウィンドウ: 初期=現在の前 10/後 15 件、端 1000px 接近で 15 件ずつ拡張(実装定数 — 固定オラクル合否対象外)。停止検出後に ScrollPositionTracker で現在位置更新。キーは Right/PageDown=次・Left/PageUp=前(対象画像へスクロール)"
+        spread: "2 列 Grid(1fr/1fr)。クリックは各半面全体(余白含む)。キーは §2.9 規則(spread-right は矢印反転・Page キーは論理)。画像 2 枚は並行ロード+次ペア 2 枚を先読み(実装定数)"
+        keys: "KeyBindings は ViewerViewModel の ICommand へ。モード別の解釈は ViewModel 内で M-VIEWERCORE-017 を呼ぶ(コードビハインドでの判定禁止)"
+        persistence: "設定変更は即時 SettingsStore.Save。起動時に AppSettings の Viewer* から復元(REQ-059)"
+        errors: "個別画像のロード失敗は当該位置にエラー表示(ファイル名+失敗の旨)し、閲覧継続(仕様 §2.9)"
+        excluded: "実装しない(事前ずる列挙で慣習混入が予想される次元の明示): 仕様列挙外のキー(Home/End・数字キーのモード切替・ホイールでのページ送り — normal/spread のホイールは何もしない)/ 横長画像の自動単独配置 / Ctrl+ホイールズーム / クロスフェード等のアニメーション。必要と判断した場合はずる報告"
+        resize_anchor: "ウィンドウリサイズ時: 見開き=同一ペアを保ったまま再レイアウト(仕様 §4)/ scroll=現在位置の画像を維持(画像単位アンカー)"
+        memory: "scroll の Bitmap 保持は読み込みウィンドウ範囲のみ(範囲外は K-AVALONIA の手順で破棄)。normal/spread は ImageMemoryCache(REQ-045)の範囲"
+      invariants:
+        - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り)
+        - 全件一括読み込み禁止(REQ-055)
+        - Esc/閉じるボタン/現在位置表示/端停止は全モード共通(REQ-044 継承)
+      acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-L1-SMOKE]
+      fmea_refs: [FMEA-015, FMEA-016, FMEA-020]
+
+    - id: M-UI-019
+      ebom_refs: [E-UI-GRID-022, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
+      artifact:
+        path: src/ViewPrism2.App/(Views/ 該当 axaml 改修)+ src/ViewPrism2.Core/Services/ConditionSummaryFormatter.cs
+        type: avalonia-app + dotnet-classlib
+      interface_contract:
+        gf01: "TagEditorWindow: 高さ固定(SizeToContent=Manual 相当)。候補値リストは内部 ScrollViewer のみ伸縮"
+        gf02: "グリッドの行コンテナから行選択視覚を除去(セル強調枠+選択順バッジのみ)。リスト表示の行選択視覚は変更しない"
+        gf03: "ホームタグのトグル/強調アイコンを家アイコンへ変更(K-DESIGN のアイコン規定)"
+        gf04: "タグパレット選択行に明確な選択視覚(K-DESIGN)。階層エディタの追加ボタン文言: i18n キーで『「{tagName}」をルートに追加 / 子に追加』。パレット未選択時は非活性+選択を促す文言"
+        gf05: "ConditionSummaryFormatter.Format(conditionType, conditionValueJson, ILocalizationService) → 表示文字列  // 仕様 §2.6 の条件型別 i18n テンプレート(equals/range(片側含む)/pattern/values)。格納 JSON は不変。unit 検査対象(CP-GF-015)"
+      invariants:
+        - 機能の意味論は不変(視覚・表示整形のみ。既存 unit 234 件と凍結オラクルの回帰ゼロが前提)
+      acceptance_refs: [CP-GF-015, CP-UI-G1, CP-UI-G6]
+      fmea_refs: [FMEA-019]
+
     - id: M-HARNESS-015        # 治具は製品と同格に管理
       ebom_refs: []
       artifact:
         path: tests/ViewPrism2.Tests
         type: dotnet-test(xunit.v3)
-      verifies: [M-CORE-001, M-EVAL-002, M-GRAPH-003, M-SORT-004, M-SCAN-005, M-DB-007, M-THUMB-008, M-CACHE-009, M-SET-010, M-I18N-011, M-VIEWSVC-012, M-UI-014]
+      verifies: [M-CORE-001, M-EVAL-002, M-GRAPH-003, M-SORT-004, M-SCAN-005, M-DB-007, M-THUMB-008, M-CACHE-009, M-SET-010, M-I18N-011, M-VIEWSVC-012, M-UI-014, M-VIEWERCORE-017, M-UI-019]
       interface_contract:
         traits: "各テストに [Trait(\"cp\", \"CP-xxx\")] を付与し Control Plan へトレース"
         fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
@@ -244,10 +311,10 @@ procurement:
   - { package: Microsoft.Data.Sqlite,                      version: 10.0.9,  rationale: "ADR-0003 SQLite ドライバ",     license: MIT,        substitutable: false }
   - { package: Dapper,                                     version: 2.1.79,  rationale: "ADR-0003 マッピング",          license: Apache-2.0, substitutable: false }
   - { package: SkiaSharp,                                  version: 3.119.4, rationale: "ADR-0004 画像処理",            license: MIT,        substitutable: false }
-  - { package: Microsoft.Extensions.DependencyInjection,   version: 10.0.*,  rationale: "ADR-0002 DI",                 license: MIT,        substitutable: false }
-  - { package: Microsoft.Extensions.Logging,               version: 10.0.*,  rationale: "ログ抽象",                     license: MIT,        substitutable: false }
-  - { package: Serilog.Extensions.Logging,                 version: 9.*,     rationale: "ログ実装ブリッジ",             license: Apache-2.0, substitutable: false }
-  - { package: Serilog.Sinks.File,                         version: 7.*,     rationale: "ファイルログ(日次・7 世代)",  license: Apache-2.0, substitutable: false }
+  - { package: Microsoft.Extensions.DependencyInjection,   version: 10.0.9,  rationale: "ADR-0002 DI(SB-F-01 で exact ピン化)",      license: MIT,        substitutable: false }
+  - { package: Microsoft.Extensions.Logging,               version: 10.0.9,  rationale: "ログ抽象(SB-F-01 で exact ピン化)",          license: MIT,        substitutable: false }
+  - { package: Serilog.Extensions.Logging,                 version: 9.0.2,   rationale: "ログ実装ブリッジ(SB-F-01 で exact ピン化)",  license: Apache-2.0, substitutable: false }
+  - { package: Serilog.Sinks.File,                         version: 7.0.0,   rationale: "ファイルログ(日次・7 世代)(SB-F-01 で exact ピン化)", license: Apache-2.0, substitutable: false }
   - { package: xunit.v3,                                   version: 3.2.2,   rationale: "ADR-0007 受入ハーネス",        license: Apache-2.0, substitutable: false }
 
 # FMEA(要求台帳 counterexamples 由来。受入 CP を狙い撃つ)
@@ -266,6 +333,13 @@ fmea:
   - { id: FMEA-012, unit: M-THUMB-008, failure_mode: "壊れた画像で例外伝播/小画像の拡大",                            effect: "一覧表示停止・画質劣化",                targeted_by: CP-THUMB-007 }
   - { id: FMEA-013, unit: M-UI-013,    failure_mode: "仮想化なしの素朴な ItemsControl 実装",                         effect: "1 万件で UI フリーズ",                  targeted_by: CP-UI-G1(+probe P-01) }
   - { id: FMEA-014, unit: M-UI-016,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
+  # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
+  - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
+  - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05(契約は CP-VIEWER-014 対象外の実装定数)" }
+  - { id: FMEA-017, unit: M-VIEWERCORE-017, failure_mode: "ペアリングを固定ペア (0,1)(2,3) で実装(慣習の典型分岐 — 事前ずる列挙 #36)/空白開始の 0→1 送り漏れで偶奇ずれ", effect: "見開きの組が原典・仕様とずれる", targeted_by: "CP-VIEWER-014(OC-9/10 ベクタ)" }
+  - { id: FMEA-018, unit: M-SET-010,   failure_mode: "ビューア設定の保存漏れ/customGapPx 範囲外値で表示崩壊",          effect: "再起動で設定喪失・レイアウト破壊",      targeted_by: CP-SET-009 }
+  - { id: FMEA-019, unit: M-UI-019,    failure_mode: "GF 是正の再発(行選択視覚・ダイアログ伸長・★アイコン・エスケープ露出)", effect: "golden 再指摘・承認往復",          targeted_by: "CP-GF-015+CP-UI-G1/G6(v2.0 追加項)" }
+  - { id: FMEA-020, unit: M-VIEWERCORE-017, failure_mode: "モード切替で位置を共通 index 引き継ぎにする(慣習の典型分岐 — 事前ずる列挙 #41)/未訪問モードが 0 始まり", effect: "モード別の前回位置が失われる(REQ-054 違反)", targeted_by: "CP-VIEWER-014(OC-13 ベクタ)" }
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:
@@ -280,3 +354,11 @@ silence_sweep:
   - { dimension: アクセシビリティ,                decision: exploratory, note: "probe P-02 で観測のみ" }
   - { dimension: テーマ(ダーク),                 decision: out-of-scope, note: "V1 はライトのみ(仕様 §4)" }
   - { dimension: インストーラ/配布,              decision: out-of-scope, note: "チャーター・仕様 §4 のとおり" }
+  # ---- v2.0 追加(20-spec §4 第2回掃討の deferred-to-phase3 を解消+事前ずる列挙由来) ----
+  - { dimension: スクロールの読み込みウィンドウ定数, decision: specified,  where: M-UI-018 interface_contract.scroll, note: "初期=前10/後15、端 1000px 接近で 15 件ずつ拡張(原典定数を採用)。固定オラクル合否対象外の実装定数(仕様 §2.9)" }
+  - { dimension: 見開きの先読み,                  decision: specified,  where: M-UI-018 interface_contract.spread, note: "現在ペア並行ロード+次ペア 2 枚先読み。合否対象外の実装定数" }
+  - { dimension: 仕様列挙外のキー・ホイール操作,    decision: specified,  where: M-UI-018 interface_contract.excluded, note: "Home/End・数字キー・ホイールページ送り等は実装しない(追加はずる報告)。normal/spread のホイール=無操作" }
+  - { dimension: scroll のロード失敗・未ロード表示, decision: specified,  where: "M-UI-018 errors / K-DESIGN",        note: "失敗=ファイル名+失敗表示で継続。未ロード=プレースホルダ(仮高さ 300px)" }
+  - { dimension: ウィンドウリサイズ時のアンカー,    decision: specified,  where: M-UI-018 interface_contract.resize_anchor, note: "見開き=同一ペア維持 / scroll=現在画像維持" }
+  - { dimension: クリック判定の移動閾値・キーリピート, decision: exploratory, note: "工場判断(ずる報告)。probe P-06 で操作感を観測" }
+  - { dimension: スクロール大量画像の体感,          decision: exploratory, note: "probe P-05 で観測(1,000 枚)。固定オラクルに入れない" }

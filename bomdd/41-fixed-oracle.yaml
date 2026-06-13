@@ -1,17 +1,22 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(v2.0 — S-13〜S-18 追加。S-01〜S-12 は tag loop-v1-r1 凍結のまま不変=回帰検査)"
   layer: Fixed Oracle          # ★設計者のみ。製造装置に渡さない
 
 # 規律: 仕様化済み契約だけを合否に入れる。製造開始前に凍結し、収束ループ中は不変。
 # Control Plan のベクタ(工場開示)と重なるが、本オラクルは複合シナリオ+隠しケースを含む別집合。
 
 fixed_oracle:
-  frozen_since: "tag:loop-v1-r1(2026-06-11、製造開始前に凍結。収束ループ中は不変)"
+  frozen_since: "tag:loop-v1-r1(2026-06-11、S-01〜S-12)/ tag:loop-v2-r1(2026-06-13、S-13〜S-18 追加凍結。V2 収束ループ中は全 18 ケース不変)"
   self_test: |
     凍結前セルフテスト: 各ケースの期待値が 20-spec.md の節番号から導出できることを設計者が逐条確認(2026-06-11 実施)。
     期待値が仕様から書けないケースは発見されなかった(全件 spec_ref 付き)。
     実行治具は工場が納品する tests/ViewPrism2.Tests の公開 API を設計者が直接呼ぶ追加テストとして実装する。
+    v2.0 追記(2026-06-13): S-13〜S-18 の期待値を 20-spec v2.0(G2/G2' 通過版)の §2.9・§2.6 から逐条導出
+    できることを確認。実行治具は 32-mbom M-VIEWERCORE-017/M-UI-019/M-SET-010 の公開契約
+    (SpreadPairCalculator/PageTurnCalculator/ScrollPositionTracker/SpreadHeightCalculator/ViewerModeMemory/
+    ConditionSummaryFormatter/SettingsStore)に対する追加テストとして tests/ViewPrism2.Oracle へ実装する
+    (V1 と同方式 — 工場非開示)。
   equivalence_rules:
     - id: EQ-001
       compares: [エラーコード(ErrorCode enum), 状態遷移後の DB 行の値, 出力 id 集合(順不同), 整列出力の id 順序]
@@ -95,5 +100,43 @@ fixed_oracle:
       scenario: "ホームタグ参照切れ: home_tag_id が指す階層ノードを削除後にビューを開く"
       contract_expectation: "ルートから開始。エラー表示なし"
       spec_ref: §2.4 REQ-037
+      equivalence_ref: EQ-001
+      depth: unit
+
+    # ---- v2.0(loop-v2-viewer)— tag loop-v2-r1 で凍結 ----
+    - id: S-13
+      scenario: "見開き読書 E2E(右開き・奇数枚数): total=7・index=0 から『次へ』(doublePage)を末尾まで送り、SHIFT で 1 戻す"
+      contract_expectation: "ペア遷移: (R=0,L=1)→(R=2,L=3)→(R=4,L=5)→(R=6,L=空白)。末尾でさらに次へ→変化なし(停止)。SHIFT 前へ 1 → index=5 で (R=5,L=6)(偶奇ずれの維持・再アラインなし)"
+      spec_ref: §2.9 REQ-056(ペアリング)・REQ-057(送り・境界・停止)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-14
+      scenario: "空白ページ開始の複合: total=6・startWithEmptyPage=ON・右開きで index=0 から次へ×3、左開きへ切替えて先頭から同様"
+      contract_expectation: "右開き: index0=(L=0,R=空白)→次へで index=1(0→1 特殊送り)=(R=1,L=2)→index=3=(R=3,L=4)→index=5=(R=5,L=空白)。左開き: index0=(R=0,L=空白)→以後同型(L/R 鏡像)。index>0 では特殊配置なし"
+      spec_ref: §2.9 REQ-056(空白開始は index 0 のみ・進行方向側)・REQ-057(0→1 送り)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-15
+      scenario: "モード別位置記憶の操作列: 起動 index=5 → scroll で 20 へ移動 → spread-right へ切替 → 2 回送る(step2) → normal へ切替 → scroll へ戻る"
+      contract_expectation: "spread 切替時=5(初期値=起動 index)→送って 9 → normal 切替時=5(normal の記憶は初期値のまま)→ scroll 復帰=20(scroll の記憶)。各モードの記憶が独立(共通 index 引き継ぎは違反)"
+      spec_ref: §2.9 REQ-054(モード別記憶・初期値=起動 index)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-16
+      scenario: "スクロール中央追跡の境界: 等高画像 3 枚(gap 0)で 2 枚が表示中心から完全等距離になるオフセット+先頭・最下端"
+      contract_expectation: "等距離 → 若い index を現在位置とする。先頭(offset=0)→ index 0 / 最下端 → 最終 index。負 offset・範囲外は発生しない前提(クランプは呼び出し側)"
+      spec_ref: §2.9 REQ-055(中央最近傍・同距離タイブレーク)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-17
+      scenario: "ビューア設定の永続化と破損耐性: 全 7 項目を非既定値で保存→再読込。次に settings.json の ViewerCustomGapPx を 9999・ViewerMode を 'xyz' に書き換えて再読込"
+      contract_expectation: "ラウンドトリップ: 全 7 項目一致。破損後: customGapPx=0(既定)・mode='normal'(既定)へ項目単位でフォールバックし他項目は保持。例外なし。v1.3 形式(Viewer* キーなし)も全既定値で読める"
+      spec_ref: §2.9 REQ-059・§2.7 REQ-052(破損耐性)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-18
+      scenario: "条件サマリ整形(GF-05 再発防止): textual equals 値='男'・values=['男','女']・range(10,20)・range(10,なし)・不正 JSON の 5 入力を ja で整形"
+      contract_expectation: "『値が一致: 男』『いずれか: 男, 女』『範囲: 10〜20』『10 以上』、不正 JSON=空文字列(例外なし)。全出力に '\\u' と '{' が含まれない(エスケープ・生 JSON 非露出)"
+      spec_ref: §2.6 REQ-060(e)(i18n テンプレート書式)
       equivalence_ref: EQ-001
       depth: unit

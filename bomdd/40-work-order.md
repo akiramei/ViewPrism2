@@ -1,25 +1,38 @@
-# Work Order — loop-v1-core
+# Work Order — loop-v2-viewer(v2.0)
+
+> V1(loop-v1-core)の Work Order は git 履歴(tag loop-v1-r1〜r3)を参照。本書は V2 増分製造の指示書。
 
 ## 目的
-ViewPrism2(タグ × 仮想ビューの Windows 向け画像管理アプリ、.NET 10 / Avalonia 12 / SQLite)の V1 コアを、本製造パッケージのみから製造する。
+ViewPrism2 の V1 完成コードベース(タグ × 仮想ビューの Windows 向け画像管理アプリ、.NET 10 / Avalonia 12 / SQLite、unit 234 全緑)に対し、**ビューア拡張(表示モード scroll / spread-right / spread-left・共通表示設定・設定永続化)と V1 golden 所見 5 件の是正**を、本製造パッケージのみから増分製造する。
 
 ## 入力(これがすべて。これ以外を参照しない)
-- `bomdd/20-spec.md`(仕様 — 観測契約 §2.8 を含む)
-- `bomdd/30-ebom.yaml` / `31-kbom.yaml` / `32-mbom.yaml` / `33-control-plan.yaml` / `34-routing.yaml`
+- `bomdd/20-spec.md` v2.0(§2.9 ビューア拡張が今回の中心。観測契約 §2.8 OC-9〜13 を含む)
+- `bomdd/30-ebom.yaml` / `31-kbom.yaml` / `32-mbom.yaml` / `33-control-plan.yaml` / `34-routing.yaml`(routing_v2)
 - `docs/adr/`(確定済みの技術決定)
+- 既存コードベース `src/` / `tests/ViewPrism2.Tests`(V1 完成品 — 読解・拡張してよい)
 
-原典 TypeScript 実装・設計対話・固定オラクルは供与されない。参照を試みないこと。
+原典 TypeScript 実装・設計対話・固定オラクル(`tests/ViewPrism2.Oracle` 含む)は供与されない。参照を試みないこと。
 
-## 製造対象
-- C# / .NET 10 / Avalonia 12.0.4。配置は 32-mbom.yaml の artifact.path のとおり
-  (src/ViewPrism2.Core, src/ViewPrism2.Infrastructure, src/ViewPrism2.App, tests/ViewPrism2.Tests)
+## 製造対象(増分)
+| 製造単位 | 内容 | 受入 |
+|---|---|---|
+| M-VIEWERCORE-017 | ビューア計算核(Core/Services/Viewer/ — ペアリング・送り・追跡・高さ統一・位置記憶。純粋計算) | CP-VIEWER-014(unit) |
+| M-SET-010(拡張) | AppSettings に Viewer* 7 項目(範囲外値の既定化込み) | CP-SET-009(v2.0 ベクタ) |
+| M-UI-018 | ビューア UI 拡張(モードビュー・コントロールバー・キーボード・永続化結線・ロード失敗耐性) | CP-UI-G8 / CP-L1-SMOKE |
+| M-UI-019 | GF 是正(ダイアログ高さ固定・グリッド行選択視覚除去・家アイコン・パレット選択強調+追加ボタン文言・条件サマリ整形) | CP-GF-015(unit)+ CP-UI-G1/G6 |
+
+## 回帰の規律(増分製造の絶対条件)
+- **既存の意味論を変更しない**。既存 unit テスト 234 件の修正・削除は原則禁止。
+  期待値変更が必要だと判断した場合は当該単位を `blocked` にして C6 報告(テストを書き換えて緑にしない)
+- 既存機能のリファクタリングは今回のスコープに必要な最小限に留める(不要改変はずる報告対象)
+- INV-009(woven 安全制約): 物理画像ファイルへの書き込み・移動・削除は一切禁止(ビューアは読み取り専用)
 
 ## 必須受入(自己受入)
 - `dotnet build ViewPrism2.sln -c Release` が警告ゼロで成功する(TreatWarningsAsErrors)
-- `dotnet test tests/ViewPrism2.Tests -c Release` が成功する
-- 受入ハーネスの必須範囲: Control Plan の unit/L2/L3 行の test_vectors 全被覆 +
-  **L1 スモーク(起動→フォルダ登録→スキャン→グリッド表示の正常系 1 本)**(unit 緑のまま表面が実行時全滅する盲点の対策)
-- G 行(CP-UI-G1〜G5)は承認者(maintainer)の受入であり、工場の自己受入対象外。ただしチェックリスト項目を満たすよう実装する
+- `dotnet test tests/ViewPrism2.Tests -c Release` が成功する(**既存 234 件+v2 新規の全緑 = 回帰ゼロ**)
+- 受入ハーネスの必須範囲: CP-VIEWER-014 / CP-GF-015 / CP-SET-009(v2.0)の test_vectors 全被覆
+- **L1 スモーク(CP-L1-SMOKE v2.0 経路)**: 起動→スキャン→グリッド→ビューア起動→**3 モード切替+各モードでページ送り/スクロール 1 回**→ja/en 切替→タグ作成
+- G 行(CP-UI-G1〜G8)は承認者(maintainer)の受入であり、工場の自己受入対象外。ただしチェックリスト項目(20-spec.md §2.6 — G-8 と G-1/G-6 の v2.0 追加項を含む)を満たすよう実装する
 
 ## ずる報告(義務)
 製造中に BOM/K-BOM/Control Plan から導けなかった判断は、**実装を止めずに**全件 cheat-log 形式で報告する:
@@ -30,14 +43,17 @@ ViewPrism2(タグ × 仮想ビューの Windows 向け画像管理アプリ、.N
 - 重大度: blocker / friction / minor
 ```
 
-特に以下の次元は判断したら必ず報告する:
-- UI レイアウトの寸法・余白・配色で K-DESIGN に無い値を使った場合
-- Avalonia の仮想化方式で K-AVALONIA の既定方式から逸脱した場合
-- エラー表示・通知の形態(ダイアログ/トースト等)を独自判断した場合
-- i18n の新規キー追加・キー命名
+特に以下の次元は判断したら必ず報告する(V2 重点 — 事前分析で慣習分散が確認された箇所):
+- **見開きの方向規則**(矢印・クリックの向き、ペアの組み方)を仕様 §2.9 と異なる形にした場合(慣習の「論理方向」「固定ペア」は仕様違反 — FMEA-015/017)
+- **モード切替時の位置の扱い**を仕様(モード別記憶・初期値=起動 index)と変えた場合(FMEA-020)
+- 仕様列挙外のキー・ホイール・ジェスチャ操作を追加した場合(M-UI-018 excluded)
+- スクロールの読み込みウィンドウ・先読み・Bitmap 破棄の定数/方式を M-BOM/K-BOM と変えた場合
+- UI レイアウトの寸法・余白・配色・アイコンで K-DESIGN(v2.0 追補含む)に無い値を使った場合
+- i18n の新規キー追加・キー命名(ビューア UI・条件サマリテンプレート・GF-04 ボタン文言)
+- クリック判定の移動閾値・キーリピートの扱い(exploratory — 判断値を報告)
 
 ## 調達部品の規律
-依存パッケージは `32-mbom.yaml` の `procurement` に列挙されたものだけを使う。列挙外のパッケージが必要だと判断した場合、その採用は**ずる報告対象**(理由・代替案込みで報告し、標準ライブラリで代替できるならそちらを優先)。
+依存パッケージは `32-mbom.yaml` の `procurement` に列挙されたものだけを使う(全 exact ピン)。列挙外のパッケージが必要だと判断した場合、その採用は**ずる報告対象**(理由・代替案込みで報告し、標準ライブラリで代替できるならそちらを優先)。
 
 ## 進めない級の問題(blocker)を発見した場合
 BOM の自己矛盾・実装不能を発見した場合は、**当該製造単位を `blocked` とマークして他の単位を続行**し、cheat-log に C6(手戻り)として記録して納品時に報告する。製造を中断しての質問往復はしない(隔離の維持。修正は設計者側が BOM を改訂し fresh re-run する)。

@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(v2.0 — E-VIEWER-CALC-030 追加・E-UI-VIEWER-024 拡張・GF 是正の織り込み。v1 部品の意味論は不変)"
   layer: E-BOM
 
 # 規律(method-v1 §2):
@@ -151,14 +151,28 @@ ebom:
       acceptance_refs: [CP-CACHE-008]
 
     - id: E-SETTINGS-013
-      name: 設定ストア(settings.json・破損耐性)
+      name: 設定ストア(settings.json・破損耐性)— v2.0 でビューア設定 7 項目を追加(REQ-059)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-052]
+      requirement_refs: [REQ-052, REQ-059]
       depends_on: []
       invariants:
         - 破損ファイルで例外を外に漏らさない(既定値+再生成)
+        - ビューア設定の範囲外値(customGapPx 等)は既定値として読む(REQ-059)
       acceptance_refs: [CP-SET-009]
+
+    - id: E-VIEWER-CALC-030
+      name: ビューア計算核(見開きペアリング・ページ送り・スクロール現在位置追跡・高さ統一・モード別位置記憶)— v2.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-054, REQ-055, REQ-056, REQ-057, REQ-058]
+      kbom_refs: []
+      depends_on: [E-DOMAIN-001]
+      invariants:
+        - 純粋計算(I/O・UI 依存なし)。OC-9〜13 として ViewModel から呼ぶだけにする
+        - 送り・ペアリングは仕様 §2.9 の規則のみ(端で停止・ループしない)
+        - 高さ統一はアスペクト比を常に維持(仕様 §2.9 REQ-058)
+      acceptance_refs: [CP-VIEWER-014]
 
     - id: E-I18N-014
       name: i18n 解決器(フォールバック・補間・動的切替通知)
@@ -198,10 +212,10 @@ ebom:
       acceptance_refs: [CP-UI-G1, CP-L1-SMOKE]
 
     - id: E-UI-GRID-022
-      name: グリッド/リスト表示(レスポンシブ自動列・仮想化・選択(Ctrl トグル/SHIFT 範囲 union)・空状態)— v1.3 改訂(ECO-002 CR-1/3/6)
+      name: グリッド/リスト表示(レスポンシブ自動列・仮想化・選択(Ctrl トグル/SHIFT 範囲 union)・空状態)— v1.3 改訂(ECO-002 CR-1/3/6)+v2.0 GF-02 是正
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-041, REQ-042]
+      requirement_refs: [REQ-041, REQ-042, REQ-060]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-SORT-004, E-THUMB-020, E-EVAL-002]
@@ -209,6 +223,7 @@ ebom:
         - 選択ロジックは ViewModel に置き unit 検査可能にする(OC 系)
         - 列数はコンテンツ幅から自動算出(clamp(⌊幅/220px⌋,2,8))。固定列数セレクタを置かない(v1.3)
         - SHIFT 範囲選択は union(置換しない)・選択順は index 昇順で末尾へ追番(v1.3)
+        - グリッドの選択視覚はセル強調枠+バッジのみ。行背景の選択視覚を出さない(v2.0/GF-02。リスト表示の行選択視覚は正)
       acceptance_refs: [CP-UI-G1, CP-UI-G2]
 
     - id: E-UI-DETAIL-023
@@ -222,35 +237,45 @@ ebom:
       acceptance_refs: [CP-UI-G3]
 
     - id: E-UI-VIEWER-024
-      name: 基本画像ビューア(フィット表示・キーボードナビゲーション)
+      name: "画像ビューア(normal フィット表示+v2.0 拡張: scroll/spread-right/spread-left・コントロールバー(モード切替+表示設定)・設定永続化結線・モード別位置記憶)"
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-044, REQ-045]
+      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059]
       external_source_ref: K-AVALONIA
-      kbom_refs: [K-AVALONIA, K-MVVM]
-      depends_on: [E-CACHE-011, E-SORT-004]
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-SETTINGS-013]
       invariants:
         - ナビゲーション(端で停止・現在位置)は ViewModel で unit 検査可能にする
-      acceptance_refs: [CP-UI-G4]
+        - ペアリング・送り・追跡・高さ統一・位置記憶の判断は E-VIEWER-CALC-030 のみ経由(UI 側で再実装しない)
+        - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り — 仕様 §2.9)
+        - スクロールは全件一括読み込みしない(REQ-055)
+      acceptance_refs: [CP-UI-G4, CP-UI-G8]
 
     - id: E-UI-NODEGRAPH-025
-      name: タグタブ中央+画像タブ左 — ビュー階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D 追加)と NodeGraph ナビゲーションツリー — v1.2 改訂
+      name: タグタブ中央+画像タブ左 — ビュー階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D 追加)と NodeGraph ナビゲーションツリー — v1.2 改訂+v2.0 GF-03/04/05 是正
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-030, REQ-034, REQ-035, REQ-036, REQ-037]
+      requirement_refs: [REQ-030, REQ-034, REQ-035, REQ-036, REQ-037, REQ-060]
       external_source_ref: "原典 BaseViewHandler/TagTreeItem/HierarchyTreeView(仕様 §2.6 v1.2)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-GRAPH-003, E-VIEWSVC-009]
-      acceptance_refs: [CP-UI-G6]
+      invariants:
+        - ホームタグのトグル/強調は家アイコン(★不可 — v2.0/GF-03)
+        - ノード追加ボタンは対象タグ名を表示(パレット未選択時は非活性 — v2.0/GF-04)
+        - 条件サマリは i18n テンプレートで整形表示。JSON・\uXXXX を露出しない(整形は核側ヘルパで unit 検査 — v2.0/GF-05)
+      acceptance_refs: [CP-UI-G6, CP-GF-015]
 
     - id: E-UI-TAGS-026
-      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)— v1.2 改訂
+      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)— v1.2 改訂+v2.0 GF-01/04 是正
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030]
+      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030, REQ-060]
       external_source_ref: "原典 TagManagementPanel/ViewManagementPanel(仕様 §2.6 v1.2)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-TAGSVC-008, E-VIEWSVC-009]
+      invariants:
+        - タグ作成/編集ダイアログは高さ固定。候補値リスト内部のみスクロール(v2.0/GF-01)
+        - パレット選択中タグは明確な選択視覚で判別可能(v2.0/GF-04)
       acceptance_refs: [CP-UI-G6]
 
     - id: E-UI-TAGASSIGN-029
