@@ -102,3 +102,50 @@ as_built:
       v2_seed: "Loop V2(ビューア拡張)= RVP-UI-003(normal/scroll/spread/custom)。以降: 類似検索/マージ/リンク修復/作業スペース/バックアップ"
       pre_adjudicate: "製造前に設計者裁定 or 探索プローブへ落とす未確定項目 — RVP-REPAIR-004(relink 候補削除)/ RVP-REPAIR-005(detailed=pHash-only)/ RVP-MERGE-002(値付きタグ衝突)"
       safety_carryforward: "merge/trash/permanent-delete 導入時に物理ファイル非破壊を woven 安全制約+L3 物理差分 CP へ格上げ(現 V1 は INV-009 分散配置で充足)"
+
+# ════════════════════════════════════════════════════════════════
+# Loop V2(loop-v2-viewer)As-Built — ビューア拡張 + golden 所見是正
+# ════════════════════════════════════════════════════════════════
+as_built_v2:
+  experiment: loop-v2-viewer
+  date: 2026-06-13
+  bom_version: "v2.0(20-spec v2.0・30〜34 改訂。固定オラクル S-13〜18 は tag loop-v2-r1 で凍結)"
+  base: "V1 完成コードベース(commit 242955c)への増分。SB-F-01 で依存 exact ピン+global.json 済み"
+  factory:
+    id: [factory-02(Run1), factory-03(Run2 収束)]
+    model: claude(隔離サブエージェント・各 Run fresh)
+    supplied_package: [bomdd/20-spec.md(v2.0), bomdd/30-ebom.yaml, bomdd/31-kbom.yaml, bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/34-routing.yaml(routing_v2), bomdd/40-work-order.md(v2.0), docs/adr/, V1 完成コードベース(src/, tests/ViewPrism2.Tests)]
+    not_supplied: [原典 view-prism ソース, 設計対話(本セッション), bomdd/00-charter*, bomdd/10-requirements.yaml, bomdd/41-fixed-oracle.yaml, bomdd/42-exploratory-probes.yaml, tests/ViewPrism2.Oracle/]
+    runs:
+      - { run: 1, factory: factory-02, scope: "M-VIEWERCORE-017(計算核 6 クラス)/ M-SET-010 拡張(Viewer* 7 項目)/ M-UI-018(ビューア UI)/ M-UI-019(GF-01〜05 是正)。unit 290/290・警告 0。CHEAT-03(scroll 非仮想化)friction 申告" }
+      - { run: 2, factory: factory-03, scope: "scroll 仮想化の収束再製造(ListBox+VirtualizingStackPanel+ContainerClearing→ViewerImage.Release)。他単位不変。unit 290/290・警告 0・V1 オラクル 20/20 回帰ゼロ" }
+  artifacts:
+    commits: "e492f78(収束補正 BOM)/ 45dba20(製造 Run1+Run2)/ 33a59fe(固定オラクル S-13〜18)"
+    new_files: [src/ViewPrism2.Core/Services/Viewer/(SpreadPairCalculator/PageTurnCalculator/ScrollPositionTracker/SpreadHeightCalculator/ViewerModeMemory/ViewerSettingsModel).cs, src/ViewPrism2.Core/Services/ConditionSummaryFormatter.cs, src/ViewPrism2.App/Controls/ViewerImage.cs, tests/ViewPrism2.Tests/(CpViewer014/CpGf015)Tests.cs, tests/ViewPrism2.Oracle/(S13〜S18)*.cs]
+    changed_files: "Enums.cs/Entities.cs(AppSettings Viewer*)/SettingsStore.cs/ViewerWindow.axaml(.cs)/ViewerViewModel.cs/WindowService.cs/MainWindow.axaml/TagEditorWindow.axaml/TagsTabView.axaml/HierarchyEditorViewModel.cs/TagsTabViewModel.cs/i18n(ja,en).json"
+    runtime: ".NET 10.0.100(global.json 固定)/ Avalonia 12.0.4 ほか — V1 と同(SB-F-01 で exact ピン)"
+  inspection_results:
+    build: "Release・警告 0(TreatWarningsAsErrors)"
+    unit: "tests/ViewPrism2.Tests 290/290 PASS(V1 234 + V2 新規 56・回帰ゼロ。既存 234 は無改変)"
+    fixed_oracle: "tests/ViewPrism2.Oracle 31/31 PASS(S-01〜18=18 シナリオ。S-01〜12 は loop-v1-r1、S-13〜18 は loop-v2-r1 凍結)"
+    scroll_memory: "P-05 round-2: ListBox+VirtualizingStackPanel+画面外 Release で総枚数非比例(REQ-055 充足。Run1 の FMEA-016 顕在化を構造的に解消)"
+    l1_smoke: "CP-L1-SMOKE v2.0 経路(3 モード切替+送り/スクロール)は工場自己受入で緑。実機目視は golden G-8(承認者)"
+  cheat_log_ref: bomdd/51-cheat-log.md(V2 セクション・計 14・blocker 0)
+  metrics_ref: bomdd/52-metrics.yaml(metrics_v2)
+
+  # golden 承認(CP-UI-G8 新設+G-1/G-6 の v2.0 追加項。AUDIT-303 形式)— 承認者 maintainer の実機目視待ち
+  golden_approvals_v2:
+    status: pending
+    pending: [CP-UI-G8, "CP-UI-G1(GF-02 行選択視覚)", "CP-UI-G6(GF-01 ダイアログ高さ/GF-03 家アイコン/GF-04 パレット選択強調+ボタン文言/GF-05 条件サマリ整形)"]
+    note: "ビューア拡張(モード切替・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)と GF 是正は実機目視でのみ判定可。アプリ起動は設計者が補助、承認は maintainer"
+
+  # G4 受入判定(Loop V2)— golden を除き充足
+  charter_completion_v2:
+    date: 2026-06-13
+    definition_check:
+      - { criterion: "V2 固定オラクル全通過+V1 回帰ゼロ", evidence: "S-01〜18 全 31 facts PASS(loop-v2-r1)。V1 S-01〜12 回帰ゼロ", status: met }
+      - { criterion: "blocker ずるゼロ", evidence: "V2 計 14 件・blocker 0(friction 2=CHEAT-03 は Run2 で解消/位置追跡結線・minor 12。51-cheat-log V2 裁定済み)", status: met }
+      - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build 警告 0・unit 290/290・BOM v2.0・S-13〜18 オラクル・As-Built/cheat-log/metrics(本記録)", status: met }
+      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G8/G1(GF-02)/G6(GF-01/03/04/05)", status: "pending(承認者 maintainer)" }
+    verdict: "Loop V2 — 設計者側受入(固定オラクル+ずる監査+納品物)充足。golden 承認待ちで G4 未確定"
+    carryover_to_v3: "タグ制御モード(viewer-spec §5・2026-06-13 defer)/ RVP-REPAIR-004(improve-on-port)・005(pHash-only)/ RVP-MERGE-002(マージ先優先)/ P-06 操作感プローブ / golden 所見が出れば minor(モードアイコン PathIcon 厳密化等)"

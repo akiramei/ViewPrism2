@@ -57,3 +57,42 @@ metrics:
       cheats_run5: 5                # 裁定後 blocker 0 / friction 2 / minor 3
       root_causes_found: "DF-2: Dapper×空 image_tags の COUNT 列 BLOB 化 / DF-4: Avalonia ClickCount の環境依存"
       pending: "golden CP-UI-G1〜G7 再判定(承認者 maintainer)"
+
+# ── Loop V2(loop-v2-viewer)メトリクス ──
+metrics_v2:
+  experiment: loop-v2-viewer
+  factory_runs: 2                  # Run1(factory-02): 全 4 単位 / Run2(factory-03): scroll 仮想化 収束再製造
+  fixed_oracle:
+    cases: 18                      # S-01〜18(S-13〜18 を tag loop-v2-r1 で追加凍結。S-01〜12 は loop-v1-r1 不変)
+    facts: 31                      # テスト数(S-01〜12=20 + S-13〜18=11)
+    after_run2: "31/31 PASS(全 18 シナリオ。回帰ゼロ・凍結不変)"
+    designer_implemented: "S-13〜18 は設計者が Phase 5 で実装(工場非開示の凍結シナリオ・製造コード公開 API 直叩き)"
+  self_acceptance:
+    tests_final: 290               # unit/L2/L3(V1 234 + V2 新規 56。オラクル治具 31 は別)
+    build_warnings: 0              # TreatWarningsAsErrors
+    regressions_across_runs: 0     # 既存 234 を 1 件も変更・削除せず全緑
+  interventions: 0                 # 製造中の設計者介入ゼロ(隔離維持。G3 ドライランも質問ゼロ)
+  cheats:
+    total: 14                      # Run1: 8 / Run2: 6
+    blocker: 0
+    friction: 2                    # CHEAT-03(Run1 scroll 非仮想化 → Run2 で是正)/ CHEAT-04(Run2 位置追跡の View 結線変更)
+    minor: 12
+    distribution: "核(計算核 M-VIEWERCORE-017)の挙動乖離 0。表面(仮想化方式・コントロールバー形態・アイコン・i18n 新規キー)と実装定数に集中"
+  convergence:
+    trigger: "CHEAT-03(Run1 friction): scroll が ItemsControl 直置き(非仮想化)"
+    probe_first: "P-05 先行測定(ユーザー裁定)で FMEA-016 顕在化(全件フルサイズ Bitmap 常駐・1,000 枚 8〜48GB)と判明"
+    bom_fix: "K-AVALONIA/M-UI-018 に scroll 仮想化必須を明文化(コーチングでなく BOM へ)"
+    run2_result: "fresh factory-03 で scroll のみ再製造 → ListBox+VirtualizingStackPanel+ContainerClearing→Release。1 回で受入緑(build/unit 290+V1 オラクル 20 回帰ゼロ・メモリ総枚数非比例=REQ-055 充足)"
+  targeted_fix_success:
+    run2_targets: [scroll 仮想化(ItemsControl 直置き廃止・画面外 Dispose/キャンセル)]
+    result: "1/1 — fresh re-run 1 回で受入緑(P-05 round-2 で構造的解消を確認)"
+  new_unspecified_found_in_convergence: 0   # BOM は scroll 段階読み込みを既に指定済み。Run1 は仕様欠落でなく製造ミス
+  nfr:
+    NFR-001: "維持(変更なし — 評価器 unchanged)"
+    NFR-002: "維持(グローバル例外ハンドラ unchanged)"
+  golden_approved: []                       # golden 承認待ち
+  golden_pending: [CP-UI-G8, "CP-UI-G1(GF-02)", "CP-UI-G6(GF-01/03/04/05)"]   # 承認者 maintainer の実機目視
+  probes:
+    P-05: "観測済み(round1 顕在化 / round2 解消)— 42-exploratory-probes.yaml"
+    P-06: "未実施(操作感。golden 実機ウォークスルーと併せて観測可)"
+  loop_v2_status: "製造・固定オラクル受入 完了。golden 承認待ち(maintainer)。50-as-built は golden_pending で登録"

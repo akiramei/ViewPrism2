@@ -72,3 +72,45 @@
 ずるはすべて表面(UI 構成・未規定次元)と契約転記漏れに集中し、核(ドメインロジック)の挙動乖離はゼロ —
 BomDD の「ずるは表面側に現れる」観測と整合。Run 5 の CHEAT-R01(リポジトリ materialization)も
 仕様挙動の乖離ではなく実装基盤の欠陥+検査被覆の穴であり、凍結オラクルは退行ゼロを確認した。
+
+---
+
+# ずる台帳 — loop-v2-viewer(ビューア拡張+GF 是正)2026-06-13 追記
+
+V2 は 2 ラン収束。Run1(factory-02)= 全 4 単位の製造、Run2(factory-03)= scroll 仮想化の収束再製造。
+報告計 14 件(blocker 0 / friction 2 / minor 12)。一次資料は各工場の最終報告。
+
+## Run1(factory-02)— 8 件(friction 1 / minor 7)
+
+| # | 重大度 | 内容 | 裁定 |
+|---|---|---|---|
+| R1-01 | minor | 見開き位置表示「n-m / total」の番号順序(読み順で小さい番号を先頭) | **accept** — golden G-8 で表示判定。K-DESIGN の位置表示規定と整合 |
+| R1-02 | minor | scroll 未ロード仮高さの代替として ViewerImage に MinHeight=64 | **accept** — Run1 時点の暫定。Run2 の仮想化で実体化制御が主機構に |
+| R1-03 | **friction** | **scroll を ItemsControl 直置き(非仮想化)で実装 → REQ-055「全件一括読み込みしない」未達** | **収束再製造(ユーザー裁定)** — P-05 先行測定で FMEA-016 顕在化(全件フルサイズ Bitmap 常駐・1,000 枚 8〜48GB・確実 OOM)と確定。工場の friction 自己評価は過小(scroll では SourcePath 不変=Dispose 発火せず)。**設計側帰属の一面あり**(M-UI-018 は段階読み込みを指定済みだが「ScrollViewer ベース」の語が ItemsControl 直置きへ誘導しうる+K-AVALONIA のグリッド仮想化罠がビューア scroll に明示適用されていなかった)→ K-AVALONIA/M-UI-018 を Run2 向けに強化。Run2 で解消 |
+| R1-04 | minor | SHIFT 単独 1 ページ送りの検知(Tunnel KeyDown/Up で SHIFT 状態を VM へ) | **accept** — Avalonia の Shift+矢印ジェスチャ煩雑回避の妥当策。キーリピート抑制なしは exploratory(P-06) |
+| R1-05 | minor | 開き方向トグルを 2 ボタン化・モードアイコンをテキストラベルに簡略 | **accept** — golden G-8 で判定。K-DESIGN の PathIcon 厳密採用は G-8 所見があれば V3 申し送り |
+| R1-06 | minor | i18n 新規キー(viewer.* / hierarchy.conditionSummary.* / hierarchy.addRootNamed 等)の命名・en 文面 | **accept** — K-I18N の `<画面>.<要素>` 規約・ja 正/en 併記に準拠。条件サマリ ja 文面は spec §2.6 採用 |
+| R1-07 | minor | GF-03 家アイコンの StreamGeometry 形状(自作) | **accept** — golden G-6/G-8 で見栄え判定。形状未規定の沈黙次元 |
+| R1-08 | minor | GF-02 行選択視覚除去を防御的に明示(既存 plain テンプレに Transparent 追加) | **accept** — 意味論不変。リスト表示の行選択視覚は正として維持 |
+
+## Run2(factory-03)— 6 件(friction 1 / minor 5)
+
+| # | 重大度 | 内容 | 裁定 |
+|---|---|---|---|
+| R2-01 | minor | scroll 仮想化に ListBox を採用(ItemsRepeater でなく — BOM は両許容) | **accept** — VirtualizingStackPanel 既定+ContainerClearing/GetRealizedContainers/ScrollIntoView の仮想化 API が揃い最小改修 |
+| R2-02 | minor | 画面外解放のトリガに ListBox.ContainerClearing を採用 | **accept** — リサイクル時に ViewerImage.Release() を呼ぶ妥当な結線 |
+| R2-03 | minor | CancellationToken の粒度(ViewerImage に CTS 1 本・SourcePath 変更/Release で張替) | **accept** — 在飛行ロードの打ち切り+完了レースの対象一致チェックで滞留防止 |
+| R2-04 | **friction** | 仮想化で実体化コンテナが疎になるため、位置追跡の rect→index 写像を View 層が担う結線に変更(OC-11 計算核は不変) | **accept** — 計算核 ScrollPositionTracker(CP-VIEWER-014 合否対象)は無改変。View 結線のみ Run1 から変化。ViewModel に UpdateScrollPositionByIndex 追加(意味論不変) |
+| R2-05 | minor | 先読みウィンドウ定数を VirtualizingStackPanel 既定挙動に委譲(原典の前10/後15 は移植せず) | **accept** — M-UI-018 が「実装定数・合否対象外」と明記。合格条件「総枚数非比例メモリ」は既定仮想化で充足 |
+| R2-06 | minor | scroll クリック無操作を選択ハンドラ非結線+選択視覚除去+Focusable=False で実現 | **accept** — 観測可能な挙動ゼロ。ホイールスクロールは維持 |
+
+## V2 構造的所見(最重要)
+
+| 項目 | 帰属 | 裁定 |
+|---|---|---|
+| **scroll 非仮想化(R1-03)** | 設計側+製造側の両面 | M-UI-018 は段階読み込みを指定していたが、K-AVALONIA のグリッド仮想化罠(FMEA-013)がビューア scroll へ明示適用されていなかった(設計側の沈黙)。一方で工場が指定された読み込みウィンドウを実装しなかった(製造側)。**P-05 観測駆動で BOM へ仮想化必須を明文化 → fresh re-run で是正**。BomDD の「測定 → BOM 補正 → fresh 再製造」収束が機能した実例 |
+
+## V2 凍結オラクルとの関係
+固定オラクル S-01〜S-18 は Run2 後・Phase 5 受入で **全 31 facts PASS**(S-01〜12 は loop-v1-r1、S-13〜18 は loop-v2-r1 で凍結。ともに不変)。
+V2 のずるも全件 **表面(仮想化方式・UI 形態・アイコン・i18n)と実装定数**に集中し、核(計算核 M-VIEWERCORE-017)の挙動乖離はゼロ。
+唯一の品質欠陥(R1-03 scroll メモリ)も計算核でなく表示機構の問題で、P-05 観測 → BOM 強化 → Run2 で構造的に解消。core の挙動は凍結オラクルが退行ゼロを確認した。
