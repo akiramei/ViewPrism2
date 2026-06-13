@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v2-viewer(REQ-001〜053 は loop-v1-core で確定。台帳は同一ファイルを改訂継続)"
+  experiment: "loop-v3-similarity(REQ-001〜053=loop-v1-core / REQ-054〜060=loop-v2-viewer / REQ-061〜067=loop-v3-similarity。台帳は同一ファイルを改訂継続)"
   layer: Requirements
 
 # 根拠精度の規律(playbook §2):
@@ -639,3 +639,116 @@ requirements:
     counterexamples:
       - "候補値を 20 件追加するとダイアログが画面高さを超え、保存ボタンが押せなくなる(GF-01 再発)"
       - "条件サマリ整形が保存値そのものを書き換え、旧バージョンで作成したビューの条件が壊れる"
+
+  # ============================================================
+  # Loop V3(loop-v3-similarity)— 類似検索+マージ REQ-061〜
+  # 出典: 原典ソースリバース 2026-06-13(設計者側、工場非開示):
+  #   electron/main/core/services/image-comparison/phash-utils.ts(DCT 32×32→8×8 64bit)・
+  #   similarity-evaluator.ts(ハミング距離・段階式類似度)・similarity-cache.service.ts・
+  #   similar-image-service.ts(simple/detailed プリセット)・migration 007/008(image_features/image_similarity)・
+  #   SimilarImageSearchModal.tsx / RepairModal.tsx / ImageMergeModal.tsx / image-merge.service.ts / TrashModal.tsx
+  #   +porting-spec(RVP-SIM-001/003・RVP-MERGE-001/002・CPOL-008/009/103/202)。
+  # スコープ裁定(00-charter-v3.md §裁定記録): 検出+マージまで / ORB・detailed は pHash-only に確定で defer /
+  #   criteria 条件検索・relink 修復・トラッシュ復元/完全削除は後続ループ(V4)。
+  # ============================================================
+  - id: REQ-061
+    statement: "画像の知覚ハッシュ(pHash)は DCT ベースの決定的アルゴリズムで算出する: 画像を一定サイズの正方グレースケールへ縮小→2 次元 DCT→低周波成分を抽出→中央値しきいで 64bit のビット列を得て 16 文字の小文字 16 進文字列で表現する。同一ピクセル内容の画像は常に同一 pHash を返す。原典実装(sharp ベース)とのビット完全一致は要求しない(CPOL-103: pHash は preserve_with_adapter — ライブラリ・特徴量表現は変更可)が、アルゴリズムと定数(縮小サイズ・低周波の取り方・DC 成分の扱い)は spec/ADR で固定し、結果が再現可能であること"
+    rationale: |
+      原典 phash-utils.ts(32×32 リサイズ→グレースケール→2 次元 DCT→低周波 8×8=64bit→中央値しきい→16hex、lib: sharp)。
+      pHash は類似検索の基礎で、決定性が固定オラクル凍結の前提。SkiaSharp(既存依存)でピクセルを取得し DCT を自作実装する
+      (ORB defer により新規ネイティブ依存なし)。具体定数と DC 成分の扱いは Phase 3 ADR で確定し pin する。
+      受入: 固定テスト画像群の pHash 値を exact 検査(自前テストベクタ)+同一内容画像の一致・微小変化画像の距離が小さいことを unit 検査。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "原典 phash-utils.ts / SkiaSharp ピクセルアクセス・DCT(Phase 3 ADR)"
+    counterexamples:
+      - "リサイズ補間方式が実行環境で揺れ、同一画像から実行ごとに異なる pHash が出る(非決定)"
+      - "DC 成分(全体輝度)が支配的なまま使われ、明るさ違いだけの同一構図が別物と判定される"
+
+  - id: REQ-062
+    statement: "2 つの pHash 間の距離はハミング距離(64bit の XOR の立っているビット数、0〜64)とし、これを単調非増加な段階式で類似度パーセント(0〜100、距離 0=100%・距離が増えるほど低下)へ変換する。変換の段階境界は spec で固定する"
+    rationale: |
+      原典 similarity-evaluator.ts(Brian Kernighan 法の popcount、距離→% の段階式: 0=100/1–5=90–100/6–10=70–89/
+      11–15=50–69/16–20=30–49/21–25=10–29/26–64=0–9)。閾値判定(REQ-064)とソートの基礎。段階式の境界は spec で確定し pin。
+      pHash のビットパリティには依存しない(距離関数のみ)。受入: 距離→% の全段階境界をテストベクタで exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "原典 similarity-evaluator.ts(popcount・段階式変換)"
+    counterexamples:
+      - "popcount のビット数え落ちで距離が過小になり、無関係画像が高類似と判定される"
+      - "段階式の境界がぶれて、同じ距離でも実行や経路で類似度%が変わる"
+
+  - id: REQ-063
+    statement: "pHash 特徴量は image_features(image_id PK、phash、file_size、modified_date、hash、last_calculated)に、画像ペアの類似度は image_similarity(cache_key=正規化したペア識別子+モード を PK、image_id1、image_id2、similarity_score、last_compared)に永続化する。ペア識別子は id1<id2 となるよう正規化し双方向検索に対応する。特徴量は対象画像の file_size/modified_date/hash のいずれかが変化した場合に無効として再計算する。画像削除時は外部キー CASCADE で両テーブルの関連行を削除する。両テーブルはマイグレーション基盤(REQ-004)で追加する"
+    rationale: |
+      原典 migration 007(image_features・image_similarity 作成)・008(cache_key 追加・PK 変更)、
+      similarity-cache.service.ts(mode 別キャッシュキー・既定 24h の時間失効)。キャッシュは全件比較コストの回避が目的。
+      ORB 列(orb_descriptors/orb_keypoints)は本ループでは作らない(ORB defer)。時間ベース失効を採用するか
+      内容ベース無効化のみで足りるかは Phase 2 で確定する(content 変化検知があれば時間失効は不要の可能性)。
+      受入: 特徴量の保存→取得ラウンドトリップ、内容変化での再計算、CASCADE 削除を exact 検査(unit/L2)。
+      マイグレーション適用後スキーマを新規作成 DB と一致させる(REQ-004 の L2 検査に追加)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "原典 migration 007/008 / similarity-cache.service.ts"
+    counterexamples:
+      - "ファイル内容が変わっても古い pHash が残り、別画像が類似と誤判定される"
+      - "ペア正規化が無く (A,B) と (B,A) が別キャッシュになり、片方向しかヒットしない"
+
+  - id: REQ-064
+    statement: "類似検索(similar)は基準画像 1 枚に対し、同一コレクション内の status=normal/pending/missing の画像を候補とし(deleted と基準画像自身は除外)、各候補との pHash 類似度(REQ-062)を算出して閾値(既定 70、範囲 50〜100)以上のものを類似度降順(同値時は id 昇順で安定)で返す。各候補の特徴量・ペア類似度はキャッシュ(REQ-063)を参照し、無ければ計算して保存する。検索は UI をブロックしない(非同期実行・進捗通知が可能)"
+    rationale: |
+      原典 similar-image-service.ts(simple プリセット: useOrb=false・pHash のみ・約 1.1ms/ペア)、find-similar-with-scores.ts、
+      進捗イベント similarity-search-progress。対象 status・除外・コレクション境界は原典準拠(06§ワークフロー6・REQ-053)。
+      simple/pHash のみ(detailed/ORB は §裁定記録 2 で defer)。閾値既定 70・範囲 50–100 は原典準拠。
+      性能(1,000 枚規模)は探索プローブ対象(原典は 1,000 枚で約 1.1 秒・5,000 枚でフリーズ感の記録 = 2025-05-28 issue)。
+      受入: 候補抽出(status フィルタ・自身除外・コレクション境界)・閾値境界・降順安定ソートを固定フィクスチャで exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "原典 similar-image-service.ts / find-similar-with-scores.ts"
+    counterexamples:
+      - "別コレクションの画像が候補に混ざり、無関係な重複候補が出る"
+      - "閾値 70 ちょうどの候補が境界判定で漏れる/重複する"
+      - "全候補を同期計算し、検索中に UI がフリーズする"
+
+  - id: REQ-065
+    statement: "類似検索 UI: 一覧/グリッドで画像 1 枚を選択して起動し、閾値スライダー(50〜100、既定 70)を提供する。検索方式は pHash のみとし、detailed/高精度モードの選択肢は表示しない(将来拡張 — RVP-REPAIR-005/§裁定記録 4)。結果は類似画像を類似度%付きで類似度降順に一覧表示し、各結果を選択できる。検索中は進捗を表示し、結果 0 件時は空状態を表示する。選択した類似画像群はマージ(REQ-066/067)の対象にできる"
+    rationale: |
+      原典 SimilarImageSearchModal.tsx(モード・閾値・進捗・大量件数警告)、RepairModal.tsx(criteria/similar 切替 — V3 は similar のみ)。
+      原典は simple/detailed の選択を出すが、本実装は pHash-only に確定(§裁定記録 2/4)しモード選択 UI を出さない(効かない設定の誤解防止)。
+      閾値範囲・既定は原典準拠。受入: 結果整列・選択・空状態の ViewModel ロジックは unit、画面は golden(G-9)+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 SimilarImageSearchModal / RepairModal / K-DESIGN"
+    counterexamples:
+      - "detailed モードのトグルが残り、選んでも pHash と同じ結果で「効かない設定」に見える"
+      - "結果が類似度順でなく id 順に並び、最も似た画像が下に埋もれる"
+
+  - id: REQ-066
+    statement: "画像マージは論理操作とする: マージ先(保持する画像)1 枚とマージ元(統合される画像)1 枚以上を指定し、(a)マージ元のタグをマージ先へ集約(union)する。両方に同一タグがある場合はマージ先の値を保持し、マージ先の値が NULL/空でマージ元に値があればマージ元の値を採用する(RVP-MERGE-002=マージ先優先・§裁定記録 3)。simple タグは存在の union のみ。(b)マージ元の status を deleted にする。(c)物理画像ファイルは一切移動・削除・変更しない(INV-009 woven 安全制約)。マージ元の image_tags は削除しない(deleted ステータスで一覧から除外されるのみ)。全操作は単一トランザクションで行い、失敗時は全ロールバックする"
+    rationale: |
+      原典 ImageMergeModal.tsx・image-merge.service.ts(タグ ID union→マージ先付与→マージ元 status=deleted、物理非破壊)、
+      CPOL-009(論理操作として保存)、RVP-MERGE-001/002。値タグ衝突は原典で曖昧(image_tags PK=(image_id,tag_id) で
+      同タグ複数値不可)→ §裁定記録 3 で「マージ先優先」確定。タグ集約は REQ-026(UPSERT)/REQ-027(原子バッチ)の意味論に従う。
+      物理非破壊は本ループで L3 物理差分 CP により実証(マージ前後でファイルのバイト・mtime 不変)。
+      受入: タグ union(衝突=マージ先優先・NULL 補完)・status 遷移・原子性・物理ファイル不変を固定フィクスチャで exact 検査(unit + L3 物理差分)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "原典 image-merge.service.ts / ImageMergeModal / CP-MERGE-001(L3 物理差分)"
+    counterexamples:
+      - "マージで物理画像ファイルが削除・移動され、元に戻せなくなる(INV-009 違反)"
+      - "値タグ衝突でマージ先の値がマージ元の値に上書きされ、保持すべき値が失われる"
+      - "タグ集約の途中で失敗し、マージ先に一部タグだけ付いてマージ元が deleted のまま残る(部分適用)"
+
+  - id: REQ-067
+    statement: "マージ UI: 類似検索結果または複数選択からマージ先(1 枚)とマージ元(1 枚以上)を指定し、マージを実行できる。実行前にマージ先・マージ元と統合後タグのプレビューを示し、物理ファイルは削除されない旨を明示する。マージで deleted になった画像が『見えないまま消える』ことを避けるため、最小のトラッシュ(deleted 画像一覧)表示を提供する(一覧と件数のみ。復元・完全削除の操作は後続ループ)"
+    rationale: |
+      原典 ImageMergeModal.tsx(マージ先/元の選択 UI)、TrashModal.tsx(deleted 一覧 — V3 は閲覧のみ移植)。
+      マージは破壊的に見えるため非破壊である旨の明示が信頼上重要(物理非破壊 woven 制約の UI 表現)。
+      復元/完全削除(RVP-STATUS-003/004)は状態遷移が広がるため後続ループ(charter スコープ外)。
+      受入: マージ対象選択・統合タグプレビューの ViewModel は unit、画面とトラッシュ一覧は golden(G-9)+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 ImageMergeModal / TrashModal / K-DESIGN"
+    counterexamples:
+      - "マージ元を選んだつもりがマージ先が消え、保持したい画像が deleted になる(役割の取り違え)"
+      - "マージ後にマージ元画像がどこにも表示されず、ユーザーが消えた画像を確認できない"
