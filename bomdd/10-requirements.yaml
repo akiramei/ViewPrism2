@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: loop-v1-core
+  experiment: "loop-v2-viewer(REQ-001〜053 は loop-v1-core で確定。台帳は同一ファイルを改訂継続)"
   layer: Requirements
 
 # 根拠精度の規律(playbook §2):
@@ -525,3 +525,117 @@ requirements:
     counterexamples:
       - "フォルダ A と B を登録すると、A 選択中でも B の画像が一覧に混ざる"
       - "コレクションを切り替えても NodeGraph の母集合が前のコレクションのまま"
+
+  # ============================================================
+  # Loop V2(loop-v2-viewer)— ビューア拡張 REQ-054〜
+  # 出典: 原典ソースリバース 2026-06-13(設計者側、工場非開示):
+  #   src/components/ImageViewer/(types.ts / ImageViewer.tsx / modes/SpreadMode.tsx /
+  #   modes/ScrollMode.tsx / hooks/useViewerNavigation.ts / utils/viewerUtils.ts /
+  #   context/ViewerContext.tsx)+docs/view-prism-viewer-spec.md+porting-spec RVP-UI-003。
+  # CustomNormalMode は原典スタブ(NormalMode と同一実装)のため移植対象外(00-charter-v2.md)。
+  # タグ制御モードは V3 以降へ defer(2026-06-13 裁定)。
+  # ============================================================
+  - id: REQ-054
+    statement: "ビューアは表示モード normal(V1 既存)/scroll(縦連続)/spread-right(右開き見開き)/spread-left(左開き見開き)を持ち、ビューア内の操作 UI で切替できる。既定モードは normal。モードごとに最後に表示した画像インデックスを記憶し、モード切替時にそのモードの前回位置を復元する(記憶はビューアを開いている間のみ。閉じると破棄)。Esc と閉じるボタンは全モードで有効、画像外余白クリックで閉じる(REQ-044)は normal モードのみ有効とする(scroll/spread はページ送りクリックと衝突するため無効 — 移植版設計)"
+    rationale: |
+      原典 ImageViewer.tsx:27-84(modeIndexMapRef によるモード別位置記憶・切替時復元)、types.ts:16(ViewerMode 4 値)、
+      ViewerContext.tsx:25-34(既定 normal)。原典はモーダル全面に見開きページが広がり余白が無く、背景クリック閉じるは
+      事実上 normal のみ → 移植でも明示的に normal 限定と確定する(誤操作防止)。
+      受入: モード別位置記憶のラウンドトリップ(切替→復元)と既定値は unit(ViewModel)、切替 UI と描画は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 ImageViewer.tsx(モード管理)/ K-AVALONIA(コントロール切替)"
+    counterexamples:
+      - "scroll で 50 枚目まで進み spread に切替えると先頭へ戻され、位置を見失う"
+      - "spread 表示中に余白クリックでビューアが閉じ、ページ送りのつもりが閲覧終了になる"
+
+  - id: REQ-055
+    statement: "スクロールモード: 画像を一覧順(REQ-038 の整列結果)で縦一列に連続表示する。全件を一括読み込みせず、現在位置の前後ウィンドウを段階読み込みし、上端・下端への接近で読み込み範囲を拡張する。ユーザーのスクロール停止後、表示領域の垂直中央に最も近い画像を現在位置として追跡する(この位置がモード別位置記憶 REQ-054 とビューアの現在位置表示に反映される)。←→キーまたは現在位置の変更で対象画像の位置までスクロールする。画像間ギャップは gapMode(REQ-058)に従う"
+    rationale: |
+      原典 ScrollMode.tsx:33-59(初期ウィンドウ前10/後15)、414-427(端 1000px 接近で 15 件ずつ拡張)、
+      431-441(停止 500ms 後に追跡)、283-329(中央最近傍の判定 = 画像矩形中心と表示領域中心の距離最小)、
+      219-276(外部ナビゲーション時は該当画像へスクロール)。ウィンドウ幅・閾値の数値は原典の実装定数であり
+      契約ではない(E-BOM で本実装の定数を確定し、変更可能な実装詳細とする)。中央最近傍の追跡規則のみ契約。
+      受入: 中央最近傍の追跡規則・読み込みウィンドウの拡張(全件一括でないこと)は unit(ViewModel+疑似ビューポート)、
+      スクロール描画・体感は golden+承認者。大量件数の挙動は探索プローブ対象。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 ScrollMode.tsx / K-AVALONIA(ScrollViewer・仮想化)"
+    counterexamples:
+      - "起動時に全件を Base64 読み込みし、1,000 枚で数分フリーズする"
+      - "スクロールで眺めた位置が現在位置に反映されず、ビューアを閉じて再度開くと意図しない画像から始まる"
+      - "←キーでのスクロール移動が画像順とずれ、隣の画像を飛ばす"
+
+  - id: REQ-056
+    statement: "見開きモードのページ配置: 右開き(spread-right)は右ページ=現在インデックス・左ページ=現在+1、左開き(spread-left)は左ページ=現在インデックス・右ページ=現在+1 とする。ペアの 2 枚目が末尾を超える場合、その側は空白ページを表示する。空白ページ開始(startWithEmptyPage、既定 OFF)が ON のとき、現在インデックス 0 では最初の画像を進行方向側(右開き=左ページ、左開き=右ページ)に配置し反対側を空白ページとする"
+    rationale: |
+      原典 SpreadMode.tsx:90-128(ペアリング規則)、132-134(範囲外は -1=空白)、86-88(空白ページ開始の特殊配置)。
+      日本式コミックは P1 が見開きの左側(=右開きで currentIndex の次)に来るため、この配置が読書順と一致する。
+      受入: ペアリング計算を unit で exact 検査(テストベクタ: 先頭/末尾/奇数・偶数枚数/空白開始 ON・OFF ×
+      右開き・左開きの全組合せ)、描画は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 SpreadMode.tsx(配置規則)/ K-AVALONIA(Grid 2 列レイアウト)"
+    counterexamples:
+      - "右開きで 1 枚目が左側に表示され、漫画の読み順と逆になる"
+      - "最終ページが奇数のとき空白側にエラー表示やプレースホルダ文言が出る(正しくは無地の空白)"
+
+  - id: REQ-057
+    statement: "見開きモードのページ送り: 送りステップは SHIFT 押下時 1、通常時はページ送りモード(doublePage=2(既定)/singlePage=1)に従う。キーボードは右開きで →=前へ・←=次へ(進行方向反転)、左開きで →=次へ・←=前へ。ページクリックは進行方向側(右開き=左ページ、左開き=右ページ)で次へ、反対側で前へ(空白ページ部分のクリックも同様に送る)。境界規則: 前へは現在-step が負なら先頭(0)へ移動、次へは現在+step が末尾を超える場合は末尾(総数-1)へ移動し、既に末尾なら何もしない。空白ページ開始 ON かつ現在インデックス 0 から 2 ページ送り設定で次へ送るときはインデックス 1 へ進む(以後のペアが(1,2)(3,4)…と偶奇が揃う)"
+    rationale: |
+      原典 ImageViewer.tsx:86-207(キーボード規則・step 計算・境界・空白開始特殊送り)、SpreadMode.tsx:595-698
+      (クリック送り — キーボードと同一規則)。受入: 送り規則を unit で exact 検査(テストベクタ: 右開き/左開き ×
+      doublePage/singlePage × SHIFT 有無 × 先頭/中間/末尾近傍/末尾 × 空白開始 ON・OFF)、操作感は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 ImageViewer.tsx / SpreadMode.tsx(送り規則)"
+    counterexamples:
+      - "右開きで →キーを押すと次のページへ進み、紙の本と逆の操作感になる"
+      - "末尾近傍で 2 ページ送りすると末尾を飛び越してエラー、または先頭へループする"
+      - "空白ページ開始 ON で先頭から送ると 2 進んでしまい、以後すべての見開きペアの偶奇がずれる"
+
+  - id: REQ-058
+    statement: "ビューア共通表示設定: (a)リサイズモード resizeMode = matchLargerHeight(見開きペアの高い方の画像高さへ両者を統一)/matchSmallerHeight(低い方へ統一)/noResize(原寸。ただし表示領域を超える場合は領域内に収める)、既定 noResize。統一高さは表示領域高さの 90% を上限とする。適用対象は見開きモードのみ。(b)垂直揃え alignMode = top/middle/bottom、既定 middle。適用対象は見開きモードのみ(原典仕様書はスクロールも対象と記すが実装は見開きのみ — 実装準拠で確定)。(c)画像間ギャップ gapMode = tight(間隔 0、見開きでは左右画像を中央境界へ寄せる)/loose(customGapPx の間隔、既定 0px)、既定 tight。適用対象は見開きの左右間とスクロールの画像間。normal モードは V1 のフィット表示(REQ-044)を維持し、これらの設定の対象外とする"
+    rationale: |
+      原典 viewerUtils.ts:9-31(高さ計算 max/min)、SpreadMode.tsx:547-569(表示領域 90% 上限)、
+      768-822(tight 時の中央寄せ: 左ページ=右端揃え・右ページ=左端揃え)、viewerUtils.ts:67-84
+      (scroll の gap / spread の gap)。scroll コンテナに alignItems 適用なし(viewerUtils.ts:67-74)=
+      alignMode はスクロール実装に存在しない → viewer-spec §3.2 の「スクロールも対象」は未実装につき
+      採用しない(実装準拠、00-charter-v2.md の原典互換方針)。アスペクト比は全設定で常に維持する。
+      受入: 高さ統一計算(max/min・90% 上限・アスペクト比維持)は unit(テストベクタ: 高さ違いペア・
+      片側空白・縦長/横長)、視覚は golden+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 viewerUtils.ts / SpreadMode.tsx(スタイル計算)/ K-DESIGN"
+    counterexamples:
+      - "matchLargerHeight で低解像度画像が引き伸ばされ、アスペクト比が崩れて表示される"
+      - "tight 指定でも左右画像の間に隙間が残り、見開きの絵が分断される"
+      - "統一高さが表示領域を超え、見開きの下部が見切れてスクロールも出ない"
+
+  - id: REQ-059
+    statement: "ビューア設定(mode/resizeMode/alignMode/gapMode/customGapPx/pageTurnMode/startWithEmptyPage)はアプリ設定(REQ-052 settings.json)に永続化し、次回のビューア起動時に復元する。モード別位置記憶(REQ-054)は永続化しない(ビューアを閉じると破棄)。customGapPx は 0〜100 の整数に制限し、範囲外の保存値は既定 0 として読む"
+    rationale: |
+      原典は未永続化(useViewerSettings.ts = useState のみ、モーダルを閉じるとリセット)— 毎回の再設定は
+      閲覧アプリとして不便なため、移植版設計として REQ-052 の既存永続化機構へ追加する(意図的差分。
+      V1 で表示モード/選択コレクションを永続化した CR-5/6 と同方針)。customGapPx の範囲は原典 UI の
+      スライダー範囲(0-100)を契約化。受入: 保存→再起動→復元のラウンドトリップと範囲外値の既定化を
+      unit で exact 検査(REQ-052 の既存検査に追加)。
+    rationale_precision: ok
+    classification_hint: core
+    counterexamples:
+      - "見開き右開きに設定しても、ビューアを開き直すたびに normal へ戻る"
+      - "settings.json に customGapPx: 9999 が残っていると画像が画面外へ離れて表示される"
+
+  - id: REQ-060
+    statement: "V1 golden 所見(GF-01〜05)を是正する: (a)タグ作成/編集ダイアログは高さ固定とし、候補値リストはリスト内部のみスクロールする(候補値追加でウィンドウが伸長しない)(b)グリッド表示のセル選択で行背景の選択視覚を表示しない(セルの強調枠+選択順バッジのみ。リスト表示モードの行選択視覚は正として維持)(c)階層エディタのホームタグトグルは家アイコンで表示する(★は使用しない)(d)タグパレットの選択中タグを明確に強調し、階層エディタの「ルートに追加」「子に追加」ボタンに対象タグ名を表示する(例:『「風景」をルートに追加』)(e)ノード条件サマリは表示用に整形し(例: 値が一致: 男)、JSON の Unicode エスケープ(\\u7537 等)や生 JSON を画面に露出しない(保存値の JSON 形式は REQ-035 の契約のまま不変)"
+    rationale: |
+      V1 golden 承認時の minor 所見 5 件(50-as-built.yaml golden_findings GF-01〜05、承認者 maintainer 裁定
+      「V2 で修正」)。機能の意味論は全項目で不変、視覚・表示整形のみの是正。
+      受入: (e)の整形ロジック(simple/textual/numeric 各条件型 × 日本語値)は unit で exact 検査、
+      (a)〜(d)は golden チェックリスト(G-1/G-6 の再確認項目)+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "50-as-built.yaml golden_findings / K-DESIGN(アイコン・強調表現)"
+    counterexamples:
+      - "候補値を 20 件追加するとダイアログが画面高さを超え、保存ボタンが押せなくなる(GF-01 再発)"
+      - "条件サマリ整形が保存値そのものを書き換え、旧バージョンで作成したビューの条件が壊れる"
