@@ -98,3 +98,34 @@ metrics_v2:
     P-05: "観測済み(round1 顕在化 / round2 解消)— 42-exploratory-probes.yaml"
     P-06: "未実施(操作感。golden 実機ウォークスルーと併せて観測可)— V3 申し送り"
   loop_v2_status: "完了(2026-06-13)— G4 全条件充足(固定オラクル 31/31・blocker ずる 0/14・納品物・golden 全承認)"
+
+metrics_v3:                          # loop-v3-similarity(類似検索+マージ)
+  factory_runs: 1                    # factory-04 単一ラン(収束再製造なし)
+  fixed_oracle:
+    cases: 24                        # S-01〜24(S-19〜24 を loop-v3-r1 で凍結)
+    facts: 57                        # S-01〜18=31 + S-19〜24=26
+    after_run1: "57/57 PASS(S-01〜18 回帰ゼロ・S-19〜24 受入。工場非開示)"
+  self_acceptance:
+    tests_final: 346                 # 既存 290 + v3 新規 56(オラクル治具は別 57)
+    build_warnings: 0                # TreatWarningsAsErrors
+    regressions_across_runs: 0       # 既存 290 改変は追加のみ・期待値変更ゼロ
+  interventions: 0                   # 製造中の設計者介入ゼロ(G3 ドライランで質問ゼロ確認・隔離維持)
+  cheats:
+    total: 6
+    blocker: 0
+    friction: 1                      # CHEAT-01(DCT サブ ULP 量子化 → K-PHASH へ codify)
+    minor: 5
+    distribution: "核(M-PHASH-020/MergeCalculator)の挙動乖離 0。pHash 決定性細部・スキーマ番号・i18n キー・レイアウト値・閾値刻みに集中"
+  convergence:
+    trigger: "なし(収束再製造不要)。自己受入緑+固定オラクル S-19〜24 全通過で 1 ラン受入"
+    cheat01_resolution: "CHEAT-01(friction): DCT サブ ULP ノイズで単色縮退が崩れる → 8×8 を 6 桁量子化。採択+K-PHASH へ codify(次回 fresh 再走で再発見不要)"
+  new_unspecified_found_in_convergence: 0   # G3 ドライラン+G2/G2' 補正で仕様欠落は事前に解消済み(B-1/B-2/B-3)
+  inv009_first_real_action: "マージ(初の status 書換実アクション)。CP-MERGE-001(L3 物理差分)+固定オラクル S-24(EQ-003 スナップショット)で前後不変を実証 → PASS"
+  nfr:
+    NFR-001: "維持(評価器 unchanged)"
+    NFR-002: "維持(グローバル例外ハンドラ unchanged)"
+  golden_approved: []                                # 未実施
+  golden_pending: [CP-UI-G9]                         # 類似検索/マージ/トラッシュ UI(承認者 maintainer)
+  probes:
+    P-07: "未実施(1,000 枚 類似検索の応答性・メモリ。golden 実機ウォークスルーと併せて観測可)"
+  loop_v3_status: "Phase 5 設計者側受入 met(固定オラクル 24/24・blocker ずる 0/6・納品物)。golden G-9(maintainer)のみ pending"

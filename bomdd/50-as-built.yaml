@@ -166,3 +166,31 @@ as_built_v2:
       - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G8/G1/G6 全承認(承認者 maintainer、2026-06-13。GF-01/02/V2-01 を Run3 是正後 OK)", status: met }
     verdict: "Loop V2 (loop-v2-viewer) 完了 — G4 全条件充足(2026-06-13)"
     carryover_to_v3: "タグ制御モード(viewer-spec §5・2026-06-13 defer)/ RVP-REPAIR-004(improve-on-port)・005(pHash-only)/ RVP-MERGE-002(マージ先優先)/ P-06 操作感プローブ / golden 所見が出れば minor(モードアイコン PathIcon 厳密化等)/ **ItemsRepeater 採用可否スパイク → 真のアイコンビュー(行概念撤廃)への移行(GF-02 の B 経路。Avalonia 12 で ItemsRepeater が retired 別パッケージのため要実証 — 31-kbom K-AVALONIA 注記)**"
+
+  # ===== Loop V3(loop-v3-similarity)— 類似検索+マージ =====
+  inspection_results_v3:
+    date: 2026-06-13
+    build: "dotnet build -c Release: 0 警告 0 エラー(TreatWarningsAsErrors。設計者独立実測)"
+    unit: "dotnet test ViewPrism2.Tests: 346/346 PASS(既存 290 + v3 新規 56・回帰ゼロ。既存改変は追加のみ)"
+    fixed_oracle: "ViewPrism2.Oracle: 57/57 facts PASS(S-01〜18=31 回帰ゼロ + S-19〜24=26 受入。工場非開示)"
+    cp_v3: "CP-PHASH-016 / CP-SIM-017 / CP-MERGE-018 / CP-MERGE-001(L3 物理差分) / CP-DB-006(v3 スキーマ) 全緑"
+    inv009: "マージ=初の実アクション。CP-MERGE-001+S-24(EQ-003 物理スナップショット)で前後不変=PASS。物理ファイル操作の実装なし"
+    new_dependencies: "なし(pHash は SkiaSharp 既存のピクセルアクセスで自作。ORB/OpenCV は defer)"
+
+  golden_approvals_v3:
+    status: "pending — CP-UI-G9(類似検索/マージ/トラッシュ UI)承認待ち(承認者 maintainer)"
+    target: CP-UI-G9
+    checklist_ref: "20-spec.md §2.6 G-9"
+    machine_verified_logic: "結果整列・空状態・マージ統合タグプレビュー・トラッシュ列挙は CP-UI-G9 トレースの unit 7 件で担保(工場 self-acceptance)。視覚・操作は maintainer 目視"
+    note: "視覚要件(類似度バッジ・マージ先/元の区別・非破壊明示・物理ファイル不変の実機確認)は maintainer の golden 承認で最終確定"
+
+  charter_completion_v3:
+    date: 2026-06-13
+    definition_check:
+      - { criterion: "V3 固定オラクル全通過+V1/V2 回帰ゼロ", evidence: "S-19〜24 含む 24 ケース=57 facts PASS(loop-v3-r1)。S-01〜18 回帰ゼロ", status: met }
+      - { criterion: "blocker ずるゼロ", evidence: "factory-04 計 6 件・blocker 0(friction 1=CHEAT-01→K-PHASH codify・minor 5。51-cheat-log V3 裁定済み)", status: met }
+      - { criterion: "L3 物理差分(INV-009 実アクション初適用)", evidence: "CP-MERGE-001+S-24 でマージ前後の物理ファイル(SHA-256・mtime・集合)不変を実証=PASS", status: met }
+      - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build 0 警告・unit 346/346・BOM v3.0・S-19〜24 オラクル・As-Built/cheat-log/metrics・ADR-0008", status: met }
+      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G9 — 承認者 maintainer", status: pending }
+    verdict: "Loop V3 設計者側受入 met。golden G-9(maintainer)承認で G4 クローズ予定"
+    carryover_to_v4: "修復/relink(RVP-REPAIR-004=improve-on-port・pending 消費で削除統一)/ 完全削除・トラッシュ復元(RVP-STATUS-003/004)/ ORB・detailed モード(OpenCvSharp/Emgu 採用 ADR)/ criteria 条件検索 / P-07 大規模類似検索プローブ / golden 所見が出れば minor 是正"
