@@ -695,19 +695,22 @@ requirements:
       - "ペア正規化が無く (A,B) と (B,A) が別キャッシュになり、片方向しかヒットしない"
 
   - id: REQ-064
-    statement: "類似検索(similar)は基準画像 1 枚に対し、同一コレクション内の status=normal/pending/missing の画像を候補とし(deleted と基準画像自身は除外)、各候補との pHash 類似度(REQ-062)を算出して閾値(既定 70、範囲 50〜100)以上のものを類似度降順(同値時は id 昇順で安定)で返す。各候補の特徴量・ペア類似度はキャッシュ(REQ-063)を参照し、無ければ計算して保存する。検索は UI をブロックしない(非同期実行・進捗通知が可能)"
+    statement: "類似検索(similar)は基準画像 1 枚に対し、同一コレクション内の status=normal の画像のみを候補とし(基準画像自身は除外)、各候補との pHash 類似度(REQ-062)を算出して閾値(既定 70、範囲 50〜100、整数刻み)以上(≧)のものを類似度降順(同値時は id 昇順で安定)で返す。候補の status フィルタ(normal 限定)はキャッシュ参照より先に適用し、各候補の特徴量・ペア類似度はキャッシュ(REQ-063)を参照し、無ければ計算して保存する。検索は UI をブロックしない(非同期実行・進捗通知が可能)"
     rationale: |
       原典 similar-image-service.ts(simple プリセット: useOrb=false・pHash のみ・約 1.1ms/ペア)、find-similar-with-scores.ts、
-      進捗イベント similarity-search-progress。対象 status・除外・コレクション境界は原典準拠(06§ワークフロー6・REQ-053)。
-      simple/pHash のみ(detailed/ORB は §裁定記録 2 で defer)。閾値既定 70・範囲 50–100 は原典準拠。
-      性能(1,000 枚規模)は探索プローブ対象(原典は 1,000 枚で約 1.1 秒・5,000 枚でフリーズ感の記録 = 2025-05-28 issue)。
-      受入: 候補抽出(status フィルタ・自身除外・コレクション境界)・閾値境界・降順安定ソートを固定フィクスチャで exact 検査(unit)。
+      進捗イベント similarity-search-progress。simple/pHash のみ(detailed/ORB は §裁定記録 2 で defer)。閾値既定 70・範囲 50–100 は原典準拠。
+      候補は status=normal のみに限定(G2 補正・20-spec v3.0 §2.10.4): V3 のユースケースは重複 normal 画像の統合であり、
+      missing は物理ファイルが無く pHash を新規計算できず、pending/missing を候補にする検索は relink 修復(V4)の用途。
+      これにより INV-010(既定の表示・抽出は normal のみ)とも整合する。原典は normal/pending/missing を候補にするが
+      それは repair 検索の文脈 → 本ループの similar 検索は normal 限定と確定(意図的差分・スコープ整合)。
+      性能(1,000 枚規模)は探索プローブ P-07 対象(原典は 1,000 枚で約 1.1 秒・5,000 枚でフリーズ感の記録 = 2025-05-28 issue)。
+      受入: 候補抽出(normal 限定・自身除外・コレクション境界・フィルタ先行)・閾値境界(≧)・降順安定ソートを固定フィクスチャで exact 検査(unit)。
     rationale_precision: ok
     classification_hint: core
     external_source: "原典 similar-image-service.ts / find-similar-with-scores.ts"
     counterexamples:
-      - "別コレクションの画像が候補に混ざり、無関係な重複候補が出る"
-      - "閾値 70 ちょうどの候補が境界判定で漏れる/重複する"
+      - "別コレクションの画像や非 normal(deleted/missing/pending)が候補に混ざる"
+      - "閾値 70 ちょうどの候補が境界判定(≧)で漏れる/重複する"
       - "全候補を同期計算し、検索中に UI がフリーズする"
 
   - id: REQ-065
@@ -724,7 +727,7 @@ requirements:
       - "結果が類似度順でなく id 順に並び、最も似た画像が下に埋もれる"
 
   - id: REQ-066
-    statement: "画像マージは論理操作とする: マージ先(保持する画像)1 枚とマージ元(統合される画像)1 枚以上を指定し、(a)マージ元のタグをマージ先へ集約(union)する。両方に同一タグがある場合はマージ先の値を保持し、マージ先の値が NULL/空でマージ元に値があればマージ元の値を採用する(RVP-MERGE-002=マージ先優先・§裁定記録 3)。simple タグは存在の union のみ。(b)マージ元の status を deleted にする。(c)物理画像ファイルは一切移動・削除・変更しない(INV-009 woven 安全制約)。マージ元の image_tags は削除しない(deleted ステータスで一覧から除外されるのみ)。全操作は単一トランザクションで行い、失敗時は全ロールバックする"
+    statement: "画像マージは論理操作とする: マージ先(保持する画像)1 枚とマージ元(統合される画像)1 枚以上(いずれも status=normal が前提・同一指定や重複は拒否)を指定し、(a)マージ元のタグをマージ先へ集約(union)する。両方に同一タグがある場合はマージ先の値を保持し、マージ先の値が NULL/空でマージ元に値があればマージ元の値を採用する(RVP-MERGE-002=マージ先優先・§裁定記録 3)。マージ元が複数の場合は id 昇順で処理し、マージ先が NULL/空のタグに最初に非空値を与えたマージ元の値を採用する(以降は上書きしない)。simple タグは存在の union のみ。(b)マージ元の status を deleted にする。(c)物理画像ファイルは一切移動・削除・変更しない(INV-009 woven 安全制約)。マージ元の image_tags は削除しない(deleted ステータスで一覧から除外されるのみ)。全操作は単一トランザクションで行い、失敗時は全ロールバックする"
     rationale: |
       原典 ImageMergeModal.tsx・image-merge.service.ts(タグ ID union→マージ先付与→マージ元 status=deleted、物理非破壊)、
       CPOL-009(論理操作として保存)、RVP-MERGE-001/002。値タグ衝突は原典で曖昧(image_tags PK=(image_id,tag_id) で
