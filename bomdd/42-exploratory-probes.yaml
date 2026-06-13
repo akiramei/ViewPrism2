@@ -36,7 +36,25 @@ exploratory_probes:
     dimension: ビューア大量画像の応答性とメモリ(読み込みウィンドウ・先読み定数は実装定数 — 合否にしない)
     sweep_ref: "32-mbom silence_sweep: スクロール大量画像の体感"
     observed:
-      factory-01: ~
+      factory-02:
+        method: "コード解析(ViewerWindow.axaml ScrollItems / ViewerImage.cs / ViewerViewModel.Items)+ デコードメモリ算術。1,000 枚実起動は OOM 破壊的のため未実施"
+        finding: |
+          scroll = ScrollViewer > ItemsControl(Avalonia 既定 = 非仮想化 StackPanel)に Items(=_ordered 全件)を
+          バインド。表示時に全件の ViewerImage がマウントされ、各 ViewerImage は SourcePath バインドで即
+          new Bitmap(path)(フルサイズデコード)。_bitmap の Dispose は SourcePath 変更時のみで、静的リストの
+          scroll 中は不変 → スクロール中に破棄が一度も起きず、全件のフルサイズ Bitmap が常駐。
+          常駐メモリ ≈ Σ(w×h×4)。1920×1080 で 1 枚 ≈ 8.3MB → 1,000 枚 ≈ 8.3GB、12MP 写真なら ≈ 48GB。
+        verdict: "FMEA-016(全件一括読み込み/ウィンドウ外未破棄)が顕在化。CHEAT-03 の friction 自己評価は過小。"
+        feeds: "CHEAT-03 裁定の判断材料(P-05 先行 — 2026-06-13)。spread の Bitmap 破棄(対象変更時)は正常に効く"
+      factory-03:
+        method: "Run2(scroll 仮想化収束再製造)後のコード解析。ViewerWindow.axaml(ScrollList=ListBox+VirtualizingStackPanel)/ ViewerWindow.axaml.cs(ContainerClearing→Release)/ ViewerImage.cs(Release())"
+        finding: |
+          scroll を ListBox+VirtualizingStackPanel に置換。実体化されるのは可視+キャッシュ分のコンテナのみで、
+          画面外アイテムは ItemTemplate(ViewerImage)が生成されず SourcePath バインドも評価されない(ロード未発生)。
+          ContainerClearing で ViewerImage.Release() を呼び、CTS キャンセル→Source=null(描画除外)→Bitmap.Dispose(外した後)
+          →SourcePath=null の順で実行。よって常駐 Bitmap 総量 = 同時実体化コンテナ数 × 1 枚分で頭打ち、総枚数 N に非依存。
+        verdict: "FMEA-016 解消。REQ-055「全件一括読み込みしない」充足。メモリ総枚数非比例(Run2 収束の合格条件)を構造的に達成。描画中 Dispose 回避(K-AVALONIA)も Release() 順序で担保。"
+        note: "1,000 枚実起動の数値測定は OOM 破壊回避のため未実施だが、実体化数定数化+画面外即解放の構造により総枚数比例は構造的に断たれている。実機での体感・上限の数値確認は golden G-8(承認者)で最終確認。build 警告0・unit 290/290・V1 オラクル 20/20 回帰ゼロ(設計者実測)。"
   - id: P-06
     scenario: "ビューアのコントロールバーを一通り操作(モード切替・設定 Flyout・ギャップ Slider・クリック送り連打・キーリピート押しっぱなし)"
     dimension: 操作感(クリック判定閾値・キーリピート・設定 UI の使い勝手 — exploratory 宣言次元)

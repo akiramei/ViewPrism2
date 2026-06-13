@@ -58,6 +58,7 @@ kbom:
       - "(v2.0) ScrollViewer はカーソルキー・PageUp/Down を自分で消費する — ビューアのキーボードは Window レベルの AddHandler(KeyDownEvent, handler, RoutingStrategies.Tunnel) で受けて e.Handled=true にし、ScrollViewer の既定キー処理に渡さない(scroll モードのキー移動も ViewModel 経由で明示スクロール)"
       - "(v2.0) フォーカス管理: ビューア本体領域を Focusable=true にし、ウィンドウ表示時と設定 Flyout クローズ時にフォーカスを戻す(矢印キーが効かなくなる事故の定番予防)"
       - "(v2.0) scroll モードの画像は原寸デコードしない: Bitmap.DecodeToWidth(表示幅 × TopLevel.RenderScaling) を Task.Run 内で実施(高 DPI のぼやけ防止に RenderScaling を忘れない)。normal/spread はフルサイズ表示のため従来どおり ImageMemoryCache(REQ-045)経由"
+      - "(v2.0/Run2 必須 — V2 Run1 で違反した中核罠): scroll は **ItemsControl 直置き禁止**。これは V1 グリッドの仮想化罠(本 K-BOM 冒頭・FMEA-013)とまったく同型で、ビューア scroll にも等しく適用される。Avalonia の ItemsControl 既定パネルは非仮想化 StackPanel のため全件が実体化し、各アイテムがフルサイズ Bitmap をロード・常駐 → 1,000 枚で 8〜48GB 常駐し確実にフリーズ/OOM(P-05 で実証、FMEA-016)。**必ず VirtualizingStackPanel を備えた ListBox(SelectionMode=単一/無効・行リスト)または ItemsRepeater を使い、画面外アイテムを実体化しない**。各 ViewerImage は **可視(仮想化で実体化中)の間のみ SourcePath を持ち、非可視化/コンテナリサイクル時に SourcePath=null にして Bitmap を Dispose(描画から外した後)し、進行中ロードを CancellationToken でキャンセルする**。結果としてメモリは『画面内+先読みウィンドウ』に比例し、総枚数に比例して増えてはならない(Run2 収束の合格条件 — P-05 再測定で確認)"
       - "(v2.0) Bitmap の破棄: 読み込みウィンドウ外へ出た scroll の Bitmap は破棄するが、必ず Image.Source から外した後に Dispose(描画中 Dispose はネイティブクラッシュ)"
       - "(v2.0) モード切替の View 構造: ContentControl+DataTemplate(モードごとに UserControl 分割)。非表示モードの視覚ツリーは保持しない(切替時に破棄)"
     risk_if_implicit: |

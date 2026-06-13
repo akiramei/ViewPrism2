@@ -258,7 +258,15 @@ mbom:
       interface_contract:
         modes: "normal(既存 V1 表示を維持)/ scroll / spread-right / spread-left。モード描画の切替は ContentControl 等で行い、計算は M-VIEWERCORE-017 のみ経由"
         controlbar: "ビューア上部コントロールバー: モード切替+表示設定(resizeMode/alignMode/gapMode+customGapPx 数値入力・ページ送りモード・空白ページ開始)。細部レイアウトは K-DESIGN 範囲で製造判断(golden G-8 で承認)"
-        scroll: "ScrollViewer ベース。読み込みウィンドウ: 初期=現在の前 10/後 15 件、端 1000px 接近で 15 件ずつ拡張(実装定数 — 固定オラクル合否対象外)。停止検出後に ScrollPositionTracker で現在位置更新。キーは Right/PageDown=次・Left/PageUp=前(対象画像へスクロール)"
+        scroll: >-
+          **仮想化必須(V2 Run2 改訂 — ItemsControl 直置き禁止。K-AVALONIA v2.0/Run2 参照)**: VirtualizingStackPanel を
+          備えた ListBox(行リスト・選択視覚なし)または ItemsRepeater を ScrollViewer 相当に載せ、画面外アイテムを
+          実体化しない。各 ViewerImage は可視(実体化中)の間のみ SourcePath を持ち、非可視化/リサイクルで SourcePath=null
+          にして Bitmap を Dispose(描画から外した後)・進行中ロードをキャンセルする。これによりメモリは画面内+先読みに
+          比例し総枚数に比例しない(REQ-055「全件一括読み込みしない」の充足 — V2 Run1 で未達)。
+          停止検出後に ScrollPositionTracker(OC-11)で現在位置更新。キーは Right/PageDown=次・Left/PageUp=前(対象画像へスクロール)。
+          読み込みウィンドウ・先読み枚数の具体定数は実装定数(固定オラクル合否対象外)だが、「全件一括でない=総枚数非比例メモリ」は
+          REQ-055 の要求であり Run2 収束の合格条件(P-05 再測定で確認)。
         spread: "2 列 Grid(1fr/1fr)。クリックは各半面全体(余白含む)。キーは §2.9 規則(spread-right は矢印反転・Page キーは論理)。画像 2 枚は並行ロード+次ペア 2 枚を先読み(実装定数)"
         keys: "KeyBindings は ViewerViewModel の ICommand へ。モード別の解釈は ViewModel 内で M-VIEWERCORE-017 を呼ぶ(コードビハインドでの判定禁止)"
         persistence: "設定変更は即時 SettingsStore.Save。起動時に AppSettings の Viewer* から復元(REQ-059)"
@@ -335,7 +343,7 @@ fmea:
   - { id: FMEA-014, unit: M-UI-016,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
-  - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05(契約は CP-VIEWER-014 対象外の実装定数)" }
+  - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }
   - { id: FMEA-017, unit: M-VIEWERCORE-017, failure_mode: "ペアリングを固定ペア (0,1)(2,3) で実装(慣習の典型分岐 — 事前ずる列挙 #36)/空白開始の 0→1 送り漏れで偶奇ずれ", effect: "見開きの組が原典・仕様とずれる", targeted_by: "CP-VIEWER-014(OC-9/10 ベクタ)" }
   - { id: FMEA-018, unit: M-SET-010,   failure_mode: "ビューア設定の保存漏れ/customGapPx 範囲外値で表示崩壊",          effect: "再起動で設定喪失・レイアウト破壊",      targeted_by: CP-SET-009 }
   - { id: FMEA-019, unit: M-UI-019,    failure_mode: "GF 是正の再発(行選択視覚・ダイアログ伸長・★アイコン・エスケープ露出)", effect: "golden 再指摘・承認往復",          targeted_by: "CP-GF-015+CP-UI-G1/G6(v2.0 追加項)" }
