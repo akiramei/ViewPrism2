@@ -25,7 +25,7 @@ service_bom:
     commit: f7d6cf7
     bom_version: "v1.3"
     target_framework: net10.0
-    sdk_observed: "10.0.100(global.json なし — 実装環境の SDK に追従。これ自体が浮動面)"
+    sdk_observed: "10.0.100(global.json で固定・rollForward=latestPatch — SB-F-01 裁定 2026-06-13)"
     build_flags: "TreatWarningsAsErrors=true / Nullable=enable / LangVersion=latest"
     health_revalidated: "2026-06-12 再開時に再実行 — Release 警告0・unit 234/234・凍結オラクル 20/20 PASS"
 
@@ -46,13 +46,13 @@ service_bom:
 
     - kbom: K-MVVM
       dependency: "CommunityToolkit.Mvvm(+ Microsoft.Extensions.DependencyInjection)"
-      pinned_version: "8.4.2(MS.Ext.DI は 10.0.* 浮動)"
-      pin_status: "exact(CommunityToolkit)/ floating(MS.Ext.DI=10.0.*)"
+      pinned_version: "8.4.2(MS.Ext.DI/Logging は 10.0.9 — SB-F-01 裁定で exact 化)"
+      pin_status: exact
       drift_source: "ソースジェネレータ(ObservableProperty/RelayCommand)の生成コード変化・DI コンテナ挙動変化"
       reinspect_depth: G   # VM ロジックは unit、しかし生成バインディングの実挙動は golden/L1
       known_traps:
         - "INPC 手書き・コードビハインド肥大・UI スレッドブロックは工場我流の典型(本 build は ObservableObject+RelayCommand に統一)"
-        - "MS.Extensions.* が 10.0.* 浮動 → restore で patch が静かに上がりうる(下記 findings:SB-F-01)"
+        - "MS.Extensions.* は SB-F-01 裁定(2026-06-13)で 10.0.9 exact 固定 — patch 更新は意図的な劣化イベントとして本手順で処理"
       affected_parts: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
 
     - kbom: K-SKIA
@@ -128,7 +128,7 @@ service_bom:
   platform_externals:
     - id: PX-DOTNET
       external: ".NET ランタイム/SDK"
-      pinned: "net10.0 / SDK 10.0.100(global.json なし=浮動)"
+      pinned: "net10.0 / SDK 10.0.100(global.json 固定・rollForward=latestPatch — SB-F-01)"
       drift_source: "10.0.x patch / 10→11 メジャー更新"
       blast_radius: "全部品(BCL)。明示依存は K-REGEX(E-EVAL-002)・K-WINFS(E-SCAN-005)・K-SQLITE 経由 ADO.NET(E-DB-010)"
       reinspect: "まず unit 234 全件(自動安全網)→ 緑なら L1 スモーク → 表面は spot golden。赤なら逆引きで部品特定"
@@ -327,7 +327,7 @@ service_bom:
       area: 依存ピンの浮動面
       finding: "Microsoft.Extensions.DependencyInjection/Logging が 10.0.* 、Serilog.Extensions.Logging が 9.* 、Serilog.Sinks.File が 7.* の浮動参照。さらに global.json 不在で SDK も実装環境追従。restore のたびに patch/minor が無告知で上がりうる(=非監視の劣化面)"
       recommendation: "(a) これら 4 参照を exact ピンへ、または (b) 浮動を許容し restore 後の L1 スモークを劣化検出網として明文化。SDK は global.json 固定を検討。V2 起案時にいずれか裁定"
-      disposition: "V2 申し送り(機能影響なし。保守容易性の改善)"
+      disposition: "裁定済み・実施済み(2026-06-13、ユーザー maintainer が (a) を選択 — 00-charter-v2.md §裁定記録 5): MS.Ext.DI/Logging=10.0.9・Serilog.Extensions.Logging=9.0.2・Serilog.Sinks.File=7.0.0 を exact ピン(当時の解決版に固定=挙動不変)、global.json で SDK 10.0.100(rollForward=latestPatch)。検証: Release 警告 0・unit 234/234・凍結オラクル 20/20"
     - id: SB-F-02
       severity: info
       area: ネイティブアセット
