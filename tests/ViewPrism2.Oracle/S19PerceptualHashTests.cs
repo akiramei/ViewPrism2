@@ -4,11 +4,16 @@ using Xunit;
 namespace ViewPrism2.Oracle;
 
 /// <summary>
-/// S-19: pHash 決定性と距離関係(spec §2.10.1・OC-14・ADR-0008・K-PHASH、EQ-001)。
-/// 工場非開示の凍結シナリオ。pHash の 16hex は性質ベース(決定性・縮退の手計算値・距離関係)で凍結し、
-/// 係数レベルの exact 値は ADR pin(本書外)に委ねる(CPOL-103 adapter)。
+/// S-19: pHash の横断契約(scope=cross-factory・A/B 共通ゲート)。spec §2.10.1・OC-14・CPOL-103。
+/// 「正しい知覚ハッシュ実装ならどの工場でも満たすべき性質」だけを凍結する:
+///   - 決定性(同一ピクセル→同一ハッシュ)
+///   - 同一内容→距離 0
+///   - 近傍=類似分類(score≥70)・遠傍=非類似分類(score&lt;50)・近傍&lt;遠傍(順序)
+/// **このビルド固有の係数レベル exact 値(単色=0x8000…)は S-19b へ分離**(CPOL-103: ビット一致不要)。
+/// 実 decode パイプライン経由の順位等価は S-25(cross-factory)。
 /// </summary>
 [Trait("oracle", "S-19")]
+[Trait("scope", "cross-factory")]
 public sealed class S19PerceptualHashTests
 {
     private const int N = 32; // PerceptualHash.Size
@@ -41,21 +46,12 @@ public sealed class S19PerceptualHashTests
     }
 
     [Fact]
-    public void 単色画像の縮退_DC位置のみ1で0x8000000000000000()
+    public void 同一内容は距離0_近傍は類似分類_遠傍は非類似分類_近傍が近い()
     {
-        // 全係数が等しい(非 DC=0)→ 中央値 0・c=m=0 で bit=0、DC のみ 1(行優先 MSB)
-        var solid = Bgra((_, __) => 128);
-        Assert.Equal("8000000000000000", PerceptualHash.Compute(solid));
-    }
-
-    [Fact]
-    public void 同一内容は距離0_加算輝度シフトに頑健_構造が異なれば距離大()
-    {
-        // 構造の豊かな基準(rand)。加算定数の輝度シフトは AC 係数不変=pHash 不変(DC のみ変化・
-        // 中央値は DC 除外)で距離 0 が数学的に保証される=「微小変化に頑健」。構造の異なる画像は距離大。
+        // 横断契約: exact 距離値ではなく「順序」と「類似/非類似の分類」を凍結する(A/B 実装で値は変わってよい)。
         var a = Bgra(Rand);
         var aCopy = Bgra(Rand);                              // 同一内容(別パス/別 mtime 相当)
-        var near = Bgra((x, y) => Rand(x, y) + 20);          // 加算輝度シフト(クランプなし)→ 距離 0
+        var near = Bgra((x, y) => Rand(x, y) + 20);          // 加算輝度シフト=微小変化
         var far = Bgra((x, y) =>                              // 構造の全く異なる低周波画像
             (int)(128 + (60 * Math.Cos(2 * Math.PI * x / 32)) + (60 * Math.Cos(2 * Math.PI * y / 32))));
 
@@ -64,9 +60,9 @@ public sealed class S19PerceptualHashTests
 
         var dNear = HammingDistance.Between(ha, PerceptualHash.ComputeBits(near));
         var dFar = HammingDistance.Between(ha, PerceptualHash.ComputeBits(far));
-        Assert.True(dNear <= 10, $"近傍距離 {dNear} が 10 超");
-        Assert.True(dNear < dFar, $"近傍 {dNear} が遠傍 {dFar} 以上");
-        Assert.True(dFar > 25, $"遠傍距離 {dFar} が 25 以下");
+        Assert.True(dNear < dFar, $"近傍 {dNear} が遠傍 {dFar} 以上(順序破れ)");
+        Assert.True(SimilarityScore.FromDistance(dNear) >= 70, $"近傍が類似分類(≥70)に入らない: score={SimilarityScore.FromDistance(dNear)}");
+        Assert.True(SimilarityScore.FromDistance(dFar) < 50, $"遠傍が非類似(<50)でない: score={SimilarityScore.FromDistance(dFar)}");
     }
 
     /// <summary>構造の豊かな決定的擬似乱数パターン(2 値)。</summary>

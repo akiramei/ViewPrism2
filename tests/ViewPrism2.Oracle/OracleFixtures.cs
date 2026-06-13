@@ -86,4 +86,48 @@ internal static class OracleImages
         using var stream = File.Create(path);
         data.SaveTo(stream);
     }
+
+    /// <summary>
+    /// patternIndex で構造が変わる低周波グレースケール画像を path へ保存(S-25/能力プローブ用)。
+    /// 同一 patternIndex+同一 shift は同一構造(format/quality 違いは知覚的に近傍=同じ pHash 近傍)。
+    /// </summary>
+    public static void WriteStructured(
+        string path, int size, SKEncodedImageFormat format, int quality, int patternIndex, int brightnessShift = 0)
+    {
+        // 多周波の豊かなパターン(低周波成分が多く pHash ビットが安定 → JPEG 再エンコードに頑健)。
+        // patternIndex で周波数/位相が変わり構造が distinct になる。単一周波数だと中央値近傍の
+        // 係数が多くビットが不安定になり JPEG 微小ノイズで距離が暴れる(S-25 の near-dup が壊れる)。
+        var fx1 = (patternIndex % 5) + 1;
+        var fy1 = (patternIndex % 3) + 1;
+        var fx2 = (patternIndex % 4) + 2;
+        var fy2 = (patternIndex % 6) + 1;
+        var fx3 = (patternIndex % 7) + 1;
+        var fy3 = (patternIndex % 5) + 2;
+        var ph = patternIndex * 0.7;
+        using var bitmap = new SKBitmap(size, size);
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                // 振幅合計 90(基準 128 に対し 38〜218 でクリップしない)→ 加算輝度シフトが純加算を保ち、
+                // JPEG 再エンコードもハードエッジを生まず低周波 pHash が安定。
+                var u = 2 * Math.PI / size;
+                var v = (byte)Math.Clamp(
+                    128
+                    + (40 * Math.Cos((u * ((fx1 * x) + (fy1 * y))) + ph))
+                    + (30 * Math.Cos((u * ((fx2 * x) + (fy2 * y))) + (ph * 1.3)))
+                    + (20 * Math.Cos((u * ((fx3 * x) + (fy3 * y))) + (ph * 0.5)))
+                    + brightnessShift,
+                    0, 255);
+                bitmap.SetPixel(x, y, new SKColor(v, v, v));
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(format, quality)
+            ?? throw new InvalidOperationException($"encode 失敗: {format}");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using var stream = File.Create(path);
+        data.SaveTo(stream);
+    }
 }
