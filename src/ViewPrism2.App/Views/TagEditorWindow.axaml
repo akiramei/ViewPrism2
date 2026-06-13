@@ -3,13 +3,15 @@
         xmlns:vm="using:ViewPrism2.App.ViewModels"
         x:Class="ViewPrism2.App.Views.TagEditorWindow"
         x:DataType="vm:TagEditorViewModel"
-        Width="440" SizeToContent="Height"
-        MaxHeight="640"
+        Width="440" Height="640"
+        SizeToContent="Manual"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- タグ編集(REQ-021〜025): 名前・種別(既存は変更不可)・色・説明・型別設定 -->
+  <!-- タグ編集(REQ-021〜025): 名前・種別(既存は変更不可)・色・説明・型別設定。
+       GF-01(REQ-060(a)): ダイアログは高さ固定(SizeToContent=Manual)。候補値の増加では
+       ウィンドウを伸長させず候補値リスト内部のみスクロールする(ValuesList の MaxHeight)。 -->
   <ScrollViewer>
     <StackPanel Margin="16" Spacing="8">
       <TextBlock x:Name="TitleText" FontSize="16" />

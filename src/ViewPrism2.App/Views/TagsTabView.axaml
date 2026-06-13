@@ -6,18 +6,41 @@
   <!-- タグタブ(3 ペイン、仕様 §2.6 v1.2 / G-6):
        左=ビュー管理 / 中央=階層構造エディタ(バッチ保存) / 右=タグパレット -->
 
+  <UserControl.Resources>
+    <!-- GF-03(REQ-060(c)): ホームタグのアイコンは家形シルエット(★は不可)。
+         PathIcon+StreamGeometry 直書き(フォントアイコン依存禁止 — K-DESIGN v2.0)。 -->
+    <StreamGeometry x:Key="HomeIconGeometry">M12 3 L3 10 L5 10 L5 20 L10 20 L10 14 L14 14 L14 20 L19 20 L19 10 L21 10 Z</StreamGeometry>
+  </UserControl.Resources>
+
   <UserControl.Styles>
     <Style Selector="TreeView#HierarchyTree TreeViewItem" x:DataType="vm:EditNodeViewModel">
       <!-- 展開/折畳(仕様 §2.6 のノード操作)を VM の状態と同期 -->
       <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
     </Style>
-    <Style Selector="Button.mini.homeOn">
+    <Style Selector="Button.mini.homeOn PathIcon">
+      <!-- ホーム設定中のトグルアイコンはアクセント色で強調(GF-03) -->
       <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.mini.homeOff PathIcon">
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.nodeName.home">
       <!-- ホームタグ設定中ノードの強調表示(G-6) -->
       <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
       <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- GF-04(REQ-060(d)): タグパレットの選択中タグ行を明確に強調する(K-DESIGN v2.0):
+         アクセント色 12% 不透明の背景+左端 3px アクセントバー(選択が一目で判別できる強さ)。 -->
+    <Style Selector="Border.paletteRow">
+      <Setter Property="Padding" Value="9,6" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Margin" Value="4,0" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.paletteRow.selected">
+      <Setter Property="Background" Value="#1F3B82F6" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
     </Style>
     <Style Selector="Border.typeChip">
       <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
@@ -80,10 +103,9 @@
         </DockPanel>
       </Border>
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,8,8,8">
-        <Button Content="{Binding Loc[viewEditor.addRootNode]}" Command="{Binding AddRootNodeCommand}"
-                IsEnabled="{Binding Editor.HasView}" />
-        <Button Content="{Binding Loc[viewEditor.addChildNode]}" Command="{Binding AddChildNodeCommand}"
-                IsEnabled="{Binding Editor.HasView}" />
+        <!-- GF-04(REQ-060(d)): 追加ボタンは対象タグ名を表示。パレット未選択時は非活性+選択を促す文言 -->
+        <Button Content="{Binding AddRootButtonText}" Command="{Binding AddRootNodeCommand}" />
+        <Button Content="{Binding AddChildButtonText}" Command="{Binding AddChildNodeCommand}" />
         <TextBlock Text="{Binding Editor.StatusMessage}" Foreground="{StaticResource DangerBrush}"
                    FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
       </StackPanel>
@@ -109,9 +131,12 @@
                     <Button Classes="mini" Content="✎"
                             Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.BeginAliasEditCommand}"
                             CommandParameter="{Binding}" />
-                    <Button Classes="mini" Content="★" Classes.homeOn="{Binding IsHome}"
+                    <!-- GF-03: ホームタグのトグルは家アイコン(設定中は homeOn でアクセント強調) -->
+                    <Button Classes="mini" Classes.homeOn="{Binding IsHome}" Classes.homeOff="{Binding !IsHome}"
                             Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.ToggleHomeCommand}"
-                            CommandParameter="{Binding}" />
+                            CommandParameter="{Binding}">
+                      <PathIcon Data="{StaticResource HomeIconGeometry}" Width="13" Height="13" />
+                    </Button>
                     <Button Classes="mini" Content="⚙" IsVisible="{Binding CanHaveCondition}"
                             Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.EditConditionCommand}"
                             CommandParameter="{Binding}" />
@@ -120,8 +145,10 @@
                             CommandParameter="{Binding}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="★" Foreground="{StaticResource AccentBrush}" IsVisible="{Binding IsHome}"
-                               VerticalAlignment="Center" />
+                    <!-- GF-03: ホームタグの強調インジケータも家アイコン -->
+                    <PathIcon Data="{StaticResource HomeIconGeometry}" Width="13" Height="13"
+                              Foreground="{StaticResource AccentBrush}" IsVisible="{Binding IsHome}"
+                              VerticalAlignment="Center" />
                     <!-- 別名のインライン編集(仕様 §2.6) -->
                     <TextBlock Classes="nodeName" Classes.home="{Binding IsHome}" Text="{Binding DisplayName}"
                                IsVisible="{Binding !IsEditingAlias}" VerticalAlignment="Center"
@@ -158,7 +185,7 @@
           <ItemsControl ItemsSource="{Binding Palette.Tags}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TagPaletteRowViewModel">
-                <Border Classes="navItem" Classes.selected="{Binding IsSelected}"
+                <Border Classes="paletteRow" Classes.selected="{Binding IsSelected}"
                         Background="Transparent" PointerPressed="OnPaletteItemPressed">
                   <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">

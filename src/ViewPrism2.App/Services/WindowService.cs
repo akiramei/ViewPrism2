@@ -5,6 +5,7 @@ using ViewPrism2.App.Views;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Viewer;
 using ViewPrism2.Infrastructure.Scanning;
 using ViewPrism2.Infrastructure.Settings;
 
@@ -176,8 +177,19 @@ public sealed class WindowService : IWindowService
 
     public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
     {
-        var vm = new ViewerViewModel(ordered, startIndex);
+        // ビューア設定を復元(REQ-059)し、変更は即時 settings.json へ保存する
+        var settings = ViewerSettingsModel.FromSettings(_settings);
+        var vm = new ViewerViewModel(ordered, startIndex, settings, Persist)
+        {
+            Loc = new LocalizationProxy(_localization),
+        };
         var window = new ViewerWindow(_imageCache) { DataContext = vm };
         window.Show(Owner!);
+
+        void Persist(ViewerSettingsModel model)
+        {
+            model.ApplyTo(_settings);
+            _settingsStore.Save(_settings);
+        }
     }
 }

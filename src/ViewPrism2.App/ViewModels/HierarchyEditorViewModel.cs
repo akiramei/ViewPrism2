@@ -14,11 +14,14 @@ namespace ViewPrism2.App.ViewModels;
 /// </summary>
 public sealed partial class EditNodeViewModel : ObservableObject
 {
-    public EditNodeViewModel(string id, string tagId, Tag? tag)
+    private readonly LocalizationService? _localization;
+
+    public EditNodeViewModel(string id, string tagId, Tag? tag, LocalizationService? localization = null)
     {
         Id = id;
         TagId = tagId;
         Tag = tag;
+        _localization = localization;
     }
 
     /// <summary>階層ノード id(既存ノードは DB の id、新規ノードは採番済み)。</summary>
@@ -62,14 +65,14 @@ public sealed partial class EditNodeViewModel : ObservableObject
 
     public bool HasCondition => ConditionType is not null;
 
-    public string ConditionSummary => ConditionType switch
-    {
-        HierarchyConditionType.Equals => $"equals {ConditionValue}",
-        HierarchyConditionType.Range => $"range {ConditionValue}",
-        HierarchyConditionType.Pattern => $"pattern {ConditionValue}",
-        HierarchyConditionType.Values => $"values {ConditionValue}",
-        _ => string.Empty,
-    };
+    /// <summary>
+    /// 条件サマリの整形表示(GF-05・REQ-060(e)、仕様 §2.6)。i18n テンプレートで人間可読化し、
+    /// 生 JSON や Unicode エスケープを露出しない(ConditionSummaryFormatter)。
+    /// localization 未注入(後方互換)時はサマリなし(空文字列)。
+    /// </summary>
+    public string ConditionSummary => _localization is null
+        ? string.Empty
+        : ConditionSummaryFormatter.Format(ConditionType, ConditionValue, _localization);
 
     public void SetCondition(HierarchyConditionType? type, string? valueJson)
     {
@@ -156,7 +159,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             foreach (var node in nodes)
             {
                 _tagById.TryGetValue(node.TagId, out var tag);
-                var vm = new EditNodeViewModel(node.Id, node.TagId, tag)
+                var vm = new EditNodeViewModel(node.Id, node.TagId, tag, _localization)
                 {
                     Alias = node.Alias,
                     IsHome = string.Equals(view.HomeTagId, node.Id, StringComparison.Ordinal),
@@ -195,7 +198,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             return null;
         }
 
-        var node = new EditNodeViewModel(IdGenerator.NewId(), tag.Id, tag) { Parent = parent };
+        var node = new EditNodeViewModel(IdGenerator.NewId(), tag.Id, tag, _localization) { Parent = parent };
         if (parent is null)
         {
             Roots.Add(node);

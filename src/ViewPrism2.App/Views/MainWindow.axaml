@@ -49,13 +49,18 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Padding" Value="4" />
     </Style>
+    <!-- GF-02(REQ-060(b)): グリッドの行(ListBoxItem)から選択視覚を完全に除去する。
+         行リスト仮想化の実装が「行選択視覚」として漏れ出ることを禁止(セル強調枠+選択順バッジのみが正)。
+         背景は常に透明・パディングなしの素テンプレートで、:selected/:pointerover でも変化させない。 -->
     <Style Selector="ListBox.plain ListBoxItem">
       <Setter Property="Padding" Value="0" />
       <Setter Property="Margin" Value="0" />
       <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Template">
         <ControlTemplate>
           <ContentPresenter Name="PART_ContentPresenter"
+                            Background="Transparent"
                             Content="{TemplateBinding Content}"
                             ContentTemplate="{TemplateBinding ContentTemplate}"
                             Padding="{TemplateBinding Padding}" />

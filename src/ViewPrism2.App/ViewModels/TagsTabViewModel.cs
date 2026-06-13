@@ -55,11 +55,20 @@ public sealed partial class TagsTabViewModel : ObservableObject
 
         Editor.Saved += (_, _) => DataChanged?.Invoke(this, EventArgs.Empty);
         Palette.TagsChanged += async (_, _) => await OnTagsChangedAsync();
+        Palette.PropertyChanged += (_, e) =>
+        {
+            // GF-04: パレット選択の変化で追加ボタンの文言・活性を更新する
+            if (e.PropertyName == nameof(TagPaletteViewModel.SelectedTag))
+            {
+                RaiseAddButtonChanged();
+            }
+        };
         localization.CultureChanged += (_, _) =>
         {
             // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            RaiseAddButtonChanged();
         };
     }
 
@@ -193,8 +202,24 @@ public sealed partial class TagsTabViewModel : ObservableObject
         DataChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>パレット選択タグをルートへ追加(ボタン経路、仕様 §2.6)。</summary>
-    [RelayCommand]
+    /// <summary>パレットでタグが選択されているか(GF-04: 追加ボタンの活性条件)。</summary>
+    public bool CanAddNode => Palette.SelectedTag is not null;
+
+    /// <summary>
+    /// ルート追加ボタンの文言(GF-04・REQ-060(d))。選択中は『「{tagName}」をルートに追加』、
+    /// 未選択は選択を促す文言。i18n キー経由(生文字列直書き禁止)。
+    /// </summary>
+    public string AddRootButtonText => Palette.SelectedTag is { } row
+        ? _localization.T("hierarchy.addRootNamed", new Dictionary<string, string> { ["tagName"] = row.Tag.Name })
+        : _localization.T("hierarchy.selectTagToAdd");
+
+    /// <summary>子追加ボタンの文言(GF-04・REQ-060(d))。選択中は『「{tagName}」を子に追加』。</summary>
+    public string AddChildButtonText => Palette.SelectedTag is { } row
+        ? _localization.T("hierarchy.addChildNamed", new Dictionary<string, string> { ["tagName"] = row.Tag.Name })
+        : _localization.T("hierarchy.selectTagToAdd");
+
+    /// <summary>パレット選択タグをルートへ追加(ボタン経路、仕様 §2.6)。未選択時は非活性(GF-04)。</summary>
+    [RelayCommand(CanExecute = nameof(CanAddNode))]
     private void AddRootNode()
     {
         if (Palette.SelectedTag is { } row)
@@ -203,14 +228,24 @@ public sealed partial class TagsTabViewModel : ObservableObject
         }
     }
 
-    /// <summary>パレット選択タグを選択ノードの子として追加(ボタン経路)。</summary>
-    [RelayCommand]
+    /// <summary>パレット選択タグを選択ノードの子として追加(ボタン経路)。未選択時は非活性(GF-04)。</summary>
+    [RelayCommand(CanExecute = nameof(CanAddNode))]
     private void AddChildNode()
     {
         if (Palette.SelectedTag is { } row)
         {
             Editor.AddNode(row.Tag, Editor.SelectedNode);
         }
+    }
+
+    /// <summary>GF-04: 追加ボタンの文言・活性を再評価する。</summary>
+    private void RaiseAddButtonChanged()
+    {
+        OnPropertyChanged(nameof(CanAddNode));
+        OnPropertyChanged(nameof(AddRootButtonText));
+        OnPropertyChanged(nameof(AddChildButtonText));
+        AddRootNodeCommand.NotifyCanExecuteChanged();
+        AddChildNodeCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>D&D 経路: タグ id からノード追加(View 層の Drop ハンドラから呼ぶ)。</summary>

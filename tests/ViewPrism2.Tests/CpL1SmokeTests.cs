@@ -5,6 +5,7 @@ using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Viewer;
 using ViewPrism2.Infrastructure.I18n;
 using ViewPrism2.Infrastructure.Imaging;
 using ViewPrism2.Infrastructure.Scanning;
@@ -204,5 +205,70 @@ public sealed class CpL1SmokeTests : IDisposable
         Assert.Contains(vm.Tagging.CurrentTags, r => r.Tag.Id == tag.Value.Id); // 付与済み「色」が現在タグに出る
         vm.IsTagEditMode = false;
         Assert.False(vm.Browser.SuppressOpenItem);
+    }
+
+    [Fact]
+    public void V2_ビューア3モード切替とページ送りと位置記憶の経路()
+    {
+        // CP-L1-SMOKE v2.0 経路(in-process): 3 モード切替+各モードで送り 1 回+モード別位置記憶
+        // +設定の即時永続化ラウンドトリップ。描画/ウィンドウ生成は手動起動で確認(報告書記録)。
+        var items = Enumerable.Range(0, 6)
+            .Select(i => Entry($"img{i}.jpg"))
+            .ToList();
+
+        // 永続化先(WindowService と同等: モデル → AppSettings → SettingsStore)
+        var settings = new AppSettings();
+        var saved = new List<ViewerSettingsModel>();
+        var vm = new ViewerViewModel(items, startIndex: 2, new ViewerSettingsModel(), model =>
+        {
+            model.ApplyTo(settings);
+            saved.Add(model);
+        });
+
+        // 起動 index=2 → normal で現在 3/6
+        Assert.True(vm.IsNormal);
+        Assert.Equal("3 / 6", vm.CurrentPositionText);
+
+        // scroll へ → 位置記憶の初期値=起動 index(2)。送り 1 回(→ 3)
+        vm.SetScrollModeCommand.Execute(null);
+        Assert.True(vm.IsScroll);
+        Assert.Equal(2, vm.CurrentIndex);
+        vm.NextCommand.Execute(null);
+        Assert.Equal(3, vm.CurrentIndex);
+
+        // spread-right へ → spread の記憶は起動 index(2)のまま。送り(2 ページ)→ 4
+        vm.SetSpreadRightModeCommand.Execute(null);
+        Assert.True(vm.IsSpread);
+        Assert.Equal(2, vm.CurrentIndex);
+        vm.NextCommand.Execute(null);
+        Assert.Equal(4, vm.CurrentIndex); // doublePage 既定 step=2
+
+        // scroll へ戻す → scroll の記憶 3 が復元(共通 index 引き継ぎではない — FMEA-020)
+        vm.SetScrollModeCommand.Execute(null);
+        Assert.Equal(3, vm.CurrentIndex);
+
+        // 設定変更の即時永続化(REQ-059): mode/customGapPx が settings へ反映
+        Assert.Equal("scroll", settings.ViewerMode);
+        vm.GapMode = GapMode.Loose;
+        vm.CustomGapPx = 16;
+        Assert.Equal("loose", settings.ViewerGapMode);
+        Assert.Equal(16, settings.ViewerCustomGapPx);
+        Assert.NotEmpty(saved);
+    }
+
+    private static ImageEntry Entry(string name)
+    {
+        var record = new ImageRecord
+        {
+            Id = name,
+            SyncFolderId = "f",
+            RelativePath = name,
+            FileName = name,
+            FileSize = 1,
+            Hash = new string('0', 64),
+            CreatedDate = "2026-06-13T00:00:00.000Z",
+            ModifiedDate = "2026-06-13T00:00:00.000Z",
+        };
+        return new ImageEntry(record, @"C:\img\" + name, []);
     }
 }

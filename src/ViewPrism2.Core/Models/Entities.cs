@@ -234,4 +234,134 @@ public sealed record AppSettings
 
     /// <summary>最後に選択したコレクション(同期フォルダ)id(REQ-052 v1.3/CR-5)。null=未選択。</summary>
     public string? LastCollectionId { get; set; }
+
+    // ---- v2.0 追加(REQ-059 ビューア設定の永続化。M-SET-010 拡張) ----
+    // 列挙系は文字列のまま格納し、型付き化と既定化は ViewerSettingsModel が担う(項目単位の破損耐性)。
+    // 文字列系は TolerantStringConverter で「文字列以外の型・null」を許容し、不正値は項目単位で既定へ落とす
+    // (ファイル全体を破損扱いにしない — CP-SET-009 v2.0)。
+
+    /// <summary>表示モード(REQ-054): "normal"|"scroll"|"spread-right"|"spread-left"。既定 normal。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerMode { get; set; } = "normal";
+
+    /// <summary>見開き高さ統一(REQ-058): "matchLargerHeight"|"matchSmallerHeight"|"noResize"。既定 noResize。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerResizeMode { get; set; } = "noResize";
+
+    /// <summary>見開き垂直揃え(REQ-058): "top"|"middle"|"bottom"。既定 middle。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerAlignMode { get; set; } = "middle";
+
+    /// <summary>ギャップ方式(REQ-058): "tight"|"loose"。既定 tight。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerGapMode { get; set; } = "tight";
+
+    /// <summary>ギャップ px(REQ-059): 0〜100。範囲外・型不正の保存値は既定 0 として読む。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantGapPxConverter))]
+    public int ViewerCustomGapPx { get; set; }
+
+    /// <summary>ページ送りモード(REQ-057): "doublePage"|"singlePage"。既定 doublePage。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerPageTurnMode { get; set; } = "doublePage";
+
+    /// <summary>空白ページ開始(REQ-056)。既定 false。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantBoolConverter))]
+    public bool ViewerStartWithEmptyPage { get; set; }
+
+    /// <summary>
+    /// ビューア設定の列挙系文字列を正規化する(CP-SET-009 v2.0)。読み込み後に呼び、
+    /// 列挙外文字列・null を項目単位で既定値へ落とす(ViewerSettingsModel が唯一の真実)。
+    /// customGapPx の範囲外は TolerantGapPxConverter が既に 0 化済み。
+    /// </summary>
+    public void NormalizeViewerSettings()
+    {
+        ViewerMode = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseMode(ViewerMode));
+        ViewerResizeMode = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseResize(ViewerResizeMode));
+        ViewerAlignMode = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseAlign(ViewerAlignMode));
+        ViewerGapMode = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseGap(ViewerGapMode));
+        ViewerPageTurnMode = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseTurn(ViewerPageTurnMode));
+        ViewerCustomGapPx = Services.Viewer.ViewerSettingsModel.NormalizeGapPx(ViewerCustomGapPx);
+    }
+}
+
+/// <summary>
+/// 文字列プロパティの寛容な読み取り(CP-SET-009 v2.0・REQ-052 破損耐性)。
+/// JSON 値が文字列なら採用、それ以外の型(数値・真偽・null)はスキップして
+/// プロパティ既定値を維持する(項目単位の既定化。ファイル全体を破損扱いにしない)。
+/// </summary>
+internal sealed class TolerantStringConverter : System.Text.Json.Serialization.JsonConverter<string>
+{
+    public override string? Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        Type typeToConvert,
+        System.Text.Json.JsonSerializerOptions options)
+    {
+        if (reader.TokenType == System.Text.Json.JsonTokenType.String)
+        {
+            return reader.GetString();
+        }
+
+        reader.Skip(); // 文字列以外は無視(既定値が残る)
+        return null;
+    }
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        string value,
+        System.Text.Json.JsonSerializerOptions options)
+        => writer.WriteStringValue(value);
+}
+
+/// <summary>customGapPx の寛容な読み取り: 整数 0〜100 のみ採用、範囲外・型不正は 0(REQ-059)。</summary>
+internal sealed class TolerantGapPxConverter : System.Text.Json.Serialization.JsonConverter<int>
+{
+    public override int Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        Type typeToConvert,
+        System.Text.Json.JsonSerializerOptions options)
+    {
+        if (reader.TokenType == System.Text.Json.JsonTokenType.Number && reader.TryGetInt32(out var value)
+            && value is >= 0 and <= 100)
+        {
+            return value;
+        }
+
+        reader.Skip(); // 範囲外・型不正は既定 0
+        return 0;
+    }
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        int value,
+        System.Text.Json.JsonSerializerOptions options)
+        => writer.WriteNumberValue(value);
+}
+
+/// <summary>bool の寛容な読み取り: 真偽値のみ採用、型不正は既定 false。</summary>
+internal sealed class TolerantBoolConverter : System.Text.Json.Serialization.JsonConverter<bool>
+{
+    public override bool Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        Type typeToConvert,
+        System.Text.Json.JsonSerializerOptions options)
+    {
+        if (reader.TokenType is System.Text.Json.JsonTokenType.True or System.Text.Json.JsonTokenType.False)
+        {
+            return reader.GetBoolean();
+        }
+
+        reader.Skip();
+        return false;
+    }
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        bool value,
+        System.Text.Json.JsonSerializerOptions options)
+        => writer.WriteBooleanValue(value);
 }

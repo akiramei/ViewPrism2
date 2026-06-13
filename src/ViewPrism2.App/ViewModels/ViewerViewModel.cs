@@ -1,67 +1,426 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Services.Viewer;
 
 namespace ViewPrism2.App.ViewModels;
 
 /// <summary>
-/// ビューアのナビゲーション ViewModel(M-UI-014、REQ-044、G-4)。
-/// Next/Prev は端で停止(ループ・例外なし。空一覧も安全 — FMEA-002)。
-/// CurrentPositionText は「n / total」。並びは呼び出し元一覧の整列結果をそのまま受け取る。
+/// ビューアの ViewModel(M-UI-014 / M-UI-018、REQ-044・§2.9、G-4/G-8)。
+/// V1: 単一画像(normal)のナビゲーション(Next/Prev は端で停止・ループや例外なし、空一覧も安全 — FMEA-002)。
+/// V2: 表示モード(normal/scroll/spread-right/spread-left)・モード別位置記憶・見開きの送り/ペアリング・
+/// スクロール位置追跡・共通表示設定の永続化。計算は M-VIEWERCORE-017(Core)のみ経由する
+/// (コードビハインドでの判定禁止 — K-AVALONIA)。
 /// </summary>
 public sealed partial class ViewerViewModel : ObservableObject
 {
     private readonly IReadOnlyList<ImageEntry> _ordered;
-    private int _index;
+    private readonly ViewerModeMemory _memory;
 
+    /// <summary>設定変更の即時永続化(REQ-059)。null=永続化しない(unit テスト等)。</summary>
+    private readonly Action<ViewerSettingsModel>? _persist;
+
+    private ViewerSettingsModel _settings;
+
+    // SHIFT 押下状態(見開きのページ送りステップ解決に使用。View 層の修飾キー検知から設定)
+    private bool _shiftHeld;
+
+    /// <summary>
+    /// V1 互換コンストラクタ(M-UI-014)。normal モード・既定表示設定・永続化なし。
+    /// 既存 CP-UI-G4 unit がこのシグネチャを使う(回帰ゼロ)。
+    /// </summary>
     public ViewerViewModel(IReadOnlyList<ImageEntry> ordered, int startIndex)
+        : this(ordered, startIndex, new ViewerSettingsModel(), persist: null)
     {
-        ArgumentNullException.ThrowIfNull(ordered);
-        _ordered = ordered;
-        _index = ordered.Count == 0 ? -1 : Math.Clamp(startIndex, 0, ordered.Count - 1);
     }
 
-    public ImageEntry? Current => _index >= 0 ? _ordered[_index] : null;
+    /// <summary>
+    /// V2 コンストラクタ(M-UI-018)。保存済み表示設定で復元し、各モードの位置記憶を起動 index で初期化する
+    /// (REQ-054: 初期値=起動時 index)。persist は設定変更の即時保存(REQ-059)。
+    /// </summary>
+    public ViewerViewModel(
+        IReadOnlyList<ImageEntry> ordered,
+        int startIndex,
+        ViewerSettingsModel settings,
+        Action<ViewerSettingsModel>? persist)
+    {
+        ArgumentNullException.ThrowIfNull(ordered);
+        ArgumentNullException.ThrowIfNull(settings);
+        _ordered = ordered;
+        _settings = settings;
+        _persist = persist;
+
+        var initial = ordered.Count == 0 ? 0 : Math.Clamp(startIndex, 0, ordered.Count - 1);
+        _memory = new ViewerModeMemory(initial);
+        _mode = ordered.Count == 0 ? ViewerMode.Normal : settings.Mode; // 復元したモード(REQ-059)
+    }
+
+    /// <summary>
+    /// i18n プロキシ(コントロールバー・エラー文言の XAML バインディング用)。
+    /// WindowService が設定する。unit テストでは null(文言不要)。
+    /// </summary>
+    public LocalizationProxy? Loc { get; set; }
+
+    /// <summary>scroll/spread の画像ロード失敗文言テンプレート(ViewerImage.ErrorTemplate へ)。</summary>
+    public string LoadErrorTemplate => Loc?.T("viewer.loadError") ?? "{fileName}";
+
+    // ---- 共通(全モード) ----
+
+    public int TotalCount => _ordered.Count;
+
+    /// <summary>現在モードの記憶 index(空一覧は -1)。</summary>
+    public int CurrentIndex => _ordered.Count == 0 ? -1 : _memory.Get(Mode);
+
+    public ImageEntry? Current => CurrentIndex >= 0 ? _ordered[CurrentIndex] : null;
 
     public string? CurrentImagePath => Current?.AbsolutePath;
 
-    /// <summary>「現在位置/総数」(REQ-044)。空一覧は「0 / 0」。</summary>
-    public string CurrentPositionText => _ordered.Count == 0
-        ? "0 / 0"
-        : string.Create(CultureInfo.InvariantCulture, $"{_index + 1} / {_ordered.Count}");
+    /// <summary>呼び出し元一覧(整列結果)。各モードビューが描画に使う。</summary>
+    public IReadOnlyList<ImageEntry> Items => _ordered;
 
-    /// <summary>ウィンドウタイトル(現在位置/総数の表示先、REQ-044)。</summary>
+    /// <summary>
+    /// 「現在位置/総数」(REQ-044)。空一覧は「0 / 0」。
+    /// 見開きはペアの表示番号「n-m / total」(単独ページ時は「n / total」)— K-DESIGN v2.0。
+    /// </summary>
+    public string CurrentPositionText
+    {
+        get
+        {
+            if (_ordered.Count == 0)
+            {
+                return "0 / 0";
+            }
+
+            if (IsSpread)
+            {
+                var pair = CurrentSpreadPair;
+                // 表示は読み順(右開き=右が先・左が後 / 左開き=左が先・右が後)で小さい表示番号を先に出す
+                var first = Direction == SpreadDirection.Right ? pair.RightIndex : pair.LeftIndex;
+                var second = Direction == SpreadDirection.Right ? pair.LeftIndex : pair.RightIndex;
+                if (first is { } f && second is { } s)
+                {
+                    return string.Create(CultureInfo.InvariantCulture, $"{f + 1}-{s + 1} / {_ordered.Count}");
+                }
+
+                var single = first ?? second ?? CurrentIndex;
+                return string.Create(CultureInfo.InvariantCulture, $"{single + 1} / {_ordered.Count}");
+            }
+
+            return string.Create(CultureInfo.InvariantCulture, $"{CurrentIndex + 1} / {_ordered.Count}");
+        }
+    }
+
     public string Title => Current is null
         ? $"ViewPrism2 — {CurrentPositionText}"
         : $"{Current.Record.FileName} — {CurrentPositionText}";
 
     public event EventHandler? CloseRequested;
 
-    /// <summary>次へ(Right / PageDown)。端で停止。</summary>
+    /// <summary>現在位置が変わったとき(View 層がスクロール追従・再描画する)。</summary>
+    public event EventHandler? CurrentIndexChanged;
+
+    // ---- モード ----
+
+    private ViewerMode _mode;
+
+    /// <summary>表示モード(REQ-054)。切替時は当該モードの記憶位置へ復元し、設定を永続化する。</summary>
+    public ViewerMode Mode
+    {
+        get => _mode;
+        set
+        {
+            if (_mode == value)
+            {
+                return;
+            }
+
+            _mode = value;
+            _settings = _settings with { Mode = value };
+            Persist();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsNormal));
+            OnPropertyChanged(nameof(IsScroll));
+            OnPropertyChanged(nameof(IsSpread));
+            OnPropertyChanged(nameof(Direction));
+            RaisePositionChanged();
+            CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public bool IsNormal => Mode == ViewerMode.Normal;
+
+    public bool IsScroll => Mode == ViewerMode.Scroll;
+
+    public bool IsSpread => Mode is ViewerMode.SpreadRight or ViewerMode.SpreadLeft;
+
+    /// <summary>見開きの開き方向(spread のときのみ意味を持つ)。</summary>
+    public SpreadDirection Direction =>
+        Mode == ViewerMode.SpreadLeft ? SpreadDirection.Left : SpreadDirection.Right;
+
+    /// <summary>現在の見開きペア(OC-9)。spread でないときも計算上は右開き基準で返す。</summary>
+    public SpreadPair CurrentSpreadPair => SpreadPairCalculator.Calculate(
+        CurrentIndex < 0 ? 0 : CurrentIndex, _ordered.Count, Direction, _settings.StartWithEmptyPage);
+
+    [RelayCommand]
+    private void SetNormalMode() => Mode = ViewerMode.Normal;
+
+    [RelayCommand]
+    private void SetScrollMode() => Mode = ViewerMode.Scroll;
+
+    [RelayCommand]
+    private void SetSpreadRightMode() => Mode = ViewerMode.SpreadRight;
+
+    [RelayCommand]
+    private void SetSpreadLeftMode() => Mode = ViewerMode.SpreadLeft;
+
+    // ---- 表示設定(REQ-058/059)。変更は即時永続化 ----
+
+    public ViewerSettingsModel Settings => _settings;
+
+    public ResizeMode ResizeMode
+    {
+        get => _settings.ResizeMode;
+        set => UpdateSettings(_settings with { ResizeMode = value });
+    }
+
+    public AlignMode AlignMode
+    {
+        get => _settings.AlignMode;
+        set => UpdateSettings(_settings with { AlignMode = value });
+    }
+
+    public GapMode GapMode
+    {
+        get => _settings.GapMode;
+        set => UpdateSettings(_settings with { GapMode = value });
+    }
+
+    public int CustomGapPx
+    {
+        get => _settings.CustomGapPx;
+        set => UpdateSettings(_settings with { CustomGapPx = ViewerSettingsModel.NormalizeGapPx(value) });
+    }
+
+    public PageTurnMode PageTurnMode
+    {
+        get => _settings.PageTurnMode;
+        set => UpdateSettings(_settings with { PageTurnMode = value });
+    }
+
+    public bool StartWithEmptyPage
+    {
+        get => _settings.StartWithEmptyPage;
+        set => UpdateSettings(_settings with { StartWithEmptyPage = value });
+    }
+
+    /// <summary>見開きの左右間/スクロールの画像間ギャップ(px)。tight=0、loose=customGapPx。</summary>
+    public double EffectiveGapPx => _settings.GapMode == GapMode.Loose ? _settings.CustomGapPx : 0;
+
+    // 設定 Flyout の選択肢(列挙値そのまま。SelectedItem に enum を直接束縛)
+    public static IReadOnlyList<ResizeMode> ResizeOptions { get; } =
+        [ResizeMode.NoResize, ResizeMode.MatchLargerHeight, ResizeMode.MatchSmallerHeight];
+
+    public static IReadOnlyList<AlignMode> AlignOptions { get; } =
+        [AlignMode.Top, AlignMode.Middle, AlignMode.Bottom];
+
+    public static IReadOnlyList<GapMode> GapOptions { get; } = [GapMode.Tight, GapMode.Loose];
+
+    public static IReadOnlyList<PageTurnMode> PageTurnOptions { get; } =
+        [PageTurnMode.DoublePage, PageTurnMode.SinglePage];
+
+    // ---- ナビゲーション ----
+
+    /// <summary>
+    /// 次へ。normal/scroll は 1 画像進む。spread は REQ-057 のステップ(SHIFT=1 / pageTurnMode)で送る。
+    /// 端で停止(ループ・例外なし)。
+    /// </summary>
     [RelayCommand]
     private void Next()
     {
-        if (_index >= 0 && _index < _ordered.Count - 1)
+        if (_ordered.Count == 0)
         {
-            _index++;
-            RaisePositionChanged();
+            return;
         }
+
+        var current = CurrentIndex;
+        int next;
+        if (IsSpread)
+        {
+            next = PageTurnCalculator.Next(current, _ordered.Count, ResolveStep(), _settings.StartWithEmptyPage);
+        }
+        else
+        {
+            next = Math.Min(current + 1, _ordered.Count - 1);
+        }
+
+        SetIndex(next);
     }
 
-    /// <summary>前へ(Left / PageUp)。端で停止。</summary>
+    /// <summary>前へ。normal/scroll は 1 画像戻る。spread は REQ-057 のステップで戻す。先頭で停止。</summary>
     [RelayCommand]
     private void Prev()
     {
-        if (_index > 0)
+        if (_ordered.Count == 0)
         {
-            _index--;
-            RaisePositionChanged();
+            return;
+        }
+
+        var current = CurrentIndex;
+        int prev = IsSpread ? PageTurnCalculator.Prev(current, ResolveStep()) : Math.Max(current - 1, 0);
+        SetIndex(prev);
+    }
+
+    /// <summary>
+    /// 矢印キー(空間キー)。spread-right では右=前へ・左=次へ(進行方向反転 — 紙の右開き本と一致)。
+    /// spread-left は右=次へ・左=前へ。normal/scroll は右=次へ・左=前へ(REQ-044 共通)。
+    /// PageDown/PageUp は論理キーのため Next/Prev を直接束縛し、本メソッドは通らない(§2.9)。
+    /// </summary>
+    [RelayCommand]
+    private void ArrowRight()
+    {
+        if (Mode == ViewerMode.SpreadRight)
+        {
+            Prev(); // 右開きで → は前へ
+        }
+        else
+        {
+            Next();
         }
     }
 
-    /// <summary>閉じる(Escape / 閉じるボタン / 画像外余白クリック — REQ-044 v1.3/CR-7)。</summary>
+    [RelayCommand]
+    private void ArrowLeft()
+    {
+        if (Mode == ViewerMode.SpreadRight)
+        {
+            Next(); // 右開きで ← は次へ
+        }
+        else
+        {
+            Prev();
+        }
+    }
+
+    /// <summary>
+    /// ページクリック(見開きのみ。表示領域を左右半分に二分した各半面)。
+    /// 進行方向側の半面(右開き=左半面 / 左開き=右半面)=次へ、反対側=前へ(REQ-057)。
+    /// isLeftHalf=true がクリックされた半面が左半面かどうか。normal/scroll では呼ばない(無操作)。
+    /// </summary>
+    public void OnPageClick(bool isLeftHalf)
+    {
+        if (!IsSpread)
+        {
+            return; // scroll/normal の余白/画像クリックはここを通らない(送らない)
+        }
+
+        var nextSideIsLeft = Direction == SpreadDirection.Right; // 右開き=左半面が次へ
+        if (isLeftHalf == nextSideIsLeft)
+        {
+            Next();
+        }
+        else
+        {
+            Prev();
+        }
+    }
+
+    /// <summary>scroll の追跡結果(OC-11)で現在位置を更新する(View 層の停止検出から呼ぶ)。</summary>
+    public void UpdateScrollPosition(IReadOnlyList<(double Top, double Height)> imageRects, double viewportHeight, double scrollOffset)
+    {
+        if (_ordered.Count == 0 || Mode != ViewerMode.Scroll)
+        {
+            return;
+        }
+
+        var index = ScrollPositionTracker.FindCurrent(imageRects, viewportHeight, scrollOffset);
+        UpdateScrollPositionByIndex(index);
+    }
+
+    /// <summary>
+    /// scroll の追跡結果(OC-11 の戻り index)で現在位置を更新する。仮想化 View は実体化コンテナの
+    /// 疎な部分集合から FindCurrent を計算し、実 item index へ写し戻したうえで本メソッドを呼ぶ
+    /// (View 層が rect→index 写像の責務を持つため。計算核 OC-11 自体は ScrollPositionTracker のまま)。
+    /// </summary>
+    public void UpdateScrollPositionByIndex(int index)
+    {
+        if (_ordered.Count == 0 || Mode != ViewerMode.Scroll)
+        {
+            return;
+        }
+
+        if (index != CurrentIndex)
+        {
+            _memory.Set(Mode, Math.Clamp(index, 0, _ordered.Count - 1));
+            RaisePositionChanged();
+            // scroll 追跡では CurrentIndexChanged を発火しない(自分が動いた結果のため、再スクロールしない)
+        }
+    }
+
+    /// <summary>SHIFT 修飾の保持状態を設定(見開きの 1 ページ送り解決。View 層の KeyDown/KeyUp から)。</summary>
+    public void SetShift(bool held) => _shiftHeld = held;
+
+    /// <summary>閉じる(Escape / 閉じるボタン / normal の画像外余白クリック — REQ-044)。</summary>
     [RelayCommand]
     private void Close() => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// 余白クリックで閉じてよいか(normal のみ。scroll/spread は無効 — REQ-054)。
+    /// View 層は normal のときだけ IsBackgroundPoint と併用してこの規則を適用する。
+    /// </summary>
+    public bool CanCloseOnBackgroundClick => Mode == ViewerMode.Normal;
+
+    /// <summary>見開きのステップ(SHIFT=1 / doublePage=2 / singlePage=1。REQ-057)。</summary>
+    private int ResolveStep()
+    {
+        if (_shiftHeld)
+        {
+            return 1;
+        }
+
+        return _settings.PageTurnMode == PageTurnMode.DoublePage ? 2 : 1;
+    }
+
+    private void SetIndex(int index)
+    {
+        var clamped = Math.Clamp(index, 0, _ordered.Count - 1);
+        if (clamped == CurrentIndex)
+        {
+            return;
+        }
+
+        _memory.Set(Mode, clamped);
+        RaisePositionChanged();
+        CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void UpdateSettings(ViewerSettingsModel updated)
+    {
+        _settings = updated;
+        Persist();
+        OnPropertyChanged(nameof(Settings));
+        OnPropertyChanged(nameof(ResizeMode));
+        OnPropertyChanged(nameof(AlignMode));
+        OnPropertyChanged(nameof(GapMode));
+        OnPropertyChanged(nameof(CustomGapPx));
+        OnPropertyChanged(nameof(PageTurnMode));
+        OnPropertyChanged(nameof(StartWithEmptyPage));
+        OnPropertyChanged(nameof(EffectiveGapPx));
+        // ペアリング・高さ統一に影響するため再描画を促す
+        RaisePositionChanged();
+    }
+
+    private void Persist() => _persist?.Invoke(_settings);
+
+    private void RaisePositionChanged()
+    {
+        OnPropertyChanged(nameof(CurrentIndex));
+        OnPropertyChanged(nameof(Current));
+        OnPropertyChanged(nameof(CurrentImagePath));
+        OnPropertyChanged(nameof(CurrentPositionText));
+        OnPropertyChanged(nameof(CurrentSpreadPair));
+        OnPropertyChanged(nameof(Title));
+    }
 
     /// <summary>
     /// 指定点が「画像外余白」か(REQ-044 v1.3/CR-7 の判定。純粋関数 — unit 検査可能)。
@@ -82,13 +441,5 @@ public sealed partial class ViewerViewModel : ObservableObject
         var left = (hostWidth - renderWidth) / 2;
         var top = (hostHeight - renderHeight) / 2;
         return x < left || x > left + renderWidth || y < top || y > top + renderHeight;
-    }
-
-    private void RaisePositionChanged()
-    {
-        OnPropertyChanged(nameof(Current));
-        OnPropertyChanged(nameof(CurrentImagePath));
-        OnPropertyChanged(nameof(CurrentPositionText));
-        OnPropertyChanged(nameof(Title));
     }
 }

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:c="using:ViewPrism2.App.Controls"
         x:Class="ViewPrism2.App.Views.ViewerWindow"
         x:DataType="vm:ViewerViewModel"
         Title="{Binding Title}"
@@ -8,32 +9,170 @@
         MinWidth="400" MinHeight="300"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- ビューア(M-UI-014、REQ-044、G-4): ウィンドウフィット(縮小のみ・拡大なし=DownOnly)。
-       キー: Right/PageDown=次、Left/PageUp=前、Escape=閉じる。端で停止。 -->
+  <!-- ビューア(M-UI-014 / M-UI-018、REQ-044・§2.9、G-4/G-8):
+       normal=ウィンドウフィット(縮小のみ) / scroll=縦連続 / spread=見開き(右/左)。
+       キー: PageDown/PageUp は論理キー(常に次へ/前へ)。矢印は空間キー(spread-right で反転)。
+       Escape=閉じる。計算は M-VIEWERCORE-017(Core)経由(コードビハインドで判定しない)。 -->
   <Window.KeyBindings>
-    <KeyBinding Gesture="Right" Command="{Binding NextCommand}" />
+    <!-- PageDown/PageUp は論理キー(方向反転しない — §2.9) -->
     <KeyBinding Gesture="PageDown" Command="{Binding NextCommand}" />
-    <KeyBinding Gesture="Left" Command="{Binding PrevCommand}" />
     <KeyBinding Gesture="PageUp" Command="{Binding PrevCommand}" />
+    <!-- 矢印は空間キー(spread-right では ViewModel 内で反転) -->
+    <KeyBinding Gesture="Right" Command="{Binding ArrowRightCommand}" />
+    <KeyBinding Gesture="Left" Command="{Binding ArrowLeftCommand}" />
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </Window.KeyBindings>
 
+  <Window.Styles>
+    <Style Selector="ToggleButton.modeToggle">
+      <Setter Property="Padding" Value="8,4" />
+    </Style>
+    <Style Selector="ToggleButton.modeToggle:checked">
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+  </Window.Styles>
+
   <DockPanel>
-    <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
-            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,1,0,0">
-      <DockPanel Margin="12,4">
-        <Button DockPanel.Dock="Right" Command="{Binding CloseCommand}" Content="✕" Padding="8,2" />
-        <Button DockPanel.Dock="Left" Command="{Binding PrevCommand}" Content="←" Padding="8,2" />
-        <Button DockPanel.Dock="Left" Command="{Binding NextCommand}" Content="→" Padding="8,2" Margin="8,0,0,0" />
-        <!-- 現在位置/総数(REQ-044) -->
-        <TextBlock Text="{Binding CurrentPositionText}" HorizontalAlignment="Center"
-                   VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+    <!-- 上部コントロールバー(K-DESIGN v2.0): モード切替・開き方向・表示設定・位置表示・閉じる -->
+    <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
+      <DockPanel Margin="12,6">
+        <!-- 右端: 位置表示+閉じる -->
+        <Button DockPanel.Dock="Right" Command="{Binding CloseCommand}"
+                Content="{Binding Loc[viewer.close]}" Padding="10,4" Margin="8,0,0,0" />
+        <TextBlock DockPanel.Dock="Right" Text="{Binding CurrentPositionText}" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="8,0" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <!-- モード切替: 排他トグル 3 連(単一/縦スクロール/見開き) -->
+          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsNormal, Mode=OneWay}"
+                        Command="{Binding SetNormalModeCommand}" Content="{Binding Loc[viewer.mode.normal]}" />
+          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsScroll, Mode=OneWay}"
+                        Command="{Binding SetScrollModeCommand}" Content="{Binding Loc[viewer.mode.scroll]}" />
+          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsSpread, Mode=OneWay}"
+                        Command="{Binding SetSpreadRightModeCommand}" Content="{Binding Loc[viewer.mode.spread]}" />
+
+          <!-- 見開き選択時のみ有効な開き方向トグル(右開き/左開き) -->
+          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSpread}"
+                      VerticalAlignment="Center">
+            <Button Command="{Binding SetSpreadRightModeCommand}"
+                    Content="{Binding Loc[viewer.openDirection.right]}" Padding="6,2" />
+            <Button Command="{Binding SetSpreadLeftModeCommand}"
+                    Content="{Binding Loc[viewer.openDirection.left]}" Padding="6,2" />
+          </StackPanel>
+
+          <!-- 表示設定=歯車ボタン→Flyout(縦並び: リサイズ/揃え/ギャップ/ページ送り/空白開始) -->
+          <Button Content="{Binding Loc[viewer.displaySettings]}" Padding="8,4">
+            <Button.Flyout>
+              <Flyout>
+                <StackPanel Spacing="8" Width="240">
+                  <TextBlock Text="{Binding Loc[viewer.resize]}" FontSize="12"
+                             Foreground="{StaticResource TextMutedBrush}" />
+                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding ResizeMode}"
+                            ItemsSource="{Binding ResizeOptions}" />
+                  <TextBlock Text="{Binding Loc[viewer.align]}" FontSize="12"
+                             Foreground="{StaticResource TextMutedBrush}" />
+                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding AlignMode}"
+                            ItemsSource="{Binding AlignOptions}" />
+                  <TextBlock Text="{Binding Loc[viewer.gap]}" FontSize="12"
+                             Foreground="{StaticResource TextMutedBrush}" />
+                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding GapMode}"
+                            ItemsSource="{Binding GapOptions}" />
+                  <TextBlock Text="{Binding Loc[viewer.gapPx]}" FontSize="12"
+                             Foreground="{StaticResource TextMutedBrush}" />
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding CustomGapPx}" Width="36"
+                               TextAlignment="Right" VerticalAlignment="Center" />
+                    <Slider Minimum="0" Maximum="100" Value="{Binding CustomGapPx}" />
+                  </DockPanel>
+                  <TextBlock Text="{Binding Loc[viewer.pageTurn]}" FontSize="12"
+                             Foreground="{StaticResource TextMutedBrush}" />
+                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding PageTurnMode}"
+                            ItemsSource="{Binding PageTurnOptions}" />
+                  <CheckBox IsChecked="{Binding StartWithEmptyPage}"
+                            Content="{Binding Loc[viewer.startWithEmptyPage]}" />
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+        </StackPanel>
       </DockPanel>
     </Border>
-    <!-- 画像外余白のクリックで閉じる(REQ-044 v1.3/CR-7 — 背景クリックは原典準拠) -->
-    <Panel x:Name="ImageHost" Background="{StaticResource AppBackgroundBrush}"
-           PointerPressed="OnBackgroundPressed">
-      <Image x:Name="ImageView" Stretch="Uniform" StretchDirection="DownOnly" Margin="8" />
+
+    <!-- 下部ナビゲーション(前へ/次へ) -->
+    <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,1,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,4" HorizontalAlignment="Center">
+        <Button Command="{Binding PrevCommand}" Content="{Binding Loc[viewer.prev]}" Padding="10,2" />
+        <Button Command="{Binding NextCommand}" Content="{Binding Loc[viewer.next]}" Padding="10,2" />
+      </StackPanel>
+    </Border>
+
+    <!-- 本体: モードごとの描画(IsVisible で切替。非表示モードのツリーは生成されない) -->
+    <Panel x:Name="ViewerBody" Focusable="True">
+      <!-- normal: ウィンドウフィット(縮小のみ)+画像外余白クリックで閉じる(REQ-044) -->
+      <Panel x:Name="NormalHost" IsVisible="{Binding IsNormal}"
+             Background="{StaticResource AppBackgroundBrush}" PointerPressed="OnNormalBackgroundPressed">
+        <Image x:Name="NormalImage" Stretch="Uniform" StretchDirection="DownOnly" Margin="8" />
+      </Panel>
+
+      <!-- scroll: 縦連続。仮想化必須(K-AVALONIA v2.0/Run2・M-UI-018 — ItemsControl 直置き禁止):
+           VirtualizingStackPanel を備えた ListBox(行リスト)を使い画面外アイテムを実体化しない。
+           選択視覚は無効(SelectionMode=AlwaysSelected を使わず・行選択枠/ハイライトをスタイルで除去)。
+           クリックは無操作(誤操作防止 — REQ-055)。標準スクロール(ホイール=OS 既定)。
+           各 ViewerImage の SourcePath は可視の間のみバインドで設定され、コンテナリサイクル時に
+           code-behind(ContainerClearing)が Release() で Bitmap を破棄しロードをキャンセルする。 -->
+      <ListBox x:Name="ScrollList" IsVisible="{Binding IsScroll}"
+               ItemsSource="{Binding Items}"
+               Background="Transparent"
+               BorderThickness="0"
+               Focusable="False"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <VirtualizingStackPanel Orientation="Vertical" />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.Styles>
+          <!-- 行選択視覚なし(行リストとしてのみ使用 — M-UI-018 scroll「選択視覚なし」) -->
+          <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+          </Style>
+          <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+          </Style>
+          <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+          </Style>
+        </ListBox.Styles>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ImageEntry">
+            <c:ViewerImage SourcePath="{Binding AbsolutePath}"
+                           ErrorTemplate="{Binding $parent[Window].((vm:ViewerViewModel)DataContext).LoadErrorTemplate}"
+                           HorizontalAlignment="Center" MinHeight="64" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <!-- spread: 2 列 Grid(1fr/1fr)。クリックは各半面全体(余白含む)で送り。空白ページは無地 -->
+      <Grid x:Name="SpreadHost" IsVisible="{Binding IsSpread}" ColumnDefinitions="*,*"
+            Background="{StaticResource AppBackgroundBrush}">
+        <Panel Grid.Column="0" x:Name="SpreadLeftHalf" Background="Transparent"
+               PointerPressed="OnSpreadLeftPressed">
+          <c:ViewerImage x:Name="SpreadLeftImage" Margin="8"
+                         ErrorTemplate="{Binding LoadErrorTemplate}" />
+        </Panel>
+        <Panel Grid.Column="1" x:Name="SpreadRightHalf" Background="Transparent"
+               PointerPressed="OnSpreadRightPressed">
+          <c:ViewerImage x:Name="SpreadRightImage" Margin="8"
+                         ErrorTemplate="{Binding LoadErrorTemplate}" />
+        </Panel>
+      </Grid>
     </Panel>
   </DockPanel>
 </Window>

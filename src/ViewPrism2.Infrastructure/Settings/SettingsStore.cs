@@ -44,7 +44,14 @@ public sealed class SettingsStore
 
             var json = File.ReadAllText(SettingsFilePath);
             var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
-            return settings ?? RecoverFromCorruption();
+            if (settings is null)
+            {
+                return RecoverFromCorruption();
+            }
+
+            // ビューア設定の列挙外文字列・null を項目単位で既定値へ正規化(REQ-059・CP-SET-009 v2.0)
+            settings.NormalizeViewerSettings();
+            return settings;
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
