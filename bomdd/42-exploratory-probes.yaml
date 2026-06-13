@@ -61,10 +61,28 @@ exploratory_probes:
     sweep_ref: "32-mbom silence_sweep: クリック判定の移動閾値・キーリピート"
     observed:
       factory-01: ~
-  # ---- v3.0 追加(loop-v3-similarity) ----
+  # ---- v3.0 追加(loop-v3-similarity)→ v3.1 で「観測のみ」から「target + 片側 Cpk」に格上げ ----
   - id: P-07
-    scenario: "実画像 1,000 枚のコレクションで類似検索を実行(初回=全件 pHash 計算+全ペア比較、2 回目=キャッシュ利用)。検索レイテンシ・進捗の体感・メモリ使用量を観測"
-    dimension: 大規模類似検索の応答性とメモリ(原典は 1,000 枚で約 1.1 秒・5,000 枚でフリーズ感の既知 UX 課題 — 2025-05-28 issue。本実装の初回計算コスト・キャッシュ効果・非同期/進捗の効きを観測。合否にしない)
+    scenario: "実画像 1,000 枚のコレクションで類似検索を実行。特性 C1=cold 初回(全件 decode+pHash 計算)を反復測定、C2=warm 再検索(キャッシュ済み)を参考測定。レイテンシ・メモリを採取"
+    dimension: 大規模類似検索の応答性とメモリ(原典は 1,000 枚で約 1.1 秒・5,000 枚でフリーズ感の既知 UX 課題 — 2025-05-28 issue)
     sweep_ref: "32-mbom silence_sweep: 大規模類似検索の応答性 / 20-spec §2.10.4"
+    # ---- 工程能力指数(Cpk)の試行(2026-06-14)----
+    capability:
+      characteristic: "C1 cold 初回検索レイテンシ(1,000 枚 decode+pHash)。fresh DB=空特徴量で反復・先頭 1 本はディスク温めとして σ から除外"
+      spec_limit: "片側 USL(上限)= 3000ms(暫定 UX 目標: 1,000 枚の類似検索 初回 ≤ 3s)"
+      index: "片側 Cpk_upper = (USL − μ) / (3σ)"
+      gate_policy: "**ゲートにしない・報告する**(少数サンプル・環境ノイズ・偽精度回避)。Cpk は『崖っぷち/不安定』の警告灯として使う(Cpk<1.33 で要注意)"
+      harness: "tests/ViewPrism2.Oracle/P07CapabilityProbe.cs(設計者側・工場非開示)。実行: 環境変数 VP_RUN_P07=1 で明示実行(通常回帰では skip)"
+      ab_use: "A/B 生産技術の判定関数。固定オラクル(正しさ)は両工場とも緑で序列化不能 → capability で序列化。**μ=速度フロンティア(A/B 選択の主指標)、Cpk=堅牢性ゲート(低 σ=安定・高 σ=GC/メモリ圧の警告)**。統合はコード結合でなく勝ち技術を K-BOM へ織り込み fresh 再製造(ずる→BOM→再走の一般化)"
     observed:
-      factory-03: ~
+      factory-04-baseline:
+        date: 2026-06-14
+        result: "C1 cold: n=5・μ=1633ms・σ=18.1ms・min1617/max1654。USL=3000ms → **Cpk_upper=25.1(capable)**。C2 warm 再検索=11.5ms(キャッシュ効果で桁違い)。メモリ=3.7MB。結果 7 件"
+        finding: |
+          ①cold 1.6s は原典 1.1s と同オーダー(SkiaSharp decode+自作 DCT×1000)。USL 3s に対し μ は 55%・σ は 1.1% と
+          極小 → Cpk は σ の小ささに支配され高く出る(決定的計算は σ が小さい)。
+          ②教訓: 決定的計算特性では Cpk はほぼ常に capable に出る → **A/B 選択の実効指標は μ(速度)**、Cpk は
+          『不安定(高 σ=GC/メモリ圧)・崖っぷち(μ≈USL)』を弾く資格ゲート。最初に置いた warm の USL=250ms は
+          Cpk=31 を出し『測る特性/上限が不適』を自己暴露 → cold を主特性に是正(能力設計そのものが学習対象)。
+          ③メモリ 3.7MB=検索は画像を保持しない(ビューア scroll のメモリ問題=FMEA-016 とは別系)。
+        carryover: "A/B を実走するなら『factory-04-baseline=A』に対し別方針工場(並列 decode・DecodeToWidth・pHash SIMD 等)=B を同ハーネスで μ 比較。5,000/10,000 枚で σ・メモリの能力が割れる帯を観測"
