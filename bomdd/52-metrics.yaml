@@ -124,8 +124,11 @@ metrics_v3:                          # loop-v3-similarity(類似検索+マージ
   nfr:
     NFR-001: "維持(評価器 unchanged)"
     NFR-002: "維持(グローバル例外ハンドラ unchanged)"
-  golden_approved: []                                # 未実施
-  golden_pending: [CP-UI-G9]                         # 類似検索/マージ/トラッシュ UI(承認者 maintainer)
+  golden_approved: [CP-UI-G9]                        # 承認(2026-06-13・maintainer 実機。機能 4 点+GF-V3-01 是正後 OK)
+  golden_pending: []                                 # なし — G4 全条件充足
+  golden_rounds: 1                                   # 第1回で機能承認、視覚所見 GF-V3-01 を設計者直接修正→同回で最終 OK
+  golden_findings_v3:
+    GF-V3-01: "既定幅でツールバーのゴミ箱ボタン見切れ → WrapPanel 折り返しで是正(MainWindow.axaml)。minor・回帰ゼロ"
   probes:
-    P-07: "未実施(1,000 枚 類似検索の応答性・メモリ。golden 実機ウォークスルーと併せて観測可)"
-  loop_v3_status: "Phase 5 設計者側受入 met(固定オラクル 24/24・blocker ずる 0/6・納品物)。golden G-9(maintainer)のみ pending"
+    P-07: "未実施(1,000 枚 類似検索の応答性・メモリ)— V4 申し送り"
+  loop_v3_status: "完了(2026-06-13)— G4 全条件充足(固定オラクル 24/24=57 facts・blocker ずる 0/6・納品物・golden G-9 承認)"

@@ -178,11 +178,18 @@ as_built_v2:
     new_dependencies: "なし(pHash は SkiaSharp 既存のピクセルアクセスで自作。ORB/OpenCV は defer)"
 
   golden_approvals_v3:
-    status: "pending — CP-UI-G9(類似検索/マージ/トラッシュ UI)承認待ち(承認者 maintainer)"
+    status: "approved — CP-UI-G9 承認(2026-06-13・maintainer 実機ウォークスルー)。機能 4 点 OK + GF-V3-01 是正後 OK"
     target: CP-UI-G9
     checklist_ref: "20-spec.md §2.6 G-9"
-    machine_verified_logic: "結果整列・空状態・マージ統合タグプレビュー・トラッシュ列挙は CP-UI-G9 トレースの unit 7 件で担保(工場 self-acceptance)。視覚・操作は maintainer 目視"
-    note: "視覚要件(類似度バッジ・マージ先/元の区別・非破壊明示・物理ファイル不変の実機確認)は maintainer の golden 承認で最終確定"
+    results:
+      - { cp_id: CP-UI-G9, date: 2026-06-13, approver: maintainer, verdict: approved, notes: "①類似検索 UI(閾値・精度モード非表示・%降順)OK ②マージ(先元区別・統合タグプレビュー・非破壊明示)OK ③トラッシュ(deleted 閲覧)OK ④物理非破壊(マージ後も元ファイル残存)OK。所見 GF-V3-01 を是正後に最終 OK" }
+    findings:
+      - id: GF-V3-01
+        severity: minor
+        observed: "メインウィンドウ既定サイズでツールバーのゴミ箱ボタンが見切れる(最大化すると見える)。V3 で類似/マージ/ゴミ箱の 3 ボタン追加により既定幅を超過"
+        fix: "ツールバーの横 StackPanel を WrapPanel に変更し、幅に収まらない分を次行へ折り返す(全ボタンが既定幅でも常に見える)。MainWindow.axaml。視覚要件のため設計者直接修正→maintainer 再確認 OK"
+        verification: "build 警告0・unit 346/346 回帰ゼロ・maintainer 実機で既定幅でもゴミ箱可視を確認"
+    machine_verified_logic: "結果整列・空状態・マージ統合タグプレビュー・トラッシュ列挙は CP-UI-G9 トレースの unit 7 件で担保(工場 self-acceptance)"
 
   charter_completion_v3:
     date: 2026-06-13
@@ -191,6 +198,6 @@ as_built_v2:
       - { criterion: "blocker ずるゼロ", evidence: "factory-04 計 6 件・blocker 0(friction 1=CHEAT-01→K-PHASH codify・minor 5。51-cheat-log V3 裁定済み)", status: met }
       - { criterion: "L3 物理差分(INV-009 実アクション初適用)", evidence: "CP-MERGE-001+S-24 でマージ前後の物理ファイル(SHA-256・mtime・集合)不変を実証=PASS", status: met }
       - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build 0 警告・unit 346/346・BOM v3.0・S-19〜24 オラクル・As-Built/cheat-log/metrics・ADR-0008", status: met }
-      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G9 — 承認者 maintainer", status: pending }
-    verdict: "Loop V3 設計者側受入 met。golden G-9(maintainer)承認で G4 クローズ予定"
+      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G9 承認(2026-06-13・maintainer 実機。機能 4 点+GF-V3-01 是正後 OK)", status: met }
+    verdict: "Loop V3 (loop-v3-similarity) 完了 — G4 全条件充足(2026-06-13 クローズ)"
     carryover_to_v4: "修復/relink(RVP-REPAIR-004=improve-on-port・pending 消費で削除統一)/ 完全削除・トラッシュ復元(RVP-STATUS-003/004)/ ORB・detailed モード(OpenCvSharp/Emgu 採用 ADR)/ criteria 条件検索 / P-07 大規模類似検索プローブ / golden 所見が出れば minor 是正"

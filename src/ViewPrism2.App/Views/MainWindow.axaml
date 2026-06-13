@@ -220,7 +220,14 @@
         <DockPanel Grid.Column="2">
           <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
             <!-- 列数セレクタは v1.3/CR-1 で撤去(列数はレスポンシブ自動算出 — REQ-041) -->
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="8">
+            <!-- v3.0/GF-V3-01: ボタン数増(類似/マージ/ゴミ箱)で既定幅では末尾が見切れたため
+                 WrapPanel に変更し、狭い時は折り返して全ボタンを常に見せる(maintainer golden 所見の是正) -->
+            <WrapPanel Orientation="Horizontal" Margin="8">
+              <WrapPanel.Styles>
+                <Style Selector="WrapPanel > :is(Control)">
+                  <Setter Property="Margin" Value="0,2,8,2" />
+                </Style>
+              </WrapPanel.Styles>
               <TextBlock Text="{Binding Loc[view.sortBy]}" VerticalAlignment="Center" FontSize="12"
                          Foreground="{StaticResource TextMutedBrush}" />
               <ComboBox ItemsSource="{Binding Browser.SortFieldOptions}"
@@ -251,7 +258,7 @@
               <Button Content="{Binding Loc[toolbar.merge]}" Command="{Binding MergeSelectedCommand}"
                       IsEnabled="{Binding CanMerge}" />
               <Button Content="{Binding Loc[toolbar.trash]}" Command="{Binding OpenTrashCommand}" />
-            </StackPanel>
+            </WrapPanel>
           </Border>
 
           <Panel x:Name="ContentHost" SizeChanged="OnContentSizeChanged">
