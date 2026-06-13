@@ -19,6 +19,9 @@ internal sealed class TempDb : IDisposable
         Images = new ImageRepository(Manager);
         Tags = new TagRepository(Manager);
         Views = new ViewRepository(Manager);
+        Features = new ImageFeatureRepository(Manager);
+        Similarities = new ImageSimilarityRepository(Manager);
+        Merges = new MergeRepository(Manager);
     }
 
     public IClock Clock { get; }
@@ -36,6 +39,12 @@ internal sealed class TempDb : IDisposable
     public TagRepository Tags { get; }
 
     public ViewRepository Views { get; }
+
+    public ImageFeatureRepository Features { get; }
+
+    public ImageSimilarityRepository Similarities { get; }
+
+    public MergeRepository Merges { get; }
 
     public void Dispose()
     {

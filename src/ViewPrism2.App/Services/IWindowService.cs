@@ -47,4 +47,19 @@ public interface IWindowService
 
     /// <summary>ビューアウィンドウ(REQ-044)。ordered は呼び出し元一覧の整列結果。</summary>
     void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex);
+
+    /// <summary>
+    /// 類似検索ウィンドウ(REQ-065、仕様 §2.10.4)。基準画像 1 枚に対し閾値で類似画像を検索する。
+    /// collectionEntries は選択中コレクションの normal 画像(結果のサムネイル表示用)。
+    /// </summary>
+    Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries);
+
+    /// <summary>
+    /// マージダイアログ(REQ-067、仕様 §2.10.5)。マージ先 1 枚・マージ元 1 枚以上。
+    /// 統合後タグプレビュー+非破壊明示。マージされたら true。
+    /// </summary>
+    Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources);
+
+    /// <summary>トラッシュ表示(REQ-067、仕様 §2.10.5)。選択中コレクションの deleted 一覧(閲覧のみ)。</summary>
+    Task ShowTrashAsync(string collectionId);
 }

@@ -244,6 +244,13 @@
               <!-- タグ編集モードトグル(REQ-046): 右パネルが詳細⇔タグ付与に切替 -->
               <ToggleButton IsChecked="{Binding IsTagEditMode}" Content="{Binding Loc[toolbar.tagEdit]}" />
               <Button Content="{Binding Loc[toolbar.refresh]}" Command="{Binding RefreshCommand}" />
+              <!-- v3.0 類似検索/マージ/トラッシュの入口(仕様 §2.10、REQ-065/067) -->
+              <Border Width="1" Background="{StaticResource BorderLineBrush}" Margin="4,2" />
+              <Button Content="{Binding Loc[toolbar.searchSimilar]}" Command="{Binding SearchSimilarCommand}"
+                      IsEnabled="{Binding CanSearchSimilar}" />
+              <Button Content="{Binding Loc[toolbar.merge]}" Command="{Binding MergeSelectedCommand}"
+                      IsEnabled="{Binding CanMerge}" />
+              <Button Content="{Binding Loc[toolbar.trash]}" Command="{Binding OpenTrashCommand}" />
             </StackPanel>
           </Border>
 

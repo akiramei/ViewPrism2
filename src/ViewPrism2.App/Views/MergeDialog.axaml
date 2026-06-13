@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:c="using:ViewPrism2.App.Controls"
+        x:Class="ViewPrism2.App.Views.MergeDialog"
+        x:DataType="vm:MergeViewModel"
+        Title="{Binding Loc[merge.title]}"
+        Width="760" Height="560"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- マージ UI(仕様 §2.10.5 / K-DESIGN v3.0): マージ先=アクセント枠+「保持」、マージ元=通常枠+「統合」。
+       統合後タグプレビュー+「物理ファイルは削除されません」注記。実行ボタンはアクセント色(非破壊)。 -->
+  <DockPanel Margin="16">
+    <!-- 下部: 非破壊注記+実行 -->
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,0,0">
+      <TextBlock Text="{Binding Loc[merge.nonDestructiveNote]}" FontSize="12"
+                 Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Content="{Binding Loc[merge.execute]}"
+                Command="{Binding ExecuteCommand}" IsEnabled="{Binding !IsExecuting}"
+                Background="{StaticResource AccentBrush}" Foreground="White" Padding="16,8" />
+      </Grid>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="*,16,*">
+      <!-- 左: マージ先/元の画像 -->
+      <DockPanel Grid.Column="0">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[merge.imagesHeader]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6" />
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Images}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MergeImageViewModel">
+                <Border Margin="0,0,0,8" Padding="8" CornerRadius="6" BorderThickness="2"
+                        BorderBrush="{StaticResource BorderLineBrush}"
+                        Classes.target="{Binding IsTarget}">
+                  <Border.Styles>
+                    <Style Selector="Border.target">
+                      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                      <Setter Property="Background" Value="#1F3B82F6" />
+                    </Style>
+                  </Border.Styles>
+                  <Grid ColumnDefinitions="Auto,12,*,Auto">
+                    <Border Grid.Column="0" Width="56" Height="56" CornerRadius="4" ClipToBounds="True">
+                      <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" />
+                    </Border>
+                    <TextBlock Grid.Column="2" Text="{Binding FileName}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <Border Grid.Column="3" VerticalAlignment="Center" CornerRadius="10" Padding="8,2"
+                            Background="{StaticResource PanelBrush}">
+                      <TextBlock Text="{Binding RoleLabel}" FontSize="11" />
+                    </Border>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+
+      <!-- 右: 統合後タグプレビュー -->
+      <DockPanel Grid.Column="2">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[merge.tagPreviewHeader]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,6" />
+        <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1" CornerRadius="6"
+                Padding="8" Background="{StaticResource PanelBrush}">
+          <Panel>
+            <TextBlock Text="{Binding Loc[merge.noTags]}" Foreground="{StaticResource TextMutedBrush}"
+                       IsVisible="{Binding !TagPreview.Count}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding TagPreview}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MergedTagPreviewViewModel">
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                    <TextBlock Grid.Column="0" Text="{Binding TagName}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding DisplayValue}"
+                               Foreground="{StaticResource TextMutedBrush}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Panel>
+        </Border>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

@@ -79,6 +79,14 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
         public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
         {
         }
+
+        public Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries)
+            => Task.CompletedTask;
+
+        public Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources)
+            => Task.FromResult(false);
+
+        public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
     }
 
     private async Task<(View View, Tag TagA, Tag TagB, HierarchyEditorViewModel Editor, Dictionary<string, Tag> TagById)> SetupAsync()

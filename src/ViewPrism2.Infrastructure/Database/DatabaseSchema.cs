@@ -105,6 +105,25 @@ public static class DatabaseSchema
             condition_value TEXT    NULL
         );
         CREATE INDEX idx_view_tag_hierarchies_view ON view_tag_hierarchies(view_id);
+
+        CREATE TABLE image_features (
+            image_id        TEXT    NOT NULL PRIMARY KEY REFERENCES images(id) ON DELETE CASCADE,
+            phash           TEXT    NULL,
+            file_size       INTEGER NULL,
+            modified_date   TEXT    NULL,
+            hash            TEXT    NULL,
+            last_calculated TEXT    NULL
+        );
+
+        CREATE TABLE image_similarity (
+            cache_key        TEXT    NOT NULL PRIMARY KEY,
+            image_id1        TEXT    NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+            image_id2        TEXT    NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+            similarity_score INTEGER NULL,
+            last_compared    TEXT    NULL
+        );
+        CREATE INDEX idx_image_similarity_image_id1 ON image_similarity(image_id1);
+        CREATE INDEX idx_image_similarity_image_id2 ON image_similarity(image_id2);
         """;
 
     /// <summary>
@@ -117,5 +136,30 @@ public static class DatabaseSchema
     [
         // v1.2: ビュー作成/編集ダイアログ=名前+説明(REQ-030 の description を views へ追加)
         new("001-views-description", "ALTER TABLE views ADD COLUMN description TEXT NULL;"),
+
+        // v3.0: 類似検索の特徴量・類似度キャッシュ(REQ-063 / 仕様 §2.10.3)。
+        // image_features(pHash 等) と image_similarity(ペア類似度キャッシュ)。両 FK→images CASCADE。
+        // 索引: idx_image_similarity_image_id1/image_id2。ORB 列は作らない(ORB defer)。
+        // LatestDdl と同値になるよう列順・索引名を揃える(CP-DB-006 スキーマ同値)。
+        new("002-similarity-tables", """
+            CREATE TABLE image_features (
+                image_id        TEXT    NOT NULL PRIMARY KEY REFERENCES images(id) ON DELETE CASCADE,
+                phash           TEXT    NULL,
+                file_size       INTEGER NULL,
+                modified_date   TEXT    NULL,
+                hash            TEXT    NULL,
+                last_calculated TEXT    NULL
+            );
+
+            CREATE TABLE image_similarity (
+                cache_key        TEXT    NOT NULL PRIMARY KEY,
+                image_id1        TEXT    NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+                image_id2        TEXT    NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+                similarity_score INTEGER NULL,
+                last_compared    TEXT    NULL
+            );
+            CREATE INDEX idx_image_similarity_image_id1 ON image_similarity(image_id1);
+            CREATE INDEX idx_image_similarity_image_id2 ON image_similarity(image_id2);
+            """),
     ];
 }

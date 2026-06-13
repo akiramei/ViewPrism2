@@ -68,6 +68,14 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
         public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
         {
         }
+
+        public Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries)
+            => Task.CompletedTask;
+
+        public Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources)
+            => Task.FromResult(false);
+
+        public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
     }
 
     private MainWindowViewModel NewShell(AppSettings settings)

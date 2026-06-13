@@ -13,6 +13,7 @@ using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Infrastructure.Database;
 using ViewPrism2.Infrastructure.I18n;
 using ViewPrism2.Infrastructure.Imaging;
@@ -125,6 +126,11 @@ public partial class App : Application
         services.AddSingleton<ITagRepository>(sp => new TagRepository(sp.GetRequiredService<DatabaseManager>()));
         services.AddSingleton<IViewRepository>(sp => new ViewRepository(sp.GetRequiredService<DatabaseManager>()));
 
+        // v3.0 類似検索/マージの永続化(M-SIMSEARCH-021 / M-MERGE-022)
+        services.AddSingleton<IImageFeatureRepository>(sp => new ImageFeatureRepository(sp.GetRequiredService<DatabaseManager>()));
+        services.AddSingleton<IImageSimilarityRepository>(sp => new ImageSimilarityRepository(sp.GetRequiredService<DatabaseManager>()));
+        services.AddSingleton<IMergeRepository>(sp => new MergeRepository(sp.GetRequiredService<DatabaseManager>()));
+
         // Core サービス(K-MVVM: シングルトン)
         services.AddSingleton<ConditionEvaluator>();
         services.AddSingleton<NodeGraphBuilder>();
@@ -133,6 +139,21 @@ public partial class App : Application
         services.AddSingleton(sp => new ImageMemoryCache(sp.GetRequiredService<IClock>()));
         services.AddSingleton(sp => new TagService(sp.GetRequiredService<ITagRepository>()));
         services.AddSingleton(sp => new ViewService(sp.GetRequiredService<IViewRepository>(), sp.GetRequiredService<IClock>()));
+
+        // v3.0 類似検索・マージ(M-PHASH-020 / M-SIMSEARCH-021 / M-MERGE-022)
+        services.AddSingleton<IPHashImageReader>(sp => new PHashImageReader(
+            sp.GetRequiredService<ILogger<PHashImageReader>>()));
+        services.AddSingleton(sp => new SimilaritySearchService(
+            sp.GetRequiredService<ISyncFolderRepository>(),
+            sp.GetRequiredService<IImageRepository>(),
+            sp.GetRequiredService<IImageFeatureRepository>(),
+            sp.GetRequiredService<IImageSimilarityRepository>(),
+            sp.GetRequiredService<IPHashImageReader>(),
+            sp.GetRequiredService<IClock>()));
+        services.AddSingleton(sp => new MergeService(
+            sp.GetRequiredService<IImageRepository>(),
+            sp.GetRequiredService<ITagRepository>(),
+            sp.GetRequiredService<IMergeRepository>()));
 
         // Infrastructure サービス
         services.AddSingleton(sp => new ScanService(

@@ -5,6 +5,7 @@ using ViewPrism2.App.Views;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Core.Services.Viewer;
 using ViewPrism2.Infrastructure.Scanning;
 using ViewPrism2.Infrastructure.Settings;
@@ -25,6 +26,8 @@ public sealed class WindowService : IWindowService
     private readonly ScanService _scan;
     private readonly RelinkService _relink;
     private readonly ImageMemoryCache _imageCache;
+    private readonly SimilaritySearchService _similaritySearch;
+    private readonly MergeService _mergeService;
     private readonly LocalizationService _localization;
     private readonly AppSettings _settings;
     private readonly SettingsStore _settingsStore;
@@ -38,6 +41,8 @@ public sealed class WindowService : IWindowService
         ScanService scan,
         RelinkService relink,
         ImageMemoryCache imageCache,
+        SimilaritySearchService similaritySearch,
+        MergeService mergeService,
         LocalizationService localization,
         AppSettings settings,
         SettingsStore settingsStore)
@@ -50,6 +55,8 @@ public sealed class WindowService : IWindowService
         _scan = scan;
         _relink = relink;
         _imageCache = imageCache;
+        _similaritySearch = similaritySearch;
+        _mergeService = mergeService;
         _localization = localization;
         _settings = settings;
         _settingsStore = settingsStore;
@@ -191,5 +198,45 @@ public sealed class WindowService : IWindowService
             model.ApplyTo(_settings);
             _settingsStore.Save(_settings);
         }
+    }
+
+    public async Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries)
+    {
+        if (Owner is null)
+        {
+            return;
+        }
+
+        var vm = new SimilarSearchViewModel(baseImage, collectionEntries, _similaritySearch, _localization, this);
+        var window = new SimilarSearchWindow { DataContext = vm };
+        await window.ShowDialog(Owner);
+    }
+
+    public async Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources)
+    {
+        if (Owner is null)
+        {
+            return false;
+        }
+
+        // 統合後タグプレビューのためタグ名を解決する(マージ計算は MergeCalculator が純粋に行う)
+        var tagById = (await _tags.GetAllAsync()).ToDictionary(t => t.Id, StringComparer.Ordinal);
+        var vm = new MergeViewModel(target, sources, tagById, _mergeService, _localization);
+        var window = new MergeDialog { DataContext = vm };
+        vm.MergeCompleted += (_, _) => window.Close(true);
+        return await window.ShowDialog<bool?>(Owner) == true;
+    }
+
+    public async Task ShowTrashAsync(string collectionId)
+    {
+        if (Owner is null)
+        {
+            return;
+        }
+
+        var vm = new TrashViewModel(collectionId, _images, _folders, _localization);
+        var window = new TrashView { DataContext = vm };
+        await vm.LoadAsync();
+        await window.ShowDialog(Owner);
     }
 }

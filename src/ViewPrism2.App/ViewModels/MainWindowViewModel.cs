@@ -344,6 +344,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task OnSelectionChangedAsync()
     {
         await Detail.SetEntryAsync(Browser.LastSelected?.Entry, _tagById);
+        OnPropertyChanged(nameof(CanSearchSimilar));
+        OnPropertyChanged(nameof(CanMerge));
         if (IsTagEditMode)
         {
             SyncTaggingSelection();
@@ -374,6 +376,68 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var ordered = Browser.SortedItems.Select(i => i.Entry).ToList();
         var index = Browser.SortedItems.ToList().FindIndex(i => ReferenceEquals(i, item));
         _windows.ShowViewer(ordered, Math.Max(0, index));
+    }
+
+    /// <summary>選択中の画像 1 枚以上選択でき、最後に選択した 1 枚を基準に類似検索する(REQ-065)。</summary>
+    public bool CanSearchSimilar => Browser.LastSelected is not null;
+
+    /// <summary>マージは 2 枚以上選択(マージ先 1+マージ元 1 以上)で活性(REQ-067)。</summary>
+    public bool CanMerge => Browser.Selection.Count >= 2;
+
+    /// <summary>
+    /// 類似画像検索(REQ-065、仕様 §2.10.4): 最後に選択した 1 枚を基準に、選択中コレクションの
+    /// normal 画像を候補として類似検索 UI を開く。検索後はマージで構成が変わり得るため再読込する。
+    /// </summary>
+    [RelayCommand]
+    private async Task SearchSimilarAsync()
+    {
+        if (Browser.LastSelected is not { } baseItem)
+        {
+            StatusMessage = _localization.T("similar.selectOne");
+            return;
+        }
+
+        await _windows.ShowSimilarSearchAsync(baseItem.Entry, _entries);
+        await ReloadAsync(); // マージで deleted 化した可能性 → グリッドを更新
+    }
+
+    /// <summary>
+    /// 複数選択からマージ(REQ-067、仕様 §2.10.5): 最後に選択した 1 枚をマージ先、残りをマージ元とする。
+    /// 2 枚未満では何もしない。マージ後はグリッドを再読込する。
+    /// </summary>
+    [RelayCommand]
+    private async Task MergeSelectedAsync()
+    {
+        var selection = Browser.Selection.ToList();
+        if (selection.Count < 2)
+        {
+            StatusMessage = _localization.T("merge.selectAtLeastTwo");
+            return;
+        }
+
+        // マージ先=最後に選択した 1 枚、マージ元=それ以外(K-DESIGN v3.0: 役割を視覚区別)
+        var target = selection[^1].Entry;
+        var sources = selection.Take(selection.Count - 1).Select(i => i.Entry).ToList();
+
+        var merged = await _windows.ShowMergeAsync(target, sources);
+        if (merged)
+        {
+            StatusMessage = _localization.T("merge.completed");
+            await ReloadAsync();
+        }
+    }
+
+    /// <summary>トラッシュ表示(REQ-067): 選択中コレクションの deleted 一覧(閲覧のみ)。</summary>
+    [RelayCommand]
+    private async Task OpenTrashAsync()
+    {
+        if (SelectedCollectionId is not { } collectionId)
+        {
+            StatusMessage = _localization.T("collection.pleaseSelectCollection");
+            return;
+        }
+
+        await _windows.ShowTrashAsync(collectionId);
     }
 
     private async Task ReloadViewListsAsync()

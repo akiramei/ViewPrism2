@@ -1,0 +1,102 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:c="using:ViewPrism2.App.Controls"
+        x:Class="ViewPrism2.App.Views.SimilarSearchWindow"
+        x:DataType="vm:SimilarSearchViewModel"
+        Title="{Binding Loc[similar.title]}"
+        Width="820" Height="600"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- 類似検索 UI(仕様 §2.10.4 / K-DESIGN v3.0): 閾値スライダー(50〜100・既定 70)+検索ボタン。
+       精度モード切替は置かない(pHash のみ)。結果はサムネイル+類似度%(右上バッジ)で降順グリッド表示。 -->
+  <DockPanel Margin="16">
+    <!-- 上部: 基準画像+閾値スライダー+検索 -->
+    <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1"
+            CornerRadius="6" Padding="12" Margin="0,0,0,12">
+      <Grid ColumnDefinitions="Auto,16,*,Auto">
+        <Border Grid.Column="0" Width="64" Height="64" CornerRadius="4" ClipToBounds="True"
+                BorderBrush="{StaticResource AccentBrush}" BorderThickness="2">
+          <c:ThumbnailImage SourcePath="{Binding BaseAbsolutePath}" Stretch="UniformToFill" />
+        </Border>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="8">
+          <TextBlock Text="{Binding BaseFileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Loc[similar.threshold]}" VerticalAlignment="Center"
+                       Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+            <Slider Width="240" Minimum="50" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                    Value="{Binding Threshold}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Threshold}" VerticalAlignment="Center" MinWidth="28" />
+            <TextBlock Text="%" VerticalAlignment="Center" />
+          </StackPanel>
+        </StackPanel>
+        <Button Grid.Column="3" VerticalAlignment="Center"
+                Content="{Binding Loc[similar.search]}"
+                Command="{Binding SearchCommand}" IsEnabled="{Binding !IsSearching}"
+                Background="{StaticResource AccentBrush}" Foreground="White" Padding="16,8" />
+      </Grid>
+    </Border>
+
+    <!-- 下部: マージ操作バー -->
+    <Border DockPanel.Dock="Bottom" Margin="0,12,0,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Content="{Binding Loc[similar.mergeSelected]}"
+                Command="{Binding MergeCommand}" IsEnabled="{Binding HasMergeSources}"
+                Background="{StaticResource AccentBrush}" Foreground="White" Padding="16,8" />
+      </Grid>
+    </Border>
+
+    <!-- 中央: 結果(進捗 / 空状態 / グリッド) -->
+    <Panel>
+      <ProgressBar IsVisible="{Binding IsSearching}" Minimum="0" Maximum="100" Value="{Binding Progress}"
+                   VerticalAlignment="Top" Height="4" />
+      <TextBlock IsVisible="{Binding IsEmpty}" Text="{Binding Loc[similar.noResults]}"
+                 Foreground="{StaticResource TextMutedBrush}"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Results}" Margin="0,8,0,0">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SimilarResultViewModel">
+              <Border Width="160" Margin="6" Padding="6" CornerRadius="6"
+                      BorderThickness="2"
+                      BorderBrush="{StaticResource BorderLineBrush}"
+                      Classes.picked="{Binding IsSelectedAsSource}">
+                <Border.Styles>
+                  <Style Selector="Border.picked">
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Background" Value="#1F3B82F6" />
+                  </Style>
+                </Border.Styles>
+                <StackPanel Spacing="4">
+                  <Panel>
+                    <Border Height="120" CornerRadius="4" ClipToBounds="True">
+                      <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" />
+                    </Border>
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="10"
+                            Padding="6,2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4">
+                      <TextBlock Text="{Binding ScoreText}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                    </Border>
+                  </Panel>
+                  <TextBlock Text="{Binding FileName}" FontSize="12" TextTrimming="CharacterEllipsis"
+                             HorizontalAlignment="Center" />
+                  <CheckBox Content="{Binding SelectLabel}"
+                            IsChecked="{Binding IsSelectedAsSource}" FontSize="12" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Panel>
+  </DockPanel>
+</Window>
