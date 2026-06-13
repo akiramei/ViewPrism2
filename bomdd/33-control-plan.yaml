@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v2-viewer(v2.0 — CP-VIEWER-014/CP-GF-015/CP-UI-G8 追加・CP-SET-009 拡張・CP-L1-SMOKE 経路深化)"
+  experiment: "loop-v3-similarity(v3.0 — CP-PHASH-016/CP-SIM-017/CP-MERGE-018/CP-MERGE-001(L3 物理差分)/CP-UI-G9 追加・CP-L1-SMOKE 経路深化)"
   layer: Control Plan
 
 # 深さの梯子(method-v1 §5): 核=unit(exact)。表面=L2 以上、知覚=G(golden+承認者)。
@@ -12,7 +12,7 @@ control_plan:
     L1: "ビルド成功+アプリ起動+主要画面表示+フィクスチャフォルダのスキャン正常系 1 本(スモーク)"
     L2: "成果物メタデータ検査(SQLite スキーマの PRAGMA 照合、サムネイル出力の寸法・形式)"
     L3: "実行時計測(NFR: Stopwatch による評価器レイテンシ)"
-    G: "承認者 maintainer による golden チェックリスト(20-spec.md §2.6 G-1〜G-8)の目視承認"
+    G: "承認者 maintainer による golden チェックリスト(20-spec.md §2.6 G-1〜G-9)の目視承認"
 
   characteristics:
     - id: CP-UTIL-005
@@ -305,7 +305,75 @@ control_plan:
         - "condition_type=NULL → 空文字列(サマリなし)"
         - "不正 JSON → 例外を投げずフォールバック表示(空文字列)"
 
-    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-8(v2.0・操作経路付き) ----
+    # ---- v3.0 追加(loop-v3-similarity) ----
+    - id: CP-PHASH-016
+      characteristic: pHash 計算とハミング距離・類似度%変換が仕様 §2.10.1-2・OC-14/15 と一致する(決定的)
+      classification: core
+      depth: unit
+      tolerance: "pHash は性質ベース(決定性・縮退の手計算値・距離関係)。類似度%変換は exact"
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-PHASH-016。合成画像フィクスチャ: 単色・既知パターン・同一内容の別ファイル・微小変化版・非類似版)"
+      oracle: pHash の決定性・縮退手計算値・距離関係+類似度%ベクタの一致
+      approver: automated
+      test_vectors:
+        - "決定性: 同一画像を 2 回計算 → 同一 16hex(OC-14)"
+        - "縮退(単色画像): 非 DC 係数が全て 0 → 中央値 0・DC 位置のみ bit=1 → 0x8000000000000000(行優先・DC=最上位)"
+        - "距離 0: 同一ピクセル内容の別ファイル(別パス・別 mtime)→ ハミング距離 0"
+        - "近傍: 同一画像の再エンコード/わずかな縮小版 → 距離が小さい(既定閾値 70=距離 10 以内に入る代表ケース)"
+        - "非近傍: 明確に異なる 2 画像 → 距離が大きい(類似度 < 50)"
+        - "ハミング距離: popcount(h1 XOR h2)。0x0…0 と 0xF…F → 64 / 同値 → 0"
+        - "類似度%変換(OC-15・exact): d=0→100, 3→94, 5→90, 7→82, 10→70, 12→62, 15→50, 20→30, 25→10, 26→10, 27→9, 40→6, 64→0。単調非増加"
+
+    - id: CP-SIM-017
+      characteristic: 類似検索エンジンと特徴量・類似度キャッシュ(無効化・正規化・スキーマ)が仕様 §2.10.3-4・OC-16/18 と一致する
+      classification: core
+      depth: "unit + L2(スキーマ)"
+      tolerance: "検索結果 id 列・キャッシュ挙動 exact。スキーマ同値(列・FK・索引)"
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-SIM-017。一時 SQLite+合成 pHash 注入)"
+      oracle: 検索結果列・キャッシュ再計算/連鎖無効化・PRAGMA スキーマの一致
+      approver: automated
+      test_vectors:
+        - "候補=normal 限定: deleted/missing/pending と基準画像自身・別コレクションを結果から除外(FMEA-022)"
+        - "閾値境界(≧): 閾値ちょうどの類似度は含む。閾値未満は除外"
+        - "降順安定: 類似度降順、同値は id 昇順。同一入力で同一出力"
+        - "キャッシュヒット: 同一ペアの 2 回目は再計算せずキャッシュ値(Load/Compute 回数で検査)"
+        - "ペア正規化: (A,B) と (B,A) が同一 cache_key={min}-{max} を指す"
+        - "内容ベース無効化: file_size/modified_date/hash の変化で特徴量再計算(FMEA-025)"
+        - "連鎖無効化: 特徴量再計算時、その画像が関与する image_similarity 行が削除される"
+        - "フィルタ先行: 非 normal はキャッシュ値があっても結果に出ない"
+        - "(L2)スキーマ: image_features/image_similarity の列・型・FK(CASCADE)・索引が新規作成 DB と一致(REQ-004)"
+
+    - id: CP-MERGE-018
+      characteristic: マージ計算・マージサービスのタグ集約・status 遷移・原子性が仕様 §2.10.5・OC-17 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-MERGE-018。一時 SQLite)"
+      oracle: 統合後タグ集合・status・エラーコード・ロールバック後 DB 状態の完全一致
+      approver: automated
+      test_vectors:
+        - "タグ union: マージ元のみのタグがマージ先へ付与される"
+        - "衝突=マージ先優先: 両方に同一 tag_id(値違い)→ マージ先の値を保持(FMEA-024)"
+        - "NULL 補完: マージ先の値が NULL/空・マージ元に値あり → マージ元値を採用"
+        - "simple union: 値なしタグは存在のみ union"
+        - "多元 id 昇順先勝ち: マージ元 2 つが同タグに異値 → id 小の非空値を採用、id 大は上書きしない"
+        - "status: マージ元 → Deleted。マージ元の image_tags は残存(削除しない)。マージ先は Normal のまま"
+        - "原子性: タグ集約の途中失敗 → 全ロールバック(マージ先タグ・マージ元 status とも変化なし)"
+        - "拒否: マージ先=マージ元 / マージ元重複 / 非 normal 指定 → ValidationError"
+
+    - id: CP-MERGE-001
+      characteristic: "マージの物理非破壊 — 操作前後でユーザー画像ファイルが不変(INV-009 実アクション初適用・L3 物理差分)"
+      classification: core
+      depth: L3
+      tolerance: "マージ前後でマージ先・マージ元の物理ファイルのバイト列(SHA-256)と LastWriteTimeUtc が完全不変。ファイルの移動・削除・新規作成が一切ない"
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-MERGE-001。一時ディレクトリに実画像ファイル+一時 SQLite。操作前後でフォルダ内全ファイルのハッシュ・mtime・一覧をスナップショット)"
+      oracle: 操作前後のファイルシステムスナップショット(ハッシュ・mtime・ファイル集合)の完全一致
+      approver: automated
+      test_vectors:
+        - "マージ実行前にマージ先・マージ元のファイル SHA-256 と mtime を記録 → MergeAsync → 再取得して不変(FMEA-023)"
+        - "フォルダ内ファイル集合がマージ前後で同一(削除・移動・新規作成なし)"
+        - "DB 上はマージ元が Deleted・タグ集約済み(論理操作は起きている=空振りでない)"
+
+    # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
     - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+グリッド(レスポンシブ列・Ctrl/SHIFT 選択)の描画と操作(G-1・v1.3)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上), oracle: 承認者の目視チェック, approver: maintainer }
@@ -316,3 +384,4 @@ control_plan:
     - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }

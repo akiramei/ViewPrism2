@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v2-viewer(v2.0 — ROUTING-V2VIEWER-001 を追加。V1 ルーティングは記録として保持)"
+  experiment: "loop-v3-similarity(v3.0 — ROUTING-V3SIMILARITY-001 を追加。V1/V2 ルーティングは記録として保持)"
   layer: Routing
 
 routing:
@@ -81,5 +81,53 @@ routing_v2:
       output: [受入ログ(CP 別の結果一覧)]
     - order: 6
       id: ROUTE2-CHEAT-REPORT
+      name: ずる報告+As-Built 情報を提出する
+      output: [cheat-report(全件), 実装サマリ(製造単位→成果物パス対応表)]
+
+# ---- v3.0(loop-v3-similarity)— 既存コードベースへの増分製造 ----
+routing_v3:
+  id: ROUTING-V3SIMILARITY-001
+  gate_g3_dryrun: "PASS(2026-06-13)— fresh エージェントに製造パッケージ(20 §2.10/30〜34/40/adr-0008+既存 src)のみ供与(41/42/原典/Oracle は非開示)し着手可否を質問: 4 単位とも着手可・**設計者質問ゼロ**。ベースライン build 警告ゼロ・test 290/290 緑も工場側で実測確認。検証候補(マイグレーション番号・タグ集約 API・キャッシュ規則・DI 配線)は全てパッケージ内で解消。ドライランの層規律指摘(pHash の SkiaSharp 依存が Core に漏れる懸念)を受け M-PHASH-020=Core 純粋計算/PHashImageReader=Infrastructure に層分離を明文化(凍結前補正)"
+  purpose: ViewPrism2 V3(類似検索 pHash+マージ)を、V1/V2 完成コードベース+改訂 BOM のみから増分製造する
+  factory_isolation: 製造装置には製造パッケージ(20-spec.md v3.0 / 30〜34 / 40 / docs/adr/)+V1/V2 完成コードベース(src/, tests/ViewPrism2.Tests)のみ供与。原典 view-prism ソース・設計対話・41 固定オラクル・42 探索プローブ・tests/ViewPrism2.Oracle は非開示
+  cheat_report: BOM/K-BOM/Control Plan から導けなかった判断は実装を止めず全件 cheat-log 形式で報告する(分類 C1〜C6)
+  regression_guard: "既存の意味論を変更しない。既存 unit テスト(290 件=v1 234+v2 56)の修正・削除は原則禁止 — 仕様改訂に伴い既存テストの期待値変更が必要だと判断した場合は当該テストを変更せず blocked とし C6 で報告する(例外: 新規 CP の新規テスト追加・新規マイグレーション追加は許可)"
+  safety_guard: "INV-009 woven 安全制約の初の実アクション(マージ)。マージは DB 上の論理操作(タグ union+status=Deleted)のみで、物理画像ファイルへの書き込み・移動・削除を一切行わない。CP-MERGE-001(L3 物理差分)が前後不変を実証する。物理ファイル操作の実装を検知したら blocked+C6"
+  steps:
+    - order: 1
+      id: ROUTE3-READ
+      name: 製造パッケージと V1/V2 コードベースを読む
+      input: [bomdd/20-spec.md(§2.10 中心), bomdd/30-ebom.yaml, bomdd/31-kbom.yaml(K-PHASH 必読), bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/40-work-order.md, docs/adr/(0008 必読), 既存 src/]
+      output: [実装計画(増分の着手順)]
+    - order: 2
+      id: ROUTE3-PHASH-CORE
+      name: pHash 計算核を製造する(unit 受入とセット)
+      input: [M-PHASH-020]
+      output: [src/ViewPrism2.Core/Services/Similarity/(PerceptualHash/HammingDistance/SimilarityScore), tests(CP-PHASH-016 全ベクタ緑)]
+    - order: 3
+      id: ROUTE3-SIMCACHE
+      name: 特徴量・類似度の永続化と検索エンジンを製造する
+      input: [M-SIMSEARCH-021]
+      output: [新規マイグレーション(image_features/image_similarity), リポジトリ 2, SimilaritySearchService, tests(CP-SIM-017 緑+CP-DB-006 スキーマ)]
+    - order: 4
+      id: ROUTE3-MERGE
+      name: マージ核+サービスを製造する(物理非破壊厳守)
+      input: [M-MERGE-022]
+      output: [MergeCalculator/MergeService, tests(CP-MERGE-018 緑+CP-MERGE-001 L3 物理差分緑)]
+    - order: 5
+      id: ROUTE3-SURFACE
+      name: "表面を製造する(K-BOM 参照必須: K-AVALONIA / K-DESIGN v3.0 追補)"
+      input: [M-UI-SIMILARITY-023]
+      output: [類似検索 UI・マージ UI・トラッシュ表示+入口, Assets/i18n に similar.*/merge.*/trash.* 追加]
+    - order: 6
+      id: ROUTE3-SELF-ACCEPTANCE
+      name: 自己受入(緑が納品条件。自己受入緑≠合格)
+      command:
+        - dotnet build ViewPrism2.sln -c Release   # 警告ゼロ(TreatWarningsAsErrors)
+        - dotnet test tests/ViewPrism2.Tests -c Release   # 既存 290+v3 新規が全緑(回帰ゼロ)
+        - "L1 スモーク: CP-L1-SMOKE v3.0 経路(類似検索→結果→マージ→トラッシュ確認+物理ファイル不変の目視)"
+      output: [受入ログ(CP 別の結果一覧)]
+    - order: 7
+      id: ROUTE3-CHEAT-REPORT
       name: ずる報告+As-Built 情報を提出する
       output: [cheat-report(全件), 実装サマリ(製造単位→成果物パス対応表)]

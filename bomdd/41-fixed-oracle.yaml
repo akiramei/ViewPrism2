@@ -1,13 +1,13 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v2-viewer(v2.0 — S-13〜S-18 追加。S-01〜S-12 は tag loop-v1-r1 凍結のまま不変=回帰検査)"
+  experiment: "loop-v3-similarity(v3.0 — S-19〜S-24 追加。S-01〜S-18 は loop-v1-r1/loop-v2-r1 凍結のまま不変=回帰検査)"
   layer: Fixed Oracle          # ★設計者のみ。製造装置に渡さない
 
 # 規律: 仕様化済み契約だけを合否に入れる。製造開始前に凍結し、収束ループ中は不変。
 # Control Plan のベクタ(工場開示)と重なるが、本オラクルは複合シナリオ+隠しケースを含む別집合。
 
 fixed_oracle:
-  frozen_since: "tag:loop-v1-r1(2026-06-11、S-01〜S-12)/ tag:loop-v2-r1(2026-06-13、S-13〜S-18 追加凍結。V2 収束ループ中は全 18 ケース不変)"
+  frozen_since: "tag:loop-v1-r1(2026-06-11、S-01〜S-12)/ tag:loop-v2-r1(2026-06-13、S-13〜S-18)/ tag:loop-v3-r1(2026-06-13、S-19〜S-24 追加凍結。V3 収束ループ中は全 24 ケース不変)"
   self_test: |
     凍結前セルフテスト: 各ケースの期待値が 20-spec.md の節番号から導出できることを設計者が逐条確認(2026-06-11 実施)。
     期待値が仕様から書けないケースは発見されなかった(全件 spec_ref 付き)。
@@ -17,6 +17,12 @@ fixed_oracle:
     (SpreadPairCalculator/PageTurnCalculator/ScrollPositionTracker/SpreadHeightCalculator/ViewerModeMemory/
     ConditionSummaryFormatter/SettingsStore)に対する追加テストとして tests/ViewPrism2.Oracle へ実装する
     (V1 と同方式 — 工場非開示)。
+    v3.0 追記(2026-06-13): S-19〜S-24 の期待値を 20-spec v3.0(G2/G2' 通過版)の §2.10 から逐条導出できることを
+    確認。pHash(S-19)は決定性・縮退の手計算値(単色=0x8000000000000000)・距離関係の性質ベース、類似度%変換
+    (S-20)は §2.10.2 の期待値ベクタ、マージ(S-23)は §2.10.5 の規則、物理非破壊(S-24)は EQ-003 のスナップショット
+    で凍結。実行治具は 32-mbom M-PHASH-020/M-SIMSEARCH-021/M-MERGE-022 の公開契約(PerceptualHash/HammingDistance/
+    SimilarityScore/SimilaritySearchService/MergeCalculator/MergeService)に対する追加テストとして tests/ViewPrism2.Oracle
+    へ実装する。S-24 は一時フォルダの実画像ファイルを操作前後でスナップショット比較(工場非開示)。
   equivalence_rules:
     - id: EQ-001
       compares: [エラーコード(ErrorCode enum), 状態遷移後の DB 行の値, 出力 id 集合(順不同), 整列出力の id 順序]
@@ -28,6 +34,11 @@ fixed_oracle:
       ignores: [バイト列・画質・メタデータの細部]
       normalization: 出力を再デコードして寸法・形式を取得
       rationale: 画質はライブラリ実装依存で仕様化していない(寸法・形式のみ契約)
+    - id: EQ-003
+      compares: [物理ファイルのバイト列(SHA-256)・LastWriteTimeUtc・フォルダ内ファイル集合]
+      ignores: [DB 上の論理状態(別途 EQ-001 で比較)・アクセス時刻]
+      normalization: 操作前後でフォルダをスナップショット(各ファイルの SHA-256・mtime・相対パス集合)して比較
+      rationale: INV-009(物理非破壊)の実証。マージ等の実アクションがユーザー画像を改変しないことを操作前後の不変で検査する(L3 物理差分)
 
   cases:
     - id: S-01
@@ -140,3 +151,41 @@ fixed_oracle:
       spec_ref: §2.6 REQ-060(e)(i18n テンプレート書式)
       equivalence_ref: EQ-001
       depth: unit
+
+    # ---- v3.0(loop-v3-similarity)— tag loop-v3-r1 で凍結 ----
+    - id: S-19
+      scenario: "pHash 決定性と距離関係: 合成画像群(単色 1 枚・既知パターン・同一内容の別ファイル A/A'・A の再エンコード微小変化 A''・非類似 B)の pHash を計算"
+      contract_expectation: "決定性=A を 2 回計算で同一 16hex。単色=非 DC 係数 0→DC 位置のみ bit1=0x8000000000000000。dist(A,A')=0(同一ピクセル内容・別パス/別 mtime)。dist(A,A'')<dist(A,B) かつ dist(A,A'')≤10(閾値 70 内)・dist(A,B)>25(類似度<10)"
+      spec_ref: §2.10.1(OC-14・ADR-0008・K-PHASH)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-20
+      scenario: "距離→類似度%変換: 距離 0,3,5,7,10,12,15,20,25,26,27,40,64 を変換し、閾値判定の境界を確認"
+      contract_expectation: "順に 100,94,90,82,70,62,50,30,10,10,9,6,0(単調非増加)。閾値 70 ⇔ 距離 10 以内(d=10→70 を含む≧判定で類似)"
+      spec_ref: §2.10.2(OC-15)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-21
+      scenario: "類似検索エンジン E2E: 1 コレクションに normal 5 枚(基準に近い 2・中間 1・遠い 2)+別コレクション 1(近い)+deleted/missing/pending 各 1(近い・キャッシュ値あり)。基準=normal 1 枚・閾値 70 で検索"
+      contract_expectation: "結果=同一コレクションの normal 候補のうち類似度≧70 のみ、類似度降順・同値 id 昇順。別コレクション・基準自身・deleted/missing/pending はキャッシュ値があっても除外(フィルタ先行)。類似度ちょうど 70 の候補は含む"
+      spec_ref: §2.10.4(OC-16・REQ-053)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-22
+      scenario: "特徴量・類似度キャッシュ: A,B の pHash を保存しペア類似度をキャッシュ → (1)B のファイル内容変化(hash 変化)で B 特徴量を再計算 → (2)A-B を再検索 → (3)画像 A を DB 削除"
+      contract_expectation: "(1)B 再計算時に B が関与する image_similarity 行(A-B 含む)が連鎖削除。(2)A-B は再計算され新値で保存。cache_key は (A,B)=(B,A)(id1<id2 正規化)で同一キーを指す。(3)A 削除で A 関与の image_features/image_similarity 行が CASCADE 削除"
+      spec_ref: §2.10.3(OC-18)
+      equivalence_ref: EQ-001
+      depth: unit〜L2
+    - id: S-23
+      scenario: "マージ E2E(タグ集約・多元・status・原子): マージ先 T(simple s / textual t=NULL / numeric n=5)+マージ元 A(t='赤', n=3, simple u)・B(t='青', simple s)。id 昇順 A<B。T へ A,B をマージし、別途タグ集約途中失敗を注入したケースも検査"
+      contract_expectation: "統合後 T のタグ: s(既存保持)・u(A から union)・t=T が NULL→A の '赤' を補完(B の '青' は上書きしない=id 昇順先勝ち)・n=T の 5 を保持(A の 3 は採用しない=マージ先優先)。A,B は status=Deleted・image_tags 残存・T は Normal。物理ファイル不変。失敗注入時=全ロールバック(T タグ・A/B status とも変化なし)"
+      spec_ref: §2.10.5(OC-17・INV-011・INV-006)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-24
+      scenario: "マージの物理非破壊(L3): 実画像ファイル 3 枚を一時フォルダに置きスキャン → 2 枚をマージ → フォルダをスナップショット比較"
+      contract_expectation: "マージ前後でフォルダ内全ファイルの SHA-256・LastWriteTimeUtc・ファイル集合が完全一致(削除・移動・新規作成なし)。一方 DB 上はマージ元が Deleted・タグ集約済み(論理操作は起きている=空振りでない)"
+      spec_ref: §2.10.5(CP-MERGE-001・INV-009)
+      equivalence_ref: EQ-003
+      depth: L3

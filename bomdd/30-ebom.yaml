@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v2-viewer(v2.0 — E-VIEWER-CALC-030 追加・E-UI-VIEWER-024 拡張・GF 是正の織り込み。v1 部品の意味論は不変)"
+  experiment: "loop-v3-similarity(v3.0 — E-PHASH-031/E-SIMSEARCH-032/E-SIMCACHE-033/E-MERGE-034/E-UI-SIMILARITY-035/E-UI-MERGE-036 追加。v1/v2 部品の意味論は不変)"
   layer: E-BOM
 
 # 規律(method-v1 §2):
@@ -185,6 +185,63 @@ ebom:
         - INV-008 欠落キーで例外を投げない(ja → キー文字列の順でフォールバック)
       acceptance_refs: [CP-I18N-010]
 
+    # ---------- v3.0 核(loop-v3-similarity) ----------
+    - id: E-PHASH-031
+      name: pHash 計算核(DCT 知覚ハッシュ・ハミング距離・類似度%変換)— v3.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-061, REQ-062]
+      kbom_refs: [K-PHASH, K-SKIA]
+      depends_on: [E-DOMAIN-001]
+      invariants:
+        - INV-012 同一ピクセル内容→同一 pHash(決定的)。距離→類似度%は単調非増加・spec 固定
+        - 純粋計算(ピクセル取得後は I/O・UI・DB 依存なし)。OC-14/OC-15 として直接呼べる公開 API
+        - レシピは仕様 §2.10.1/ADR-0008 のみ(orthonormal DCT-II・DC 除外中央値・双線形・(int)(y+0.5))
+      acceptance_refs: [CP-PHASH-016]
+
+    - id: E-SIMSEARCH-032
+      name: 類似検索エンジン(候補=normal 限定・閾値・降順安定・キャッシュ協調)— v3.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-064]
+      kbom_refs: []
+      depends_on: [E-PHASH-031, E-SIMCACHE-033, E-DOMAIN-001]
+      invariants:
+        - 候補は status=normal のみ(基準画像・他 status を除外)。フィルタはキャッシュ参照に先行(仕様 §2.10.4)
+        - 同一コレクション内(REQ-053)。閾値以上(≧)を類似度降順・同値 id 昇順で安定
+        - 検索は UI をブロックしない(非同期・進捗通知可)
+      acceptance_refs: [CP-SIM-017]
+
+    - id: E-SIMCACHE-033
+      name: 特徴量・類似度の永続化と無効化(image_features / image_similarity)— v3.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-063]
+      kbom_refs: [K-SQLITE]
+      depends_on: [E-DB-010, E-PHASH-031]
+      graph_edges:
+        owner: E-SIMCACHE-033
+        consumers: [E-SIMSEARCH-032, E-MERGE-034]
+      invariants:
+        - ペアは id1<id2 正規化・cache_key={id1}-{id2}(モード接尾辞なし)。(A,B)=(B,A)
+        - 無効化は内容ベースのみ(file_size/modified_date/hash 変化で再計算)。時間失効は不採用
+        - 特徴量再計算時はその画像が関与する image_similarity 行を連鎖削除する
+        - 画像削除時は FK CASCADE で両テーブルの関連行を削除
+      acceptance_refs: [CP-SIM-017, CP-DB-006]
+
+    - id: E-MERGE-034
+      name: マージ計算+マージサービス(タグ union・マージ先優先・status=deleted・原子・物理非破壊)— v3.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-066]
+      kbom_refs: []
+      depends_on: [E-DOMAIN-001, E-TAGSVC-008, E-DB-010, E-SIMCACHE-033]
+      invariants:
+        - INV-011 タグ union・衝突=マージ先優先(マージ先 NULL/空ならマージ元値)・多元 id 昇順先勝ち・simple は存在 union
+        - マージ元 status=deleted の論理操作のみ。image_tags は削除しない。全工程は原子(失敗時全ロールバック・INV-006)
+        - INV-009 物理画像ファイルを移動・削除・変更しない(L3 物理差分 CP-MERGE-001 で実証)
+      acceptance_refs: [CP-MERGE-018, CP-MERGE-001]
+
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
       name: サムネイル生成サービス
@@ -311,8 +368,36 @@ ebom:
       depends_on: []
       graph_edges:
         owner: E-DESIGN-028
-        consumers: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
+        consumers: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036]
       acceptance_refs: [CP-UI-G1]
+
+    # ---------- v3.0 表面(loop-v3-similarity) ----------
+    - id: E-UI-SIMILARITY-035
+      name: 類似検索 UI(起動・閾値スライダー・精度モード非表示・結果一覧(類似度%降順)・進捗・空状態)— v3.0 新設
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-065, REQ-064]
+      external_source_ref: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-SIMSEARCH-032, E-UI-GRID-022, E-THUMB-020]
+      invariants:
+        - 照合は pHash のみ。simple/detailed(精度モード)の選択 UI を出さない(仕様 §2.10.4)
+        - 結果整列・選択・空状態のロジックは ViewModel に置き unit 検査可能にする
+      acceptance_refs: [CP-UI-G9]
+
+    - id: E-UI-MERGE-036
+      name: マージ UI(マージ先/元選択・統合タグプレビュー・非破壊明示)+マージ元 deleted の最小トラッシュ表示 — v3.0 新設
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-067, REQ-066]
+      external_source_ref: "原典 ImageMergeModal/TrashModal(仕様 §2.10.5)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-MERGE-034, E-UI-SIMILARITY-035, E-THUMB-020]
+      invariants:
+        - 実行前にマージ先・元・統合後タグのプレビューと「物理ファイルは削除されない」旨を明示
+        - トラッシュは選択中コレクションの deleted 一覧+件数のみ(復元/完全削除なし — 仕様 §2.10.5)
+        - マージ実行は E-MERGE-034 の原子 API のみ経由(UI 側でタグ操作を再実装しない)
+      acceptance_refs: [CP-UI-G9]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
 nfr_targets:

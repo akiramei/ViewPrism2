@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v2-viewer(v2.0 — K-AVALONIA/K-DESIGN にビューア拡張の追補。事前ずる列挙(2026-06-13 クリーンエージェント 65 項目)で慣習分散が確認された次元を固定)"
+  experiment: "loop-v3-similarity(v3.0 — K-PHASH 新設・K-SKIA にピクセルアクセス追補・K-DESIGN に類似検索/マージ UI 追補。pHash の決定性に関わる技術判断を固定)"
   layer: K-BOM
 
 # 製造装置が参照する外部/設計知識。K-BOM に無い判断で埋めた箇所は CHEAT として報告対象。
@@ -35,10 +35,33 @@ kbom:
       - "GIF/WebP/BMP も SKBitmap.Decode で先頭フレームがデコードされる。アニメーション対応は不要"
       - "EXIF Orientation は適用しない(仕様 §4 で宣言済み。SKCodec の origin を無視してよい)"
       - "SKBitmap/SKImage/SKData は IDisposable。using で確実に破棄(ネイティブメモリ)"
+      # ---- v3.0 追補(pHash のピクセル取得) ----
+      - "(v3.0) pHash 用ピクセル取得: 32×32 への縮小は bitmap.Resize(new SKImageInfo(32,32, SKColorType.Bgra8888, SKAlphaType.Unpremul), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None))。**SKFilterMode.Linear(双線形)を明示**(決定性 — ADR-0008)。Mipmap は使わない(品質揺れ回避)"
+      - "(v3.0) ピクセル読み出しは GetPixel(x,y) のループではなく、resized.GetPixelSpan()(または GetPixels ポインタ)で一括取得し BGRA 各バイトから輝度を計算する(GetPixel は遅く 1024px で実用外)。アルファは無視"
+      - "(v3.0) pHash は描画系と独立(Image.Source へは渡さない)。SKBitmap は using で破棄。SkiaSharp 版差で縮小結果が変わり得るため版は exact ピン(3.119.4)— pHash 値の決定性は版に紐づく(S-19 系の再凍結判断は版更新時)"
     risk_if_implicit: |
       フィットの丸め方式・最小 1px・拡大禁止を規定しないと工場ごとに寸法が 1px ずれて L2 検査が不安定になる。
       Dispose 漏れはネイティブメモリリーク(大量サムネイル生成でクラッシュ)。
-    source_reference: "https://learn.microsoft.com/dotnet/api/skiasharp / ADR-0004"
+      v3.0: リサイズ補間方式(双線形)を明示しないと工場ごとに pHash が変わり固定オラクル(S-19)が不安定になる。
+    source_reference: "https://learn.microsoft.com/dotnet/api/skiasharp / ADR-0004 / ADR-0008"
+
+  - id: K-PHASH
+    category: algorithm_convention
+    subject: 知覚ハッシュ(DCT-pHash)・ハミング距離・類似度%変換の実装規約
+    managed_knowledge:
+      - "pHash レシピ(仕様 §2.10.1/ADR-0008 を実装規約化): ①32×32 双線形グレースケール(輝度 y=0.299R+0.587G+0.114B を (int)(y+0.5) で 8bit 化。.NET 既定 Math.Round は ToEven=銀行丸めなので使わない) ②orthonormal 2 次元 DCT-II ③左上 8×8=64 係数 ④DC[0,0] を除く 63 係数の中央値 m ⑤各係数 c に bit=(c>m)?1:0 を行優先で 64bit ⑥最上位ビットから 16hex 小文字"
+      - "2 次元 DCT-II は**行方向→列方向の 2 パス**(各 1 次元 DCT を行列に適用)で O(N^3)。直接 4 重ループ(O(N^4))にしない。N=32"
+      - "1 次元 DCT-II(orthonormal): X[k] = α(k)·Σ_{n=0..N-1} x[n]·cos(π(2n+1)k/(2N))、α(0)=√(1/N)、α(k>0)=√(2/N)。**cos 値は (n,k) ごとに事前計算した固定 double[N,N] テーブル**を使う(毎回 Math.Cos を呼ばない=性能+決定性)"
+      - "中央値: 63 要素(DC 除外)を昇順ソートし中央(31 番目、0 起点)を m とする。偶数個でないので平均を取る分岐は不要。c==m は bit=0(>判定)"
+      - "ハミング距離: ulong xor=h1^h2; popcount(System.Numerics.BitOperations.PopCount(xor))。0〜64"
+      - "類似度%変換(仕様 §2.10.2): ブレークポイント (0,100)(5,90)(10,70)(15,50)(20,30)(25,10)(64,0)。区間線形 raw=s_lo+(s_hi-s_lo)*(d-d_lo)/(d_hi-d_lo)、sim=(int)Math.Floor(raw+0.5)、[0,100] クランプ。期待値: d=0→100,3→94,5→90,7→82,10→70,12→62,15→50,20→30,25→10,26→10,27→9,40→6,64→0"
+      - "公開 API は純粋計算(OC-14: byte[] or ピクセル → 16hex / ulong、OC-15: int 距離 → int %)。DB・SkiaSharp デコード・UI に依存しない関数として Core に置き、固定オラクル(S-19/S-20)が直接呼ぶ"
+      - "16hex は小文字・64bit を上位から。原典 sharp 実装とのビット一致は不要(CPOL-103 adapter)。当方レシピを正準として S-19 系で凍結"
+    risk_if_implicit: |
+      補間方式・グレースケール丸め(ToEven 罠)・DCT 正規化/符号規約・cos の事前計算・中央値の DC 除外を
+      固定しないと、工場ごとに pHash 値がぶれて固定オラクル(S-19)が不安定になり、決定性(INV-012)が崩れる。
+      2D DCT を O(N^4) で書くと 32×32 でも無駄に重い(2 パスで O(N^3))。
+    source_reference: "ADR-0008 / 仕様 §2.10.1-2 / 原典 phash-utils.ts・similarity-evaluator.ts(工場非開示)"
 
   - id: K-AVALONIA
     category: external_tool_convention
@@ -141,5 +164,10 @@ kbom:
       - "(v2.0) ビューア位置表示: normal/scroll=「n / total」、見開き=「n-m / total」(1 起点の表示番号。単独ページ時は n / total)"
       - "(v2.0) 空白ページ(見開き): 背景と同系の無地。枠・アイコン・文言を置かない(仕様 §2.9)"
       - "(v2.0) scroll の未ロードプレースホルダ: パネル背景色+小スピナー。寸法不明時の仮高さは 300px(ロード後に実寸へ)"
-    risk_if_implicit: "工場が『自然な寸法・配色』を独自に埋め、golden 承認のたびに微妙なズレの指摘往復が発生する(BomDD Loop3/4 の実証どおり)。v2.0: コントロールバー形態・モードアイコン・選択強調は事前ずる列挙(#19-27)で慣習分散を確認済み — 固定して golden 往復を抑止する。"
+      # ---- v3.0 追補(類似検索・マージ UI) ----
+      - "(v3.0) 類似検索 UI: モーダルダイアログ。上部に閾値スライダー(50〜100・整数・現在値数値表示・既定 70)+検索ボタン。精度モード切替は置かない(pHash のみ — 仕様 §2.10.4)。結果は各画像をサムネイル+類似度%(右上バッジ、アクセント色)で類似度降順グリッド表示。検索中は進捗バー、0 件は空状態(中央テキスト弱色)"
+      - "(v3.0) マージ UI: 類似検索結果または複数選択から起動。マージ先 1 枚を明示強調(アクセント枠+『保持』ラベル)、マージ元は通常枠(『統合』ラベル)。実行前プレビュー領域に統合後タグ一覧と『物理ファイルは削除されません(DB 上の統合のみ)』の注記(テキスト弱色)。実行ボタンは危険色でなくアクセント色(非破壊のため)"
+      - "(v3.0) トラッシュ表示: deleted 画像の一覧(サムネイル+ファイル名・件数ヘッダ)。閲覧のみ(復元/完全削除ボタンは置かない — 後続ループ)。空時は『ゴミ箱は空です』(テキスト弱色)"
+      - "(v3.0) 類似検索/マージの入口: グリッドの選択コンテキスト(右クリックメニューまたはツールバー)に『類似画像を検索』『マージ』。アイコンは PathIcon+StreamGeometry(類似=重なる 2 円/マージ=2→1 の矢印)"
+    risk_if_implicit: "工場が『自然な寸法・配色』を独自に埋め、golden 承認のたびに微妙なズレの指摘往復が発生する(BomDD Loop3/4 の実証どおり)。v2.0: コントロールバー形態・モードアイコン・選択強調は事前ずる列挙(#19-27)で慣習分散を確認済み — 固定して golden 往復を抑止する。v3.0: マージ先/元の視覚区別・非破壊の明示・類似度バッジは golden G-9 の往復を抑止するため固定。"
     source_reference: "ADR-0001 / 原典 UI(Tailwind 系の慣用値を踏襲)"

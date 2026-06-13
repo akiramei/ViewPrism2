@@ -61,3 +61,10 @@ exploratory_probes:
     sweep_ref: "32-mbom silence_sweep: クリック判定の移動閾値・キーリピート"
     observed:
       factory-01: ~
+  # ---- v3.0 追加(loop-v3-similarity) ----
+  - id: P-07
+    scenario: "実画像 1,000 枚のコレクションで類似検索を実行(初回=全件 pHash 計算+全ペア比較、2 回目=キャッシュ利用)。検索レイテンシ・進捗の体感・メモリ使用量を観測"
+    dimension: 大規模類似検索の応答性とメモリ(原典は 1,000 枚で約 1.1 秒・5,000 枚でフリーズ感の既知 UX 課題 — 2025-05-28 issue。本実装の初回計算コスト・キャッシュ効果・非同期/進捗の効きを観測。合否にしない)
+    sweep_ref: "32-mbom silence_sweep: 大規模類似検索の応答性 / 20-spec §2.10.4"
+    observed:
+      factory-03: ~
