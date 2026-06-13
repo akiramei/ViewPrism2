@@ -133,19 +133,36 @@ as_built_v2:
   cheat_log_ref: bomdd/51-cheat-log.md(V2 セクション・計 14・blocker 0)
   metrics_ref: bomdd/52-metrics.yaml(metrics_v2)
 
-  # golden 承認(CP-UI-G8 新設+G-1/G-6 の v2.0 追加項。AUDIT-303 形式)— 承認者 maintainer の実機目視待ち
+  # golden 承認(CP-UI-G8 新設+G-1/G-6 の v2.0 追加項。AUDIT-303 形式)
+  # 第1回判定: 承認者 maintainer 実機目視(2026-06-13)。CP-UI-G8 承認(所見1)・G-1/G-6 は一部 NG → 収束 Run3 へ
   golden_approvals_v2:
-    status: pending
-    pending: [CP-UI-G8, "CP-UI-G1(GF-02 行選択視覚)", "CP-UI-G6(GF-01 ダイアログ高さ/GF-03 家アイコン/GF-04 パレット選択強調+ボタン文言/GF-05 条件サマリ整形)"]
-    note: "ビューア拡張(モード切替・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)と GF 是正は実機目視でのみ判定可。アプリ起動は設計者が補助、承認は maintainer"
+    status: "approved — CP-UI-G8/G1/G6 全承認(2026-06-13 第2回。GF-01/02/V2-01 を Run3 で是正後 maintainer OK)"
+    results_round2:
+      - { cp_id: CP-UI-G1, date: 2026-06-13, approver: maintainer, verdict: approved, notes: "GF-02 是正確認: ホバーはセルのみ淡く反応し行は無反応(エクスプローラー特大アイコン同等)。クリック選択もセルの枠+バッジのみ・行背景なし" }
+      - { cp_id: CP-UI-G6, date: 2026-06-13, approver: maintainer, verdict: approved, notes: "GF-01 是正確認: タグ作成ダイアログは最初から固定サイズ・候補値追加でも伸びず(固定 140px リスト内部スクロール)。GF-03/04/05 は第1回承認済み" }
+      - { cp_id: CP-UI-G8, date: 2026-06-13, approver: maintainer, verdict: approved, notes: "GF-V2-01 是正確認: コントロールバーが単一/縦スクロール/右開き/左開きの 4 ボタン・active が filled で現在モード=方向が一目瞭然(view-prism 準拠)。第1回の機能承認と併せ確定" }
+    results_round1:
+      - { cp_id: CP-UI-G8, date: 2026-06-13, approver: maintainer, verdict: approved, notes: "単一/縦スクロール/見開き/右開き/左開き/永続性 すべて OK。所見(minor): 右開き/左開き選択時に現在どちらかの視覚表示がなく分かりにくい(方向トグルの選択状態表示)→ GF-V2-01 として Run3 で是正" }
+      - { cp_id: CP-UI-G1, date: 2026-06-13, approver: maintainer, verdict: rejected, notes: "GF-02 NG: グリッドのセル選択で背景色が変化(行単位に見える)。要求は枠+バッジのみ。静的スタイルは枠のみだが実機で選択背景が残る → Run3 で確実に除去" }
+      - { cp_id: CP-UI-G6, date: 2026-06-13, approver: maintainer, verdict: rejected, notes: "GF-01 NG: タグ作成ダイアログの高さが固定に見えない(外側 ScrollViewer が全体を包み候補値リストのみスクロールになっていない)。GF-03 家アイコン OK・GF-04 パレット選択強調+ボタン文言 OK・GF-05 条件サマリ整形 OK → GF-01 のみ Run3 で是正" }
+    diagnosis:
+      GF-01: "TagEditorWindow は Height=640/CanResize=False で窓は固定だが、全コンテンツが外側 ScrollViewer 内。意図(候補値リストのみ内部スクロール・他は固定・保存/キャンセル下端固定)に反する。修正(Run3 適用): 外側 ScrollViewer 廃止→DockPanel(ボタン下端固定)+SizeToContent=Height+ValuesList のみ MaxHeight 内部スクロール"
+      GF-02: "実機の真因はホバー(:pointerover)で行が反応すること(maintainer 第2報・エクスプローラー特大アイコン比較)。cellFrame.selected は枠のみで静的には正だが、Fluent テーマの :pointerover/:selected が行 ListBoxItem のテンプレート部品(PART_ContentPresenter)に背景を適用(テンプレート定義値より Style が高優先)。修正(Run3 適用=A 経路): (1)OnCellPressed で e.Handled=true(行選択バブリング抑止) (2)アプリスコープの :pointerover/:selected /template/ ContentPresenter#PART_ContentPresenter スタイルで Background=Transparent 上書き。ホバー・選択はセルのみ反応"
+      GF-V2-01: "見開きの開き方向トグル(右開き/左開きの 2 ボタン)に選択状態の視覚がなく現在方向が不明(Run1 CHEAT-05・maintainer G-8 所見)。修正(Run3 適用): view-prism 準拠でコントロールバーを単一/縦スクロール/右開き/左開きの上位 4 トグルに再構成(『見開き』抽象廃止=仕様 ViewerMode 4 値に一致)、active な 1 つだけ filled(アクセント背景+白文字)で一目瞭然"
+    gf02_design_decision:
+      date: 2026-06-13
+      decision: "A(スタイルパッチ=行リスト維持+行選択視覚の確実な無効化)を GF-02 正式是正として採用。B(ItemsRepeater+UniformGridLayout で『行』を撤廃する真のアイコンビュー)は別 ECO/技術スパイクへ分離(承認者 maintainer 裁定)"
+      rationale: "maintainer 指摘: 画像グリッドに『行』概念は本来不要で B が抽象として理想。ただし Avalonia.Controls.ItemsRepeater は Avalonia 12 でコア非同梱の別パッケージ(12.0.0・retired/archived after 12.0)で 12.0.4 本体に公開型なし。GF-02 是正と同ランで BOM 昇格は事故リスク大。行リストは FMEA-013 回避の実績ある既定。→ A で承認を取り、B はスパイク先行で実証してから昇格(K-AVALONIA に明文化済み)"
+    verification_constraint: "GF-01/02/V2-01 は視覚要件。工場・設計者ともヘッドレスでは目視確認不可 → 最終検証は maintainer の golden 再承認(Run3 ビルド後)= 2026-06-13 全 OK で充足"
+    note: "ビューア機能(G-8)+表示視覚 3 点(GF-01/02/V2-01)とも承認済み"
 
-  # G4 受入判定(Loop V2)— golden を除き充足
+  # G4 受入判定(Loop V2)— 全条件充足(2026-06-13 クローズ)
   charter_completion_v2:
     date: 2026-06-13
     definition_check:
-      - { criterion: "V2 固定オラクル全通過+V1 回帰ゼロ", evidence: "S-01〜18 全 31 facts PASS(loop-v2-r1)。V1 S-01〜12 回帰ゼロ", status: met }
+      - { criterion: "V2 固定オラクル全通過+V1 回帰ゼロ", evidence: "S-01〜18 全 31 facts PASS(loop-v2-r1)。V1 S-01〜12 回帰ゼロ。Run3 後も 290/290・31/31 維持", status: met }
       - { criterion: "blocker ずるゼロ", evidence: "V2 計 14 件・blocker 0(friction 2=CHEAT-03 は Run2 で解消/位置追跡結線・minor 12。51-cheat-log V2 裁定済み)", status: met }
       - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build 警告 0・unit 290/290・BOM v2.0・S-13〜18 オラクル・As-Built/cheat-log/metrics(本記録)", status: met }
-      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G8/G1(GF-02)/G6(GF-01/03/04/05)", status: "pending(承認者 maintainer)" }
-    verdict: "Loop V2 — 設計者側受入(固定オラクル+ずる監査+納品物)充足。golden 承認待ちで G4 未確定"
-    carryover_to_v3: "タグ制御モード(viewer-spec §5・2026-06-13 defer)/ RVP-REPAIR-004(improve-on-port)・005(pHash-only)/ RVP-MERGE-002(マージ先優先)/ P-06 操作感プローブ / golden 所見が出れば minor(モードアイコン PathIcon 厳密化等)"
+      - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G8/G1/G6 全承認(承認者 maintainer、2026-06-13。GF-01/02/V2-01 を Run3 是正後 OK)", status: met }
+    verdict: "Loop V2 (loop-v2-viewer) 完了 — G4 全条件充足(2026-06-13)"
+    carryover_to_v3: "タグ制御モード(viewer-spec §5・2026-06-13 defer)/ RVP-REPAIR-004(improve-on-port)・005(pHash-only)/ RVP-MERGE-002(マージ先優先)/ P-06 操作感プローブ / golden 所見が出れば minor(モードアイコン PathIcon 厳密化等)/ **ItemsRepeater 採用可否スパイク → 真のアイコンビュー(行概念撤廃)への移行(GF-02 の B 経路。Avalonia 12 で ItemsRepeater が retired 別パッケージのため要実証 — 31-kbom K-AVALONIA 注記)**"

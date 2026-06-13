@@ -110,7 +110,23 @@ V2 は 2 ラン収束。Run1(factory-02)= 全 4 単位の製造、Run2(factory-0
 |---|---|---|
 | **scroll 非仮想化(R1-03)** | 設計側+製造側の両面 | M-UI-018 は段階読み込みを指定していたが、K-AVALONIA のグリッド仮想化罠(FMEA-013)がビューア scroll へ明示適用されていなかった(設計側の沈黙)。一方で工場が指定された読み込みウィンドウを実装しなかった(製造側)。**P-05 観測駆動で BOM へ仮想化必須を明文化 → fresh re-run で是正**。BomDD の「測定 → BOM 補正 → fresh 再製造」収束が機能した実例 |
 
+## Run3(golden 駆動の視覚是正 — 設計者直接修正)2026-06-13 追記
+
+golden 第1回判定(承認者 maintainer)で CP-UI-G8 承認・CP-UI-G1/G6 が GF-01/GF-02 で NG、加えて G-8 所見 GF-V2-01(方向トグルの選択状態不明)。
+**裁定: 設計者直接修正(maintainer 選択)** — GF-01/02/V2-01 は視覚要件で、隔離工場も設計者もヘッドレスでは目視確認不可。fresh 工場では「一見正しいが実機で失敗」を再生産しがちなため、設計者が直接是正し最終検証は maintainer の golden 再承認とした。
+
+| 項目 | 真因 | 是正 |
+|---|---|---|
+| GF-01(ダイアログ伸長) | 外側 ScrollViewer が全体を包む+ValuesList MaxHeight=0→140 の伸びに SizeToContent=Height が追従 | 外側 ScrollViewer 廃止→DockPanel(ボタン下端固定)。ValuesList を固定 Height=140(最初から固定サイズ・候補追加はリスト内部スクロールのみ・窓不変) |
+| GF-02(行が hover/選択で反応) | Fluent テーマの :pointerover/:selected が行 ListBoxItem のテンプレート部品に背景適用(テンプレート定義値より Style 高優先)+セルクリックが行選択へバブル | (1)OnCellPressed で e.Handled=true (2)アプリスコープ :pointerover/:selected /template/ ContentPresenter スタイルで透明化 (3)セル単位 cellFrame:pointerover に淡い 8% アクセント(エクスプローラー同様セルのみ反応) |
+| GF-V2-01(方向不明) | 見開き+方向サブトグルで現在方向が不明瞭 | view-prism 準拠の上位 4 ボタン(単一/縦スクロール/右開き/左開き)へ再構成(『見開き』抽象廃止=仕様 ViewerMode 4 値一致)・active を filled |
+
+**設計判断(GF-02 の A/B)**: B(ItemsRepeater+UniformGridLayout で『行』撤廃の真のアイコンビュー)が抽象として理想だが、Avalonia.Controls.ItemsRepeater は Avalonia 12 でコア非同梱・retired 別パッケージ(maintainer 確認)。→ A(行リスト維持+選択視覚の確実な無効化)で承認を取り、B は採用可否スパイクとして V3 申し送り(31-kbom K-AVALONIA / 50-as-built carryover)。
+**事実訂正**: 設計 AI が当初「ItemsRepeater は Avalonia コアの慣用手段」と述べたのは誤り。maintainer がソース(NuGet/GitHub)で retired 別パッケージと確認・訂正。K-AVALONIA に注記済み。
+
+golden 再判定(第2回・2026-06-13): Run3 是正後 **CP-UI-G8/G1/G6 全承認**(50-as-built golden_approvals_v2 results_round2)。回帰: build 警告 0・unit 290/290・凍結オラクル 31/31 維持。
+
 ## V2 凍結オラクルとの関係
-固定オラクル S-01〜S-18 は Run2 後・Phase 5 受入で **全 31 facts PASS**(S-01〜12 は loop-v1-r1、S-13〜18 は loop-v2-r1 で凍結。ともに不変)。
+固定オラクル S-01〜S-18 は Run2 後・Phase 5 受入・**Run3 後**とも **全 31 facts PASS**(S-01〜12 は loop-v1-r1、S-13〜18 は loop-v2-r1 で凍結。ともに不変)。
 V2 のずるも全件 **表面(仮想化方式・UI 形態・アイコン・i18n)と実装定数**に集中し、核(計算核 M-VIEWERCORE-017)の挙動乖離はゼロ。
 唯一の品質欠陥(R1-03 scroll メモリ)も計算核でなく表示機構の問題で、P-05 観測 → BOM 強化 → Run2 で構造的に解消。core の挙動は凍結オラクルが退行ゼロを確認した。
