@@ -86,3 +86,39 @@ exploratory_probes:
           Cpk=31 を出し『測る特性/上限が不適』を自己暴露 → cold を主特性に是正(能力設計そのものが学習対象)。
           ③メモリ 3.7MB=検索は画像を保持しない(ビューア scroll のメモリ問題=FMEA-016 とは別系)。
         carryover: "A/B を実走するなら『factory-04-baseline=A』に対し別方針工場(並列 decode・DecodeToWidth・pHash SIMD 等)=B を同ハーネスで μ 比較。5,000/10,000 枚で σ・メモリの能力が割れる帯を観測"
+  # ---- v3.1 実 A/B 生産技術(2026-06-14): P-07 の carryover を実走 ----
+  - id: P-08
+    scenario: "decode 戦略の実 A/B。同一最終レシピ(32×32 双線形→PerceptualHash)で **decode 経路だけ**異なる 2 工場を、代表ワークロード(大判 JPEG 写真)で μ 対決。factory-A=PHashImageReader(SKBitmap.Decode フル解像度→Resize)/ factory-B=PHashImageReaderScaledDecode(SKCodec scaled-decode 早期縮小)。factory-B は別エージェント(Codex)が隔離製造=真の別工場"
+    dimension: "A/B 生産技術(select/synthesize/defer/tension の実走)。μ=選択の主レバー・Cpk=安定性の番兵・固定オラクルは序列化不能を capability で序列化"
+    sweep_ref: "P-07 carryover(DecodeToWidth 早期縮小)/ capability-discipline.md §A/B / 20-spec §2.10.4"
+    harness: "tests/ViewPrism2.Oracle/ABDecodeStrategyProbe.cs(設計者側・工場非開示)。同等性ゲート(両工場 EQ-RANK)=常時実行 / μ 対決=VP_RUN_AB=1 で明示実行(~11s)"
+    correctness_gate:
+      contract: "EQ-RANK(順位等価・threshold 非依存): 近傍=同一構造の JPEG 再エンコードが無関係より厳密に上位。絶対閾値メンバーシップ(threshold:70)は factory-04 固有較正=this-build なので緩め(threshold:1)て純粋順位で検査"
+      workload: "代表サイズ 1280×960(factory-B の早期縮小が実際に engage する大きさ。64px 極小では engage せず B の本質挙動を試せない)"
+      result: "**両工場とも緑**(factory-A/factory-B とも近傍 3 枚が無関係 5 枚より厳密上位)。回帰: 既存オラクル 59/59 緑(S-19b 単色含む)"
+    observed:
+      ab-decode-strategy:
+        date: 2026-06-14
+        workload: "40 photos 2000×1500 jpeg q85 / batch=全40枚 pHash / n=5(ABBA・warmup 除外)/ USL=1600ms(40ms/枚)"
+        factory_A_full_decode: "μ=506.2ms σ=12.3 min=492/max=522 Cpk=29.5"
+        factory_B_scaled_decode: "μ=80.4ms σ=5.1 min=75/max=87 Cpk=98.6"
+        result: "**SPEEDUP μ_A/μ_B = 6.29×**(10.6ms/枚 改善)。correctness null_A=0/null_B=0(両工場全枚数で有効 hash)。adapter drift = A↔B ハミング平均 16.6・max 28 / 64bit(値は大きく異なるが順位は保存=CPOL-103 preserve_with_adapter の実証)。stability guard: σ_B=5.1 < σ_A=12.3 で B はむしろ安定(σ 崩壊なし)"
+        finding: |
+          ①factory-B は早期縮小で decode 画素を桁で削る(2000×1500=3M px → JPEG DCT スケール ~1/8 で ~250×188 へ縮小デコード後に
+          32×32 へ)。フル解像度 decode→縮小(factory-A)に対し 6.29× 高速・σ も小。**μ=選択の主レバー**(P-07 の方法論的発見)が実証された。
+          ②Cpk は両工場とも巨大(σ 小=決定的計算)で序列化に無力 → 予告どおり **Cpk は『B が σ を膨らませていないか』の番兵**として
+          機能(σ_B<σ_A で健全)。番兵としてのみ価値があるという P-07 教訓が A/B で確認された。
+          ③adapter drift 16.6/64 が大きいことが重要: 早期縮小は**異なる画素を標本化**するため絶対 pHash 値・絶対距離は移動する。
+          よって絶対閾値は工場間で非可搬で、**横断契約は順位ベース(EQ-RANK)でなければならない** → step 1 の cross-factory/this-build
+          分離(絶対閾値を this-build へ寄せた判断)の正しさが A/B で裏取りされた。
+        verdict: |
+          **select = factory-B 技術を採用**。Pareto 支配(μ・tail・安定性すべて B 優位)・correctness 保存・**tension なし**
+          (latency 勝因が memory/安定性を犠牲にせず、むしろ両方改善 — 早期縮小は decode 画素自体が減るため)。
+          synthesize 不要: factory-B は factory-A のパイプライン(最終 32×32 双線形・DCT レシピ)を完全内包し decode 前段だけ
+          差し替えた上位互換で、A 側に B が欠く勝ち技術は無い(A の優位は『現行 this-build 値の incumbency』のみで技術ではない)。
+        codify: "K-SKIA v3.1 へ『pHash 用 decode は SKCodec scaled-decode で早期縮小』を勝ち技術として織り込み(コード結合でなく fresh 再製造で native 採用)"
+        adoption_note: |
+          本ループ(V3)は G4 クローズ済みのため、ここでは『判定+K-BOM lesson 化』までを scope とする(remembered task に忠実)。
+          実 production 採用(App の DI を factory-B へ差し替え)は別判断: this-build pHash 値が drift 16.6 で移動するため
+          S-19b(単色)等 this-build オラクルの再凍結が要る。単色は scale 不変で S-19b は緑のままだが、再製造時に再凍結を確認すること。
+        limits: "EQ-RANK は再エンコード/品質違いの近傍で検証。crop/rotate 等の広い近傍種に対する scaled-decode の頑健性は未網羅(factory-A も同様に未網羅)→ defer(将来 near-dup 種拡張時に両工場で再評価)"

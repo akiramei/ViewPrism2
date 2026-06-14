@@ -130,5 +130,26 @@ metrics_v3:                          # loop-v3-similarity(類似検索+マージ
   golden_findings_v3:
     GF-V3-01: "既定幅でツールバーのゴミ箱ボタン見切れ → WrapPanel 折り返しで是正(MainWindow.axaml)。minor・回帰ゼロ"
   probes:
-    P-07: "未実施(1,000 枚 類似検索の応答性・メモリ)— V4 申し送り"
+    P-07: "実施(2026-06-14・factory-04 baseline: C1 cold μ=1633ms σ=18.1 Cpk=25.1 / warm 11.5ms / mem 3.7MB)— 42-exploratory-probes"
+    P-08: "実施(2026-06-14・実 A/B decode 戦略)— 42-exploratory-probes"
   loop_v3_status: "完了(2026-06-13)— G4 全条件充足(固定オラクル 24/24=57 facts・blocker ずる 0/6・納品物・golden G-9 承認)"
+
+# ── 生産技術: 実 A/B(P-08・capability-discipline §A/B 実証)──
+ab_experiment_v3:
+  id: P-08
+  date: 2026-06-14
+  hypothesis: "factory-B=DecodeToWidth 早期縮小(SKCodec scaled-decode)が大判写真の pHash レイテンシ(μ)を下げる"
+  isolation: "factory-A=Claude 既存(PHashImageReader)/ factory-B=Codex 隔離製造(PHashImageReaderScaledDecode)。同一最終レシピ・decode 経路のみ差。別エージェント製造で A/B 隔離純度を上げた"
+  correctness_gate: "EQ-RANK(順位等価・threshold 非依存)を代表サイズ 1280×960 で両工場検証 → 両緑。既存オラクル回帰 59/59(S-19b 単色含む)"
+  duel:
+    workload: "40 photos 2000×1500 jpeg q85 / batch=全40枚 pHash / n=5 ABBA / USL=1600ms"
+    factory_A: "μ=506.2ms σ=12.3 Cpk=29.5"
+    factory_B: "μ=80.4ms σ=5.1 Cpk=98.6"
+    speedup: "6.29×(10.6ms/枚 改善)"
+    adapter_drift: "A↔B ハミング平均 16.6・max 28 / 64bit(値不一致・順位保存=CPOL-103 実証)"
+  verdict: "select=factory-B 技術採用(Pareto 支配・tension なし・synthesize 不要)。codify→K-SKIA v3.1。production 採用は this-build 値再凍結を伴う別判断として deferred"
+  methodology_validated:
+    - "μ=A/B 選択の主レバー(Cpk は両工場巨大で序列化不能・μ だけが 6.29× を出した)"
+    - "Cpk=安定性の番兵として機能(σ_B<σ_A=synthesize 健全を確認)"
+    - "adapter drift 大 → 横断契約を順位ベースにした step 1 の判断を裏取り"
+  harness: "tests/ViewPrism2.Oracle/ABDecodeStrategyProbe.cs(VP_RUN_AB=1)"

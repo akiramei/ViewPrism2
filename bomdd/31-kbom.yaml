@@ -39,6 +39,10 @@ kbom:
       - "(v3.0) pHash 用ピクセル取得: 32×32 への縮小は bitmap.Resize(new SKImageInfo(32,32, SKColorType.Bgra8888, SKAlphaType.Unpremul), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None))。**SKFilterMode.Linear(双線形)を明示**(決定性 — ADR-0008)。Mipmap は使わない(品質揺れ回避)"
       - "(v3.0) ピクセル読み出しは GetPixel(x,y) のループではなく、resized.GetPixelSpan()(または GetPixels ポインタ)で一括取得し BGRA 各バイトから輝度を計算する(GetPixel は遅く 1024px で実用外)。アルファは無視"
       - "(v3.0) pHash は描画系と独立(Image.Source へは渡さない)。SKBitmap は using で破棄。SkiaSharp 版差で縮小結果が変わり得るため版は exact ピン(3.119.4)— pHash 値の決定性は版に紐づく(S-19 系の再凍結判断は版更新時)"
+      # ---- v3.1 追補(実 A/B P-08 で実証した勝ち技術 — DecodeToWidth 早期縮小) ----
+      - "(v3.1/P-08 勝ち技術) pHash 用 decode は **SKCodec の scaled-decode で早期縮小**する(フル解像度 decode→Resize を避ける)。手順: SKCodec.Create(stream)(null=壊れた画像)→ 長辺を ~64px 付近へ落とすスケール(各辺 32px 未満にしない・拡大しない)を codec.GetScaledDimensions(scale) で codec サポート寸法に丸め → new SKBitmap(SKImageInfo(w,h,Bgra8888,Unpremul)) へ codec.GetPixels(info, bmp.GetPixels())(結果 Success/IncompleteInput 以外は null)→ **最終 32×32 双線形(Linear/Mipmap None)は v3.0 と完全一致**で PerceptualHash.Compute(GetPixelSpan())。codec が各辺 32 を割る寸法しか返さない場合は原寸 decode へ安全側フォールバック"
+      - "(v3.1) 効果(P-08 実測 2026-06-14・2000×1500 jpeg 40 枚): フル解像度 decode(factory-A μ=506ms)に対し早期縮小(factory-B μ=80ms)で **6.29× 高速・σ も縮小(5.1<12.3)**。JPEG は DCT ベースで 1/2,1/4,1/8 を native サポートし decode 画素を桁で削るため。大判写真ほど効く(64px 以下の小画像は原寸 decode に縮退=オーバーヘッドのみ)"
+      - "(v3.1/重要) 早期縮小は**異なる画素を標本化**するため pHash の絶対値・絶対距離が移動する(P-08: A↔B ハミング平均 16.6/64)。CPOL-103(preserve_with_adapter)で許容されるが、**順位等価(EQ-RANK)は保存される=検索体験は同等**。よって採用時は this-build の固定 pHash 値(S-19b 単色 0x8000… 等)を再凍結すること(単色は scale 不変で不動だが再製造時に確認)。横断オラクルは絶対値でなく順位で書く(step 1 で分離済み)"
     risk_if_implicit: |
       フィットの丸め方式・最小 1px・拡大禁止を規定しないと工場ごとに寸法が 1px ずれて L2 検査が不安定になる。
       Dispose 漏れはネイティブメモリリーク(大量サムネイル生成でクラッシュ)。

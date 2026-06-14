@@ -59,6 +59,22 @@
 - これで factory-B(DecodeToWidth 等)は、自前の pHash 値で S-19b を満たさなくても、**S-19/S-25(順位等価)を
   満たせば正しいと判定できる**。A/B の正しさゲートが工場間で共有可能になった(= A/B 着手の前提が整った)。
 
+### 実 A/B 第1回 結果(2026-06-14・P-08)— 方法論の実証
+前提(上記の同等性契約分離)が整ったので、単一仮説 **factory-B=DecodeToWidth 早期縮小**(SKCodec scaled-decode)を
+別エージェント(Codex)に隔離製造させ、同ハーネスで μ 対決した(tests/ViewPrism2.Oracle/ABDecodeStrategyProbe.cs)。
+
+- **correctness(必須条件)**: 代表サイズ 1280×960 で **両工場とも EQ-RANK 緑**(threshold 緩めの純粋順位)。回帰 59/59。
+- **μ 対決(40 枚 2000×1500 jpeg)**: factory-A μ=506ms / **factory-B μ=80ms = 6.29× 高速**。σ_B=5.1<σ_A=12.3。
+- **判定 = `select`(factory-B 技術を採用)**: Pareto 支配(μ・tail・安定性すべて B 優位)・correctness 保存・**tension なし**
+  (早期縮小は decode 画素自体が減るため latency 勝因が memory/安定性を犠牲にしない)。synthesize 不要(B は A の上位互換)。
+- **codify**: K-SKIA v3.1 に勝ち技術を織り込み(コード結合でなく fresh 再製造で native 採用)。production 採用は this-build 値の
+  再凍結を伴う別判断として残す。
+
+**方法論が裏取りされた 3 点**:
+1. **μ=A/B 選択の主レバー**(P-07 の発見)— Cpk は両工場巨大で序列化不能、μ だけが 6.29× の差を出した。
+2. **Cpk=安定性の番兵**(警告灯)としてのみ機能 — σ_B<σ_A を見て「B が σ を膨らませていない(synthesize 健全)」を確認できた。
+3. **adapter drift 16.6/64 が大きい**ことが、横断契約を**順位ベース**にした step 1 の判断を裏付けた(早期縮小は絶対値を動かすが順位は保存)。
+
 ## 統合 = コード結合でなく知識結合(BomDD 中核思想)
 
 普通の A/B は「A と B のコードを見比べて手でマージ」。BomDD でそれをやると工場隔離・再現性・決定性が壊れる。だから:
@@ -99,6 +115,7 @@ Knowledge:        K-BOM lessons extracted / fresh-regeneration pass / uplift ove
 
 **観測される uplift**: V1(多ラン+ECO)→ V2(収束 1 回)→ V3(first-pass green・質問ゼロ)。BOM/K-BOM の知識蓄積 + G2/G3 ゲートが製造前に欠落を潰した効果と説明できる = **Factory Loop Capability の実測上昇**。
 **正直な限界**: n=1/ループでは Factory Capability の "ばらつき"(同一 BOM への複数工場の σ=真の Factory Cpk)は測れない。既存データで取れるのは**ループ横断トレンド**であって**ループ内分散ではない**。真の Factory Cpk はマルチファクトリ実走が要る。
+**P-08 で初のマルチファクトリ実走**: 同一特性(decode 経路)に対し 2 工場(A=Claude / B=Codex 隔離製造)を立て、同等性契約+μ で序列化できた。これは「複数工場の能力比較」という Factory Capability の核心動作の最小実証(各 n=1 だが工場数=2)。Codex を別工場として使うと **A/B の隔離純度が上がる**(同一 BOM・異なる製造装置)ことも確認。
 
 ## 導入方針(まとめ)
 
