@@ -180,6 +180,32 @@ public sealed class CpUiRepairViewModelTests
         Assert.Equal(ImageStatus.Normal, relinked.Status);
     }
 
+    [Fact]
+    public async Task GF_V4_01_missing選択でhash拡張子サイズを自動事前入力し候補を手入力なしで発見()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        // 移動/リネームで normal として再登録された同一内容ファイル(同一 hash・拡張子・サイズ)
+        await db.Images.AddAsync(Image("missing-1", "sub/old.jpg", ImageStatus.Missing, hash: "H1", size: 100));
+        await db.Images.AddAsync(Image("moved-1", "moved.jpg", ImageStatus.Normal, hash: "H1", size: 100));
+        await db.Images.AddAsync(Image("other-1", "other.jpg", ImageStatus.Normal, hash: "HX", size: 999));
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        // missing を選択 → criteria が自動で事前入力される(view-prism 既定 useHash/useExtension/useSize)
+        vm.SelectedMissing = vm.MissingImages.First();
+        Assert.Equal("H1", vm.HashInput);
+        Assert.Equal(".jpg", vm.ExtensionInput);
+        Assert.Equal("100", vm.SizeMinInput);
+        Assert.Equal("100", vm.SizeMaxInput);
+        Assert.Null(vm.NameContainsInput);    // ファイル名はリネームで変わるため OFF
+
+        // 候補が手入力なしで自動発見される(同一 hash+拡張子+サイズの normal=moved-1。other-1 は除外)
+        await vm.RefreshCandidatesAsync();
+        Assert.Single(vm.Candidates);
+        Assert.Equal("moved-1", vm.Candidates.First().Candidate.ImageId);
+    }
+
     // ---- トラッシュ復元/完全削除(TrashViewModel 拡張) ----
 
     private static TrashViewModel CreateTrashVm(TempDb db, IFilePresenceProbe probe)

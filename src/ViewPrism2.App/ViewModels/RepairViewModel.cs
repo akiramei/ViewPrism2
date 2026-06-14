@@ -181,10 +181,47 @@ public sealed partial class RepairViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedMissingChanged(MissingImageViewModel? value) => _ = LoadCandidatesAsync(value);
+    partial void OnSelectedMissingChanged(MissingImageViewModel? value)
+    {
+        // GF-V4-01(golden 是正・view-prism 自動修復準拠 §2.11.5): 選択した missing 自身の
+        // hash+拡張子+サイズを criteria へ事前入力し、再リンク候補を**手入力なしで自動探索**する
+        // (view-prism RepairModal の既定 useHash/useExtension/useSize。filename/mtime はリネームで変わるため OFF)。
+        PrefillCriteriaFromMissing(value);
+        _ = LoadCandidatesAsync(value);
+    }
 
     /// <summary>選択中の missing に対する候補を再読込する(UI バインド・unit 検査の双方から呼べる awaitable 経路)。</summary>
     public Task RefreshCandidatesAsync() => LoadCandidatesAsync(SelectedMissing);
+
+    /// <summary>
+    /// 選択した missing の属性(hash・拡張子・サイズ)を criteria フォームへ事前入力する(GF-V4-01)。
+    /// これにより LoadCandidatesAsync が同一 hash+拡張子+サイズの pending/normal を自動的に候補化する
+    /// (ユーザーが SHA-256 を手入力する必要がなくなる)。null 選択でフォームをクリアする。
+    /// </summary>
+    private void PrefillCriteriaFromMissing(MissingImageViewModel? value)
+    {
+        if (value is null)
+        {
+            HashInput = null;
+            NameContainsInput = null;
+            ExtensionInput = null;
+            MtimeFromInput = null;
+            MtimeToInput = null;
+            SizeMinInput = null;
+            SizeMaxInput = null;
+            return;
+        }
+
+        var record = value.Record;
+        HashInput = record.Hash;                                   // 同一内容=同一ハッシュ(移動/リネームの中核条件)
+        ExtensionInput = System.IO.Path.GetExtension(record.FileName); // ".png"(CriteriaMatcher が先頭ドット正規化)
+        var size = record.FileSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        SizeMinInput = size;
+        SizeMaxInput = size;
+        NameContainsInput = null;                                  // ファイル名はリネームで変わるため既定 OFF
+        MtimeFromInput = null;
+        MtimeToInput = null;
+    }
 
     partial void OnHashInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
 
