@@ -170,3 +170,29 @@ p09_production_adoption:
     tests_project: "346→347(+1: adapter 世代交代の無効化)"
     oracle_project: "59→63(+3 ThisBuildGoldenTests・+1 latency guard。skip 2=AB duel/P-07)"
   lesson: "adapter version を成果物に刻む+freshness に adapter 一致を足す+横断/this-build の 2 層オラクルで、値が動く性能改善を golden/cache を壊さず投入できる。A/B 生産技術が production 接続まで一周した"
+
+metrics_v4:                          # loop-v4-repair-lifecycle(修復ライフサイクル)
+  factory_runs: 1                    # factory-05 単一ラン(収束再製造なし=first-pass)
+  fixed_oracle:
+    cases: 30                        # S-01〜S-30(S-26〜S-30 を loop-v4-r1 で凍結)+S-19b
+    facts: 73                        # Oracle テスト数(S-26〜30=新規 10・S-01〜25 回帰)+2 skip(AB duel/P-07)
+    after_run1: "73 PASS+2 skip(S-26〜30 受入・S-01〜25 回帰ゼロ。工場非開示・設計者が納品後に実装)"
+  self_acceptance:
+    tests_final: 378                 # tests/ViewPrism2.Tests(既存 347+v4 新規 31)
+    build_warnings: 0                # TreatWarningsAsErrors
+    regressions_across_runs: 0       # 既存 347 改変ゼロ(追加のみ)
+  interventions: 0                   # 製造中の設計者介入ゼロ(G3 ドライランで質問ゼロ確認・隔離維持)
+  cheats:
+    total: 5
+    blocker: 0
+    friction: 1                      # CHEAT-01(ITagRepository optional 注入=隔離境界の張力。accept・production は必ず注入)
+    minor: 4
+    distribution: "核(CriteriaMatcher/TrashService/RelinkService)の挙動乖離 0。隔離境界(optional 注入)・既存 interface 拡張・UI 表面・実装定数(拡張子正規化)に集中"
+  convergence:
+    trigger: "なし(収束再製造不要)。自己受入緑+固定オラクル S-26〜30 全通過で 1 ラン受入"
+  schema_change: "なし(V4 はスキーマ変更不要=既存列+既存 FK CASCADE。migration 追加ゼロ。S-05 マイグレーション同値は不変で緑=回帰)"
+  inv009_second_real_action: "復元・完全削除(マージに続く INV-009 実アクション第 2 弾)。CP-TRASH-001+S-26(L3 物理差分)で復元・完全削除前後の物理ファイル不変を実証 → PASS"
+  factory_loop_capability_note: "G3 で V3 の層規律ギャップ(SkiaSharp が Core に漏れる)を BOM に事前内包したため**凍結前補正ゼロ**(V3 は補正 1 件)。first-pass green・質問ゼロ・blocker ゼロを V3 に続き達成 = Factory Loop Capability の uplift 継続"
+  golden_approved: []                                # G-10 承認待ち
+  golden_pending: [CP-UI-G10]                        # maintainer 実機ウォークスルー
+  loop_v4_status: "製造+固定オラクル受入 完了(2026-06-14)。golden G-10 承認待ち → 承認で G4 クローズ"

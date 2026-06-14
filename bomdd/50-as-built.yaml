@@ -201,3 +201,31 @@ as_built_v2:
       - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G9 承認(2026-06-13・maintainer 実機。機能 4 点+GF-V3-01 是正後 OK)", status: met }
     verdict: "Loop V3 (loop-v3-similarity) 完了 — G4 全条件充足(2026-06-13 クローズ)"
     carryover_to_v4: "修復/relink(RVP-REPAIR-004=improve-on-port・pending 消費で削除統一)/ 完全削除・トラッシュ復元(RVP-STATUS-003/004)/ ORB・detailed モード(OpenCvSharp/Emgu 採用 ADR)/ criteria 条件検索 / P-07 大規模類似検索プローブ / golden 所見が出れば minor 是正"
+
+# ── Loop V4(loop-v4-repair-lifecycle)As-Built ──
+as_built_v4:
+  date: 2026-06-14
+  bom_version: "v4.0(BOM 改訂 commit 群: G0 30eeb4d / G1 a3450eb / G2 e96a876 / G3 72d25fb / オラクル凍結 2db7eba=tag loop-v4-r1。製造 499f24e)"
+  factory:
+    id: factory-05
+    model: claude(隔離サブエージェント・fresh)
+    supplied_package: [bomdd/20-spec.md(v4.0 §2.11), bomdd/30-ebom.yaml, bomdd/31-kbom.yaml, bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/34-routing.yaml(routing_v4), bomdd/40-work-order.md, docs/adr/, "既存 src/ + tests/ViewPrism2.Tests(V1〜V3 完成品)"]
+    not_supplied: [原典 view-prism ソース, 設計対話, bomdd/41-fixed-oracle.yaml, bomdd/42-exploratory-probes.yaml, tests/ViewPrism2.Oracle/]
+    runs:
+      - { run: 1, commit: 499f24e, scope: "M-CRITERIA-024 / M-RELINK-025 / M-TRASH-026 / M-UI-REPAIR-027(first-pass・収束再製造なし)" }
+  artifacts:
+    new_core: "src/ViewPrism2.Core/Services/Repair/(SearchCriteria, CriteriaMatcher, CriteriaSearchService, TrashService, TrashTransition, IFilePresenceProbe)"
+    new_infra: "src/ViewPrism2.Infrastructure/Imaging/FilePresenceProbe.cs / RelinkService.cs 拡張"
+    new_app: "Views/RepairWindow.axaml(.cs) / ViewModels/RepairViewModel.cs / TrashView+TrashViewModel 拡張 / i18n repair.*・trash.restore.*・trash.purge.*"
+    schema_change: "なし(既存列+既存 FK CASCADE で完結。migration 追加ゼロ)"
+  inspection_results:
+    build: "Release・警告 0(TreatWarningsAsErrors)"
+    unit_l2_l3: "tests/ViewPrism2.Tests 378/378 PASS(既存 347+v4 新規 31: CP-CRITERIA-019/CP-RELINK-019/CP-TRASH-020/CP-TRASH-001/CP-UI-G10)"
+    fixed_oracle: "tests/ViewPrism2.Oracle 73 PASS+2 skip(S-26〜S-30=新規 10 件・S-01〜S-25 回帰ゼロ・tag loop-v4-r1)。設計者が製造納品後に実装した独立ゲート"
+    l3_physical_diff: "S-26+CP-TRASH-001 で復元・完全削除前後の物理ファイル(SHA-256・mtime・集合)不変を実証=PASS(INV-009 第 2 の実アクション)"
+    inv009_second_real_action: "復元(status 遷移)・完全削除(images 行削除+FK CASCADE)とも物理ファイル非破壊。S-26 L3 で前後不変"
+  interventions: 0
+  cheats: { total: 5, blocker: 0, friction: 1, minor: 4, ref: "bomdd/51-cheat-log.md(V4 全 accept)" }
+  golden_pending: [CP-UI-G10]   # maintainer 実機ウォークスルー待ち
+  verdict: "製造+固定オラクル受入 完了(blocker 0・回帰ゼロ)。**golden G-10 承認待ち** → 承認で G4 クローズ"
+  metrics_ref: bomdd/52-metrics.yaml(metrics_v4)
