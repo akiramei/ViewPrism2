@@ -226,6 +226,22 @@ as_built_v4:
     inv009_second_real_action: "復元(status 遷移)・完全削除(images 行削除+FK CASCADE)とも物理ファイル非破壊。S-26 L3 で前後不変"
   interventions: 0
   cheats: { total: 5, blocker: 0, friction: 1, minor: 4, ref: "bomdd/51-cheat-log.md(V4 全 accept)" }
-  golden_pending: [CP-UI-G10]   # maintainer 実機ウォークスルー待ち
-  verdict: "製造+固定オラクル受入 完了(blocker 0・回帰ゼロ)。**golden G-10 承認待ち** → 承認で G4 クローズ"
+  golden_approved: [CP-UI-G10]   # 2026-06-14 maintainer 実機ウォークスルー(GF-V4-01/02/03 是正後 OK)
+  golden_rounds: 2               # 第1回(復元/完全削除/物理非破壊 OK・criteria/relink 所見)→ GF 是正 → 第2回 OK
+  golden_findings_v4:
+    GF-V4-01: "missing 選択時に候補が自動探索されず SHA-256 手入力が必要 → hash+拡張子+サイズを自動事前入力し候補を手入力なし提示(原典 RepairModal 準拠)。commit e002a6d"
+    GF-V4-02: "読み込み失敗(ファイル不在)の normal が修復一覧に出ない(再スキャン未実施)→ 修復を開く時にスキャンして検出(missing 化+リネーム後 pending 登録)+『N 件(M 件自動修復可能)』表示。commit 2a50dd8"
+    GF-V4-03: "再リンク候補(Pending∪Normal)は出るのに左検索(Normal 限定)が空の不一致 → 検索を再リンク候補探索に統一(原典 AdvancedRepairModal 準拠)。commit 5c52827"
+  deferred_to_v5:
+    - "元パスに戻した missing 自身の自動復元(missing→normal)— 原典にも無い improve-on-port"
+    - "コレクション展開時のグリッド自動検出(現状は修復を開いた時のスキャンで代替)"
+    - "再エンコード(hash 変化)の pHash 類似修復(原典 AdvancedRepairModal の類似検索モード相当)"
+  definition_check:
+    - { criterion: "V4 固定オラクル全通過+V1/V2/V3 回帰ゼロ", evidence: "S-26〜S-30=新規10+S-01〜S-25 回帰=Oracle 73 PASS+2 skip(tag loop-v4-r1)", status: met }
+    - { criterion: "blocker ずるゼロ", evidence: "factory-05 計 5 件・blocker 0(friction 1=ITagRepository optional 注入・minor 4。51-cheat-log V4 全 accept)", status: met }
+    - { criterion: "L3 物理差分(INV-009 第2の実アクション=復元/完全削除)", evidence: "CP-TRASH-001+S-26 で復元・完全削除前後の物理ファイル(SHA-256・mtime・集合)不変を実証=PASS", status: met }
+    - { criterion: "スキーマ変更なし(S-05 マイグレーション同値 不変)", evidence: "migration 追加ゼロ・既存列+FK CASCADE で完結・S-05 緑維持", status: met }
+    - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build 0 警告・Tests 379/379・BOM v4.0・S-26〜30 オラクル・As-Built/cheat-log/metrics", status: met }
+    - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G10 承認(2026-06-14・maintainer 実機。第1回所見 GF-V4-01/02/03 を是正後 OK)", status: met }
+  verdict: "Loop V4 (loop-v4-repair-lifecycle) 完了 — G4 全条件充足(2026-06-14 クローズ)"
   metrics_ref: bomdd/52-metrics.yaml(metrics_v4)

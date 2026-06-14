@@ -171,3 +171,13 @@ golden 最終: **CP-UI-G9 全承認**(機能 4 点+GF-V3-01 是正)→ G4 全条
 | CHEAT-05 | C2・minor | TrashViewModel の操作後 `StatusMessage` を `LoadAsync` の**後**に設定(復元の missing 化通知が消えないよう順序修正) | **accept** — 未規定の順序を妥当に補完。CP-UI-G10 の結果表示要件に整合 |
 
 スキーマ変更・物理ファイル書込/移動/削除・既存テスト改変はいずれも発生せず(routing_v4 の safety/regression guard を充足)。
+
+## golden G-10 収束(設計者直接修正 + 原典リバース確認)2026-06-14
+
+golden 第1回(maintainer 実機ウォークスルー): **復元・完全削除・物理非破壊は承認**。修復(criteria/relink)に 3 所見:
+- **GF-V4-01**(minor): missing 選択時に候補が自動探索されず SHA-256 手入力が必要で実用不可。原典 view-prism(searchForRelink + NewUI RepairModal)確認 = criteria は真偽フラグで値を選択 missing から自動導出・既定 useHash/useExtension/useSize。是正: hash+拡張子+サイズを criteria へ自動事前入力し候補を手入力なし提示(commit e002a6d)。
+- **GF-V4-02**(minor): ビューア読み込み失敗(ファイル不在)の normal が修復一覧に出ない=status=normal のまま(再スキャンせず)。原典確認 = RepairModal は status='missing' を引くだけ・検出は再起動/コレクション展開のスキャン依存。是正: 修復を開く前にコレクションをスキャン(missing 化+リネーム後 pending 登録)+『N 件のリンク切れ(M 件が自動修復可能)』表示(commit 2a50dd8)。
+- **GF-V4-03**(minor): 再リンク候補(Pending∪Normal)は出るのに左検索(Normal 限定)が空の不一致。maintainer 選択『検索を再リンク候補探索に統一』(原典 AdvancedRepairModal=検索結果が候補)。是正: 検索ボタン=選択中 missing の候補を現在条件で再探索・別検索結果リスト廃止(commit 5c52827)。
+いずれも視覚/UX 要件(ヘッドレス工場が検証不可)+ 原典リバース確認で方針確定 → 設計者直接修正。build 0・Tests 379・Oracle 73 回帰ゼロ・maintainer 再確認 OK。
+golden 最終: **CP-UI-G10 承認**(機能 3 点+GF-V4-01/02/03 是正)→ G4 全条件充足 = **Loop V4 完了(2026-06-14)**。
+deferred(V5 候補・原典にも無い improve-on-port): 元パスに戻した self の自動復元 / コレクション展開時のグリッド自動検出 / 再エンコードの pHash 類似修復。
