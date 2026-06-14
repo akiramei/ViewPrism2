@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v3-similarity(v3.0 — CP-PHASH-016/CP-SIM-017/CP-MERGE-018/CP-MERGE-001(L3 物理差分)/CP-UI-G9 追加・CP-L1-SMOKE 経路深化)"
+  experiment: "loop-v4-repair-lifecycle(v4.0 — CP-CRITERIA-019/CP-RELINK-019/CP-TRASH-020/CP-TRASH-001(L3 物理差分)/CP-UI-G10 追加。CP-PHASH-ADAPTER-019=P-09 既存)。前: loop-v3-similarity(CP-PHASH-016/CP-SIM-017/CP-MERGE-018/CP-MERGE-001/CP-UI-G9)"
   layer: Control Plan
 
 # 深さの梯子(method-v1 §5): 核=unit(exact)。表面=L2 以上、知覚=G(golden+承認者)。
@@ -389,6 +389,68 @@ control_plan:
         - "横断(scope=cross-factory): EQ-RANK(順位)を両工場・代表サイズで維持"
         - "latency 退行ガード(default-on): scaled-decode の μ が full-decode の 1/2 以下(相対比・machine 非依存)"
 
+    # ---- v4.0 修復ライフサイクル(loop-v4-repair-lifecycle) ----
+    - id: CP-CRITERIA-019
+      characteristic: "criteria 条件検索(REQ-068)が指定条件のみ AND・status 用途別・安定順・空条件非実行で絞り込む"
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-CRITERIA-019)。固定画像集合(hash/名前/拡張子/mtime/サイズ違い+status 混在)"
+      oracle: OC-19 の出力 id 列の完全一致
+      approver: automated
+      test_vectors:
+        - "単一条件: 拡張子=.png のみ指定 → .png かつ statusTargets の画像のみ(他条件は無視)"
+        - "複数条件 AND: 名前部分一致 + サイズ範囲 → 両方満たす画像のみ(OR にならない)"
+        - "status 対象: statusTargets={Pending,Normal} で deleted/missing を除外 / ={Normal} で pending 除外"
+        - "安定順: relative_path 昇順・同値は id 昇順"
+        - "空条件: 全項目 null → 空列(全件を返さない)"
+        - "名前=OrdinalIgnoreCase 部分一致 / 拡張子=case-insensitive 完全一致 / hash=Ordinal 完全一致"
+
+    - id: CP-RELINK-019
+      characteristic: "relink(REQ-069)が候補=pending∪untagged-normal・タグ付き拒否・missing 側 ID 不変・候補消費削除で確定する"
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-RELINK-019)。一時 SQLite に missing+pending+normal(タグ有/無)を投入"
+      oracle: 確定後 DB 状態(missing 行・候補行・タグ)の完全一致
+      approver: automated
+      test_vectors:
+        - "候補列挙: exact-hash pending + criteria 結果(status∈{Pending,Normal})・安定順。タグ付き候補は除外"
+        - "確定(pending 消費): missing 行=候補パス/メタ・status=Normal・candidate_link_id=NULL・pending 行削除・missing image_id 不変"
+        - "確定(untagged-normal 消費): 同上で normal 候補行を削除"
+        - "タグ付き候補の確定要求 → ValidationError(タグ損失防止・マージ案内)。DB 無変化"
+        - "遷移表外(missing でない/別コレクション/deleted 候補)→ ValidationError"
+        - "原子性: 確定途中失敗 → 全ロールバック(missing も候補も無変化)"
+
+    - id: CP-TRASH-020
+      characteristic: "トラッシュ復元(REQ-070)の存在分岐と完全削除(REQ-071)の CASCADE・deleted 限定が仕様どおり"
+      classification: core
+      depth: "unit/L2"
+      tolerance: exact
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-TRASH-020)。一時 SQLite+IFilePresenceProbe フェイク(存在/不在を注入)"
+      oracle: 復元後 status・完全削除後の各テーブル件数の完全一致
+      approver: automated
+      test_vectors:
+        - "復元・物理存在: deleted→Normal(T6)。タグ/ID/特徴量不変"
+        - "復元・物理不在: deleted→Missing(T7・幽霊 normal 防止)"
+        - "復元・deleted 以外: ValidationError"
+        - "完全削除: images 行削除→image_tags/image_features/image_similarity が CASCADE で 0 件(孤児ゼロ)"
+        - "完全削除・deleted 以外: ValidationError(normal/pending/missing は対象外)"
+        - "TrashTransition.ResolveRestore(true)=Normal / (false)=Missing(純粋関数ベクタ)"
+
+    - id: CP-TRASH-001
+      characteristic: "トラッシュ復元・完全削除の物理非破壊 — 操作前後でユーザー画像ファイルが不変(INV-009 第 2 の実アクション・L3 物理差分)"
+      classification: core
+      depth: L3
+      tolerance: "復元・完全削除の前後でフォルダ内ファイル集合・各ファイルの SHA-256・LastWriteTimeUtc が完全不変。移動・削除・新規作成が一切ない"
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-TRASH-001。一時ディレクトリに実画像+一時 SQLite。操作前後でフォルダ全ファイルのハッシュ・mtime・一覧をスナップショット)"
+      oracle: 操作前後のファイルシステムスナップショット(ハッシュ・mtime・ファイル集合)の完全一致
+      approver: automated
+      test_vectors:
+        - "完全削除前にファイル SHA-256・mtime を記録 → PermanentDeleteAsync → 物理ファイルは不変(FMEA-027)"
+        - "復元(存在/不在とも)前後でフォルダ内ファイル集合が同一(読み取り存在確認のみ・FMEA-026)"
+        - "DB 上は完全削除でレコード消滅・復元で status 遷移(論理操作は起きている=空振りでない)"
+
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
@@ -401,3 +463,4 @@ control_plan:
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G10, characteristic: "修復ライフサイクル UI(criteria 検索・relink 候補提示/確定・トラッシュ復元/完全削除・非破壊明示文言・タグ付き候補のマージ案内・復元の missing 化表示)の目視(G-10・v4.0)", classification: surface, depth: G, tolerance: "G-10 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ(missing/pending を含むコレクション+deleted 画像。relink・復元・完全削除の前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }

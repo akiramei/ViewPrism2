@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v3-similarity(v3.0 — E-PHASH-031/E-SIMSEARCH-032/E-SIMCACHE-033/E-MERGE-034/E-UI-SIMILARITY-035/E-UI-MERGE-036 追加。v1/v2 部品の意味論は不変)"
+  experiment: "loop-v4-repair-lifecycle(v4.0 — E-CRITERIA-037/E-TRASH-038/E-UI-REPAIR-039 追加・E-RELINK-007 を criteria 候補+タグ安全へ拡張。v1/v2/v3 部品の意味論は不変)。前: loop-v3-similarity(E-PHASH-031〜E-UI-MERGE-036)"
   layer: E-BOM
 
 # 規律(method-v1 §2):
@@ -92,14 +92,17 @@ ebom:
       acceptance_refs: [CP-UTIL-005]
 
     - id: E-RELINK-007
-      name: 再リンク(候補検索+確定処理)
+      name: 再リンク(候補検索+確定処理)— v4.0 で criteria 候補探索+タグ安全ガードへ拡張(REQ-069)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-017]
-      depends_on: [E-DOMAIN-001, E-DB-010]
+      requirement_refs: [REQ-017, REQ-069]
+      depends_on: [E-DOMAIN-001, E-DB-010, E-CRITERIA-037, E-TAGSVC-008]
       invariants:
         - INV-001 missing 側 image_id 不変(タグ・関連の保全)
-      acceptance_refs: [CP-SCAN-004]
+        - INV-015 (v4.0) 置換候補は pending ∪ untagged-normal のみ。タグ付き候補は relink 拒否→マージ案内(タグ損失防止)
+        - INV-015 (v4.0) candidate_link_id は候補ヒント(非確定)。確定で候補行を削除し missing 行が当該パスを所有
+        - 確定は単一トランザクション・原子(T4)。遷移表外(missing でない/別コレクション/許可外 status)は拒否
+      acceptance_refs: [CP-SCAN-004, CP-RELINK-019]
 
     - id: E-TAGSVC-008
       name: タグ管理サービス(CRUD・UPSERT 付与・バッチ・カスケード・バリデーション)
@@ -242,6 +245,37 @@ ebom:
         - INV-009 物理画像ファイルを移動・削除・変更しない(L3 物理差分 CP-MERGE-001 で実証)
       acceptance_refs: [CP-MERGE-018, CP-MERGE-001]
 
+    # ---------- v4.0 核(loop-v4-repair-lifecycle) ----------
+    - id: E-CRITERIA-037
+      name: criteria 条件検索(hash/名前/拡張子/mtime 範囲/サイズ範囲 AND・status 用途別・安定順)— v4.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-068]
+      kbom_refs: []
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      graph_edges:
+        owner: E-CRITERIA-037
+        consumers: [E-RELINK-007, E-UI-REPAIR-039]
+      invariants:
+        - 指定条件のみ AND 結合・同一コレクション内。対象 status は呼び出し用途で固定(単体=normal / relink 候補=pending∪normal)
+        - 結果は安定順(relative_path 昇順・同値 id 昇順)。条件が 1 つも未指定なら非実行(全件を返さない)
+        - 純粋な絞り込みロジックは ViewModel/サービスから unit 検査可能(OC-19)
+      acceptance_refs: [CP-CRITERIA-019]
+
+    - id: E-TRASH-038
+      name: トラッシュ復元(存在分岐 T6/T7)+完全削除(T8・CASCADE・物理非破壊)— v4.0 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-070, REQ-071]
+      kbom_refs: [K-WINFS, K-SQLITE]
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      invariants:
+        - INV-013 復元は deleted→normal を物理存在時のみ・不在は deleted→missing(幽霊 normal 防止)
+        - INV-014 完全削除は images 行削除のみ(image_tags/features/similarity は FK CASCADE)・deleted 限定
+        - INV-009 物理画像ファイルへ触れない(復元の存在確認は読み取りのみ・L3 物理差分 S-26/CP-TRASH-020 で実証)
+        - 層規律: 物理存在確認(File.Exists 相当)は Infrastructure。状態遷移判断は Core(bool 存在を受けて分岐)
+      acceptance_refs: [CP-TRASH-020, CP-TRASH-001]
+
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
       name: サムネイル生成サービス
@@ -368,7 +402,7 @@ ebom:
       depends_on: []
       graph_edges:
         owner: E-DESIGN-028
-        consumers: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036]
+        consumers: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039]
       acceptance_refs: [CP-UI-G1]
 
     # ---------- v3.0 表面(loop-v3-similarity) ----------
@@ -398,6 +432,23 @@ ebom:
         - トラッシュは選択中コレクションの deleted 一覧+件数のみ(復元/完全削除なし — 仕様 §2.10.5)
         - マージ実行は E-MERGE-034 の原子 API のみ経由(UI 側でタグ操作を再実装しない)
       acceptance_refs: [CP-UI-G9]
+
+    # ---------- v4.0 表面(loop-v4-repair-lifecycle) ----------
+    - id: E-UI-REPAIR-039
+      name: 修復ライフサイクル UI(criteria 検索フォーム+結果・relink 候補提示/確定・トラッシュ復元/完全削除・非破壊明示)— v4.0 新設
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-072, REQ-068, REQ-069, REQ-070, REQ-071]
+      external_source_ref: "原典 RepairModal/TrashModal(仕様 §2.11.5)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-CRITERIA-037, E-RELINK-007, E-TRASH-038, E-UI-MERGE-036, E-THUMB-020]
+      invariants:
+        - 完全削除は非破壊明示文言を必須(『画像ファイルは削除されません(DB から除去)』— §2.11.5/裁定 6)+実行前確認
+        - 復元で物理不在→missing 化した結果が UI で分かる(『復元したのに消えた』の誤解防止)
+        - relink でタグ付き候補は選べない/拒否されマージ案内(タグ損失防止 — INV-015)
+        - 候補選択・確認・結果表示のロジックは ViewModel に置き unit 検査可能にする
+        - 各操作は E-CRITERIA-037/E-RELINK-007/E-TRASH-038 の API のみ経由(UI 側で状態遷移を再実装しない)
+      acceptance_refs: [CP-UI-G10]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
 nfr_targets:

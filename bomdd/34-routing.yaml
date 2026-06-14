@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v3-similarity(v3.0 — ROUTING-V3SIMILARITY-001 を追加。V1/V2 ルーティングは記録として保持)"
+  experiment: "loop-v4-repair-lifecycle(v4.0 — ROUTING-V4REPAIR-001 を追加。V1/V2/V3 ルーティングは記録として保持)"
   layer: Routing
 
 routing:
@@ -129,5 +129,53 @@ routing_v3:
       output: [受入ログ(CP 別の結果一覧)]
     - order: 7
       id: ROUTE3-CHEAT-REPORT
+      name: ずる報告+As-Built 情報を提出する
+      output: [cheat-report(全件), 実装サマリ(製造単位→成果物パス対応表)]
+
+# ---- v4.0(loop-v4-repair-lifecycle)— 既存コードベースへの増分製造 ----
+routing_v4:
+  id: ROUTING-V4REPAIR-001
+  gate_g3_dryrun: "PASS(2026-06-14)— fresh エージェントに製造パッケージ(20 §2.11/30〜34/40+既存 src)のみ供与(41/42/原典/Oracle 非開示)し着手可否を質問: **4 単位(M-CRITERIA-024/M-RELINK-025/M-TRASH-026/M-UI-REPAIR-027)とも着手可・設計者質問ゼロ・blocker ゼロ**。工場側で実コード確証: ①**スキーマ変更不要**=完全削除は ImageRepository.DeleteAsync(DELETE FROM images 既存)+image_tags/image_features/image_similarity 全て ON DELETE CASCADE+PRAGMA foreign_keys=ON(DatabaseManager 既存)、復元は UpdateStatusAsync 既存 ②層規律 OK=File.Exists は FilePresenceProbe(Infrastructure)に閉じ TrashService(Core)は bool を受けて遷移(IPHashImageReader 手本) ③タグ安全=ITagRepository.GetImageTagsAsync 既存で untagged 判定可。軽微な明確化 4 件(いずれも非 blocker・ずる報告 C 分類想定): (a)RelinkService へ ITagRepository 注入追加+DI 1 行 (b)CommitRelinkAsync 第2引数 pendingImageId→replacementImageId リネーム (c)RepairWindow と既存 RelinkViewModel の責務分担=golden/K-DESIGN 範囲 (d)SearchCriteria.Extension の先頭ドット正規化=実装定数。**V3 で顕在化した層規律ギャップは V4 では BOM に事前内包済み(Factory Loop Capability の uplift)→ 凍結前補正ゼロ**"
+  purpose: ViewPrism2 V4(修復ライフサイクル=criteria 検索+relink 拡張+トラッシュ復元/完全削除)を、V1/V2/V3 完成コードベース+改訂 BOM のみから増分製造する
+  factory_isolation: 製造装置には製造パッケージ(20-spec.md v4.0 §2.11 / 30〜34 / 40 / docs/adr/)+V1/V2/V3 完成コードベース(src/, tests/ViewPrism2.Tests)のみ供与。原典 view-prism ソース・設計対話・41 固定オラクル・42 探索プローブ・tests/ViewPrism2.Oracle は非開示
+  cheat_report: BOM/K-BOM/Control Plan から導けなかった判断は実装を止めず全件 cheat-log 形式で報告する(分類 C1〜C6)
+  regression_guard: "既存の意味論を変更しない。既存 unit テスト(347 件=v1 234+v2 56+v3 56+P-09 1)の修正・削除は原則禁止 — 仕様改訂に伴う期待値変更が必要と判断したら当該テストを変更せず blocked とし C6 で報告(例外: 新規 CP の新規テスト追加は許可)。**V4 はスキーマ変更なし**=migration 追加禁止(criteria/relink/復元/完全削除は既存列+既存 FK CASCADE で完結)"
+  safety_guard: "INV-009 woven 安全制約の**第 2 の実アクション**(復元・完全削除)。復元は物理ファイルの読み取り存在確認(File.Exists)のみで書き込み/移動/削除をしない。完全削除は DB レコード(images 行)の削除のみで、物理画像ファイルへ一切触れない(image_tags/features/similarity は FK CASCADE)。CP-TRASH-001(L3 物理差分)が前後不変を実証。物理ファイル操作の実装を検知したら blocked+C6"
+  steps:
+    - order: 1
+      id: ROUTE4-READ
+      name: 製造パッケージと V1/V2/V3 コードベースを読む
+      input: [bomdd/20-spec.md(§2.11 中心+状態機械 T1〜T8), bomdd/30-ebom.yaml, bomdd/31-kbom.yaml(K-WINFS/K-SQLITE 既存で足りる), bomdd/32-mbom.yaml, bomdd/33-control-plan.yaml, bomdd/40-work-order.md, docs/adr/, 既存 src/(RelinkService/ScanJudge/ImageStatus/ImageRepository.DeleteAsync 参照)]
+      output: [実装計画(増分の着手順)]
+    - order: 2
+      id: ROUTE4-CRITERIA
+      name: criteria 条件検索核を製造する(unit 受入とセット)
+      input: [M-CRITERIA-024]
+      output: [src/ViewPrism2.Core/Services/Repair/(CriteriaMatcher/CriteriaSearchService), tests(CP-CRITERIA-019 全ベクタ緑)]
+    - order: 3
+      id: ROUTE4-RELINK
+      name: 既存 RelinkService を criteria 候補+タグ安全へ拡張する
+      input: [M-RELINK-025]
+      output: [RelinkService 拡張(GetCandidatesAsync criteria 対応・CommitRelinkAsync タグ安全ガード), tests(CP-RELINK-019 緑)]
+    - order: 4
+      id: ROUTE4-TRASH
+      name: トラッシュ復元(存在分岐)+完全削除核を製造する(物理非破壊厳守)
+      input: [M-TRASH-026]
+      output: [TrashService/IFilePresenceProbe(Core)+FilePresenceProbe(Infrastructure), tests(CP-TRASH-020 緑+CP-TRASH-001 L3 物理差分緑)]
+    - order: 5
+      id: ROUTE4-SURFACE
+      name: "表面を製造する(K-BOM 参照必須: K-AVALONIA / K-DESIGN)。V3 の TrashViewModel を復元/完全削除へ拡張"
+      input: [M-UI-REPAIR-027]
+      output: [修復 UI(criteria 検索フォーム・relink 候補/確定・トラッシュ復元/完全削除+非破壊明示文言), Assets/i18n に repair.*/trash.restore.*/trash.purge.* 追加]
+    - order: 6
+      id: ROUTE4-SELF-ACCEPTANCE
+      name: 自己受入(緑が納品条件。自己受入緑≠合格)
+      command:
+        - dotnet build ViewPrism2.sln -c Release   # 警告ゼロ(TreatWarningsAsErrors)
+        - dotnet test tests/ViewPrism2.Tests -c Release   # 既存 347+v4 新規が全緑(回帰ゼロ)
+        - "L1 スモーク: CP-L1-SMOKE v4.0 経路(criteria 検索→relink→トラッシュ復元/完全削除+物理ファイル不変の目視)"
+      output: [受入ログ(CP 別の結果一覧)]
+    - order: 7
+      id: ROUTE4-CHEAT-REPORT
       name: ずる報告+As-Built 情報を提出する
       output: [cheat-report(全件), 実装サマリ(製造単位→成果物パス対応表)]

@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v3-similarity(v3.0 — M-PHASH-020/M-SIMSEARCH-021/M-MERGE-022/M-UI-SIMILARITY-023 追加・M-DB-007 拡張(image_features/image_similarity)・FMEA-021〜025・第3回掃討。procurement 新規追加なし(pHash は SkiaSharp 既存)。v1/v2 単位の意味論は不変)"
+  experiment: "loop-v4-repair-lifecycle(v4.0 — M-CRITERIA-024/M-RELINK-025/M-TRASH-026/M-UI-REPAIR-027 追加・FMEA-026〜030・V4 掃討。**スキーマ変更なし**=既存列+既存 FK CASCADE で完結・procurement 新規なし。v1/v2/v3 単位の意味論は不変)。前: loop-v3-similarity(M-PHASH-020〜M-UI-SIMILARITY-023)"
   layer: M-BOM
 
 # 受入3条件(method-v1 §3): 完全性 / 無矛盾性 / Control Plan 列
@@ -374,12 +374,78 @@ mbom:
       acceptance_refs: [CP-UI-G9, CP-L1-SMOKE]
       fmea_refs: [FMEA-023]
 
+    # ---------- v4.0 追加(loop-v4-repair-lifecycle)。**スキーマ変更なし**(既存列・既存 FK CASCADE で完結) ----------
+    - id: M-CRITERIA-024
+      ebom_refs: [E-CRITERIA-037]
+      artifact:
+        path: src/ViewPrism2.Core/Services/Repair/(CriteriaMatcher.cs, CriteriaSearchService.cs)
+        type: dotnet-classlib
+      interface_contract:
+        criteria: "record SearchCriteria { string? Hash, string? NameContains, string? Extension, string? MtimeFrom/MtimeTo, long? SizeMin/SizeMax }。null=未指定(その条件は無視)"
+        matcher: "IReadOnlyList<string> CriteriaMatcher.Match(IEnumerable<ImageRecord> images, SearchCriteria c, IReadOnlySet<ImageStatus> statusTargets)  // OC-19 純粋計算。指定条件のみ AND・status は statusTargets に含むもの・結果 relative_path 昇順→id 昇順。全条件未指定なら空列(全件返さない)"
+        service: "Task<IReadOnlyList<ImageRecord>> SearchAsync(string collectionId, SearchCriteria c, IReadOnlySet<ImageStatus> statusTargets, CancellationToken ct)  // 同一コレクション取得→CriteriaMatcher。用途別 statusTargets(単体={Normal} / relink 候補={Pending,Normal})は呼び出し側が渡す"
+        name_match: "NameContains は file_name の OrdinalIgnoreCase 部分一致 / Extension は拡張子 case-insensitive 完全一致 / Hash は SHA-256 完全一致(Ordinal)"
+      invariants:
+        - 純粋な絞り込み(CriteriaMatcher は I/O なし・固定オラクルが直接呼ぶ)。OC-19 を公開 API に
+        - 指定条件のみ AND・空条件は非実行(全件返さない)。安定順(relative_path 昇順・同値 id 昇順)
+        - 対象 status は statusTargets で制御(エンジンは status を勝手に固定しない=用途別)
+      acceptance_refs: [CP-CRITERIA-019]
+      fmea_refs: [FMEA-029]
+
+    - id: M-RELINK-025          # 既存 RelinkService(M-SCAN-005)を criteria 候補+タグ安全へ拡張
+      ebom_refs: [E-RELINK-007]
+      artifact:
+        path: src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs(拡張)
+        type: dotnet-classlib
+      interface_contract:
+        candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId, SearchCriteria? criteria = null)  // 既存 exact-hash pending に加え、criteria 指定時は M-CRITERIA-024 で status∈{Pending,Normal} を候補化。安定順(relative_path 昇順・id 昇順)。**user タグを持つ候補は除外**(タグ損失防止)"
+        commit: "Task<Result> CommitRelinkAsync(string missingImageId, string replacementImageId)  // 既存を拡張。replacement は pending または untagged-normal。タグ付き replacement は ErrorCode.ValidationError(マージ案内)。missing 行へ replacement のパス/メタ上書き・status=Normal・candidate_link_id=NULL・replacement 行削除。missing 側 image_id 不変。単一トランザクション"
+        tag_check: "replacement の image_tags 行数を ITagRepository(または直接 COUNT)で確認し 1 件以上なら拒否(INV-015)"
+      invariants:
+        - INV-001 missing 側 image_id 不変 / INV-015 候補=pending∪untagged-normal・タグ付きは拒否・candidate_link_id は非確定ヒント
+        - 遷移表 T4 のみ。missing でない/別コレクション/許可外 status/タグ付き → 拒否。原子(失敗時ロールバック)
+      acceptance_refs: [CP-RELINK-019]
+      fmea_refs: [FMEA-028]
+
+    - id: M-TRASH-026
+      ebom_refs: [E-TRASH-038]
+      artifact:
+        path: src/ViewPrism2.Core/Services/Repair/(TrashService.cs, IFilePresenceProbe.cs)+ src/ViewPrism2.Infrastructure/Imaging/FilePresenceProbe.cs + ImageRepository への永久削除/status 更新メソッド
+        type: dotnet-classlib
+      interface_contract:
+        probe: "IFilePresenceProbe(Core 抽象): bool Exists(string absoluteImagePath)。実装 FilePresenceProbe(Infrastructure)=File.Exists のみ(読み取り・INV-009)。**SkiaSharp/FS アクセスは Infrastructure に閉じ、TrashService(Core)は bool を受けて遷移判断**(M-SIMSEARCH-021 の IPHashImageReader 層分離と同型)"
+        restore: "Task<Result<ImageStatus>> RestoreAsync(string imageId)  // OC-21。deleted 限定。folder.path+relative_path を IFilePresenceProbe.Exists で確認→存在=Normal(T6)/不在=Missing(T7)。status のみ更新・タグ/ID/特徴量不変。deleted 以外は ValidationError"
+        purge: "Task<Result> PermanentDeleteAsync(string imageId)  // OC-22。deleted 限定。DELETE FROM images WHERE id=@id(image_tags/image_features/image_similarity は FK CASCADE)。物理ファイルに触れない。deleted 以外は ValidationError。単一トランザクション"
+        decision: "ImageStatus TrashTransition.ResolveRestore(bool fileExists) → fileExists?Normal:Missing  // 純粋関数・固定オラクルが直接呼ぶ"
+      invariants:
+        - INV-013 復元は存在時 Normal・不在時 Missing(幽霊 normal 防止)/ INV-014 完全削除は行削除+CASCADE のみ・deleted 限定
+        - INV-009 物理ファイルへ触れない(復元の存在確認は読み取りのみ)。L3 物理差分 CP-TRASH-001 で実証
+        - 復元・完全削除はともに deleted 状態のみ許可(他 status は ValidationError)
+      acceptance_refs: [CP-TRASH-020, CP-TRASH-001]
+      fmea_refs: [FMEA-026, FMEA-027, FMEA-030]
+
+    - id: M-UI-REPAIR-027
+      ebom_refs: [E-UI-REPAIR-039]
+      artifact:
+        path: src/ViewPrism2.App/(Views/RepairWindow.axaml, ViewModels/{Repair,Trash}ViewModel.cs 拡張)
+        type: avalonia-app
+      interface_contract:
+        criteria_ui: "RepairViewModel: criteria 入力(hash/名前/拡張子/mtime 範囲/サイズ範囲)→ CriteriaSearchService。空条件は検索ボタン非活性。結果一覧(安定順)。ロジックは ViewModel で unit 検査可能に"
+        relink_ui: "missing 画像に対し候補(pending+criteria 結果・安定順)を提示→選択→確定(RelinkService.CommitRelinkAsync のみ経由)。タグ付き候補は選択不可/拒否時に『マージを使う』案内"
+        trash_ui: "TrashViewModel 拡張(V3 は閲覧のみ): deleted 一覧に『復元』『完全削除』。完全削除は確認+非破壊明示文言『画像ファイルは削除されません(DB から除去)』。復元で物理不在→missing になった結果を表示(TrashService.RestoreAsync の戻り status を反映)"
+        i18n: "新規キー ja 正・en 併記(repair.* / trash.restore.* / trash.purge.*)。非破壊文言・missing 化通知を含む"
+      invariants:
+        - 各操作は M-CRITERIA-024/M-RELINK-025/M-TRASH-026 の API のみ経由(UI で状態遷移・タグ操作を再実装しない)
+        - INV-009 UI からも物理ファイルを操作しない。完全削除は確認必須・非破壊文言必須(裁定 6)
+      acceptance_refs: [CP-UI-G10, CP-L1-SMOKE]
+      fmea_refs: [FMEA-026, FMEA-028]
+
     - id: M-HARNESS-015        # 治具は製品と同格に管理
       ebom_refs: []
       artifact:
         path: tests/ViewPrism2.Tests
         type: dotnet-test(xunit.v3)
-      verifies: [M-CORE-001, M-EVAL-002, M-GRAPH-003, M-SORT-004, M-SCAN-005, M-DB-007, M-THUMB-008, M-CACHE-009, M-SET-010, M-I18N-011, M-VIEWSVC-012, M-UI-014, M-VIEWERCORE-017, M-UI-019, M-PHASH-020, M-SIMSEARCH-021, M-MERGE-022]
+      verifies: [M-CORE-001, M-EVAL-002, M-GRAPH-003, M-SORT-004, M-SCAN-005, M-DB-007, M-THUMB-008, M-CACHE-009, M-SET-010, M-I18N-011, M-VIEWSVC-012, M-UI-014, M-VIEWERCORE-017, M-UI-019, M-PHASH-020, M-SIMSEARCH-021, M-MERGE-022, M-CRITERIA-024, M-RELINK-025, M-TRASH-026]
       interface_contract:
         traits: "各テストに [Trait(\"cp\", \"CP-xxx\")] を付与し Control Plan へトレース"
         fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
@@ -431,6 +497,12 @@ fmea:
   - { id: FMEA-023, unit: M-MERGE-022,    failure_mode: "マージで物理ファイルを移動・削除する(INV-009 違反)", effect: "ユーザー画像の破壊・復元不能", targeted_by: "CP-MERGE-001(L3 物理差分=前後でバイト・mtime 不変)+CP-UI-G9" }
   - { id: FMEA-024, unit: M-MERGE-022,    failure_mode: "値タグ衝突でマージ先の値をマージ元で上書き/多元の決着順が不定/途中失敗で部分適用が残る", effect: "保持すべき値の喪失・非決定・REQ-066 違反", targeted_by: "CP-MERGE-018(OC-17 マージ先優先・id 昇順先勝ち・原子)" }
   - { id: FMEA-025, unit: M-SIMSEARCH-021, failure_mode: "ファイル内容変化後も古い pHash/類似度キャッシュを返す(連鎖無効化漏れ)/ペア (A,B)≠(B,A) で片方向のみヒット", effect: "別画像を類似と誤判定・キャッシュ不整合", targeted_by: "CP-SIM-017(内容ベース無効化・連鎖削除・ペア正規化)" }
+  # ---- v4.0 追加(REQ-068〜072 の counterexamples 由来) ----
+  - { id: FMEA-026, unit: M-TRASH-026,   failure_mode: "復元で物理不在の deleted を Normal に戻す(存在確認なし=deleted→normal 固定)", effect: "サムネイル欠落の幽霊 normal 行(INV-013 違反)", targeted_by: "CP-TRASH-020(存在=Normal/不在=Missing 分岐ベクタ)" }
+  - { id: FMEA-027, unit: M-TRASH-026,   failure_mode: "完全削除で物理画像ファイルまで削除・移動する(DB 削除に便乗)", effect: "ユーザー原本の破壊・復元不能(INV-009 違反)", targeted_by: "CP-TRASH-001(L3 物理差分=前後でファイル集合/SHA/mtime 不変)" }
+  - { id: FMEA-028, unit: M-RELINK-025,  failure_mode: "relink がタグ付き候補を消費しタグ損失/missing 側 image_id を作り直す/candidate_link_id だけで自動リンク", effect: "付与タグ喪失・タグ参照切れ・誤リンク(INV-015/001 違反)", targeted_by: "CP-RELINK-019(候補=untagged 限定・ID 不変・確定で消費削除)" }
+  - { id: FMEA-029, unit: M-CRITERIA-024, failure_mode: "空条件で全件返す/条件が OR 結合/status 対象を用途無関係に固定/ソート不安定", effect: "誤候補大量ヒット・UI フリーズ・結果順不定(REQ-068 違反)", targeted_by: "CP-CRITERIA-019(AND・空条件非実行・status 対象・安定順ベクタ)" }
+  - { id: FMEA-030, unit: M-TRASH-026,   failure_mode: "完全削除で FK CASCADE 不発(image_tags/features/similarity に孤児行)/deleted 以外も削除/復元できる", effect: "整合性破壊・件数水増し・対象逸脱", targeted_by: "CP-TRASH-020(CASCADE 孤児ゼロ・deleted 限定)" }
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:
@@ -466,3 +538,13 @@ silence_sweep:
   - { dimension: 大規模類似検索の応答性,           decision: exploratory, note: "probe P-07 で観測(1,000 枚)。固定オラクルに入れない(原典に既知 UX 課題)" }
   - { dimension: ORB / detailed モード,            decision: out-of-scope, note: "pHash-only 確定(§裁定記録 2)。OpenCV 依存回避。後続ループ" }
   - { dimension: criteria 条件検索・relink 修復・トラッシュ復元/完全削除, decision: out-of-scope, note: "修復ループ(V4)。V3 は similar(pHash)+マージ+deleted 閲覧のみ" }
+  # ---- v4.0 追加(20-spec §4 V4 行に対応。修復ライフサイクル) ----
+  - { dimension: criteria 検索の status 対象,      decision: specified, where: "M-CRITERIA-024 / 仕様 §2.11.1", note: "エンジンは statusTargets 引数で受ける。用途別=単体{Normal}/relink 候補{Pending,Normal}(呼び出し側が固定)" }
+  - { dimension: criteria 空条件の扱い,            decision: specified, where: M-CRITERIA-024,              note: "1 条件も未指定なら非実行・全件返さない(誤操作防止)。UI は検索ボタン非活性" }
+  - { dimension: criteria の文字列照合方式,         decision: specified, where: M-CRITERIA-024,              note: "name=OrdinalIgnoreCase 部分一致 / 拡張子=case-insensitive 完全一致 / hash=Ordinal 完全一致" }
+  - { dimension: relink 置換候補に許す status,      decision: specified, where: "M-RELINK-025 / INV-015 / 仕様 §2.11.2", note: "pending ∪ untagged-normal。タグ付き候補は拒否→マージ案内(タグ損失防止)。candidate_link_id は非確定ヒント" }
+  - { dimension: 復元時の物理不在の扱い,           decision: specified, where: "M-TRASH-026 / INV-013 / 仕様 §2.11.3", note: "deleted→normal は存在時のみ・不在は deleted→missing(幽霊 normal 防止)。存在確認は読み取りのみ" }
+  - { dimension: 完全削除の物理境界,               decision: specified, where: "M-TRASH-026 / INV-014 / CP-TRASH-001(L3)", note: "images 行削除+FK CASCADE のみ・物理非破壊。前後でファイル集合/SHA/mtime 不変を L3 で実証" }
+  - { dimension: 完全削除・復元の対象 status,       decision: specified, where: "M-TRASH-026 / 仕様 §2.11.3-4", note: "deleted のみ(normal/pending/missing は ValidationError)" }
+  - { dimension: V4 のスキーマ変更要否,            decision: specified, where: "M-DB-007(変更なし)", note: "**migration 不要**。criteria=既存列照会・relink=candidate_link_id 既存・復元=status 更新・完全削除=行削除+既存 FK CASCADE。新規 DDL/列なし" }
+  - { dimension: 物理存在確認の層配置,             decision: specified, where: "M-TRASH-026(IFilePresenceProbe)", note: "File.Exists は Infrastructure(FilePresenceProbe)。状態遷移判断は Core(bool を受けて分岐)— IPHashImageReader と同型の層分離(ADR-0002)" }
