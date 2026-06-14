@@ -255,6 +255,12 @@ public sealed class WindowService : IWindowService
             return;
         }
 
+        // GF-V4-02(原典 view-prism 準拠): 修復を開く前にコレクションをスキャンしてリンク切れを検出する。
+        // 記録パスのファイル消失→missing 化 / リネーム後の新ファイル→pending 登録(=自動修復候補)。
+        // これにより「再起動/コレクション展開で検出される」原典挙動に相当(明示再スキャン不要)。
+        // ルート消失時の一括 missing 化は ScanService 側が抑止(INV-009/V1 F-3 保護)。
+        await _scan.ScanAsync(collectionId, null, System.Threading.CancellationToken.None);
+
         // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): criteria 検索+relink フロー
         var vm = new RepairViewModel(collectionId, _images, _criteriaSearch, _relink, _localization, this);
         var window = new RepairWindow { DataContext = vm };

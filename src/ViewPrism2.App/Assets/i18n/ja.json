@@ -344,6 +344,7 @@
   "repair.criteria.sizeMin": "サイズ下限（バイト）",
   "repair.criteria.title": "条件検索",
   "repair.missingImages": "リンク切れ画像",
+  "repair.summary": "{missing} 件のリンク切れ画像（{auto} 件が自動修復可能）",
   "repair.noCandidates": "再リンク候補がありません",
   "repair.noMissingImages": "リンク切れ画像がありません",
   "repair.noResults": "条件に一致する画像がありません",

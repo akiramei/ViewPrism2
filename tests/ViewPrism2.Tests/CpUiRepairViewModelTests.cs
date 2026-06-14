@@ -206,6 +206,28 @@ public sealed class CpUiRepairViewModelTests
         Assert.Equal("moved-1", vm.Candidates.First().Candidate.ImageId);
     }
 
+    [Fact]
+    public async Task GF_V4_02_自動修復可能数は候補がちょうど1件のmissingだけを数える()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        // M1: 候補ちょうど 1 件(同一 hash+拡張子+サイズの normal)→ 自動修復可能
+        await db.Images.AddAsync(Image("m1", "sub/a.jpg", ImageStatus.Missing, hash: "H1", size: 100));
+        await db.Images.AddAsync(Image("c1", "moved-a.jpg", ImageStatus.Normal, hash: "H1", size: 100));
+        // M2: 候補 2 件(曖昧)→ 自動修復可能としない
+        await db.Images.AddAsync(Image("m2", "sub/b.jpg", ImageStatus.Missing, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2a", "dup-a.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2b", "dup-b.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+        // M3: 候補 0 件 → 自動修復可能としない
+        await db.Images.AddAsync(Image("m3", "sub/c.jpg", ImageStatus.Missing, hash: "H3", size: 300));
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        Assert.Equal(3, vm.MissingImages.Count);
+        Assert.Equal(1, vm.AutoRepairableCount);   // M1 のみ(M2=2件曖昧・M3=0件 は除外)
+    }
+
     // ---- トラッシュ復元/完全削除(TrashViewModel 拡張) ----
 
     private static TrashViewModel CreateTrashVm(TempDb db, IFilePresenceProbe probe)

@@ -344,6 +344,7 @@
   "repair.criteria.sizeMin": "Min size (bytes)",
   "repair.criteria.title": "Criteria search",
   "repair.missingImages": "Missing images",
+  "repair.summary": "{missing} broken image(s) ({auto} auto-repairable)",
   "repair.noCandidates": "No relink candidates",
   "repair.noMissingImages": "No missing images",
   "repair.noResults": "No images match the criteria",

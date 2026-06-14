@@ -80,7 +80,11 @@
               BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1"
               CornerRadius="6" Padding="12">
         <Grid RowDefinitions="Auto,*,Auto,*,Auto">
-          <TextBlock Grid.Row="0" Text="{Binding Loc[repair.missingImages]}" FontWeight="SemiBold" Margin="0,0,0,6" />
+          <StackPanel Grid.Row="0" Margin="0,0,0,6">
+            <TextBlock Text="{Binding Loc[repair.missingImages]}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding RepairSummary}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+          </StackPanel>
           <Panel Grid.Row="1">
             <TextBlock IsVisible="{Binding HasNoMissing}" Text="{Binding Loc[repair.noMissingImages]}"
                        Foreground="{StaticResource TextMutedBrush}" FontSize="12"

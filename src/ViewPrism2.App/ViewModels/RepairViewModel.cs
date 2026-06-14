@@ -98,6 +98,19 @@ public sealed partial class RepairViewModel : ObservableObject
     [ObservableProperty]
     private string? _statusMessage;
 
+    [ObservableProperty]
+    private int _autoRepairableCount;
+
+    /// <summary>
+    /// 「N 件のリンク切れ画像(M 件が自動修復可能)」見出し(GF-V4-02・原典 view-prism RepairModal 準拠)。
+    /// 自動修復可能=missing ごとに hash+拡張子+サイズで候補探索し**ちょうど 1 件**の missing 数。
+    /// </summary>
+    public string RepairSummary => _localization.T("repair.summary", new Dictionary<string, string>
+    {
+        ["missing"] = MissingImages.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["auto"] = AutoRepairableCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    });
+
     /// <summary>現在のフォーム入力から構築した検索条件。</summary>
     public SearchCriteria CurrentCriteria => BuildCriteria();
 
@@ -124,9 +137,40 @@ public sealed partial class RepairViewModel : ObservableObject
             MissingImages.Add(new MissingImageViewModel(record));
         }
 
+        AutoRepairableCount = await CountAutoRepairableAsync();
+
         OnPropertyChanged(nameof(HasNoMissing));
         OnPropertyChanged(nameof(HasNoCandidates));
+        OnPropertyChanged(nameof(RepairSummary));
     }
+
+    /// <summary>
+    /// 自動修復可能な missing 数(GF-V4-02・原典準拠): 各 missing を hash+拡張子+サイズで候補探索し、
+    /// 候補が**ちょうど 1 件**(一意=曖昧でない)のものを数える。0 件/2 件以上は自動修復可能としない。
+    /// </summary>
+    private async Task<int> CountAutoRepairableAsync()
+    {
+        var count = 0;
+        foreach (var missing in MissingImages)
+        {
+            var candidates = await _relink.GetCandidatesAsync(missing.Record.Id, DeriveAutoCriteria(missing.Record));
+            if (candidates.Count == 1)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>自動修復用の検索条件(原典 既定 useHash+useExtension+useSize。値は missing から導出)。</summary>
+    private static SearchCriteria DeriveAutoCriteria(ImageRecord record) => new()
+    {
+        Hash = record.Hash,
+        Extension = System.IO.Path.GetExtension(record.FileName),
+        SizeMin = record.FileSize,
+        SizeMax = record.FileSize,
+    };
 
     /// <summary>criteria 検索(単体検索=status {Normal}・§2.11.1)。空条件は実行しない。</summary>
     [RelayCommand]
