@@ -101,56 +101,42 @@ public sealed class CpUiRepairViewModelTests
         => new(
             Folder,
             db.Images,
-            new CriteriaSearchService(db.Images),
             new RelinkService(db.Images, db.Tags),
             CreateLoc(),
             new AcceptingWindows());
 
-    // ---- criteria 検索フォーム ----
+    // ---- 検索=再リンク候補探索に統一(GF-V4-03) ----
 
     [Fact]
-    public async Task 空条件は検索非活性_条件入力でCanSearchが立つ()
+    public async Task GF_V4_03_検索はmissing選択で活性_未選択で非活性()
     {
         using var db = new TempDb();
         await SeedFolderAsync(db);
+        await db.Images.AddAsync(Image("m1", "old.png", ImageStatus.Missing, hash: "H1"));
         var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
 
-        Assert.False(vm.CanSearch);          // 全項目未指定 → 非活性
-        vm.ExtensionInput = "  ";            // 空白のみは未指定扱い
-        Assert.False(vm.CanSearch);
-        vm.ExtensionInput = "png";
-        Assert.True(vm.CanSearch);
+        Assert.False(vm.CanSearchCandidates);          // missing 未選択 → 検索不可
+        vm.SelectedMissing = vm.MissingImages.First();
+        Assert.True(vm.CanSearchCandidates);
     }
 
     [Fact]
-    public async Task 検索は単体status_Normalのみで安定順の結果を返す()
+    public async Task GF_V4_03_検索は選択missingの候補をpending含めて再探索する()
     {
         using var db = new TempDb();
         await SeedFolderAsync(db);
-        await db.Images.AddAsync(Image("a", "a.png", ImageStatus.Normal));
-        await db.Images.AddAsync(Image("b", "b.png", ImageStatus.Normal));
-        await db.Images.AddAsync(Image("p", "p.png", ImageStatus.Pending)); // 単体検索では除外
+        await db.Images.AddAsync(Image("m1", "sub/old.png", ImageStatus.Missing, hash: "H1", size: 100));
+        // リネーム後ファイル=pending(scan 3a)。旧 Normal 限定検索では拾えないが候補探索なら出る
+        await db.Images.AddAsync(Image("p1", "_old.png", ImageStatus.Pending, hash: "H1", size: 100));
         var vm = CreateRepairVm(db);
-        vm.ExtensionInput = "png";
+        await vm.LoadAsync();
+        vm.SelectedMissing = vm.MissingImages.First();
 
-        await vm.SearchAsync();
+        await vm.SearchAsync();   // = 現在条件で再リンク候補を再探索(Pending∪Normal)
 
-        Assert.Equal(["a.png", "b.png"], vm.SearchResults.Select(r => r.RelativePath));
-        Assert.False(vm.HasNoResults);
-    }
-
-    [Fact]
-    public async Task 空条件でSearchを呼んでも結果は空_全件返さない()
-    {
-        using var db = new TempDb();
-        await SeedFolderAsync(db);
-        await db.Images.AddAsync(Image("a", "a.png", ImageStatus.Normal));
-        var vm = CreateRepairVm(db);
-
-        await vm.SearchAsync();
-
-        Assert.Empty(vm.SearchResults);
-        Assert.True(vm.HasNoResults);
+        Assert.Single(vm.Candidates);
+        Assert.Equal("p1", vm.Candidates.First().Candidate.ImageId);   // pending 候補が出る
     }
 
     // ---- relink フロー ----

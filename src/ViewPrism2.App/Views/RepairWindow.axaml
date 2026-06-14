@@ -44,34 +44,15 @@
             <TextBox Grid.Row="6" Grid.Column="2" Text="{Binding SizeMaxInput}" Margin="0,0,0,4" />
             <Button Grid.Row="7" Grid.Column="2" HorizontalAlignment="Right" Margin="0,8,0,0"
                     Content="{Binding Loc[repair.search]}"
-                    Command="{Binding SearchCommand}" IsEnabled="{Binding CanSearch}"
+                    Command="{Binding SearchCommand}" IsEnabled="{Binding CanSearchCandidates}"
                     Background="{StaticResource AccentBrush}" Foreground="White" Padding="16,8" />
           </Grid>
 
-          <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[repair.searchResults]}"
-                     FontWeight="SemiBold" Margin="0,4,0,4" />
-          <Panel>
-            <TextBlock IsVisible="{Binding HasNoResults}" Text="{Binding Loc[repair.noResults]}"
-                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <ScrollViewer>
-              <ItemsControl ItemsSource="{Binding SearchResults}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:CriteriaResultViewModel">
-                    <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1" Padding="4,6">
-                      <Grid ColumnDefinitions="*,Auto,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" Margin="8,0"
-                                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
-                        <TextBlock Grid.Column="2" Text="{Binding SizeText}"
-                                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
-                      </Grid>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
-          </Panel>
+          <!-- GF-V4-03: 検索は選択中 missing の再リンク候補(右)を現在の条件で絞り込む(原典 AdvancedRepairModal 準拠)。
+               Normal 限定の別「検索結果」リストは廃止。 -->
+          <TextBlock Text="{Binding Loc[repair.criteria.help]}"
+                     Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap"
+                     VerticalAlignment="Top" />
         </DockPanel>
       </Border>
 

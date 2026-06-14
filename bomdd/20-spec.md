@@ -654,8 +654,12 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
 - 受入: images 行削除・CASCADE(孤児行ゼロ)・deleted 限定を unit exact + **物理非破壊は L3 物理差分(S-26)**
 
 **2.11.5 修復ライフサイクル UI (REQ-072, golden G-10)**
-- (a) criteria 検索フォーム(hash/名前/拡張子/mtime/サイズ・AND・対象コレクション)+結果一覧、(b) relink フロー
-  (missing への候補提示・選択・確定)、(c) トラッシュ(deleted 一覧)からの復元・完全削除
+- (a) criteria フォーム(hash/名前/拡張子/mtime/サイズ・AND)= **再リンク候補の絞り込み条件**、(b) relink フロー
+  (missing 選択→候補自動提示→確定)、(c) トラッシュ(deleted 一覧)からの復元・完全削除
+- **(GF-V4-03・原典 AdvancedRepairModal 準拠) 検索ボタン=選択中 missing の再リンク候補(Pending∪Normal)を
+  現在のフォーム条件で再探索**する(検索結果は再リンク候補に統一。Normal 限定の別「検索結果」リストは持たない)。
+  これにより「候補はあるのに検索結果が空(=pending が Normal 限定検索から漏れる)」の不一致を解消。
+  検索は missing 選択中のみ活性。条件を編集(例: hash を消してサイズだけ)→検索 で候補を広げ/絞れる
 - **(GF-V4-01・自動修復 — 原典 view-prism RepairModal 準拠) missing を選択したら、その画像自身の
   hash+拡張子+サイズを criteria へ自動導出し、候補を手入力なしで提示する**(既定 useHash/useExtension/useSize=ON、
   filename/mtime はリネームで変わるため OFF)。ユーザーは criteria を編集して再エンコード等へ手動で広げられる。

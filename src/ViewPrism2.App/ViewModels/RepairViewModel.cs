@@ -11,27 +11,17 @@ using ViewPrism2.Infrastructure.Scanning;
 
 namespace ViewPrism2.App.ViewModels;
 
-/// <summary>criteria 検索結果の表示行(REQ-072)。</summary>
-public sealed record CriteriaResultViewModel(ImageRecord Record, string SizeText, string StatusText)
-{
-    public string RelativePath => Record.RelativePath;
-}
-
 /// <summary>
 /// 修復ライフサイクル UI の ViewModel(M-UI-REPAIR-027 / REQ-072、仕様 §2.11.5)。
-/// (a) criteria 検索フォーム(hash/名前/拡張子/mtime 範囲/サイズ範囲・AND・対象コレクション)→結果一覧、
-/// (b) relink フロー(missing への候補提示・選択・確定)。
-/// 各操作は M-CRITERIA-024/M-RELINK-025 の API のみ経由(UI で状態遷移・タグ操作を再実装しない)。
-/// 空条件は検索ボタン非活性。ロジックは ViewModel で unit 検査可能に分離する(コードビハインド判定禁止)。
+/// relink フロー(missing 選択→候補自動提示→確定)。criteria フォームは**再リンク候補の絞り込み条件**であり、
+/// 検索ボタンは選択中 missing の候補(Pending∪Normal)を現在の条件で再探索する(GF-V4-03・原典
+/// AdvancedRepairModal 準拠=検索結果は再リンク候補に統一。Normal 限定の別検索結果リストは持たない)。
+/// 各操作は M-RELINK-025 の API のみ経由(UI で状態遷移・タグ操作を再実装しない)。
 /// </summary>
 public sealed partial class RepairViewModel : ObservableObject
 {
-    private static readonly IReadOnlySet<ImageStatus> NormalOnly =
-        new HashSet<ImageStatus> { ImageStatus.Normal };
-
     private readonly string _collectionId;
     private readonly IImageRepository _images;
-    private readonly CriteriaSearchService _criteriaSearch;
     private readonly RelinkService _relink;
     private readonly LocalizationService _localization;
     private readonly IWindowService? _windows;
@@ -39,14 +29,12 @@ public sealed partial class RepairViewModel : ObservableObject
     public RepairViewModel(
         string collectionId,
         IImageRepository images,
-        CriteriaSearchService criteriaSearch,
         RelinkService relink,
         LocalizationService localization,
         IWindowService? windows = null)
     {
         _collectionId = collectionId;
         _images = images;
-        _criteriaSearch = criteriaSearch;
         _relink = relink;
         _localization = localization;
         _windows = windows;
@@ -82,8 +70,6 @@ public sealed partial class RepairViewModel : ObservableObject
     [ObservableProperty]
     private string? _sizeMaxInput;
 
-    public ObservableCollection<CriteriaResultViewModel> SearchResults { get; } = [];
-
     // ---- relink フロー ----
     public ObservableCollection<MissingImageViewModel> MissingImages { get; } = [];
 
@@ -111,13 +97,8 @@ public sealed partial class RepairViewModel : ObservableObject
         ["auto"] = AutoRepairableCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
     });
 
-    /// <summary>現在のフォーム入力から構築した検索条件。</summary>
-    public SearchCriteria CurrentCriteria => BuildCriteria();
-
-    /// <summary>検索可能か(1 つ以上の条件が指定されている)。空条件は非実行(§2.11.1)。</summary>
-    public bool CanSearch => HasAnyCriteria(BuildCriteria());
-
-    public bool HasNoResults => SearchResults.Count == 0;
+    /// <summary>候補検索(検索ボタン)が可能か。missing が選択されている必要がある(候補は missing 単位)。</summary>
+    public bool CanSearchCandidates => SelectedMissing is not null;
 
     public bool HasNoMissing => MissingImages.Count == 0;
 
@@ -172,29 +153,13 @@ public sealed partial class RepairViewModel : ObservableObject
         SizeMax = record.FileSize,
     };
 
-    /// <summary>criteria 検索(単体検索=status {Normal}・§2.11.1)。空条件は実行しない。</summary>
+    /// <summary>
+    /// 検索(GF-V4-03・原典 AdvancedRepairModal 準拠): 現在のフォーム条件で選択中 missing の
+    /// 再リンク候補(Pending∪Normal)を再探索する。検索結果は再リンク候補に統一(Normal 限定の別リストは持たない)。
+    /// 条件を編集(例: hash を消してサイズだけにする)→検索 で候補を広げ/絞れる。
+    /// </summary>
     [RelayCommand]
-    public async Task SearchAsync()
-    {
-        SearchResults.Clear();
-        var criteria = BuildCriteria();
-        if (!HasAnyCriteria(criteria))
-        {
-            OnPropertyChanged(nameof(HasNoResults));
-            return;
-        }
-
-        var matched = await _criteriaSearch.SearchAsync(_collectionId, criteria, NormalOnly, CancellationToken.None);
-        foreach (var record in matched)
-        {
-            SearchResults.Add(new CriteriaResultViewModel(
-                record,
-                ByteSizeFormatter.Format(record.FileSize),
-                record.Status.ToString()));
-        }
-
-        OnPropertyChanged(nameof(HasNoResults));
-    }
+    public Task SearchAsync() => RefreshCandidatesAsync();
 
     /// <summary>relink 確定(RelinkService.CommitRelinkAsync のみ経由)。タグ付き候補は拒否され案内文言を出す。</summary>
     [RelayCommand]
@@ -231,6 +196,7 @@ public sealed partial class RepairViewModel : ObservableObject
         // hash+拡張子+サイズを criteria へ事前入力し、再リンク候補を**手入力なしで自動探索**する
         // (view-prism RepairModal の既定 useHash/useExtension/useSize。filename/mtime はリネームで変わるため OFF)。
         PrefillCriteriaFromMissing(value);
+        OnPropertyChanged(nameof(CanSearchCandidates));
         _ = LoadCandidatesAsync(value);
     }
 
@@ -266,20 +232,6 @@ public sealed partial class RepairViewModel : ObservableObject
         MtimeFromInput = null;
         MtimeToInput = null;
     }
-
-    partial void OnHashInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
-
-    partial void OnNameContainsInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
-
-    partial void OnExtensionInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
-
-    partial void OnMtimeFromInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
-
-    partial void OnMtimeToInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
-
-    partial void OnSizeMinInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
-
-    partial void OnSizeMaxInputChanged(string? value) => OnPropertyChanged(nameof(CanSearch));
 
     private async Task LoadCandidatesAsync(MissingImageViewModel? missing)
     {

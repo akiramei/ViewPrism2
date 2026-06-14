@@ -336,6 +336,7 @@
   "relink.title": "再リンク",
   "repair.candidates": "再リンク候補",
   "repair.criteria.extension": "拡張子",
+  "repair.criteria.help": "選択したリンク切れ画像の条件で再リンク候補を絞り込みます。条件を編集して「検索」で再探索できます。",
   "repair.criteria.hash": "ハッシュ（SHA-256）",
   "repair.criteria.mtimeFrom": "更新日時（以降）",
   "repair.criteria.mtimeTo": "更新日時（以前）",

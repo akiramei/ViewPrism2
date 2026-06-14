@@ -336,6 +336,7 @@
   "relink.title": "Relink",
   "repair.candidates": "Relink candidates",
   "repair.criteria.extension": "Extension",
+  "repair.criteria.help": "Refines relink candidates by the selected missing image's criteria. Edit and press Search to re-search.",
   "repair.criteria.hash": "Hash (SHA-256)",
   "repair.criteria.mtimeFrom": "Modified from",
   "repair.criteria.mtimeTo": "Modified to",
