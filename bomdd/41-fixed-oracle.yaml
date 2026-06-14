@@ -1,13 +1,13 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v3-similarity(v3.0 — S-19〜S-24 追加。S-01〜S-18 は loop-v1-r1/loop-v2-r1 凍結のまま不変=回帰検査)"
+  experiment: "loop-v4-repair-lifecycle(v4.0 — S-26〜S-30 追加。S-01〜S-25 は loop-v1-r1/v2-r1/v3-r1 凍結のまま不変=回帰検査)"
   layer: Fixed Oracle          # ★設計者のみ。製造装置に渡さない
 
 # 規律: 仕様化済み契約だけを合否に入れる。製造開始前に凍結し、収束ループ中は不変。
 # Control Plan のベクタ(工場開示)と重なるが、本オラクルは複合シナリオ+隠しケースを含む別집合。
 
 fixed_oracle:
-  frozen_since: "tag:loop-v1-r1(2026-06-11、S-01〜S-12)/ tag:loop-v2-r1(2026-06-13、S-13〜S-18)/ tag:loop-v3-r1(2026-06-13、S-19〜S-24 追加凍結。V3 収束ループ中は全 24 ケース不変)"
+  frozen_since: "tag:loop-v1-r1(2026-06-11、S-01〜S-12)/ tag:loop-v2-r1(2026-06-13、S-13〜S-18)/ tag:loop-v3-r1(2026-06-13、S-19〜S-25)/ tag:loop-v4-r1(2026-06-14、S-26〜S-30 追加凍結。V4 収束ループ中は全 30 ケース不変)"
   self_test: |
     凍結前セルフテスト: 各ケースの期待値が 20-spec.md の節番号から導出できることを設計者が逐条確認(2026-06-11 実施)。
     期待値が仕様から書けないケースは発見されなかった(全件 spec_ref 付き)。
@@ -23,6 +23,15 @@ fixed_oracle:
     で凍結。実行治具は 32-mbom M-PHASH-020/M-SIMSEARCH-021/M-MERGE-022 の公開契約(PerceptualHash/HammingDistance/
     SimilarityScore/SimilaritySearchService/MergeCalculator/MergeService)に対する追加テストとして tests/ViewPrism2.Oracle
     へ実装する。S-24 は一時フォルダの実画像ファイルを操作前後でスナップショット比較(工場非開示)。
+    v4.0 追記(2026-06-14): S-26〜S-30 の期待値を 20-spec v4.0(G2/G2' 通過版)の §2.11(状態機械 T1〜T8)から逐条
+    導出できることを確認。S-26=復元/完全削除の物理非破壊(EQ-003 スナップショット・INV-009 第 2 の実アクション)、
+    S-27=criteria の AND/status 対象/空条件非実行/安定順、S-28=relink のタグ安全ガード(候補=pending∪untagged-normal・
+    タグ付き拒否)と missing 側 ID 不変、S-29=復元の存在分岐(存在=Normal/不在=Missing)、S-30=完全削除の CASCADE・
+    deleted 限定で凍結。実行治具は 32-mbom M-CRITERIA-024/M-RELINK-025/M-TRASH-026 の公開契約(CriteriaMatcher/
+    CriteriaSearchService/RelinkService/TrashService/TrashTransition/IFilePresenceProbe)に対する追加テストとして
+    tests/ViewPrism2.Oracle へ**製造納品後に**実装する(V1〜V3 と同方式 — 工場非開示)。S-26 は一時フォルダの実画像を
+    操作前後でスナップショット比較・S-29 は IFilePresenceProbe を注入して存在/不在を制御。**V4 はスキーマ変更なし**の
+    ため S-05(マイグレーション同値)は不変で緑のまま=回帰の一部。
     v3.1 追記(2026-06-14・A/B 同等性契約のオラクル分離 — capability-discipline.md): 各ケースに scope を付与。
     cross-factory(S-19/20/21/22/23/24/25)= CPOL-103 を満たす任意工場が満たすべき横断ゲート、
     this-build(S-19b)= factory-04 レシピの係数レベル値の回帰専用(横断ゲートにしない)。S-19 を「決定性・
@@ -223,3 +232,40 @@ fixed_oracle:
       spec_ref: §2.10.4(OC-16・CPOL-103)
       equivalence_ref: EQ-RANK
       depth: unit(実 decode パイプライン)
+
+    # ---- v4.0(loop-v4-repair-lifecycle)— tag loop-v4-r1 で凍結。全 cross-factory(状態機械・修復規則の横断契約) ----
+    - id: S-26
+      scope: cross-factory
+      scenario: "復元・完全削除の物理非破壊(L3): 実画像 3 枚を一時フォルダに置きスキャン→1 枚をマージで deleted 化し復元→別の 1 枚を deleted 化し完全削除→フォルダをスナップショット比較(INV-009 第 2 の実アクション)"
+      contract_expectation: "復元・完全削除の前後でフォルダ内全ファイルの SHA-256・LastWriteTimeUtc・ファイル集合が完全一致(削除・移動・新規作成なし)。一方 DB 上は復元で status 遷移・完全削除で images 行消滅(論理操作は起きている=空振りでない)"
+      spec_ref: §2.11.3-4(CP-TRASH-001・INV-009/013/014)
+      equivalence_ref: EQ-003
+      depth: L3
+    - id: S-27
+      scope: cross-factory
+      scenario: "criteria 条件検索: 同一コレクションに hash/名前/拡張子/mtime/サイズ違いの画像群+status 混在。(1)拡張子のみ指定 (2)名前部分一致+サイズ範囲を AND (3)全条件未指定 (4)statusTargets={Pending,Normal} で検索"
+      contract_expectation: "(1)指定拡張子かつ statusTargets の画像のみ(他条件は無視) (2)両条件を満たすもののみ(OR にならない) (3)空列(全件を返さない) (4)deleted/missing を除外。結果は relative_path 昇順・同値 id 昇順。名前=OrdinalIgnoreCase 部分一致・拡張子=case-insensitive 完全一致・hash=Ordinal 完全一致"
+      spec_ref: §2.11.1(OC-19・REQ-068)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-28
+      scope: cross-factory
+      scenario: "relink 拡張 E2E(タグ安全・ID 不変): missing 1 枚(タグ 2 種付与済み)に対し候補=同フォルダの pending(untagged・exact-hash)/ untagged-normal(criteria 一致)/ tagged-normal(criteria 一致だがタグ付き)。候補列挙と各候補での確定を試行"
+      contract_expectation: "候補列挙=pending と untagged-normal のみ(tagged-normal は除外・安定順)。untagged 候補で確定→missing 行が候補のパス/メタへ更新・status=Normal・candidate_link_id=NULL・候補行削除・**missing 側 image_id 不変・タグ 2 種残存**。tagged-normal 指定の確定→ValidationError(DB 無変化=タグ損失防止)。別コレクション/deleted 候補→ValidationError"
+      spec_ref: §2.11.2(OC-20・INV-001/015・REQ-069)
+      equivalence_ref: EQ-001
+      depth: unit〜L2
+    - id: S-29
+      scope: cross-factory
+      scenario: "トラッシュ復元の存在分岐: deleted 画像 2 枚。一方は記録パスに物理ファイル存在・他方は不在(IFilePresenceProbe で注入)。各を復元。さらに normal 画像の復元を試行"
+      contract_expectation: "存在→status=Normal(T6)/ 不在→status=Missing(T7・幽霊 normal 防止)。両者ともタグ・image_id・特徴量は不変。normal の復元→ValidationError(deleted 限定)。純粋関数 TrashTransition.ResolveRestore(true)=Normal /(false)=Missing"
+      spec_ref: §2.11.3(OC-21・INV-013・REQ-070)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-30
+      scope: cross-factory
+      scenario: "完全削除の CASCADE・対象限定: deleted 画像(タグ・特徴量・類似度ペアを持つ)を完全削除。さらに normal 画像の完全削除を試行"
+      contract_expectation: "images 行削除→当該 image の image_tags/image_features/image_similarity 行が FK CASCADE で 0 件(孤児ゼロ)。normal の完全削除→ValidationError(deleted 限定)。物理ファイルは不変(S-26 で別途 L3 実証)"
+      spec_ref: §2.11.4(OC-22・INV-014・REQ-071)
+      equivalence_ref: EQ-001
+      depth: unit〜L2
