@@ -16,8 +16,13 @@ namespace ViewPrism2.Oracle;
 [Trait("oracle", "S-21")]
 public sealed class S21SimilaritySearchTests
 {
+    // 注入 feature の HashAdapter とこの id を一致させ「fresh」を成立させる(P-09 adapter 一致)。
+    private const string Adapter = "oracle-s21-v1";
+
     private sealed class ThrowingReader : IPHashImageReader
     {
+        public string AdapterId => Adapter;
+
         public Task<string?> ComputePHashAsync(string absoluteImagePath)
             => throw new InvalidOperationException("特徴量が fresh のためリーダーは呼ばれてはならない。");
     }
@@ -85,6 +90,7 @@ public sealed class S21SimilaritySearchTests
         {
             ImageId = id,
             PHash = phash,
+            HashAdapter = Adapter, // reader と一致 → fresh(reader 非呼び出し)
             FileSize = image.FileSize,
             ModifiedDate = image.ModifiedDate,
             Hash = image.Hash,

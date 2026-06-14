@@ -22,7 +22,7 @@ public sealed class ImageFeatureRepository : IImageFeatureRepository
         return _db.RunAsync(async conn =>
         {
             var row = await conn.QuerySingleOrDefaultAsync<Row>("""
-                SELECT image_id AS ImageId, phash AS PHash, file_size AS FileSize,
+                SELECT image_id AS ImageId, phash AS PHash, hash_adapter AS HashAdapter, file_size AS FileSize,
                        modified_date AS ModifiedDate, hash AS Hash, last_calculated AS LastCalculated
                 FROM image_features WHERE image_id = @ImageId
                 """,
@@ -35,10 +35,10 @@ public sealed class ImageFeatureRepository : IImageFeatureRepository
     {
         ArgumentNullException.ThrowIfNull(feature);
         return _db.RunAsync(conn => conn.ExecuteAsync("""
-            INSERT INTO image_features (image_id, phash, file_size, modified_date, hash, last_calculated)
-            VALUES (@ImageId, @PHash, @FileSize, @ModifiedDate, @Hash, @LastCalculated)
+            INSERT INTO image_features (image_id, phash, hash_adapter, file_size, modified_date, hash, last_calculated)
+            VALUES (@ImageId, @PHash, @HashAdapter, @FileSize, @ModifiedDate, @Hash, @LastCalculated)
             ON CONFLICT(image_id) DO UPDATE SET
-                phash = excluded.phash, file_size = excluded.file_size,
+                phash = excluded.phash, hash_adapter = excluded.hash_adapter, file_size = excluded.file_size,
                 modified_date = excluded.modified_date, hash = excluded.hash,
                 last_calculated = excluded.last_calculated
             """,
@@ -46,6 +46,7 @@ public sealed class ImageFeatureRepository : IImageFeatureRepository
             {
                 feature.ImageId,
                 feature.PHash,
+                feature.HashAdapter,
                 feature.FileSize,
                 feature.ModifiedDate,
                 feature.Hash,
@@ -60,7 +61,8 @@ public sealed class ImageFeatureRepository : IImageFeatureRepository
     }
 
     private sealed record Row(
-        string ImageId, string? PHash, long? FileSize, string? ModifiedDate, string? Hash, string? LastCalculated);
+        string ImageId, string? PHash, string? HashAdapter, long? FileSize,
+        string? ModifiedDate, string? Hash, string? LastCalculated);
 
     private static ImageFeature? ToEntity(Row? row)
     {
@@ -70,6 +72,8 @@ public sealed class ImageFeatureRepository : IImageFeatureRepository
             {
                 ImageId = row.ImageId,
                 PHash = row.PHash,
+                // 旧 DB(P-09 以前)の NULL は空文字へ。現行 adapter と必ず不一致=再計算される
+                HashAdapter = row.HashAdapter ?? string.Empty,
                 FileSize = row.FileSize ?? 0,
                 ModifiedDate = row.ModifiedDate ?? string.Empty,
                 Hash = row.Hash ?? string.Empty,

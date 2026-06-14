@@ -24,6 +24,9 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
         _logger = logger;
     }
 
+    /// <summary>scaled-decode(早期縮小)世代の adapter 識別子(P-09)。full-decode とは pHash 値が異なる。</summary>
+    public string AdapterId => "skia-scaled-decode-v1";
+
     /// <summary>絶対パスの画像から 16hex pHash を計算する。壊れた画像・読み取り失敗は null。</summary>
     public Task<string?> ComputePHashAsync(string absoluteImagePath)
     {
@@ -60,7 +63,8 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
                 return null;
             }
 
-            // 最終 32×32 縮小(Factory-A と完全一致: 双線形・Mipmap なし・決定性)
+            // 最終 32×32 縮小処理は Factory-A と共通(双線形・Mipmap なし・決定性)。
+            // ただし入力画素が early-shrink で異なるため出力 pHash 値は Factory-A と一致しない(adapter drift)。
             var info = new SKImageInfo(
                 PerceptualHash.Size, PerceptualHash.Size, SKColorType.Bgra8888, SKAlphaType.Unpremul);
             using var resized = bitmap.Resize(info, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));

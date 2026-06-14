@@ -373,6 +373,22 @@ control_plan:
         - "フォルダ内ファイル集合がマージ前後で同一(削除・移動・新規作成なし)"
         - "DB 上はマージ元が Deleted・タグ集約済み(論理操作は起きている=空振りでない)"
 
+    - id: CP-PHASH-ADAPTER-019
+      characteristic: "pHash adapter 世代交代の安全性(P-09)— production=scaled-decode・値混在禁止・2 層オラクル・退行ガード"
+      classification: core
+      depth: "unit/L2/L3"
+      tolerance: "下記ベクタの exact(値混在の不在・schema 同値)+ 相対 latency 比 ≥2×"
+      fixture: "tests/ViewPrism2.Tests(CP-SIM-017 adapter 世代交代)/ tests/ViewPrism2.Oracle(ThisBuildGoldenTests・PHashLatencyGuardTests・S-05)"
+      oracle: "adapter 不一致→再計算・連鎖無効化 / this-build golden exact / schema 同値 / 相対速度比"
+      approver: automated
+      test_vectors:
+        - "adapter version: IPHashImageReader.AdapterId(full=skia-full-decode-v1 / scaled=skia-scaled-decode-v1)。production DI=scaled-decode"
+        - "freshness: 内容一致でも hash_adapter 不一致なら stale→再計算→連鎖無効化(旧 adapter 値・旧類似度の混在禁止)。旧 DB の NULL は必ず再計算"
+        - "schema: migration 003-image-features-hash-adapter 適用 DB = 新規 LatestDdl(S-05 / CP-DB-006 同値)"
+        - "this-build golden(scope=this-build): production adapter exact = b7ff8800d0de12d5(512 jpeg q90 pattern3・SkiaSharp 3.119.4)/ 単色を実 decode 経路で 0x8000…。adapter 世代交代ごとに再凍結"
+        - "横断(scope=cross-factory): EQ-RANK(順位)を両工場・代表サイズで維持"
+        - "latency 退行ガード(default-on): scaled-decode の μ が full-decode の 1/2 以下(相対比・machine 非依存)"
+
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する

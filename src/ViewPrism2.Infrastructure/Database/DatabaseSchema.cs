@@ -112,7 +112,8 @@ public static class DatabaseSchema
             file_size       INTEGER NULL,
             modified_date   TEXT    NULL,
             hash            TEXT    NULL,
-            last_calculated TEXT    NULL
+            last_calculated TEXT    NULL,
+            hash_adapter    TEXT    NULL
         );
 
         CREATE TABLE image_similarity (
@@ -161,5 +162,12 @@ public static class DatabaseSchema
             CREATE INDEX idx_image_similarity_image_id1 ON image_similarity(image_id1);
             CREATE INDEX idx_image_similarity_image_id2 ON image_similarity(image_id2);
             """),
+
+        // P-09: pHash adapter 世代交代(scaled-decode 採用)。image_features に hash_adapter を追加。
+        // 既存行は NULL のまま=現行 adapter と不一致で stale 判定 → 次回検索で再計算され、
+        // 連鎖無効化で旧 adapter 由来の類似度キャッシュも purge される(adapter をまたいだ値の混在防止)。
+        // ALTER ADD COLUMN は末尾に列を足す。LatestDdl も image_features 末尾へ同じ列を定義しスキーマ同値を保つ。
+        new("003-image-features-hash-adapter",
+            "ALTER TABLE image_features ADD COLUMN hash_adapter TEXT NULL;"),
     ];
 }

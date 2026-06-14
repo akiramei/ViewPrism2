@@ -20,6 +20,9 @@ public sealed class PHashImageReader : IPHashImageReader
         _logger = logger;
     }
 
+    /// <summary>full-decode 世代の adapter 識別子(P-09)。scaled-decode(早期縮小)とは pHash 値が異なる。</summary>
+    public string AdapterId => "skia-full-decode-v1";
+
     /// <summary>絶対パスの画像から 16hex pHash を計算する。壊れた画像・読み取り失敗は null。</summary>
     public Task<string?> ComputePHashAsync(string absoluteImagePath)
     {

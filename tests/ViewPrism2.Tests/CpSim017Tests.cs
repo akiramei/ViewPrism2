@@ -258,6 +258,50 @@ public sealed class CpSim017Tests
         Assert.Equal(0, similarities);
     }
 
+    // ---- P-09: adapter 世代交代の無効化 ----
+
+    [Fact]
+    public async Task adapter世代交代_旧adapterの特徴量と類似度は無効化され再計算される()
+    {
+        using var db = new TempDb();
+        var (folderA, _) = await SeedTwoFoldersAsync(db);
+        var baseImg = await SeedImageAsync(db, folderA, "base.jpg", ImageStatus.Normal, "0000000000000000");
+        var other = await SeedImageAsync(db, folderA, "o.jpg", ImageStatus.Normal, "000000000000001f");
+
+        // 旧 adapter(full-decode)で永続化された特徴量を仕込む。内容(file_size/modified/hash)は
+        // 現行と一致=旧来の内容ベース判定だけなら fresh。staleness は adapter 不一致だけで起こす。
+        await db.Features.UpsertAsync(new ImageFeature
+        {
+            ImageId = baseImg.Id,
+            PHash = "ffffffffffffffff",          // 旧 adapter の(別物の)値
+            HashAdapter = "skia-full-decode-v1", // 旧世代
+            FileSize = baseImg.FileSize,
+            ModifiedDate = baseImg.ModifiedDate,
+            Hash = baseImg.Hash,
+            LastCalculated = "2026-01-01T00:00:00.000Z",
+        });
+        // 旧 adapter 由来の類似度ペアも仕込む(無効化されることを確認する対象)
+        await db.Similarities.UpsertAsync(baseImg.Id, other.Id, 5, db.Clock.UtcNowIso());
+        Assert.NotNull(await db.Similarities.GetAsync(baseImg.Id, other.Id));
+
+        // 現行 adapter = scaled-decode(既定)。reader は base の現行 pHash(=0000…)を返す
+        var reader = ReaderFor(baseImg, other);
+        Assert.Equal("skia-scaled-decode-v1", reader.AdapterId);
+        var service = NewService(db, reader);
+        _ = await service.FindSimilarAsync(baseImg.Id, threshold: 1, ct: TestContext.Current.CancellationToken);
+
+        // 旧 adapter の特徴量は stale 扱い → 再計算され、新 adapter・新 pHash に置換される
+        var refreshed = await db.Features.GetAsync(baseImg.Id);
+        Assert.NotNull(refreshed);
+        Assert.Equal("skia-scaled-decode-v1", refreshed.HashAdapter); // 世代が更新
+        Assert.Equal("0000000000000000", refreshed.PHash);            // 現行 adapter で再計算
+
+        // 旧 adapter 由来の古い類似度(score=5)は連鎖無効化で消え、新 pHash 由来で再生成される
+        var pair = await db.Similarities.GetAsync(baseImg.Id, other.Id);
+        Assert.NotNull(pair);
+        Assert.NotEqual(5, pair.SimilarityScore); // 旧キャッシュ値ではない=無効化された
+    }
+
     // ---- L2 スキーマ ----
 
     [Fact]
@@ -277,6 +321,7 @@ public sealed class CpSim017Tests
 
         Assert.Contains("image_id", cols);
         Assert.Contains("phash", cols);
+        Assert.Contains("hash_adapter", cols); // P-09
         Assert.Contains("file_size", cols);
         Assert.Contains("modified_date", cols);
         Assert.Contains("hash", cols);
@@ -358,9 +403,12 @@ public sealed class CpSim017Tests
 }
 
 /// <summary>合成 pHash 注入用のフェイク reader(CP-SIM-017)。絶対パス→pHash の対応表+計算回数。</summary>
-internal sealed class FakePHashImageReader : IPHashImageReader
+internal sealed class FakePHashImageReader(string adapterId = "skia-scaled-decode-v1") : IPHashImageReader
 {
     private readonly Dictionary<string, string?> _byPath = new(StringComparer.Ordinal);
+
+    /// <summary>adapter 世代(P-09)。既定は production と同じ scaled-decode。世代交代検査では別 id を渡す。</summary>
+    public string AdapterId { get; } = adapterId;
 
     public int ComputeCount { get; private set; }
 

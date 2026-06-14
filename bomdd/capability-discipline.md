@@ -67,8 +67,17 @@
 - **μ 対決(40 枚 2000×1500 jpeg)**: factory-A μ=506ms / **factory-B μ=80ms = 6.29× 高速**。σ_B=5.1<σ_A=12.3。
 - **判定 = `select`(factory-B 技術を採用)**: Pareto 支配(μ・tail・安定性すべて B 優位)・correctness 保存・**tension なし**
   (早期縮小は decode 画素自体が減るため latency 勝因が memory/安定性を犠牲にしない)。synthesize 不要(B は A の上位互換)。
-- **codify**: K-SKIA v3.1 に勝ち技術を織り込み(コード結合でなく fresh 再製造で native 採用)。production 採用は this-build 値の
-  再凍結を伴う別判断として残す。
+- **codify**: K-SKIA v3.1 に勝ち技術を織り込み(コード結合でなく fresh 再製造で native 採用)。
+
+### P-09 production adoption(2026-06-14)— A/B の最後の一周
+P-08 の select を **production adapter 世代交代**として接続した(単純な DI 差し替えでなく、cache/oracle/golden/index の再整備)。
+- **adapter version**: IPHashImageReader.AdapterId(full=skia-full-decode-v1 / scaled=skia-scaled-decode-v1)。production DI を scaled-decode へ。
+- **混在禁止**: image_features.hash_adapter(migration 003)+ freshness に adapter 一致を要求 → 旧値は自動無効化・連鎖無効化で旧類似度も purge。
+- **2 層オラクル**: cross-factory(EQ-RANK・順位)/ this-build(production adapter の exact 値=ThisBuildGoldenTests・b7ff8800d0de12d5)を CI 分離。
+- **latency guard**: scaled-decode ≥2× full-decode(default-on・相対比・machine 非依存)。
+- 結果: 全緑(Tests 347 / Oracle 63)・回帰ゼロ・旧 cache/index 無効化を実テストで確認。
+**生産技術の確証**: A/B(lesson 化)→ production adoption → oracle/golden/cache 移行まで**一周**できた。adapter version を成果物に刻むことで、
+**pHash 値が動く性能改善を golden/cache を壊さず投入できる**(検索体験の契約=順位 と this-build の値を分離した step 1 が世代交代で効いた)。
 
 **方法論が裏取りされた 3 点**:
 1. **μ=A/B 選択の主レバー**(P-07 の発見)— Cpk は両工場巨大で序列化不能、μ だけが 6.29× の差を出した。

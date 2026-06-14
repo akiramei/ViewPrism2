@@ -153,6 +153,7 @@ public sealed class SimilaritySearchService
         {
             ImageId = image.Id,
             PHash = phash,
+            HashAdapter = _reader.AdapterId, // P-09: どの adapter 世代で計算したかを刻む
             FileSize = image.FileSize,
             ModifiedDate = image.ModifiedDate,
             Hash = image.Hash,
@@ -165,9 +166,14 @@ public sealed class SimilaritySearchService
         return phash;
     }
 
-    /// <summary>記録された特徴量が現行ファイルメタと一致するか(内容ベース無効化、仕様 §2.10.3)。</summary>
-    private static bool IsFresh(ImageFeature feature, ImageRecord image)
-        => feature.FileSize == image.FileSize
+    /// <summary>
+    /// 記録された特徴量が再利用可能か。①内容ベース(file_size/modified_date/hash・仕様 §2.10.3)に加え、
+    /// ②adapter 世代一致(P-09)を要求する。現行 reader と異なる adapter で計算された pHash は
+    /// 内容が同じでも stale 扱い=再計算し、adapter をまたいだ値の混在を防ぐ(旧 DB の空 adapter も再計算)。
+    /// </summary>
+    private bool IsFresh(ImageFeature feature, ImageRecord image)
+        => string.Equals(feature.HashAdapter, _reader.AdapterId, StringComparison.Ordinal)
+            && feature.FileSize == image.FileSize
             && string.Equals(feature.ModifiedDate, image.ModifiedDate, StringComparison.Ordinal)
             && string.Equals(feature.Hash, image.Hash, StringComparison.Ordinal);
 

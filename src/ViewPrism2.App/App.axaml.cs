@@ -140,9 +140,12 @@ public partial class App : Application
         services.AddSingleton(sp => new TagService(sp.GetRequiredService<ITagRepository>()));
         services.AddSingleton(sp => new ViewService(sp.GetRequiredService<IViewRepository>(), sp.GetRequiredService<IClock>()));
 
-        // v3.0 類似検索・マージ(M-PHASH-020 / M-SIMSEARCH-021 / M-MERGE-022)
-        services.AddSingleton<IPHashImageReader>(sp => new PHashImageReader(
-            sp.GetRequiredService<ILogger<PHashImageReader>>()));
+        // v3.0 類似検索・マージ(M-PHASH-020 / M-SIMSEARCH-021 / M-MERGE-022)。
+        // P-09: production pHash adapter は scaled-decode(早期縮小)= AdapterId "skia-scaled-decode-v1"。
+        // full-decode(PHashImageReader)から世代交代(P-08 で 6.29× 高速・順位等価 EQ-RANK 緑)。
+        // 旧 full-decode で永続化された pHash は hash_adapter 不一致で自動再計算される(混在なし)。
+        services.AddSingleton<IPHashImageReader>(sp => new PHashImageReaderScaledDecode(
+            sp.GetRequiredService<ILogger<PHashImageReaderScaledDecode>>()));
         services.AddSingleton(sp => new SimilaritySearchService(
             sp.GetRequiredService<ISyncFolderRepository>(),
             sp.GetRequiredService<IImageRepository>(),

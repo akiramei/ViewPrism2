@@ -153,3 +153,20 @@ ab_experiment_v3:
     - "Cpk=安定性の番兵として機能(σ_B<σ_A=synthesize 健全を確認)"
     - "adapter drift 大 → 横断契約を順位ベースにした step 1 の判断を裏取り"
   harness: "tests/ViewPrism2.Oracle/ABDecodeStrategyProbe.cs(VP_RUN_AB=1)"
+
+# ── P-09: production adapter 世代交代として採用(A/B の最後の一周)──
+p09_production_adoption:
+  id: P-09
+  date: 2026-06-14
+  decision: "P-08 の select を production へ。adapter version 変更として採用(単純 DI 差し替えでなく cache/oracle/golden 再整備)"
+  changes:
+    adapter_version: "IPHashImageReader.AdapterId(full=skia-full-decode-v1 / scaled=skia-scaled-decode-v1)。production DI=scaled-decode"
+    schema: "migration 003-image-features-hash-adapter(LatestDdl 末尾に列追加・スキーマ同値維持)"
+    freshness: "内容ベース+adapter 一致。不一致→stale→再計算→連鎖無効化(旧 adapter 値の混在を構造的禁止)"
+    oracle_2layer: "cross-factory(EQ-RANK)/ this-build(ThisBuildGoldenTests=production adapter exact 値)を trait scope で CI 分離"
+    latency_guard: "PHashLatencyGuardTests(default-on・相対 ≥2×・machine 非依存)"
+  acceptance: "全緑(Tests 347 / Oracle 63=+4・skip 2)・回帰ゼロ。this-build golden=b7ff8800d0de12d5(SkiaSharp 3.119.4)。旧 cache/index 無効化を CpSim017 で確認"
+  test_delta:
+    tests_project: "346→347(+1: adapter 世代交代の無効化)"
+    oracle_project: "59→63(+3 ThisBuildGoldenTests・+1 latency guard。skip 2=AB duel/P-07)"
+  lesson: "adapter version を成果物に刻む+freshness に adapter 一致を足す+横断/this-build の 2 層オラクルで、値が動く性能改善を golden/cache を壊さず投入できる。A/B 生産技術が production 接続まで一周した"

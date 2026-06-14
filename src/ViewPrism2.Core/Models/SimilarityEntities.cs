@@ -12,6 +12,14 @@ public sealed record ImageFeature
     /// <summary>pHash の 16 桁小文字 16 進(OC-14)。</summary>
     public required string PHash { get; init; }
 
+    /// <summary>
+    /// この pHash を生成した adapter の世代識別子(P-09、image_features.hash_adapter)。
+    /// 現行 reader の <see cref="ViewPrism2.Core.Services.Similarity.IPHashImageReader.AdapterId"/> と
+    /// 不一致なら内容が同じでも stale 扱い=再計算する(adapter をまたいだ pHash 値の混在防止)。
+    /// 旧 DB の NULL は空文字へマップされ、現行 adapter と必ず不一致=再計算される。
+    /// </summary>
+    public required string HashAdapter { get; init; }
+
     /// <summary>計算時点のファイルサイズ(内容ベース無効化の判定材料)。</summary>
     public long FileSize { get; init; }
 

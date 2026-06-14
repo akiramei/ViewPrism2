@@ -13,8 +13,13 @@ namespace ViewPrism2.Oracle;
 [Trait("oracle", "S-22")]
 public sealed class S22SimilarityCacheTests
 {
+    // fresh 判定を内容ベースのみで効かせるため、注入 feature の HashAdapter とこの id を一致させる。
+    private const string Adapter = "oracle-s22-v1";
+
     private sealed class FixedReader(string hex) : IPHashImageReader
     {
+        public string AdapterId => Adapter;
+
         public Task<string?> ComputePHashAsync(string absoluteImagePath) => Task.FromResult<string?>(hex);
     }
 
@@ -121,6 +126,7 @@ public sealed class S22SimilarityCacheTests
         {
             ImageId = id,
             PHash = phash,
+            HashAdapter = Adapter, // adapter は一致させ、staleness は内容(Hash)不一致のみで起こす
             FileSize = image!.FileSize,
             ModifiedDate = image.ModifiedDate,
             Hash = fresh ? image.Hash : "stale-hash-mismatch", // fresh=false で内容不一致→再計算

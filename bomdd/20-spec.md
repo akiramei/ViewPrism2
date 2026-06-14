@@ -511,15 +511,20 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
 
 **2.10.3 特徴量・類似度の永続化とキャッシュ無効化 (REQ-063, OC-18)**
 
-- **image_features**(列: image_id PK、phash、file_size、modified_date、hash、last_calculated)。
-  pHash 等の特徴量を画像ごとに保存。ORB 列(orb_descriptors/orb_keypoints)は**本ループでは作らない**(ORB defer)
+- **image_features**(列: image_id PK、phash、file_size、modified_date、hash、last_calculated、**hash_adapter**(P-09))。
+  pHash 等の特徴量を画像ごとに保存。ORB 列(orb_descriptors/orb_keypoints)は**本ループでは作らない**(ORB defer)。
+  **hash_adapter**(P-09)= pHash を計算した adapter 世代の識別子。decode 経路/レシピ/SkiaSharp 版が pHash の
+  絶対値を動かす変更をしたら新 id を採番する(production 現行 = `skia-scaled-decode-v1`)
 - **image_similarity**(列: cache_key PK、image_id1、image_id2、similarity_score、last_compared)。
   画像ペアの類似度キャッシュ。**ペアは文字列比較で小さい方を image_id1・大きい方を image_id2 に正規化**し、
   **cache_key = `{image_id1}-{image_id2}`**(本ループは pHash 単一モードのためモード識別子は付けない。
   ORB 導入時に `-{mode}` 接尾辞を追加する将来拡張余地のみ残す)。(A,B) と (B,A) は同一キャッシュ
-- **無効化は内容ベースのみ**: 対象画像の file_size / modified_date / hash のいずれかが image_features 記録と
-  異なれば特徴量を無効として再計算する。**時間ベース失効(原典の 24h TTL)は採用しない**(決定性・単純性。
-  内容変化の検知で十分 — §4 第3回掃討)
+- **無効化は内容ベース + adapter 世代**: 対象画像の file_size / modified_date / hash のいずれかが image_features
+  記録と異なれば、**または記録の hash_adapter が現行 adapter と異なれば**(P-09)、特徴量を無効として再計算する。
+  後者は adapter 世代交代(例 full-decode→scaled-decode)時に**旧 adapter 由来の pHash 値を自動的に無効化**し、
+  連鎖無効化で旧類似度キャッシュも purge する(adapter をまたいだ値の混在=ランキング破壊を防ぐ)。
+  旧 DB(P-09 以前)の hash_adapter は NULL=空で、現行 adapter と必ず不一致のため初回検索で再計算される。
+  **時間ベース失効(原典の 24h TTL)は採用しない**(決定性・単純性。内容変化の検知で十分 — §4 第3回掃討)
 - **連鎖無効化**: 画像の特徴量(pHash)を再計算した場合、その画像が image_id1 または image_id2 に含まれる
   image_similarity 行を**削除**する(古い類似度を返さない)。次回検索時に再計算・再保存する
 - 画像削除時は FK CASCADE で両テーブルの関連行を削除する

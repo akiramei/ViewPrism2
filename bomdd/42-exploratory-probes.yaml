@@ -122,3 +122,32 @@ exploratory_probes:
           実 production 採用(App の DI を factory-B へ差し替え)は別判断: this-build pHash 値が drift 16.6 で移動するため
           S-19b(単色)等 this-build オラクルの再凍結が要る。単色は scale 不変で S-19b は緑のままだが、再製造時に再凍結を確認すること。
         limits: "EQ-RANK は再エンコード/品質違いの近傍で検証。crop/rotate 等の広い近傍種に対する scaled-decode の頑健性は未網羅(factory-A も同様に未網羅)→ defer(将来 near-dup 種拡張時に両工場で再評価)"
+  # ---- v3.1/P-09: A/B の最後の一周 = production adapter 世代交代として採用(2026-06-14) ----
+  - id: P-09
+    scenario: "P-08 の select(factory-B)を production へ接続。単なる DI 差し替えでなく『scaled-decode pHash adapter を production adapter v2 として採用し、this-build oracle / golden / cache / index を再整備する』adapter 世代交代として実施(maintainer 指示)"
+    dimension: "A/B 生産技術が production の意味論(永続化・golden・cache/index・adapter version)を壊さず接続できるか=lesson 化の最後の一周"
+    harness: "ソリューション全体(src + tests/ViewPrism2.Tests + tests/ViewPrism2.Oracle)。adapter 識別子・schema migration・freshness・2 層オラクル・latency guard を実装し全緑で確認"
+    design:
+      adapter_version: "IPHashImageReader.AdapterId を追加(full-decode=skia-full-decode-v1 / scaled-decode=skia-scaled-decode-v1)。production DI を scaled-decode へ差し替え(App.axaml.cs)"
+      persistence: "image_features に hash_adapter 列(migration 003 + LatestDdl 末尾・スキーマ同値維持)。freshness=内容ベース+adapter 一致。adapter 不一致は stale→再計算→連鎖無効化で旧類似度 purge。A/B 値の検索空間混在を構造的に禁止(旧 DB の NULL は必ず再計算)"
+      two_layer_oracle: "横断(scope=cross-factory・EQ-RANK=S-19/S-25/AB ゲート・adapter をまたいで守る)/ this-build(scope=this-build・S-19b core + 新設 ThisBuildGoldenTests=production adapter の exact 値)。threshold は横断契約でなく this-build(P-08 発見)"
+      latency_guard: "PHashLatencyGuardTests(default-on・軽量): production scaled-decode が full-decode より相対 ≥2× 速いことを machine 非依存比で守る(full-decode への退行検出)"
+    acceptance:
+      result: "**全緑**(Tests 347 / Oracle 63=+4・skip 2)。回帰ゼロ"
+      checks:
+        - "S-19b 緑(core 単色 0x8000…・adapter 非依存=production core 不変)"
+        - "this-build golden 凍結: production adapter id=skia-scaled-decode-v1 / 単色を実 decode 経路で 0x8000… / 構造フィクスチャ(512 jpeg q90 pattern3)=b7ff8800d0de12d5(SkiaSharp 3.119.4)"
+        - "EQ-RANK 緑(両工場・代表サイズ。adapter をまたぐ順位契約)"
+        - "旧 cache/index 無効化確認(CpSim017: 旧 adapter feature+類似度を仕込み→検索で再計算・adapter 更新・旧ペア無効化)"
+        - "schema 同値(S-05 / CP-DB-006: migration 003 適用 DB = 新規 LatestDdl)"
+        - "latency 退行ガード緑(scaled-decode ≥2× full-decode)"
+    lesson: |
+      A/B の最後の一周(lesson 化→production adoption→oracle/golden/cache 移行)を実走できた。最大の生産技術知見:
+      ①**adapter version を成果物に刻む**と、性能改善(値が動く)を golden/cache を壊さず投入できる。pHash 系は
+        decode/補間/色変換/ライブラリ差で絶対値が動くため、検索体験の契約(順位)と this-build の値を**最初から分離**しておくと
+        世代交代が安全になる(step 1 の同等性契約分離が P-09 で効いた)。
+      ②**freshness に adapter 一致を足す**だけで「旧値の自動無効化+混在禁止」が連鎖無効化と合わさって成立する(専用の
+        big-bang re-index 不要・lazy 再計算で UI フリーズも無い)。
+      ③オラクルを横断(順位)/ this-build(値)の 2 層で CI に残すと、今後 decode 経路や SIMD を変えても『仕様違反』と
+        『this-build 再凍結対象』を機械的に切り分けられる。
+      ④latency は相対比ガードにすると machine 非依存で退行(full-decode 復帰)を確実に検出できる。Cpk は小 n で出さない。
