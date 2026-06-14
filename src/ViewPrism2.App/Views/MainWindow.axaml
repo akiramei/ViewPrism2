@@ -258,6 +258,8 @@
               <Button Content="{Binding Loc[toolbar.merge]}" Command="{Binding MergeSelectedCommand}"
                       IsEnabled="{Binding CanMerge}" />
               <Button Content="{Binding Loc[toolbar.trash]}" Command="{Binding OpenTrashCommand}" />
+              <!-- v4.0 修復ライフサイクルの入口(仕様 §2.11、REQ-072) -->
+              <Button Content="{Binding Loc[toolbar.repair]}" Command="{Binding OpenRepairCommand}" />
             </WrapPanel>
           </Border>
 

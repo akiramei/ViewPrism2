@@ -10,8 +10,8 @@
         FontSize="14"
         Foreground="{StaticResource TextPrimaryBrush}"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- トラッシュ表示(仕様 §2.10.5 / K-DESIGN v3.0): 選択中コレクションの deleted 一覧+件数。
-       閲覧のみ(復元/完全削除ボタンは置かない — 後続ループ)。空時は「ゴミ箱は空です」。 -->
+  <!-- トラッシュ表示(仕様 §2.10.5 / §2.11.3-4 / K-DESIGN): 選択中コレクションの deleted 一覧+件数。
+       V4 で『復元』『完全削除』を追加。完全削除は確認+非破壊明示文言(裁定 6)。空時は「ゴミ箱は空です」。 -->
   <DockPanel Margin="16">
     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
       <TextBlock Grid.Column="0" Text="{Binding Loc[trash.title]}" FontSize="16" FontWeight="SemiBold"
@@ -21,18 +21,32 @@
       </Border>
     </Grid>
 
+    <!-- 下部: 操作バー(復元・完全削除)+結果メッセージ。完全削除は非破壊明示文言を確認で出す -->
+    <Border DockPanel.Dock="Bottom" Margin="0,12,0,0">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Content="{Binding Loc[trash.restore]}" Margin="0,0,8,0"
+                Command="{Binding RestoreCommand}" IsEnabled="{Binding CanOperate}" Padding="14,8" />
+        <Button Grid.Column="2" Content="{Binding Loc[trash.purge]}"
+                Command="{Binding PurgeCommand}" IsEnabled="{Binding CanOperate}"
+                Background="{StaticResource DangerBrush}" Foreground="White" Padding="14,8" />
+      </Grid>
+    </Border>
+
     <Panel>
       <TextBlock IsVisible="{Binding IsEmpty}" Text="{Binding Loc[trash.empty]}"
                  Foreground="{StaticResource TextMutedBrush}"
                  HorizontalAlignment="Center" VerticalAlignment="Center" />
       <ScrollViewer>
-        <ItemsControl ItemsSource="{Binding Items}">
-          <ItemsControl.ItemsPanel>
+        <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                 Background="Transparent">
+          <ListBox.ItemsPanel>
             <ItemsPanelTemplate>
               <WrapPanel />
             </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:TrashItemViewModel">
               <Border Width="150" Margin="6" Padding="6" CornerRadius="6"
                       BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1">
@@ -45,8 +59,8 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+          </ListBox.ItemTemplate>
+        </ListBox>
       </ScrollViewer>
     </Panel>
   </DockPanel>

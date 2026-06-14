@@ -5,6 +5,7 @@ using ViewPrism2.App.Views;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Core.Services.Viewer;
 using ViewPrism2.Infrastructure.Scanning;
@@ -28,6 +29,8 @@ public sealed class WindowService : IWindowService
     private readonly ImageMemoryCache _imageCache;
     private readonly SimilaritySearchService _similaritySearch;
     private readonly MergeService _mergeService;
+    private readonly CriteriaSearchService _criteriaSearch;
+    private readonly TrashService _trashService;
     private readonly LocalizationService _localization;
     private readonly AppSettings _settings;
     private readonly SettingsStore _settingsStore;
@@ -43,6 +46,8 @@ public sealed class WindowService : IWindowService
         ImageMemoryCache imageCache,
         SimilaritySearchService similaritySearch,
         MergeService mergeService,
+        CriteriaSearchService criteriaSearch,
+        TrashService trashService,
         LocalizationService localization,
         AppSettings settings,
         SettingsStore settingsStore)
@@ -57,6 +62,8 @@ public sealed class WindowService : IWindowService
         _imageCache = imageCache;
         _similaritySearch = similaritySearch;
         _mergeService = mergeService;
+        _criteriaSearch = criteriaSearch;
+        _trashService = trashService;
         _localization = localization;
         _settings = settings;
         _settingsStore = settingsStore;
@@ -234,8 +241,23 @@ public sealed class WindowService : IWindowService
             return;
         }
 
-        var vm = new TrashViewModel(collectionId, _images, _folders, _localization);
+        // V4: 復元/完全削除を有効化(TrashService 注入)。完全削除の確認は this(IWindowService)経由
+        var vm = new TrashViewModel(collectionId, _images, _folders, _localization, _trashService, this);
         var window = new TrashView { DataContext = vm };
+        await vm.LoadAsync();
+        await window.ShowDialog(Owner);
+    }
+
+    public async Task ShowRepairAsync(string collectionId)
+    {
+        if (Owner is null)
+        {
+            return;
+        }
+
+        // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): criteria 検索+relink フロー
+        var vm = new RepairViewModel(collectionId, _images, _criteriaSearch, _relink, _localization, this);
+        var window = new RepairWindow { DataContext = vm };
         await vm.LoadAsync();
         await window.ShowDialog(Owner);
     }

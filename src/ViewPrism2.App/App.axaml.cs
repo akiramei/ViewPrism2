@@ -13,6 +13,7 @@ using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Infrastructure.Database;
 using ViewPrism2.Infrastructure.I18n;
@@ -158,13 +159,24 @@ public partial class App : Application
             sp.GetRequiredService<ITagRepository>(),
             sp.GetRequiredService<IMergeRepository>()));
 
+        // v4.0 修復ライフサイクル(M-CRITERIA-024 / M-TRASH-026)。
+        // FilePresenceProbe(Infrastructure)=File.Exists のみ。TrashService(Core)は bool を受けて遷移判断(INV-009)
+        services.AddSingleton<IFilePresenceProbe>(sp => new FilePresenceProbe());
+        services.AddSingleton(sp => new CriteriaSearchService(sp.GetRequiredService<IImageRepository>()));
+        services.AddSingleton(sp => new TrashService(
+            sp.GetRequiredService<IImageRepository>(),
+            sp.GetRequiredService<ISyncFolderRepository>(),
+            sp.GetRequiredService<IFilePresenceProbe>()));
+
         // Infrastructure サービス
         services.AddSingleton(sp => new ScanService(
             sp.GetRequiredService<ISyncFolderRepository>(),
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<IClock>(),
             sp.GetRequiredService<ILogger<ScanService>>()));
-        services.AddSingleton(sp => new RelinkService(sp.GetRequiredService<IImageRepository>()));
+        services.AddSingleton(sp => new RelinkService(
+            sp.GetRequiredService<IImageRepository>(),
+            sp.GetRequiredService<ITagRepository>()));
         services.AddSingleton(sp => new ThumbnailService(
             Path.Combine(appDataDir, "thumbnails"),
             sp.GetRequiredService<ILogger<ThumbnailService>>()));

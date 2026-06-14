@@ -438,6 +438,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         await _windows.ShowTrashAsync(collectionId);
+        await ReloadAsync();
+    }
+
+    /// <summary>修復ライフサイクル UI(REQ-072): criteria 検索+relink フロー。終了後に一覧を更新する。</summary>
+    [RelayCommand]
+    private async Task OpenRepairAsync()
+    {
+        if (SelectedCollectionId is not { } collectionId)
+        {
+            StatusMessage = _localization.T("collection.pleaseSelectCollection");
+            return;
+        }
+
+        await _windows.ShowRepairAsync(collectionId);
+        await ReloadAsync();
     }
 
     private async Task ReloadViewListsAsync()

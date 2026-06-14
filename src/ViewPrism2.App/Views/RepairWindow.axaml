@@ -1,0 +1,125 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.RepairWindow"
+        x:DataType="vm:RepairViewModel"
+        Title="{Binding Loc[repair.title]}"
+        Width="860" Height="640"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- 修復ライフサイクル UI(仕様 §2.11.5 / golden G-10): criteria 検索フォーム+結果、relink 候補提示/確定。
+       各操作は M-CRITERIA-024 / M-RELINK-025 の API のみ経由。空条件は検索ボタン非活性(§2.11.1)。 -->
+  <DockPanel Margin="16">
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[repair.title]}" FontSize="16" FontWeight="SemiBold"
+               Margin="0,0,0,12" />
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,12,0,0"
+               Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+
+    <Grid ColumnDefinitions="*,16,*">
+      <!-- 左: criteria 条件検索 -->
+      <Border Grid.Column="0" Background="{StaticResource PanelBrush}"
+              BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1"
+              CornerRadius="6" Padding="12">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[repair.criteria.title]}"
+                     FontWeight="SemiBold" Margin="0,0,0,8" />
+          <Grid DockPanel.Dock="Top" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                ColumnDefinitions="Auto,8,*" Margin="0,0,0,8">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc[repair.criteria.hash]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding HashInput}" PlaceholderText="SHA-256" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Loc[repair.criteria.name]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding NameContainsInput}" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Loc[repair.criteria.extension]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding ExtensionInput}" PlaceholderText=".jpg" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Loc[repair.criteria.mtimeFrom]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding MtimeFromInput}" PlaceholderText="2026-01-01T00:00:00.000Z" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding Loc[repair.criteria.mtimeTo]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="4" Grid.Column="2" Text="{Binding MtimeToInput}" PlaceholderText="2026-12-31T23:59:59.999Z" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding Loc[repair.criteria.sizeMin]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="5" Grid.Column="2" Text="{Binding SizeMinInput}" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="6" Grid.Column="0" Text="{Binding Loc[repair.criteria.sizeMax]}" VerticalAlignment="Center" />
+            <TextBox Grid.Row="6" Grid.Column="2" Text="{Binding SizeMaxInput}" Margin="0,0,0,4" />
+            <Button Grid.Row="7" Grid.Column="2" HorizontalAlignment="Right" Margin="0,8,0,0"
+                    Content="{Binding Loc[repair.search]}"
+                    Command="{Binding SearchCommand}" IsEnabled="{Binding CanSearch}"
+                    Background="{StaticResource AccentBrush}" Foreground="White" Padding="16,8" />
+          </Grid>
+
+          <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[repair.searchResults]}"
+                     FontWeight="SemiBold" Margin="0,4,0,4" />
+          <Panel>
+            <TextBlock IsVisible="{Binding HasNoResults}" Text="{Binding Loc[repair.noResults]}"
+                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding SearchResults}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CriteriaResultViewModel">
+                    <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1" Padding="4,6">
+                      <Grid ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" Margin="8,0"
+                                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+                        <TextBlock Grid.Column="2" Text="{Binding SizeText}"
+                                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Panel>
+        </DockPanel>
+      </Border>
+
+      <!-- 右: relink フロー(missing → 候補 → 確定) -->
+      <Border Grid.Column="2" Background="{StaticResource PanelBrush}"
+              BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1"
+              CornerRadius="6" Padding="12">
+        <Grid RowDefinitions="Auto,*,Auto,*,Auto">
+          <TextBlock Grid.Row="0" Text="{Binding Loc[repair.missingImages]}" FontWeight="SemiBold" Margin="0,0,0,6" />
+          <Panel Grid.Row="1">
+            <TextBlock IsVisible="{Binding HasNoMissing}" Text="{Binding Loc[repair.noMissingImages]}"
+                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <ListBox ItemsSource="{Binding MissingImages}" SelectedItem="{Binding SelectedMissing}"
+                     Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MissingImageViewModel">
+                  <TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Panel>
+
+          <TextBlock Grid.Row="2" Text="{Binding Loc[repair.candidates]}" FontWeight="SemiBold" Margin="0,8,0,6" />
+          <Panel Grid.Row="3">
+            <TextBlock IsVisible="{Binding HasNoCandidates}" Text="{Binding Loc[repair.noCandidates]}"
+                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <ListBox ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}"
+                     Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:RelinkCandidateViewModel">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding SizeText}" Margin="8,0,0,0"
+                               Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Panel>
+
+          <Button Grid.Row="4" HorizontalAlignment="Right" Margin="0,8,0,0"
+                  Content="{Binding Loc[repair.relink.commit]}"
+                  Command="{Binding CommitRelinkCommand}"
+                  Background="{StaticResource AccentBrush}" Foreground="White" Padding="16,8" />
+        </Grid>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

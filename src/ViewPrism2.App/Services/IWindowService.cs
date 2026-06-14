@@ -60,6 +60,16 @@ public interface IWindowService
     /// </summary>
     Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources);
 
-    /// <summary>トラッシュ表示(REQ-067、仕様 §2.10.5)。選択中コレクションの deleted 一覧(閲覧のみ)。</summary>
+    /// <summary>
+    /// トラッシュ表示(REQ-067/REQ-070/REQ-071、仕様 §2.10.5/§2.11.3-4)。選択中コレクションの
+    /// deleted 一覧。V4 で復元・完全削除(非破壊明示文言+確認)を含む。
+    /// </summary>
     Task ShowTrashAsync(string collectionId);
+
+    /// <summary>
+    /// 修復ライフサイクル UI(REQ-072、仕様 §2.11.5)。criteria 条件検索フォーム+結果と
+    /// relink フロー(missing への候補提示・選択・確定)を表示する。
+    /// 既定実装は no-op(UI を持たないテストスタブ互換)。View 層 WindowService が上書きする。
+    /// </summary>
+    Task ShowRepairAsync(string collectionId) => Task.CompletedTask;
 }
