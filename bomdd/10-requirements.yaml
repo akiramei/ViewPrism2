@@ -755,3 +755,90 @@ requirements:
     counterexamples:
       - "マージ元を選んだつもりがマージ先が消え、保持したい画像が deleted になる(役割の取り違え)"
       - "マージ後にマージ元画像がどこにも表示されず、ユーザーが消えた画像を確認できない"
+
+  # ============================================================
+  # Loop V4(loop-v4-repair-lifecycle)要件 — REQ-068〜072
+  #   出典: 00-charter-v4.md(状態機械 T1〜T8・裁定 6 件)/ 原典 RepairModal.tsx・TrashModal.tsx /
+  #   既存実装 RelinkService.CommitRelinkAsync(V1)・ScanJudge 3a(pending+candidate_link_id)/
+  #   porting-spec RVP-REPAIR-004・RVP-STATUS-003/004 / CPOL-008(criteria 保存)・CPOL-009(論理操作)。
+  # スコープ裁定(00-charter-v4.md §裁定記録): criteria 検索 + relink 拡張/明文化 +
+  #   トラッシュ復元(存在時 normal・不在 missing)+ 完全削除(DB のみ・物理非破壊)。ORB・作業スペースは後続。
+  # ============================================================
+  - id: REQ-068
+    statement: "criteria 条件検索は、基準画像を取らず複数条件を AND 結合して同一コレクション内の画像を絞り込む: hash(SHA-256 完全一致)/ファイル名(部分一致・大小無視)/拡張子/mtime 範囲/ファイルサイズ範囲。検索対象の status は用途別に固定する(relink 候補探索は pending を対象、単体検索は normal を既定 — 具体の status 対象集合は spec §2.11 / G2 で確定)。結果は安定順(relative_path 昇順・同値 id 昇順)で返す。条件が 1 つも指定されない場合は実行せず全件は返さない(誤操作防止)。検索は UI をブロックしない"
+    rationale: |
+      原典 RepairModal.tsx の criteria 検索(hash/name/ext/mtime/size の AND)/ CPOL-008(criteria 保存)。
+      pHash 距離 0 は完全一致相当を拾うが、再エンコード/改名で hash が変わったファイルは relink の候補探索に criteria が要る。
+      status 対象を用途別に固定するのは INV-010(既定の表示・抽出は normal)整合と誤候補(別状態の混入)防止のため。
+      criteria の保存(検索条件のビュー化)は本ループでは含めない(単体検索+relink 候補探索に限定 — charter スコープ)。
+      受入: 各条件の AND 絞り込み・status 対象・安定順・空条件の非実行を固定フィクスチャで exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "原典 RepairModal.tsx(criteria 検索)/ CPOL-008"
+    counterexamples:
+      - "条件が OR 結合になり、1 つ指定しただけで無関係画像が大量ヒットする"
+      - "空条件(全項目未指定)で全件が返り、大規模コレクションで UI が固まる"
+      - "status 対象が用途と無関係で、missing の復元候補探索に deleted が混ざる"
+
+  - id: REQ-069
+    statement: "relink(再リンク)は missing 画像 1 件に対し候補(同一コレクション内の pending、および criteria 条件検索(REQ-068)の結果)を安定順で提示し、確定で missing 行へ選んだ候補のパス情報(relative_path/file_name/file_size/modified_date/hash)を上書きして status=normal・candidate_link_id=NULL とし、置換に使った候補行は削除する。missing 側の image_id は不変(INV-001 — タグ参照を保つ)。candidate_link_id はスキャン(ScanJudge 3a)が付ける『候補ヒント』であって最終的な真実ではなく、確定操作で初めてリンクが成立する。候補が複数ある場合は安定順(relative_path 昇順・同値 id 昇順)で提示する。遷移表(T4)外の入力(missing でない対象・別コレクション・許可外 status の候補)は拒否する。全操作は単一トランザクションで、失敗時は全ロールバックする"
+    rationale: |
+      既存 RelinkService.CommitRelinkAsync(V1・REQ-017: 同一フォルダ同ハッシュ pending を候補・missing 側 ID 不変・
+      pending 消費削除)を criteria 候補探索で拡張し意味論を明文化(§裁定記録 5)。candidate_link_id は ScanJudge 3a が
+      付与するヒントで、確定の真実ではない(ヒントだけで自動リンクしない)。置換候補に許す status の集合(pending のみか、
+      criteria で見つけた normal も許すか)は状態遷移の安全性に関わるため G2 の遷移表監査で確定する。
+      受入: 候補列挙(pending + criteria・安定順)・確定(パス上書き・status=normal・candidate_link_id=NULL・候補削除・
+      missing 側 ID 不変)・遷移表外拒否・原子性を固定フィクスチャで exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "既存 RelinkService(V1)/ 原典 RepairModal.tsx / porting-spec RVP-REPAIR-004"
+    counterexamples:
+      - "relink で missing 側 image_id が変わり、付与済みタグの参照が切れる"
+      - "置換に使った候補行が削除されず、同一ファイルが二重に一覧へ出る"
+      - "candidate_link_id を確定の真実として扱い、ユーザー確定なしに自動リンクされる"
+
+  - id: REQ-070
+    statement: "トラッシュ復元は status=deleted の画像を復元する。記録パス(sync_folder.path + relative_path)に物理ファイルが存在すれば status=normal に、存在しなければ status=missing に遷移させる(deleted→normal は物理存在時のみ・不在は missing — §裁定記録 2、状態機械 T6/T7)。物理ファイルには一切触れない(読み取りの存在確認のみ・open/move/delete しない)。image_id・付与タグ・特徴量は不変。復元は deleted 状態の画像にのみ許可する。全操作は単一トランザクション"
+    rationale: |
+      §裁定記録 2(幽霊 normal 防止)/ porting-spec RVP-STATUS-003。deleted→normal 固定にすると、物理ファイルが既に
+      無い画像が normal 一覧へ戻りサムネイル欠落の幽霊行になる。不在は missing へ戻すことで relink(REQ-069)経路へ
+      自然に乗る。物理存在確認は File.Exists 相当(INV-009 — 非破壊)。受入: 存在時 normal/不在時 missing の分岐・
+      タグ/ID/特徴量の不変・deleted 限定・物理非破壊を固定フィクスチャで exact 検査(unit + L3 物理差分)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "porting-spec RVP-STATUS-003 / §裁定記録 2"
+    counterexamples:
+      - "物理ファイル不在の deleted を normal で復元し、サムネイル欠落の幽霊行になる"
+      - "復元処理が物理ファイルを open/move/touch して mtime を変える(INV-009 違反)"
+      - "normal/missing/pending の画像を『復元』できてしまう(deleted 限定の逸脱)"
+
+  - id: REQ-071
+    statement: "完全削除は status=deleted の画像の images 行を削除する。image_tags・image_features・image_similarity の関連行は外部キー CASCADE で削除される。物理画像ファイルには一切触れない(削除・移動・変更なし — INV-009、状態機械 T8)。完全削除は deleted 状態の画像にのみ許可する(normal/pending/missing は対象外)。全操作は単一トランザクションで、失敗時は全ロールバックする"
+    rationale: |
+      §裁定記録 3 / porting-spec RVP-STATUS-004。原典の永久削除は DB レコード削除であり、本実装も物理非破壊を厳守する
+      (INV-009 第 2 の実アクション)。マージ(REQ-066)で導入した L3 物理差分 CP(CP-MERGE-001)と同型の検査
+      (S-26 系)で完全削除前後の物理ファイル集合/SHA-256/mtime 不変を実証する。CASCADE は既存スキーマ(image_features/
+      image_similarity の FK→images ON DELETE CASCADE・image_tags も同様)で担保。受入: images 行削除・CASCADE
+      (image_tags/features/similarity の消滅)・deleted 限定・物理非破壊を固定フィクスチャで exact 検査(unit + L3 物理差分)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "porting-spec RVP-STATUS-004 / CP-MERGE-001(L3 物理差分)/ §裁定記録 3"
+    counterexamples:
+      - "完全削除で物理画像ファイルまで削除され、ユーザーの原本が失われる(INV-009 違反)"
+      - "normal 画像が完全削除できてしまう(deleted 限定の逸脱)"
+      - "CASCADE が効かず image_tags/image_features に孤児行が残る"
+
+  - id: REQ-072
+    statement: "修復ライフサイクル UI(表面): (a) criteria 条件検索フォーム(hash/名前/拡張子/mtime/サイズ・AND・対象コレクション)と結果一覧、(b) relink フロー(missing 画像に対する候補提示・選択・確定)、(c) トラッシュ(deleted 一覧)からの復元・完全削除操作。完全削除は物理削除に見えるため、非破壊を明示する文言(例『DB から完全に除去します(画像ファイルは削除されません)』)を必須とする。復元時に物理不在で missing になった場合は結果が分かるよう表示する。破壊的に見える操作(完全削除)は実行前確認を伴う"
+    rationale: |
+      §裁定記録 6(非破壊明示)/ 原典 RepairModal.tsx(criteria/similar 切替・候補選択)・TrashModal.tsx(V3 は閲覧のみ→
+      復元/完全削除ボタンを追加)。完全削除は破壊的に見えるため、物理非破壊である旨の明示が信頼上重要(INV-009 の UI 表現)。
+      復元の不在時 missing 化(REQ-070)はユーザーに結果が伝わらないと「復元したのに消えた」と誤解されるため明示する。
+      受入: 各操作の ViewModel ロジック(候補選択・確認・結果表示)は unit、画面は golden(G-10)+承認者。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "原典 RepairModal.tsx / TrashModal.tsx / K-DESIGN / §裁定記録 6"
+    counterexamples:
+      - "『完全削除』が物理ファイル削除と誤認され、原本が消えると思わせる(または逆に誤って実行される)"
+      - "復元したのに一覧から消えた(missing 化した)理由が UI で分からない"
+      - "確認ダイアログなしに完全削除が即実行され、取り消せない"
