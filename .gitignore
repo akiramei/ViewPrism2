@@ -14,3 +14,6 @@ logs/
 *.db
 *.db-shm
 *.db-wal
+
+# 設計スクラッチ(コミット対象外)
+work/
