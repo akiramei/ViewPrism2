@@ -1,0 +1,552 @@
+{
+  "meta": {
+    "schema": "ui-bom/candidate",
+    "product": "ViewPrism2",
+    "scope": "タグタブ (tag tab)",
+    "status": "candidate / 未昇格",
+    "derivedFrom": "ui-ir.json",
+    "extractedAt": "2026-06-16",
+    "note": "UI-IR から BOM 対象だけを昇格した候補部品表。正式品番は未採番。E-BOM への接続は『候補』であり、昇格は別途確認(unresolved-questions.md / §E-BOM昇格規則)を要する。装飾・余白・意味なし wrapper は ui-ir.json の unmodeledElements と ui-trace-map.json の nonBom に残す。",
+    "ebomItemsReferenced": [
+      "E-UI-TAGS-026", "E-UI-NODEGRAPH-025", "E-UI-SHELL-021", "E-DESIGN-028",
+      "E-I18N-ASSETS-027", "E-TAGSVC-008", "E-VIEWSVC-009", "E-GRAPH-003",
+      "E-EVAL-002", "E-DOMAIN-001", "E-UI-TAGASSIGN-029"
+    ]
+  },
+
+  "items": [
+    {
+      "tempPartNo": "TMP-UI-SCR-0001",
+      "uiId": "screen.tag-management",
+      "kind": "screen",
+      "name": "タグタブ画面",
+      "parent": null,
+      "bomRationale": "タブ単位の上位構成。要求群(REQ-020〜037)と表示契約の上位。",
+      "ebomCandidate": { "promoteAs": "上位構成(複数 E-BOM item の束ね)", "items": ["E-UI-TAGS-026", "E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-REG-0001",
+      "uiId": "region.shell-nav",
+      "kind": "region",
+      "name": "シェルナビ",
+      "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "ナビゲーション/グローバル検索の surface。ただしタグタブ外=シェル所有のため trace 主体。",
+      "ebomCandidate": { "promoteAs": "既存 surface 部品(再昇格不要)", "items": ["E-UI-SHELL-021"], "confidence": "high", "note": "新規昇格ではなく既存 E-UI-SHELL-021 への trace。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0002",
+      "uiId": "region.view-management",
+      "kind": "region",
+      "name": "ビュー管理ペイン(左)",
+      "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "ビューCRUD・選択の display surface。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "high", "note": "原典 ViewManagementPanel。E-UI-TAGS-026 が左『ビュー管理』を内包。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0003",
+      "uiId": "region.hierarchy",
+      "kind": "region",
+      "name": "階層構造ペイン(中央・主役)",
+      "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "ビュー階層エディタの中核 surface。配置/別名/条件/ホーム/D&D の宿主。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-GRAPH-003", "E-VIEWSVC-009"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0004",
+      "uiId": "region.tag-palette",
+      "kind": "region",
+      "name": "タグパレットペイン(右)",
+      "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "タグ定義の一覧/検索/作成入口 surface。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "confidence": "high", "note": "原典 TagManagementPanel。" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-CMP-0001",
+      "uiId": "component.view-row",
+      "kind": "component",
+      "name": "ビュー行",
+      "parent": "TMP-UI-REG-0002",
+      "bomRationale": "再利用される行部品。表示契約(DC-VIEWLIST-001)対象。",
+      "ebomCandidate": { "promoteAs": "display contract(行) — 改訂", "items": ["E-UI-TAGS-026"], "confidence": "high", "controlPlan": "CP-DISPLAY-PARITY-022", "decision": "UQ-E1: お気に入り★を削除・説明は tooltip 表示・名前+タグ数を提示", "ecoImpact": "ECO-007: E-UI-TAGS-026 DC-VIEWLIST-001 改訂(★必須撤回・説明 tooltip 化・タグ数バッジ追加)" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0002",
+      "uiId": "component.hierarchy-row",
+      "kind": "component",
+      "name": "階層行 / 配置タグ行",
+      "parent": "TMP-UI-REG-0003",
+      "bomRationale": "ビュー階層エディタの中心部品。配置タグ設定(別名/条件/ホーム)の宿主。M1/M3 を統合した正準部品。",
+      "ebomCandidate": { "promoteAs": "再利用 surface 部品(行)", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009", "E-GRAPH-003"], "confidence": "high", "controlPlan": "CP-UI-G6" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0003",
+      "uiId": "component.tag-card",
+      "kind": "component",
+      "name": "パレットタグカード",
+      "parent": "TMP-UI-REG-0004",
+      "bomRationale": "種別で内容が分岐する再利用カード。D&D 配置の発生源。表示契約(DC-TAGPALETTE-001)対象。",
+      "ebomCandidate": { "promoteAs": "再利用 surface 部品(カード)", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "confidence": "high", "controlPlan": "CP-DISPLAY-PARITY-022", "decision": "UQ-E2: 説明欄は不要(モック準拠)", "ecoImpact": "ECO-007: E-UI-TAGS-026 DC-TAGPALETTE-001 改訂(説明を表示契約から除外)" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0004",
+      "uiId": "component.type-chip",
+      "kind": "component",
+      "name": "種別チップ",
+      "parent": null,
+      "bomRationale": "全画面で再利用される識別アトム。色トークン依存。",
+      "ebomCandidate": { "promoteAs": "デザインシステム部品", "items": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0005",
+      "uiId": "component.color-dot",
+      "kind": "component",
+      "name": "カラードット",
+      "parent": null,
+      "bomRationale": "タグ識別色のアトム。全画面で再利用。",
+      "ebomCandidate": { "promoteAs": "デザインシステム部品", "items": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0006",
+      "uiId": "component.condition-badge",
+      "kind": "component",
+      "name": "条件サマリチップ",
+      "parent": "TMP-UI-CMP-0002",
+      "bomRationale": "条件状態の可視化。i18n テンプレート整形契約(GF-05)対象。",
+      "ebomCandidate": { "promoteAs": "display contract(整形)", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "i18n": ["E-I18N-ASSETS-027"], "confidence": "high", "controlPlan": "CP-GF-015" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0007",
+      "uiId": "modal.tag.create-edit",
+      "kind": "component",
+      "name": "タグ作成/編集ダイアログ(適応型)",
+      "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "タグ定義の作成/編集の主要 surface。適応型・ライブプレビュー。",
+      "ebomCandidate": { "promoteAs": "再利用 surface 部品(モーダル)", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "confidence": "high", "controlPlan": "CP-UI-G6", "note": "高さ固定・候補値リスト内部のみスクロール(GF-01)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0008",
+      "uiId": "modal.tag.condition",
+      "kind": "component",
+      "name": "条件設定ダイアログ",
+      "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "配置タグの条件設定 surface。条件タイプ=評価器の演算子に対応。",
+      "ebomCandidate": { "promoteAs": "再利用 surface 部品(モーダル)", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002", "E-VIEWSVC-009"], "confidence": "high", "controlPlan": "CP-EVAL-001" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0009",
+      "uiId": "component.type-selector",
+      "kind": "component",
+      "name": "種別セグメント",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "種別切替=適応型ダイアログの分岐源。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ内部部品)", "items": ["E-UI-TAGS-026"], "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0010",
+      "uiId": "component.color-picker",
+      "kind": "component",
+      "name": "カラーパレット(swatches)",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "色トークン選択。デザインシステム依存。",
+      "ebomCandidate": { "promoteAs": "デザインシステム連動部品", "items": ["E-UI-TAGS-026"], "designToken": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0011",
+      "uiId": "component.option-row",
+      "kind": "component",
+      "name": "選択肢行(テキスト候補値)",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "候補値の追加/削除/並べ替え行。データ項目(候補値)に対応。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ内部部品)", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0012",
+      "uiId": "component.preview-strip",
+      "kind": "component",
+      "name": "付与時プレビュー(ライブ)",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "『画像に付けたときの見え方』。E-UI-TAGASSIGN-029(タグ付与パネル)と意味的に重なる read-across 候補。",
+      "ebomCandidate": { "promoteAs": "display contract(付与表現の整合) — 契約化", "items": ["E-UI-TAGS-026"], "readAcross": ["E-UI-TAGASSIGN-029"], "confidence": "high", "controlPlan": "CP-DISPLAY-PARITY-022", "decision": "UQ-E5: 付与プレビュー(★/数値±/候補チップ)と画像タブ実付与UIの表示一致を契約化", "ecoImpact": "ECO-007: 新規表示パリティ契約 DC-TAGPREVIEW-001(E-UI-TAGS-026 ↔ E-UI-TAGASSIGN-029)を起票" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0013",
+      "uiId": "component.condition-type-selector",
+      "kind": "component",
+      "name": "条件タイプセグメント",
+      "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "条件タイプ=評価器の演算子集合。種別で集合が変わる。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ内部部品)", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0014",
+      "uiId": "component.candidate-checklist",
+      "kind": "component",
+      "name": "候補値チェックリスト",
+      "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "候補値選択(select 条件)。空状態あり。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ内部部品)", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-OCC-0001", "uiId": "component.tag-card.simple", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0003", "name": "タグカード/シンプル",
+      "bomRationale": "出現(variant)。E-BOM 品目ではなく trace/表示契約の出現。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-TAGS-026"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0002", "uiId": "component.tag-card.text", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0003", "name": "タグカード/テキスト",
+      "bomRationale": "出現(variant)。候補値チップ要約。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-TAGS-026"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0003", "uiId": "component.tag-card.number", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0003", "name": "タグカード/数値",
+      "bomRationale": "出現(variant)。範囲+刻み要約。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-TAGS-026"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0004", "uiId": "component.hierarchy-row.group", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0002", "name": "階層行/親(グループ)",
+      "bomRationale": "出現(variant)。展開キャレット+子数。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0005", "uiId": "component.hierarchy-row.leaf", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0002", "name": "階層行/子(リーフ)",
+      "bomRationale": "出現(variant)。ドラッグハンドル。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-ACT-0001", "uiId": "action.view.create", "kind": "action", "name": "新規ビュー作成", "parent": "TMP-UI-REG-0002",
+      "bomRationale": "業務操作(ビュー作成)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-030"], "controlPlan": "CP-VIEW-012", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0002", "uiId": "action.view.select", "kind": "action", "name": "ビュー選択", "parent": "TMP-UI-REG-0002",
+      "bomRationale": "業務操作(視点切替)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-030", "REQ-034"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0003", "uiId": "action.hierarchy.toggle-expand", "kind": "action", "name": "展開/折り畳み", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "UI 操作(表示状態)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0004", "uiId": "action.hierarchy.drag-nest", "kind": "action", "name": "入れ子・並べ替え(D&D)", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(階層編集)。循環不可の不変条件に接続。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009", "E-GRAPH-003"], "requirementRefs": ["REQ-034", "REQ-035"], "controlPlan": "CP-UI-G6", "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0005", "uiId": "action.palette.search", "kind": "action", "name": "パレット検索", "parent": "TMP-UI-REG-0004",
+      "bomRationale": "検索操作(絞り込み)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "requirementRefs": ["REQ-021"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0006", "uiId": "action.tag.create", "kind": "action", "name": "タグ新規作成", "parent": "TMP-UI-REG-0004",
+      "bomRationale": "業務操作(タグ CRUD)。ダイアログ起動。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-020", "REQ-023"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0007", "uiId": "action.tag.edit", "kind": "action", "name": "タグ編集", "parent": "TMP-UI-REG-0004",
+      "bomRationale": "業務操作(タグ CRUD)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-024"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0008", "uiId": "action.tag.delete", "kind": "action", "name": "タグ削除", "parent": "TMP-UI-REG-0004",
+      "bomRationale": "業務操作(タグ CRUD・カスケード)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-025"], "controlPlan": "CP-TAG-011", "confidence": "high", "note": "削除確認ダイアログ要否は未定(UQ)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0009", "uiId": "action.palette.drag-to-hierarchy", "kind": "action", "name": "パレット→階層へ配置", "parent": "TMP-UI-REG-0004",
+      "bomRationale": "業務操作(配置生成)。core/surface 境界の主要動線。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-034"], "controlPlan": "CP-UI-G6", "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0010", "uiId": "action.tag.set-type", "kind": "action", "name": "種別切替", "parent": "TMP-UI-CMP-0009",
+      "bomRationale": "業務操作(種別=ドメイン分岐)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "requirementRefs": ["REQ-020"], "confidence": "high", "note": "種別変更時の既存値の扱いは未定(UQ)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0011", "uiId": "action.tag.pick-color", "kind": "action", "name": "カラー選択", "parent": "TMP-UI-CMP-0010",
+      "bomRationale": "業務操作(必須属性設定)。",
+      "ebomCandidate": { "promoteAs": "仕様/デザイントークン", "items": ["E-UI-TAGS-026"], "designToken": ["E-DESIGN-028"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0012", "uiId": "action.tag.option-add", "kind": "action", "name": "選択肢追加", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "業務操作(候補値編集)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-023"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0013", "uiId": "action.tag.option-remove", "kind": "action", "name": "選択肢削除", "parent": "TMP-UI-CMP-0011",
+      "bomRationale": "業務操作(候補値編集)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-023"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0014", "uiId": "action.tag.option-reorder", "kind": "action", "name": "選択肢並べ替え", "parent": "TMP-UI-CMP-0011",
+      "bomRationale": "業務操作(候補値順)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-029"], "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0015", "uiId": "action.tag.apply-preset", "kind": "action", "name": "数値プリセット適用", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "UI 利便操作(数値範囲一括設定)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-TAGS-026"], "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0016", "uiId": "action.tag.save", "kind": "action", "name": "タグ保存", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "業務操作(永続化)+バリデーション。",
+      "ebomCandidate": { "promoteAs": "仕様/要求+受入", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-020", "REQ-022"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0017", "uiId": "action.dialog.cancel", "kind": "action", "name": "ダイアログを閉じる", "parent": "TMP-UI-SCR-0001",
+      "bomRationale": "共通操作(破棄して閉じる)。",
+      "ebomCandidate": { "promoteAs": "trace のみ(共通)", "items": ["E-UI-TAGS-026", "E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0018", "uiId": "action.placed.toggle-home", "kind": "action", "name": "ホーム設定(⬡)", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(ホームタグ解決に接続)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-GRAPH-003"], "requirementRefs": ["REQ-037"], "controlPlan": "CP-UI-G6", "confidence": "high", "note": "家アイコン表現(★不可 — GF-03)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0019", "uiId": "action.placed.edit-alias", "kind": "action", "name": "別名編集開始", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(配置別名)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-036"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0020", "uiId": "action.placed.confirm-alias", "kind": "action", "name": "別名確定", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(別名永続化・空で原名復帰)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-036"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0021", "uiId": "action.placed.open-condition", "kind": "action", "name": "条件ダイアログを開く", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(条件設定入口)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "requirementRefs": ["REQ-036"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0022", "uiId": "action.placed.delete", "kind": "action", "name": "配置削除", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(配置除去)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-034"], "confidence": "medium", "note": "配置削除 vs タグ定義削除の区別を要確認(UQ)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0023", "uiId": "action.hierarchy.place-tag", "kind": "action", "name": "タグを配置(ヘッダ)", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "業務操作(配置生成 / D&D 代替)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-034"], "confidence": "high", "decision": "UQ-E3: モック側(汎用ラベル)採用・GF-04 不採用", "ecoImpact": "ECO-007: E-UI-NODEGRAPH-025 GF-04 不変条件の撤回(対象タグ名表示・未選択非活性を削除)。v2.0 是正の差し戻しに相当" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0024", "uiId": "action.condition.set-type", "kind": "action", "name": "条件タイプ切替", "parent": "TMP-UI-CMP-0013",
+      "bomRationale": "業務操作(条件種別=演算子選択)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "requirementRefs": ["REQ-031"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0025", "uiId": "action.condition.toggle-candidate", "kind": "action", "name": "候補値トグル", "parent": "TMP-UI-CMP-0014",
+      "bomRationale": "業務操作(select 条件の選択)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "requirementRefs": ["REQ-031"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0026", "uiId": "action.condition.clear", "kind": "action", "name": "条件クリア", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "業務操作(条件なし初期化)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0027", "uiId": "action.condition.apply", "kind": "action", "name": "条件適用", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "業務操作(条件永続化)+バリデーション。",
+      "ebomCandidate": { "promoteAs": "仕様/要求+受入", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002", "E-VIEWSVC-009"], "requirementRefs": ["REQ-031", "REQ-036"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0028", "uiId": "action.preview.adjust-value", "kind": "action", "name": "プレビュー値操作", "parent": "TMP-UI-CMP-0012",
+      "bomRationale": "体験用(保存対象外)。付与表現の整合確認に有用。",
+      "ebomCandidate": { "promoteAs": "trace のみ(read-across)", "items": ["E-UI-TAGS-026"], "readAcross": ["E-UI-TAGASSIGN-029"], "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0029", "uiId": "action.shell.switch-tab", "kind": "action", "name": "タブ切替", "parent": "TMP-UI-REG-0001",
+      "bomRationale": "シェルナビ操作(タグタブ外)。",
+      "ebomCandidate": { "promoteAs": "既存 surface への trace", "items": ["E-UI-SHELL-021"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0030", "uiId": "action.shell.global-search", "kind": "action", "name": "グローバル検索(⌘K)", "parent": "TMP-UI-REG-0001",
+      "bomRationale": "シェル機能(⌘K)。決定により不採用。",
+      "ebomCandidate": { "promoteAs": "不採用(UI-BOM へ昇格しない)", "items": ["E-UI-SHELL-021"], "confidence": "high", "decision": "UQ-E4: グローバル検索は無し", "ecoImpact": "なし(現行 E-BOM 未記載のため改訂不要)" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-INP-0002", "uiId": "input.tag.name", "kind": "input", "name": "タグ名", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "データ項目+バリデーション(必須)。",
+      "ebomCandidate": { "promoteAs": "データ項目/バリデーション", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008", "E-DOMAIN-001"], "requirementRefs": ["REQ-022"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0003", "uiId": "input.tag.description", "kind": "input", "name": "説明", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "データ項目(任意)。表示契約(DC-*)で行に出る。",
+      "ebomCandidate": { "promoteAs": "データ項目", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0004", "uiId": "input.tag.color", "kind": "input", "name": "カラー", "parent": "TMP-UI-CMP-0010",
+      "bomRationale": "データ項目(必須)+デザイントークン。",
+      "ebomCandidate": { "promoteAs": "データ項目/トークン", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "designToken": ["E-DESIGN-028"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0006", "uiId": "input.tag.num-min", "kind": "input", "name": "最小値", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "データ項目+バリデーション(最小≦最大)。",
+      "ebomCandidate": { "promoteAs": "データ項目/バリデーション", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0007", "uiId": "input.tag.num-max", "kind": "input", "name": "最大値", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "データ項目+バリデーション(最小≦最大)。",
+      "ebomCandidate": { "promoteAs": "データ項目/バリデーション", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0008", "uiId": "input.tag.num-step", "kind": "input", "name": "ステップ", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "データ項目+バリデーション(ステップ>0)。",
+      "ebomCandidate": { "promoteAs": "データ項目/バリデーション", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0009", "uiId": "input.tag.num-unit", "kind": "input", "name": "単位", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "データ項目(数値タグ表示単位)。",
+      "ebomCandidate": { "promoteAs": "データ項目", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0010", "uiId": "input.placed.alias", "kind": "input", "name": "別名(インライン)", "parent": "TMP-UI-REG-0003",
+      "bomRationale": "データ項目(配置別名)。",
+      "ebomCandidate": { "promoteAs": "データ項目", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-036"], "confidence": "high", "note": "配置ごと独立か要確認(UQ)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0011", "uiId": "input.condition.pattern", "kind": "input", "name": "パターン(正規表現)", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "データ項目+評価器(regex)。K-REGEX 依存。",
+      "ebomCandidate": { "promoteAs": "データ項目/評価", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "kbom": ["K-REGEX"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0012", "uiId": "input.condition.candidate-select", "kind": "input", "name": "候補値選択", "parent": "TMP-UI-CMP-0014",
+      "bomRationale": "データ項目+バリデーション(1+必須)。",
+      "ebomCandidate": { "promoteAs": "データ項目/評価", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0013", "uiId": "input.condition.equal", "kind": "input", "name": "等値", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "データ項目+評価器(数値等値)。",
+      "ebomCandidate": { "promoteAs": "データ項目/評価", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0014", "uiId": "input.condition.range-min", "kind": "input", "name": "範囲最小", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "データ項目+評価器(範囲・両端含む)。",
+      "ebomCandidate": { "promoteAs": "データ項目/評価", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0015", "uiId": "input.condition.range-max", "kind": "input", "name": "範囲最大", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "データ項目+評価器(範囲・両端含む)。",
+      "ebomCandidate": { "promoteAs": "データ項目/評価", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-STA-0004", "uiId": "state.tag.type-adaptive", "kind": "state", "name": "種別適応", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "表示パリティ/受入観点(右側+プレビュー連動)。",
+      "ebomCandidate": { "promoteAs": "受入観点/表示パリティ", "items": ["E-UI-TAGS-026"], "controlPlan": "CP-UI-G6", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0005", "uiId": "state.tag.save-disabled", "kind": "state", "name": "保存不可", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "受入観点(バリデーション)+FMEA(無効保存防止)。",
+      "ebomCandidate": { "promoteAs": "受入観点/FMEA", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "controlPlan": "CP-TAG-011", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0006", "uiId": "state.dialog.no-options", "kind": "state", "name": "選択肢0(空状態)", "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "空状態の受入観点。",
+      "ebomCandidate": { "promoteAs": "受入観点(空状態)", "items": ["E-UI-TAGS-026"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0007", "uiId": "state.preview.star-vs-plain", "kind": "state", "name": "★/数値モード", "parent": "TMP-UI-CMP-0012",
+      "bomRationale": "表示分岐の受入観点。付与表現の整合。",
+      "ebomCandidate": { "promoteAs": "表示パリティ — 契約化", "items": ["E-UI-TAGS-026"], "readAcross": ["E-UI-TAGASSIGN-029"], "confidence": "high", "decision": "UQ-E5: 契約化(DC-TAGPREVIEW-001 候補)" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0008", "uiId": "state.placed.is-home", "kind": "state", "name": "ホーム指定中", "parent": "TMP-UI-CMP-0002",
+      "bomRationale": "受入観点(ビュー内1つ)+ホームタグ解決。",
+      "ebomCandidate": { "promoteAs": "受入観点", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-GRAPH-003"], "requirementRefs": ["REQ-037"], "controlPlan": "CP-GRAPH-002", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0009", "uiId": "state.placed.has-alias", "kind": "state", "name": "別名あり", "parent": "TMP-UI-CMP-0002",
+      "bomRationale": "表示パリティ(別名＝元名)。",
+      "ebomCandidate": { "promoteAs": "表示パリティ", "items": ["E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0011", "uiId": "state.placed.has-condition", "kind": "state", "name": "条件あり", "parent": "TMP-UI-CMP-0006",
+      "bomRationale": "表示パリティ(条件サマリ)+i18n整形。",
+      "ebomCandidate": { "promoteAs": "表示パリティ/整形", "items": ["E-UI-NODEGRAPH-025"], "i18n": ["E-I18N-ASSETS-027"], "controlPlan": "CP-GF-015", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0012", "uiId": "state.condition.type", "kind": "state", "name": "条件タイプ分岐", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "受入観点(種別で条件集合が変わる)。",
+      "ebomCandidate": { "promoteAs": "受入観点", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0013", "uiId": "state.condition.apply-disabled", "kind": "state", "name": "適用不可", "parent": "TMP-UI-CMP-0008",
+      "bomRationale": "受入観点(バリデーション)+FMEA。",
+      "ebomCandidate": { "promoteAs": "受入観点/FMEA", "items": ["E-UI-NODEGRAPH-025"], "controlPlan": "CP-EVAL-001", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0014", "uiId": "state.condition.no-candidates", "kind": "state", "name": "候補値なし(空状態)", "parent": "TMP-UI-CMP-0014",
+      "bomRationale": "空状態の受入観点(パターン案内)。",
+      "ebomCandidate": { "promoteAs": "受入観点(空状態)", "items": ["E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-DOM-0001", "uiId": "domain.tag", "kind": "domain", "name": "タグ",
+      "bomRationale": "中核ドメイン概念。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-020"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0002", "uiId": "domain.tag-type", "kind": "domain", "name": "タグ種別",
+      "bomRationale": "ドメイン値(simple/text/number)。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル(値型)", "items": ["E-DOMAIN-001"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0003", "uiId": "domain.view", "kind": "domain", "name": "ビュー(視点)",
+      "bomRationale": "中核ドメイン概念。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-030"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0004", "uiId": "domain.hierarchy", "kind": "domain", "name": "階層(入れ子)",
+      "bomRationale": "ドメイン構造(循環なし)。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-GRAPH-003", "E-VIEWSVC-009"], "requirementRefs": ["REQ-034", "REQ-035"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0005", "uiId": "domain.placement", "kind": "domain", "name": "配置",
+      "bomRationale": "配置固有設定の宿主。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0006", "uiId": "domain.alias", "kind": "domain", "name": "別名",
+      "bomRationale": "配置別名。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-VIEWSVC-009"], "requirementRefs": ["REQ-036"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0007", "uiId": "domain.condition", "kind": "domain", "name": "条件",
+      "bomRationale": "評価器の入力(pattern/select/equal/range)。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル+評価", "items": ["E-DOMAIN-001"], "coreRefs": ["E-EVAL-002", "E-GRAPH-003"], "requirementRefs": ["REQ-031", "REQ-036"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0008", "uiId": "domain.home", "kind": "domain", "name": "ホーム",
+      "bomRationale": "ホームタグ解決(ビュー内1つ)。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-GRAPH-003"], "requirementRefs": ["REQ-037"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0009", "uiId": "domain.color", "kind": "domain", "name": "カラー",
+      "bomRationale": "識別属性+トークン。",
+      "ebomCandidate": { "promoteAs": "ドメイン属性/トークン", "items": ["E-DOMAIN-001"], "designToken": ["E-DESIGN-028"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0010", "uiId": "domain.candidate-value", "kind": "domain", "name": "候補値",
+      "bomRationale": "テキストタグの選択肢。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-023"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0011", "uiId": "domain.numeric-range", "kind": "domain", "name": "数値範囲",
+      "bomRationale": "min/max/step/unit。InvariantCulture 保持。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル(値型)", "items": ["E-DOMAIN-001"], "confidence": "high" }
+    }
+  ],
+
+  "notModeledFromIr": {
+    "note": "ui-ir.json の以下は UI-BOM へ昇格しない(装飾/シェル外/低情報)。trace のみ ui-trace-map.json 参照。",
+    "tempPartNos": [
+      "TMP-UI-INP-0001(検索欄=action.palette.search に集約)",
+      "TMP-UI-INP-0005(option-new=option-add に集約)",
+      "TMP-UI-INP-0016(shell ⌘K 欄)",
+      "TMP-UI-STA-0001/0002/0003/0010(純 UI 表示状態。trace 保持)"
+    ]
+  }
+}

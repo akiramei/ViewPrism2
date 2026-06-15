@@ -1,0 +1,312 @@
+{
+  "meta": {
+    "schema": "ui-ir/candidate",
+    "product": "ViewPrism2",
+    "scope": "タグタブ (tag tab)",
+    "status": "candidate / 未実証",
+    "extractedAt": "2026-06-16",
+    "method": "BomDD ui-ir-ui-bom.md (candidate extension)",
+    "note": "UI-IR は HTML+JS モックから抽出した観測・追跡用の中間表現であり、設計を縛る原本ではない。仮品番 TMP-UI-* で候補を追跡する。",
+    "sources": [
+      { "id": "M1", "file": "work/tag-tab/ViewPrism2 タグ管理.dc.html", "role": "タグタブ画面(3ペイン)モック" },
+      { "id": "M2", "file": "work/tag-tab/ViewPrism2 タグ作成ダイアログ.dc.html", "role": "タグ作成/編集ダイアログ(適応型モーダル)モック" },
+      { "id": "M3", "file": "work/tag-tab/ViewPrism2 配置タグ設定.dc.html", "role": "階層+配置タグ設定+条件ダイアログ モック(M1中央ペインのフル版)" },
+      { "id": "S",  "file": "work/tag-tab/ViewPrism2 タグタブ仕様書.dc.html", "role": "機能説明(functional spec)・抽出の根拠テキスト" }
+    ],
+    "observations": [
+      "3つの画面モックは実体としては1画面=タグタブ。M1=3ペイン全体、M3=M1中央『階層構造』の高忠実度版、M2/条件ダイアログ=モーダル。",
+      "M1の階層行は home/別名/条件/削除アフォーダンスを省略した低忠実度表現。正準アフォーダンスは M3(配置タグ行)。read-across で要統合。",
+      "既存 data-ui-id / data-ui-temp-part-no は M1/M2/M3 のいずれにも存在しない。stable id と仮品番は本抽出で新規付与した。"
+    ]
+  },
+
+  "screens": [
+    {
+      "tempPartNo": "TMP-UI-SCR-0001",
+      "uiId": "screen.tag-management",
+      "name": "タグタブ画面",
+      "source": ["M1", "M3"],
+      "confidence": "high",
+      "notes": "メニュー＋3タブ(タグ/画像/作業)構成のうち『タグ』タブ。コンテンツは3ペイン(ビュー管理/階層構造/タグパレット)。M2・条件ダイアログはこの画面上のモーダル。"
+    }
+  ],
+
+  "regions": [
+    {
+      "tempPartNo": "TMP-UI-REG-0001",
+      "uiId": "region.shell-nav",
+      "name": "シェルナビ(タブ切替+検索+設定)",
+      "screen": "TMP-UI-SCR-0001",
+      "source": ["M1"],
+      "owner": "shell",
+      "confidence": "high",
+      "notes": "タイトルバー/メニューストリップ(File/Edit/View/Window/Help)/ナビバー(タグ・画像・作業タブ、⌘K検索、設定)。タグタブのスコープ外=シェル所有。trace のみ保持。決定(UQ-E4): ⌘K グローバル検索は不採用。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0002",
+      "uiId": "region.view-management",
+      "name": "ビュー管理ペイン(左)",
+      "screen": "TMP-UI-SCR-0001",
+      "source": ["M1"],
+      "confidence": "high",
+      "notes": "保存ビュー(視点)一覧・新規作成・選択。各ビューにタグ数バッジ。折り畳みボタン(«)あり。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0003",
+      "uiId": "region.hierarchy",
+      "name": "階層構造ペイン(中央・主役)",
+      "screen": "TMP-UI-SCR-0001",
+      "source": ["M1", "M3"],
+      "confidence": "high",
+      "notes": "選択中ビューのタグ入れ子ツリー。配置・編集の中心。ヘッダに『ビュー階層構造』コンテナ+タグ数バッジ+操作ヒント。M3 では配置タグ設定(home/別名/条件)とタグ配置ボタン・凡例を含む。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0004",
+      "uiId": "region.tag-palette",
+      "name": "タグパレットペイン(右)",
+      "screen": "TMP-UI-SCR-0001",
+      "source": ["M1"],
+      "confidence": "high",
+      "notes": "定義済みタグ一覧・検索・追加。件数サマリ(N/総数)と種別凡例。各カードからドラッグで階層へ配置。"
+    }
+  ],
+
+  "components": [
+    {
+      "tempPartNo": "TMP-UI-CMP-0001",
+      "uiId": "component.view-row",
+      "name": "ビュー行",
+      "region": "TMP-UI-REG-0002",
+      "source": ["M1"],
+      "confidence": "high",
+      "elements": ["アイコン", "ビュー名(省略表示)", "タグ数バッジ", "選択視覚(枠+背景)", "説明(あれば tooltip)"],
+      "notes": "決定(UQ-E1): お気に入り★は削除。表示は 名前+タグ数。説明は tooltip 表示。原典 DC-VIEWLIST-001(名前+★+説明・ECO-004 確定)と差異 → E-UI-TAGS-026 の表示契約改訂(ECO)を要する。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0002",
+      "uiId": "component.hierarchy-row",
+      "name": "階層行 / 配置タグ行",
+      "region": "TMP-UI-REG-0003",
+      "source": ["M1", "M3"],
+      "confidence": "high",
+      "elements": ["ホーム⬡トグル(M3)", "カラードット", "名前/別名ゾーン(インライン編集)", "種別チップ", "HOMEピル(M3)", "条件バッジ(M3)", "展開キャレット/子数(親)", "ドラッグハンドル(子)", "別名/条件/削除アクション(M3)"],
+      "notes": "M1(低忠実)とM3(高忠実)で同一部品。正準アフォーダンス集合は M3。親行=キャレット+子数、子行=ドラッグハンドル。出現で variant 化。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0003",
+      "uiId": "component.tag-card",
+      "name": "パレットタグカード",
+      "region": "TMP-UI-REG-0004",
+      "source": ["M1"],
+      "confidence": "high",
+      "elements": ["カラードット", "タグ名", "種別チップ", "編集(えんぴつ)", "削除(ごみ箱)", "種別別サマリ(候補値チップ/数値範囲+刻み/値なし注記)"],
+      "notes": "種別で内容が分岐(simple/text/number)。決定(UQ-E2): 説明欄は不要(モック準拠)。原典 DC-TAGPALETTE-001(色+名前+型+説明・ECO-004 確定)と差異 → E-UI-TAGS-026 の表示契約改訂(ECO)を要する。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0004",
+      "uiId": "component.type-chip",
+      "name": "種別チップ(シンプル/テキスト/数値)",
+      "source": ["M1", "M2", "M3"],
+      "confidence": "high",
+      "notes": "共有アトム。色: シンプル=グレー、テキスト=青、数値=緑。パレット凡例・カード・ツリー行・配置タグ行で再利用。デザイントークン依存(E-DESIGN-028)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0005",
+      "uiId": "component.color-dot",
+      "name": "カラードット(タグ識別色)",
+      "source": ["M1", "M2", "M3"],
+      "confidence": "high",
+      "notes": "共有アトム。タグ固有色+リング(選択強調)。行/カード/プレビューで再利用。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0006",
+      "uiId": "component.condition-badge",
+      "name": "条件サマリチップ",
+      "region": "TMP-UI-REG-0003",
+      "source": ["M3"],
+      "confidence": "high",
+      "elements": ["じょうごアイコン", "条件要約テキスト(/regex/・候補値・=値・min–max)"],
+      "notes": "条件タイプで色分け。pattern は monospace。i18n テンプレート整形が原典規律(E-UI-NODEGRAPH-025/GF-05: JSON・\\uXXXX を露出しない)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0007",
+      "uiId": "modal.tag.create-edit",
+      "name": "タグ作成/編集ダイアログ(適応型)",
+      "screen": "TMP-UI-SCR-0001",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["ヘッダ(タイトル+サブタイトル+×)", "左=基本情報", "右=種別別設定(適応)", "下=付与時プレビュー", "フッタ(キャンセル/保存)"],
+      "notes": "種別タブ切替で右側とプレビューが連動。高さ固定・候補値リスト内部のみスクロールが原典規律(E-UI-TAGS-026/GF-01)。モックの ghost backdrop/scrim は装飾(nonBom)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0008",
+      "uiId": "modal.tag.condition",
+      "name": "条件設定ダイアログ",
+      "screen": "TMP-UI-SCR-0001",
+      "source": ["M3"],
+      "confidence": "high",
+      "elements": ["ヘッダ(色ドット+対象タグ名+×)", "条件タイプセグメント", "タイプ別入力(none/pattern/select/equal/range)", "フッタ(クリア/キャンセル/適用)"],
+      "notes": "対象タグの種別で条件タイプ集合が切替(テキスト=none/pattern/select、数値=none/equal/range)。配置タグ行のじょうごから起動。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0009",
+      "uiId": "component.type-selector",
+      "name": "種別セグメント(シンプル/テキスト/数値)",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "notes": "作成ダイアログ内のセグメントコントロール。選択で右側設定とプレビューを切替(状態 TMP-UI-STA-0004)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0010",
+      "uiId": "component.color-picker",
+      "name": "カラーパレット(swatches)",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["9色 swatch", "選択強調", "HEX 表示"],
+      "notes": "色集合は E-DESIGN-028 のトークンに対応。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0011",
+      "uiId": "component.option-row",
+      "name": "選択肢行(テキストタグ候補値)",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["ドラッグハンドル", "ラベル", "削除"],
+      "notes": "ドラッグで並べ替え可。0件時は空状態(TMP-UI-STA-0006)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0012",
+      "uiId": "component.preview-strip",
+      "name": "付与時プレビュー(ライブ)",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["カラードット", "タグ名", "テキスト=候補値チップ選択", "数値=±/★/数値表示"],
+      "notes": "『画像に付けたときの見え方』を常時ライブ表示。★モード判定: 単位=★ かつ範囲span 0..9 の整数。決定(UQ-E5): 付与プレビュー(★/数値±/候補チップ)は画像タブ実付与UI(E-UI-TAGASSIGN-029)と表示一致を契約化する(新規表示パリティ契約 DC-TAGPREVIEW-001 候補)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0013",
+      "uiId": "component.condition-type-selector",
+      "name": "条件タイプセグメント",
+      "region": "TMP-UI-CMP-0008",
+      "source": ["M3"],
+      "confidence": "high",
+      "notes": "テキスト: 条件なし/パターンマッチ/候補値から選択。数値: 条件なし/等値/範囲。選択で入力欄を切替(TMP-UI-STA-0012)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0014",
+      "uiId": "component.candidate-checklist",
+      "name": "候補値チェックリスト",
+      "region": "TMP-UI-CMP-0008",
+      "source": ["M3"],
+      "confidence": "high",
+      "elements": ["チェックボックス行(候補値)", "1つ以上選択必須", "候補値なし空状態"],
+      "notes": "対象テキストタグの候補値を列挙。候補値0件は空状態(パターンマッチ案内, TMP-UI-STA-0014)。"
+    }
+  ],
+
+  "occurrences": [
+    { "tempPartNo": "TMP-UI-OCC-0001", "uiId": "component.tag-card.simple", "master": "TMP-UI-CMP-0003", "name": "タグカード/シンプル", "source": ["M1"], "confidence": "high", "notes": "値を持たない単一タグ注記のみ。" },
+    { "tempPartNo": "TMP-UI-OCC-0002", "uiId": "component.tag-card.text", "master": "TMP-UI-CMP-0003", "name": "タグカード/テキスト", "source": ["M1"], "confidence": "high", "notes": "候補値チップ列を要約表示。" },
+    { "tempPartNo": "TMP-UI-OCC-0003", "uiId": "component.tag-card.number", "master": "TMP-UI-CMP-0003", "name": "タグカード/数値", "source": ["M1"], "confidence": "high", "notes": "範囲(min–max 単位)+刻み を要約表示。" },
+    { "tempPartNo": "TMP-UI-OCC-0004", "uiId": "component.hierarchy-row.group", "master": "TMP-UI-CMP-0002", "name": "階層行/親(グループ)", "source": ["M1", "M3"], "confidence": "high", "notes": "展開キャレット+子数バッジ。クリックで展開/折り畳み。" },
+    { "tempPartNo": "TMP-UI-OCC-0005", "uiId": "component.hierarchy-row.leaf", "master": "TMP-UI-CMP-0002", "name": "階層行/子(リーフ)", "source": ["M1", "M3"], "confidence": "high", "notes": "ドラッグハンドル。並べ替え/入れ子変更の対象。" }
+  ],
+
+  "actions": [
+    { "tempPartNo": "TMP-UI-ACT-0001", "uiId": "action.view.create", "name": "新規ビュー作成", "region": "TMP-UI-REG-0002", "trigger": "click", "effect": "空のビューを作成", "source": ["M1", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0002", "uiId": "action.view.select", "name": "ビュー選択", "region": "TMP-UI-REG-0002", "trigger": "click", "effect": "そのビューの階層を中央ペインに表示", "source": ["M1", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0003", "uiId": "action.hierarchy.toggle-expand", "name": "親行の展開/折り畳み", "region": "TMP-UI-REG-0003", "trigger": "click(親行/キャレット)", "effect": "子ノードの表示/非表示", "source": ["M1", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0004", "uiId": "action.hierarchy.drag-nest", "name": "階層の入れ子・並べ替え", "region": "TMP-UI-REG-0003", "trigger": "drag", "effect": "親子関係/並び順の変更", "source": ["M1", "S"], "confidence": "medium", "notes": "モックは静的(D&D未実装)。仕様テキストで明示。" },
+    { "tempPartNo": "TMP-UI-ACT-0005", "uiId": "action.palette.search", "name": "パレット検索", "region": "TMP-UI-REG-0004", "trigger": "input", "effect": "名前で絞り込み(部分一致)", "source": ["M1"], "confidence": "high", "notes": "実装は includes() 部分一致。前方一致か否かは要確認(UQ)。" },
+    { "tempPartNo": "TMP-UI-ACT-0006", "uiId": "action.tag.create", "name": "タグ新規作成(追加)", "region": "TMP-UI-REG-0004", "trigger": "click(追加)", "effect": "タグ作成ダイアログを開く", "source": ["M1", "S"], "confidence": "high", "opens": "TMP-UI-CMP-0007" },
+    { "tempPartNo": "TMP-UI-ACT-0007", "uiId": "action.tag.edit", "name": "タグ編集", "region": "TMP-UI-REG-0004", "trigger": "click(えんぴつ)", "effect": "タグ編集ダイアログを開く", "source": ["M1", "S"], "confidence": "high", "opens": "TMP-UI-CMP-0007" },
+    { "tempPartNo": "TMP-UI-ACT-0008", "uiId": "action.tag.delete", "name": "タグ削除", "region": "TMP-UI-REG-0004", "trigger": "click(ごみ箱)", "effect": "タグ定義を削除", "source": ["M1", "S"], "confidence": "high", "notes": "削除確認ダイアログ要否は未定(UQ)。カスケード(E-TAGSVC-008/INV)。" },
+    { "tempPartNo": "TMP-UI-ACT-0009", "uiId": "action.palette.drag-to-hierarchy", "name": "パレット→階層へ配置", "region": "TMP-UI-REG-0004", "trigger": "drag", "effect": "ビューにタグを配置(入れ子/並びはドロップ位置で決定)", "source": ["M1", "S"], "confidence": "medium", "notes": "モックは静的。仕様で明示。" },
+    { "tempPartNo": "TMP-UI-ACT-0010", "uiId": "action.tag.set-type", "name": "種別切替", "region": "TMP-UI-CMP-0009", "trigger": "click(セグメント)", "effect": "右側設定とプレビューを連動切替", "source": ["M2", "S"], "confidence": "high", "notes": "種別変更時の既存値(候補値/数値範囲)の扱いは未定(UQ)。作成後も変更可(共通属性)。" },
+    { "tempPartNo": "TMP-UI-ACT-0011", "uiId": "action.tag.pick-color", "name": "カラー選択", "region": "TMP-UI-CMP-0010", "trigger": "click(swatch)", "effect": "識別色を設定", "source": ["M2"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0012", "uiId": "action.tag.option-add", "name": "選択肢追加", "region": "TMP-UI-CMP-0007", "trigger": "click(追加)/Enter", "effect": "テキスト候補値を追加", "source": ["M2"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0013", "uiId": "action.tag.option-remove", "name": "選択肢削除", "region": "TMP-UI-CMP-0011", "trigger": "click(×)", "effect": "テキスト候補値を削除", "source": ["M2"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0014", "uiId": "action.tag.option-reorder", "name": "選択肢並べ替え", "region": "TMP-UI-CMP-0011", "trigger": "drag", "effect": "候補値の並び順変更", "source": ["M2"], "confidence": "medium", "notes": "モックは静的(ハンドルのみ)。" },
+    { "tempPartNo": "TMP-UI-ACT-0015", "uiId": "action.tag.apply-preset", "name": "数値プリセット適用", "region": "TMP-UI-CMP-0007", "trigger": "click(★評価/% /pt)", "effect": "min/max/step/unit/色を一括設定", "source": ["M2"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0016", "uiId": "action.tag.save", "name": "タグ保存", "region": "TMP-UI-CMP-0007", "trigger": "click(保存)", "effect": "バリデーション通過時に保存", "source": ["M2", "S"], "confidence": "high", "guardedBy": "TMP-UI-STA-0005" },
+    { "tempPartNo": "TMP-UI-ACT-0017", "uiId": "action.dialog.cancel", "name": "ダイアログを閉じる(キャンセル/×)", "trigger": "click", "effect": "破棄して閉じる", "source": ["M2", "M3"], "confidence": "high", "notes": "作成/条件 両ダイアログ共通。" },
+    { "tempPartNo": "TMP-UI-ACT-0018", "uiId": "action.placed.toggle-home", "name": "ホーム設定(⬡)", "region": "TMP-UI-REG-0003", "trigger": "click(⬡)", "effect": "その配置をホームに設定(ビュー内で唯一)", "source": ["M3", "S"], "confidence": "high", "notes": "家アイコンで表現(★不可 — E-UI-NODEGRAPH-025/GF-03)。" },
+    { "tempPartNo": "TMP-UI-ACT-0019", "uiId": "action.placed.edit-alias", "name": "別名編集開始", "region": "TMP-UI-REG-0003", "trigger": "click(えんぴつ)", "effect": "別名のインライン編集を開始", "source": ["M3", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0020", "uiId": "action.placed.confirm-alias", "name": "別名確定", "region": "TMP-UI-REG-0003", "trigger": "Enter/緑チェック", "effect": "別名を確定(空なら元タグ名に戻る)", "source": ["M3", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0021", "uiId": "action.placed.open-condition", "name": "条件ダイアログを開く(じょうご)", "region": "TMP-UI-REG-0003", "trigger": "click(じょうご)", "effect": "条件設定ダイアログを開く", "source": ["M3", "S"], "confidence": "high", "opens": "TMP-UI-CMP-0008" },
+    { "tempPartNo": "TMP-UI-ACT-0022", "uiId": "action.placed.delete", "name": "配置削除", "region": "TMP-UI-REG-0003", "trigger": "click(ごみ箱)", "effect": "階層からその配置を削除", "source": ["M3"], "confidence": "medium", "notes": "配置削除 vs タグ定義削除の区別を要確認(UQ)。" },
+    { "tempPartNo": "TMP-UI-ACT-0023", "uiId": "action.hierarchy.place-tag", "name": "タグを配置(ヘッダ)", "region": "TMP-UI-REG-0003", "trigger": "click(タグを配置)", "effect": "配置追加(パレット選択タグを階層へ)", "source": ["M3", "S"], "confidence": "high", "notes": "決定(UQ-E3): モック側(汎用ラベル『タグを配置』)を採用。原典 GF-04(対象タグ名表示・未選択時非活性・v2.0 是正)を不採用=撤回 → E-UI-NODEGRAPH-025 の不変条件改訂(ECO)を要する。" },
+    { "tempPartNo": "TMP-UI-ACT-0024", "uiId": "action.condition.set-type", "name": "条件タイプ切替", "region": "TMP-UI-CMP-0013", "trigger": "click(セグメント)", "effect": "入力欄を条件タイプに応じて切替", "source": ["M3", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0025", "uiId": "action.condition.toggle-candidate", "name": "候補値トグル", "region": "TMP-UI-CMP-0014", "trigger": "click(チェック)", "effect": "候補値選択のトグル(1つ以上必須)", "source": ["M3"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0026", "uiId": "action.condition.clear", "name": "条件クリア", "region": "TMP-UI-CMP-0008", "trigger": "click(クリア)", "effect": "条件なしへ初期化", "source": ["M3", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0027", "uiId": "action.condition.apply", "name": "条件適用", "region": "TMP-UI-CMP-0008", "trigger": "click(適用)", "effect": "バリデーション通過時に保存して反映", "source": ["M3", "S"], "confidence": "high", "guardedBy": "TMP-UI-STA-0013" },
+    { "tempPartNo": "TMP-UI-ACT-0028", "uiId": "action.preview.adjust-value", "name": "プレビュー値操作", "region": "TMP-UI-CMP-0012", "trigger": "click(候補チップ/±/★)", "effect": "プレビュー上で付与値を変更(保存対象外の体験)", "source": ["M2"], "confidence": "medium", "notes": "プレビュー専用。タグ定義値ではない。" },
+    { "tempPartNo": "TMP-UI-ACT-0029", "uiId": "action.shell.switch-tab", "name": "タブ切替(タグ/画像/作業)", "region": "TMP-UI-REG-0001", "trigger": "click", "effect": "タブ切替", "source": ["M1"], "owner": "shell", "confidence": "high" },
+    { "tempPartNo": "TMP-UI-ACT-0030", "uiId": "action.shell.global-search", "name": "グローバル検索(⌘K)", "region": "TMP-UI-REG-0001", "trigger": "click/⌘K", "effect": "(決定 UQ-E4: 不採用) 実装しない", "source": ["M1", "S"], "owner": "shell", "confidence": "high", "decision": "dropped", "notes": "決定(UQ-E4): グローバル検索は無し。モックの⌘K UI 要素は採用しない。現行 E-BOM 未記載のため E-BOM 改訂は不要。" }
+  ],
+
+  "inputs": [
+    { "tempPartNo": "TMP-UI-INP-0001", "uiId": "input.palette.search", "name": "パレット検索欄", "type": "text", "region": "TMP-UI-REG-0004", "source": ["M1"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0001" },
+    { "tempPartNo": "TMP-UI-INP-0002", "uiId": "input.tag.name", "name": "タグ名", "type": "text", "required": true, "region": "TMP-UI-CMP-0007", "source": ["M2", "S"], "confidence": "high", "validation": "必須(空では保存不可)", "dataConcept": "TMP-UI-DOM-0001" },
+    { "tempPartNo": "TMP-UI-INP-0003", "uiId": "input.tag.description", "name": "説明", "type": "textarea", "required": false, "region": "TMP-UI-CMP-0007", "source": ["M2", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-INP-0004", "uiId": "input.tag.color", "name": "カラー", "type": "enum(swatch)", "required": true, "region": "TMP-UI-CMP-0010", "source": ["M2", "S"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0009" },
+    { "tempPartNo": "TMP-UI-INP-0005", "uiId": "input.tag.option-new", "name": "新しい選択肢", "type": "text", "region": "TMP-UI-CMP-0007", "source": ["M2"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0010" },
+    { "tempPartNo": "TMP-UI-INP-0006", "uiId": "input.tag.num-min", "name": "最小値", "type": "numeric", "region": "TMP-UI-CMP-0007", "source": ["M2", "S"], "confidence": "high", "validation": "最小 ≦ 最大", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0007", "uiId": "input.tag.num-max", "name": "最大値", "type": "numeric", "region": "TMP-UI-CMP-0007", "source": ["M2", "S"], "confidence": "high", "validation": "最小 ≦ 最大", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0008", "uiId": "input.tag.num-step", "name": "ステップ(刻み)", "type": "numeric", "region": "TMP-UI-CMP-0007", "source": ["M2", "S"], "confidence": "high", "validation": "ステップ > 0", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0009", "uiId": "input.tag.num-unit", "name": "単位", "type": "text", "region": "TMP-UI-CMP-0007", "source": ["M2", "S"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0010", "uiId": "input.placed.alias", "name": "別名(インライン)", "type": "text", "region": "TMP-UI-REG-0003", "source": ["M3", "S"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0006", "notes": "空で確定すると元タグ名に戻る。配置ごとに独立か要確認(UQ)。" },
+    { "tempPartNo": "TMP-UI-INP-0011", "uiId": "input.condition.pattern", "name": "パターン(正規表現)", "type": "text(regex)", "region": "TMP-UI-CMP-0008", "source": ["M3", "S"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0007", "notes": "不正 regex は不成立(クラッシュしない — E-EVAL-002/INV)。K-REGEX 依存。" },
+    { "tempPartNo": "TMP-UI-INP-0012", "uiId": "input.condition.candidate-select", "name": "候補値選択(複数)", "type": "multiselect", "region": "TMP-UI-CMP-0014", "source": ["M3", "S"], "confidence": "high", "validation": "1つ以上必須", "dataConcept": "TMP-UI-DOM-0010" },
+    { "tempPartNo": "TMP-UI-INP-0013", "uiId": "input.condition.equal", "name": "一致する値(等値)", "type": "numeric", "region": "TMP-UI-CMP-0008", "source": ["M3", "S"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0014", "uiId": "input.condition.range-min", "name": "範囲最小", "type": "numeric", "region": "TMP-UI-CMP-0008", "source": ["M3", "S"], "confidence": "high", "validation": "両端含む", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0015", "uiId": "input.condition.range-max", "name": "範囲最大", "type": "numeric", "region": "TMP-UI-CMP-0008", "source": ["M3", "S"], "confidence": "high", "validation": "両端含む", "dataConcept": "TMP-UI-DOM-0011" },
+    { "tempPartNo": "TMP-UI-INP-0016", "uiId": "input.shell.global-search", "name": "グローバル検索欄(⌘K)", "type": "text", "region": "TMP-UI-REG-0001", "source": ["M1"], "owner": "shell", "confidence": "high", "decision": "dropped", "notes": "決定(UQ-E4): 不採用。" }
+  ],
+
+  "states": [
+    { "tempPartNo": "TMP-UI-STA-0001", "uiId": "state.view.selected", "name": "ビュー選択中", "target": "TMP-UI-CMP-0001", "observe": "枠色+背景+アイコン/バッジ色", "source": ["M1"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0002", "uiId": "state.hierarchy.node-expanded", "name": "ノード展開/折り畳み", "target": "TMP-UI-OCC-0004", "observe": "キャレット回転+子の表示", "source": ["M1"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0003", "uiId": "state.hierarchy.row-selected", "name": "行選択中", "target": "TMP-UI-CMP-0002", "observe": "背景強調", "source": ["M1"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0004", "uiId": "state.tag.type-adaptive", "name": "種別適応(simple/text/number)", "target": "TMP-UI-CMP-0007", "observe": "右側設定+プレビューの切替", "source": ["M2"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0005", "uiId": "state.tag.save-disabled", "name": "保存不可", "target": "TMP-UI-ACT-0016", "observe": "保存ボタン淡色・非活性", "source": ["M2", "S"], "confidence": "high", "rule": "タグ名空 または (テキストで候補値0)" },
+    { "tempPartNo": "TMP-UI-STA-0006", "uiId": "state.dialog.no-options", "name": "選択肢0(空状態)", "target": "TMP-UI-CMP-0007", "observe": "『選択肢を1つ以上追加してください』破線枠", "source": ["M2"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0007", "uiId": "state.preview.star-vs-plain", "name": "★モード/数値モード", "target": "TMP-UI-CMP-0012", "observe": "★並び or 数値テキスト", "source": ["M2"], "confidence": "high", "rule": "単位=★ かつ span 0..9 整数 → ★モード" },
+    { "tempPartNo": "TMP-UI-STA-0008", "uiId": "state.placed.is-home", "name": "ホーム指定中", "target": "TMP-UI-CMP-0002", "observe": "⬡塗り+HOMEピル+行背景", "source": ["M3", "S"], "confidence": "high", "rule": "ビュー内に1つ" },
+    { "tempPartNo": "TMP-UI-STA-0009", "uiId": "state.placed.has-alias", "name": "別名あり", "target": "TMP-UI-CMP-0002", "observe": "別名表示+『＝元タグ名』", "source": ["M3", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0010", "uiId": "state.placed.editing-alias", "name": "別名編集中", "target": "TMP-UI-CMP-0002", "observe": "入力欄(橙枠)+緑チェック", "source": ["M3"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0011", "uiId": "state.placed.has-condition", "name": "条件あり", "target": "TMP-UI-CMP-0006", "observe": "条件サマリバッジ表示", "source": ["M3"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0012", "uiId": "state.condition.type", "name": "条件タイプ(none/pattern/select/equal/range)", "target": "TMP-UI-CMP-0008", "observe": "入力欄の切替", "source": ["M3", "S"], "confidence": "high" },
+    { "tempPartNo": "TMP-UI-STA-0013", "uiId": "state.condition.apply-disabled", "name": "適用不可", "target": "TMP-UI-ACT-0027", "observe": "適用ボタン淡色", "source": ["M3"], "confidence": "high", "rule": "pattern空 / select0件 / equal空 / range両端いずれか空" },
+    { "tempPartNo": "TMP-UI-STA-0014", "uiId": "state.condition.no-candidates", "name": "候補値なし(空状態)", "target": "TMP-UI-CMP-0014", "observe": "『候補値がありません。パターンマッチを…』", "source": ["M3"], "confidence": "high" }
+  ],
+
+  "domainConcepts": [
+    { "tempPartNo": "TMP-UI-DOM-0001", "uiId": "domain.tag", "name": "タグ", "source": ["S", "M1", "M2"], "confidence": "high", "notes": "画像に付与する分類の最小単位。必ず1つの種別を持つ。" },
+    { "tempPartNo": "TMP-UI-DOM-0002", "uiId": "domain.tag-type", "name": "タグ種別", "source": ["S", "M2"], "confidence": "high", "notes": "シンプル/テキスト/数値。付与時の値と設定条件が変わる。作成後も変更可。" },
+    { "tempPartNo": "TMP-UI-DOM-0003", "uiId": "domain.view", "name": "ビュー(視点)", "source": ["S", "M1"], "confidence": "high", "notes": "タグを入れ子に組んだ階層。画像タブでコレクションに与える見方。" },
+    { "tempPartNo": "TMP-UI-DOM-0004", "uiId": "domain.hierarchy", "name": "階層(入れ子)", "source": ["S", "M1", "M3"], "confidence": "high", "notes": "配置タグの親子関係。循環なし(E-GRAPH-003/E-VIEWSVC-009 INV)。" },
+    { "tempPartNo": "TMP-UI-DOM-0005", "uiId": "domain.placement", "name": "配置", "source": ["S", "M3"], "confidence": "high", "notes": "タグをビュー階層上の特定の場所に置くこと。配置ごとに固有設定(別名/条件/ホーム)。" },
+    { "tempPartNo": "TMP-UI-DOM-0006", "uiId": "domain.alias", "name": "別名(エイリアス)", "source": ["S", "M3"], "confidence": "high", "notes": "配置タグにビュー内だけで通用する呼び名。" },
+    { "tempPartNo": "TMP-UI-DOM-0007", "uiId": "domain.condition", "name": "条件", "source": ["S", "M3"], "confidence": "high", "notes": "配置タグの対象を絞る。テキスト=パターン/候補値、数値=等値/範囲。複数条件の結合は AND 前提か要確認(UQ)。" },
+    { "tempPartNo": "TMP-UI-DOM-0008", "uiId": "domain.home", "name": "ホーム", "source": ["S", "M3"], "confidence": "high", "notes": "配置タグの起点。画像タブでビュー適用時に最初に開く場所。ビュー内に1つ。" },
+    { "tempPartNo": "TMP-UI-DOM-0009", "uiId": "domain.color", "name": "カラー", "source": ["S", "M1", "M2"], "confidence": "high", "notes": "行・チップの識別色(パレットから選択)。必須。" },
+    { "tempPartNo": "TMP-UI-DOM-0010", "uiId": "domain.candidate-value", "name": "候補値(選択肢)", "source": ["S", "M2", "M3"], "confidence": "high", "notes": "テキストタグの選択肢。追加・削除・並べ替え可。" },
+    { "tempPartNo": "TMP-UI-DOM-0011", "uiId": "domain.numeric-range", "name": "数値範囲", "source": ["S", "M2"], "confidence": "high", "notes": "最小・最大・ステップ・単位。numeric 値は InvariantCulture 文字列保持(E-DOMAIN-001/INV-007)。" }
+  ],
+
+  "unmodeledElements": [
+    { "selector": "M1/M2/M3 ロゴ三角(clip-path polygon)", "reason": "装飾(ブランドマーク)", "handling": "nonBom" },
+    { "selector": "M1 DESIGN DIRECTION バンド/原則カード4枚/トークンデモ(COLOR・TYPE・ROW)", "reason": "プレゼン用説明(マーケ)。アプリ画面ではない", "handling": "nonBom", "note": "ただしトークンデモは E-DESIGN-028 の根拠資料として reference 保持。" },
+    { "selector": "M1/M2/M3 『NEXT STEPS / NEXT』フッタ", "reason": "ドキュメント注記", "handling": "nonBom" },
+    { "selector": "M2 ghost backdrop(blur)+scrim", "reason": "モーダル提示のための背景演出", "handling": "nonBom" },
+    { "selector": "M1 タイトルバー window controls(min/max/close)", "reason": "OSウィンドウ装飾。シェル所有・タグタブ外", "handling": "trace", "ebomItemRef": ["E-UI-SHELL-021"] },
+    { "selector": "M1 メニューストリップ(File/Edit/View/Window/Help)", "reason": "シェルメニュー。モックは非機能プレースホルダ", "handling": "trace", "ebomItemRef": ["E-UI-SHELL-021"] },
+    { "selector": "S(仕様書).dc.html 全体(doc header/TOC/章アコーディオン)", "reason": "機能仕様ドキュメントUIであり対象アプリ画面ではない", "handling": "nonBom", "note": "本文テキストは抽出の根拠(functional spec)として参照。" },
+    { "selector": "各種 余白調整 wrapper / 罫線・影・角丸のみの div", "reason": "レイアウト/装飾", "handling": "nonBom" }
+  ]
+}
