@@ -200,6 +200,7 @@ mbom:
       interface_contract:
         shell: "v1.2(仕様 §2.6): 上部タブ『タグ』『画像』+『設定』。タグタブ=3 ペイン(ビュー管理/階層エディタ(バッチ保存)/タグパレット+作成ダイアログ)。画像タブ=左(フォルダ+ビュー+NodeGraph ツリー+全画像入口)/ツールバー(表示切替・列数・ソート・タグ編集モード)/中央グリッド・リスト/右パネル(詳細⇔タグ付与切替)"
         viewmodels: "選択(Ctrl トグル・選択順)・空状態・ノード選択→評価呼び出し・階層編集のダーティ追跡は ViewModel ロジックとして unit 検査可能に分離(OC 系を UI から呼ぶだけにする)"
+        nav_empty: "(ECO-006/BL-001) 画像タブ左 NodeGraph ナビ: TreeRoots は選択ビューでルートを常に 1 件持つ(REQ-036)。AXAML はツリーと空状態プレースホルダを**排他**にし重ねない=子ノード無しビューはルートノードのみ表示し『階層が定義されていません』(nodeGraph.empty)を画像タブナビに出さない。MainWindowViewModel の遷移・評価は不変(表示層のみ是正)"
         design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ"
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-UI-G6, CP-L1-SMOKE]
       fmea_refs: [FMEA-013]

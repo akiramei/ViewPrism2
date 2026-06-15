@@ -6,7 +6,7 @@
 
 | ID | 区分 | 内容 | 重大度 | 状態 |
 |----|------|------|--------|------|
-| BL-001 | 既存不具合(表示) | 画像タブ左ペイン「階層構造」でビュー名と空状態が重なる | low〜med | open |
+| BL-001 | 既存不具合(表示) | 画像タブ左ペイン「階層構造」でビュー名と空状態が重なる | low〜med | **closed(ECO-006・2026-06-15)** |
 
 ---
 
@@ -25,3 +25,4 @@
   - あわせて `IsTreeEmpty` が「ビューは選択済みだが階層が空」を正しく表すか `MainWindowViewModel.TreeRoots`/`IsTreeEmpty` の算出を確認する。
 - **重大度**: low〜med(視覚のみ・機能影響なし。ただし「階層未定義」の誤読を招く)。
 - **再現**: 階層を保存していないお気に入りビュー(home_tag/条件/階層が空)を選択 → 階層構造ナビで重なりが出る。
+- **是正(closed・2026-06-15・ECO-006)**: 帰属=**spec_omission**(画像タブ NodeGraph ナビの「ルートのみ(子ノード無し)ビュー」表示契約が §2.6 空状態規則に欠落・`nodeGraph.empty` プレースホルダは未トレースの実装追加)。**仕様 §2.6 に表示契約を追加**(ルート常在・ツリーとプレースホルダ排他・画像タブナビにプレースホルダを出さない)→ E-UI-NODEGRAPH-025 invariant / M-UI-013 nav_empty / CP-UI-G1 を同期 → 隔離工場(factory)が contract から製造(MainWindow.axaml の重ねを撤去・未参照化した `IsTreeEmpty` も除去・`MainWindowViewModel` の遷移/評価は不変)。受入: Tests 395/Oracle 74 PASS+2 skip 回帰ゼロ。**golden CP-UI-G1 承認(2026-06-15・maintainer 実機=重なり解消)**。詳細 60-change-order-eco-006.md。

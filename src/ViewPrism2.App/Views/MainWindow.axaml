@@ -199,19 +199,16 @@
             <ItemsControl ItemsSource="{Binding Recents}" ItemTemplate="{StaticResource NavItemTemplate}" />
             <TextBlock Classes="sectionHeader" Text="{Binding Loc[navigation.hierarchy]}" />
           </StackPanel>
-          <Panel>
-            <TreeView x:Name="NodeTree" ItemsSource="{Binding TreeRoots}"
-                      SelectionChanged="OnTreeSelectionChanged" Background="Transparent">
-              <TreeView.ItemTemplate>
-                <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:GraphNodeViewModel">
-                  <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
-                </TreeDataTemplate>
-              </TreeView.ItemTemplate>
-            </TreeView>
-            <TextBlock Text="{Binding Loc[nodeGraph.empty]}" IsVisible="{Binding IsTreeEmpty}"
-                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"
-                       Margin="12,4" TextWrapping="Wrap" />
-          </Panel>
+          <!-- ECO-006/BL-001: 画像タブナビはルート常在(TreeRoots は選択ビューでルート 1 件を常に持つ)。
+               ツリーと空状態プレースホルダは排他のため nodeGraph.empty の重ねを撤去し TreeView を直置きする。 -->
+          <TreeView x:Name="NodeTree" ItemsSource="{Binding TreeRoots}"
+                    SelectionChanged="OnTreeSelectionChanged" Background="Transparent">
+            <TreeView.ItemTemplate>
+              <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:GraphNodeViewModel">
+                <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+              </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+          </TreeView>
         </DockPanel>
 
         <Border Grid.Column="1" Background="{StaticResource BorderLineBrush}" />

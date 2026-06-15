@@ -454,7 +454,7 @@ control_plan:
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
-    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+グリッド(レスポンシブ列・Ctrl/SHIFT 選択)の描画と操作(G-1・v1.3)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上), oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+グリッド(レスポンシブ列・Ctrl/SHIFT 選択)の描画と操作+**画像タブ NodeGraph ナビ: 階層なしビュー選択時にビュー名(ルート)と空文言が重ならない(ECO-006/BL-001)**(G-1・v1.3)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+ナビ重なりなし", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G3, characteristic: "詳細パネルの全項目表示・ノート保存(G-3)",              classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止・背景クリック閉じる(G-4・v1.3)", classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }

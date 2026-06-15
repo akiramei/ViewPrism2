@@ -151,10 +151,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string? _statusMessage;
 
-    /// <summary>選択中ビューに階層定義が無い(nodeGraph.empty 表示用)。全画像選択時は false。</summary>
-    [ObservableProperty]
-    private bool _isTreeEmpty;
-
     /// <summary>「タグ編集」モード(REQ-046): 右パネルがタグ付与へ切替、ダブルクリックのビューア起動は無効。</summary>
     [ObservableProperty]
     private bool _isTagEditMode;
@@ -508,7 +504,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
             TreeRoots.Clear();
             SelectedTreeNode = null;
             _suppressEvaluation = false;
-            IsTreeEmpty = false;
             Browser.SetColumns(null, _tagById);
             EvaluateAndShow();
             return;
@@ -534,7 +529,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         TreeRoots.Clear();
         var rootVm = new GraphNodeViewModel(result.Root, null, view.Name);
         TreeRoots.Add(rootVm);
-        IsTreeEmpty = rootVm.Children.Count == 0;
 
         // 選択復元: 旧選択ノードが解決できなければルートへ(M-BOM silence_sweep / REQ-037 と同じフォールバック)
         GraphNodeViewModel? target = null;
