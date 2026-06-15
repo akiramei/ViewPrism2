@@ -140,8 +140,8 @@
       "kind": "component",
       "name": "種別セグメント",
       "parent": "TMP-UI-CMP-0007",
-      "bomRationale": "種別切替=適応型ダイアログの分岐源。",
-      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ内部部品)", "items": ["E-UI-TAGS-026"], "confidence": "medium" }
+      "bomRationale": "種別切替=適応型ダイアログの分岐源。型別サブ部品(CMP-0015/0016/0017)を切替える。",
+      "ebomCandidate": { "promoteAs": "display 差分(ECO-007)", "items": ["E-UI-TAGS-026"], "confidence": "high", "decision": "種別セレクタは ComboBox(現実装 TagEditorWindow.axaml:31)→ セグメント3タブ(モック)", "ecoImpact": "ECO-007: タグ作成ダイアログの種別セレクタ表現を ComboBox→セグメントへ(表示)" }
     },
     {
       "tempPartNo": "TMP-UI-CMP-0010",
@@ -187,6 +187,33 @@
       "parent": "TMP-UI-CMP-0008",
       "bomRationale": "候補値選択(select 条件)。空状態あり。",
       "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ内部部品)", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-EVAL-002"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0015",
+      "uiId": "component.tag.simple-settings-panel",
+      "kind": "component",
+      "name": "シンプル用設定パネル",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "作成ダイアログの型別サブ部品(simple)。用途説明のみ・設定なし。基本情報/プレビューは型非依存の共通部。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ型別サブ部品)", "items": ["E-UI-TAGS-026"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0016",
+      "uiId": "component.tag.text-settings-panel",
+      "kind": "component",
+      "name": "テキスト用設定パネル",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "作成ダイアログの型別サブ部品(text)。候補値編集。option-row(TMP-UI-CMP-0011)を内包。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ型別サブ部品)", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-TAGSVC-008"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0017",
+      "uiId": "component.tag.number-settings-panel",
+      "kind": "component",
+      "name": "数値用設定パネル",
+      "parent": "TMP-UI-CMP-0007",
+      "bomRationale": "作成ダイアログの型別サブ部品(number)。min/max/step/unit+プリセット。",
+      "ebomCandidate": { "promoteAs": "trace のみ(ダイアログ型別サブ部品)", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "confidence": "high" }
     },
 
     {

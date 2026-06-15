@@ -155,7 +155,7 @@
       "region": "TMP-UI-CMP-0007",
       "source": ["M2"],
       "confidence": "high",
-      "notes": "作成ダイアログ内のセグメントコントロール。選択で右側設定とプレビューを切替(状態 TMP-UI-STA-0004)。"
+      "notes": "作成ダイアログ内のセグメントコントロール。選択で右側設定とプレビューを切替(状態 TMP-UI-STA-0004)。差分: 現実装は ComboBox(ドロップダウン, TagEditorWindow.axaml:31)→ モックはセグメント(3タブ)。ECO-007 表示項目。"
     },
     {
       "tempPartNo": "TMP-UI-CMP-0010",
@@ -205,6 +205,36 @@
       "confidence": "high",
       "elements": ["チェックボックス行(候補値)", "1つ以上選択必須", "候補値なし空状態"],
       "notes": "対象テキストタグの候補値を列挙。候補値0件は空状態(パターンマッチ案内, TMP-UI-STA-0014)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0015",
+      "uiId": "component.tag.simple-settings-panel",
+      "name": "シンプル用設定パネル",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["用途説明", "『値の設定は不要』注記"],
+      "notes": "種別=シンプル時に表示(現実装 isSimple 相当)。設定項目なし。作成ダイアログ右側の型別サブ部品。基本情報・プレビューは型非依存の共通部。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0016",
+      "uiId": "component.tag.text-settings-panel",
+      "name": "テキスト用設定パネル",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["選択肢追加(input+追加)", "登録済み選択肢リスト(option-row=TMP-UI-CMP-0011)", "0件空状態(TMP-UI-STA-0006)"],
+      "notes": "種別=テキスト時に表示(現実装 IsVisible={IsTextual} 相当)。option-row(TMP-UI-CMP-0011)を内包。型別サブ部品。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0017",
+      "uiId": "component.tag.number-settings-panel",
+      "name": "数値用設定パネル",
+      "region": "TMP-UI-CMP-0007",
+      "source": ["M2"],
+      "confidence": "high",
+      "elements": ["最小/最大/ステップ/単位 入力", "プリセット(★評価/% /pt)"],
+      "notes": "種別=数値時に表示(現実装 IsVisible={IsNumeric} 相当)。型別サブ部品。"
     }
   ],
 
