@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:c="using:ViewPrism2.App.Controls"
         x:Class="ViewPrism2.App.Views.RelinkWindow"
         x:DataType="vm:RelinkViewModel"
         Title="{Binding Loc[relink.title]}"
@@ -26,7 +27,12 @@
           <ListBox ItemsSource="{Binding MissingImages}" SelectedItem="{Binding SelectedMissing}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MissingImageViewModel">
-                <TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                <!-- DC-RELINK-001(A-6): リンク切れ画像行はファイル名(主)+相対パス(従)。実体欠損のためサムネイルなし。 -->
+                <StackPanel Spacing="1" Margin="0,2">
+                  <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding RelativePath}" FontSize="11"
+                             Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
@@ -42,13 +48,24 @@
           <ListBox ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:RelinkCandidateViewModel">
-                <StackPanel>
-                  <TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
-                  <StackPanel Orientation="Horizontal" Spacing="12">
-                    <TextBlock Text="{Binding SizeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Text="{Binding ModifiedText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                <!-- DC-RELINK-001(A-1・ECO-004): 候補カードは RepairWindow と同型 —
+                     サムネイル+ファイル名+パス+サイズ+更新日時で再リンク可否を判断できる情報を提示する。 -->
+                <Grid ColumnDefinitions="56,8,*" Margin="0,2">
+                  <Border Grid.Column="0" Width="56" Height="56" CornerRadius="4" ClipToBounds="True"
+                          Background="{StaticResource AppBackgroundBrush}"
+                          BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1">
+                    <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" />
+                  </Border>
+                  <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding RelativePath}" FontSize="12"
+                               Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <TextBlock Text="{Binding SizeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Text="{Binding ModifiedText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
                   </StackPanel>
-                </StackPanel>
+                </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>

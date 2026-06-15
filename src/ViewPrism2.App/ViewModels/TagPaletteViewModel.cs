@@ -22,6 +22,12 @@ public sealed partial class TagPaletteRowViewModel : ObservableObject
 
     public string Name => Tag.Name;
 
+    /// <summary>タグ説明(DC-TAGPALETTE-001/A-5)。行に truncate/tooltip 表示する。null/空なら非表示。</summary>
+    public string? Description => Tag.Description;
+
+    /// <summary>説明が非空か(表示制御。空文字・空白のみは非表示)。</summary>
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Tag.Description);
+
     public string? Color => Tag.Color;
 
     /// <summary>color=NULL のタグは境界線色のリング表示(K-DESIGN)。</summary>

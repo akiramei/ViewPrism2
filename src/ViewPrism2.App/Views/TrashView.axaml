@@ -56,6 +56,9 @@
                   </Border>
                   <TextBlock Text="{Binding FileName}" FontSize="12" TextTrimming="CharacterEllipsis"
                              HorizontalAlignment="Center" />
+                  <!-- DC-TRASH-001(A-3): ファイル名の下にファイルサイズを従テキストで提示(削除判断材料) -->
+                  <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                             TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
                 </StackPanel>
               </Border>
             </DataTemplate>

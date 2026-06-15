@@ -416,13 +416,14 @@ mbom:
         probe: "IFilePresenceProbe(Core 抽象): bool Exists(string absoluteImagePath)。実装 FilePresenceProbe(Infrastructure)=File.Exists のみ(読み取り・INV-009)。**SkiaSharp/FS アクセスは Infrastructure に閉じ、TrashService(Core)は bool を受けて遷移判断**(M-SIMSEARCH-021 の IPHashImageReader 層分離と同型)"
         restore: "Task<Result<ImageStatus>> RestoreAsync(string imageId)  // OC-21。deleted 限定。folder.path+relative_path を IFilePresenceProbe.Exists で確認→存在=Normal(T6)/不在=Missing(T7)。status のみ更新・タグ/ID/特徴量不変。deleted 以外は ValidationError"
         purge: "Task<Result> PermanentDeleteAsync(string imageId)  // OC-22。deleted 限定。DELETE FROM images WHERE id=@id(image_tags/image_features/image_similarity は FK CASCADE)。物理ファイルに触れない。deleted 以外は ValidationError。単一トランザクション"
+        exclude: "Task<Result> ExcludeAsync(string imageId)  // (ECO-005/T9)。**missing 限定**。UpdateStatusAsync(id, Deleted) のみ=missing→deleted(トラッシュへ・復元可)。物理ファイルに触れない(INV-009)。タグ/ID/特徴量不変。missing 以外は ValidationError。PermanentDeleteAsync と同型の検証構造"
         decision: "ImageStatus TrashTransition.ResolveRestore(bool fileExists) → fileExists?Normal:Missing  // 純粋関数・固定オラクルが直接呼ぶ"
       invariants:
         - INV-013 復元は存在時 Normal・不在時 Missing(幽霊 normal 防止)/ INV-014 完全削除は行削除+CASCADE のみ・deleted 限定
-        - INV-009 物理ファイルへ触れない(復元の存在確認は読み取りのみ)。L3 物理差分 CP-TRASH-001 で実証
-        - 復元・完全削除はともに deleted 状態のみ許可(他 status は ValidationError)
-      acceptance_refs: [CP-TRASH-020, CP-TRASH-001]
-      fmea_refs: [FMEA-026, FMEA-027, FMEA-030]
+        - INV-009 物理ファイルへ触れない(復元の存在確認は読み取りのみ・除外は status 更新のみ)。L3 物理差分 CP-TRASH-001 で実証
+        - 復元・完全削除はともに deleted 状態のみ許可(他 status は ValidationError)。(ECO-005)除外は missing 状態のみ許可
+      acceptance_refs: [CP-TRASH-020, CP-TRASH-001, CP-TRASH-021]
+      fmea_refs: [FMEA-026, FMEA-027, FMEA-030, FMEA-033]
 
     - id: M-UI-REPAIR-027
       ebom_refs: [E-UI-REPAIR-039]
@@ -432,13 +433,17 @@ mbom:
       interface_contract:
         criteria_ui: "RepairViewModel: criteria 入力(hash/名前/拡張子/mtime 範囲/サイズ範囲)→ CriteriaSearchService。空条件は検索ボタン非活性。結果一覧(安定順)。ロジックは ViewModel で unit 検査可能に"
         relink_ui: "missing 画像に対し候補(pending+criteria 結果・安定順)を提示→選択→確定(RelinkService.CommitRelinkAsync のみ経由)。タグ付き候補は選択不可/拒否時に『マージを使う』案内"
+        repair_actions: "(ECO-005) RepairViewModel に TrashService 注入。`Task<int> AutoRepairAllAsync()`=auto-repairable(DeriveAutoCriteria 候補ちょうど1件)な全 missing を CommitRelinkAsync・失敗はスキップ・成功数返す。`Task AutoRepairSingleAsync(MissingImageViewModel)`=その1件。`Task ExcludeAsync(MissingImageViewModel)`=TrashService.ExcludeAsync(missing→deleted)。RepairWindow: 行内『自動修復』(auto-repairable 時)・フッター『すべて自動修復(M件)』(AutoRepairableCount>0 活性)・『除外』(SelectedMissing 活性)。結果文言。i18n repair.autoRepair*/repair.exclude*。選択は単一(マルチ一括除外は golden 改善余地・スコープ外)"
+        candidate_card: "(ECO-003) 各再リンク候補は **サムネイル+ファイル名+相対パス+サイズ+更新日時** のカードで提示(原典 AdvancedRepairModal 準拠)。サムネイルは既存 `ThumbnailImage`(M-THUMB-008/E-THUMB-020)に候補の**絶対パス**を渡して描画。絶対パスは RepairViewModel が `ISyncFolderRepository` で collection root を解決し `Path.Combine(root, relative)` で算出(TrashViewModel と同パターン)。`RelinkCandidateViewModel` は AbsolutePath・FileName・SizeText・ModifiedText を公開し unit 検査可能にする(視覚描画は golden)。missing 行はファイル名+相対パス(実体欠損のためサムネイル無し)"
         trash_ui: "TrashViewModel 拡張(V3 は閲覧のみ): deleted 一覧に『復元』『完全削除』。完全削除は確認+非破壊明示文言『画像ファイルは削除されません(DB から除去)』。復元で物理不在→missing になった結果を表示(TrashService.RestoreAsync の戻り status を反映)"
         i18n: "新規キー ja 正・en 併記(repair.* / trash.restore.* / trash.purge.*)。非破壊文言・missing 化通知を含む"
       invariants:
         - 各操作は M-CRITERIA-024/M-RELINK-025/M-TRASH-026 の API のみ経由(UI で状態遷移・タグ操作を再実装しない)
         - INV-009 UI からも物理ファイルを操作しない。完全削除は確認必須・非破壊文言必須(裁定 6)
-      acceptance_refs: [CP-UI-G10, CP-L1-SMOKE]
-      fmea_refs: [FMEA-026, FMEA-028]
+        - (ECO-003) 候補カードは表示パリティ契約(サムネイル+ファイル名+パス+サイズ+更新日時)を満たす。表示フィールドは VM 公開=unit、描画=golden
+        - (ECO-005) 一括/単一自動修復・除外の判定反復は ViewModel に置き unit 検査可能。relink/除外は core API のみ経由(UI で状態遷移を再実装しない)
+      acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-REPAIR-AUTOALL-023, CP-L1-SMOKE]
+      fmea_refs: [FMEA-026, FMEA-028, FMEA-031, FMEA-034]
 
     - id: M-HARNESS-015        # 治具は製品と同格に管理
       ebom_refs: []
@@ -503,6 +508,9 @@ fmea:
   - { id: FMEA-028, unit: M-RELINK-025,  failure_mode: "relink がタグ付き候補を消費しタグ損失/missing 側 image_id を作り直す/candidate_link_id だけで自動リンク", effect: "付与タグ喪失・タグ参照切れ・誤リンク(INV-015/001 違反)", targeted_by: "CP-RELINK-019(候補=untagged 限定・ID 不変・確定で消費削除)" }
   - { id: FMEA-029, unit: M-CRITERIA-024, failure_mode: "空条件で全件返す/条件が OR 結合/status 対象を用途無関係に固定/ソート不安定", effect: "誤候補大量ヒット・UI フリーズ・結果順不定(REQ-068 違反)", targeted_by: "CP-CRITERIA-019(AND・空条件非実行・status 対象・安定順ベクタ)" }
   - { id: FMEA-030, unit: M-TRASH-026,   failure_mode: "完全削除で FK CASCADE 不発(image_tags/features/similarity に孤児行)/deleted 以外も削除/復元できる", effect: "整合性破壊・件数水増し・対象逸脱", targeted_by: "CP-TRASH-020(CASCADE 孤児ゼロ・deleted 限定)" }
+  - { id: FMEA-031, unit: M-UI-REPAIR-027, failure_mode: "(ECO-003)再リンク候補が相対パス+サイズのみで提示され、サムネイル/ファイル名/更新時刻が無い", effect: "ユーザーが正しい置換先を判断できず誤再リンク=タグ/関連を誤った画像へ付け替え。固定オラクル(論理)では捕捉不能=表示パリティの脱漏", targeted_by: "CP-REPAIR-CARD-021(VM が表示フィールドを公開=unit)+CP-UI-G10(候補カードの視覚パリティ=golden 突合)" }
+  - { id: FMEA-033, unit: M-TRASH-026,   failure_mode: "(ECO-005)除外が missing 以外(normal/pending/deleted)を deleted 化する/物理ファイルを削除・移動する", effect: "正常画像をトラッシュ送り=データ消失感・INV-009 違反(物理破壊)", targeted_by: "CP-TRASH-021(missing 限定・他 status 拒否・status 更新のみ=unit)+ S-31(cross-factory)" }
+  - { id: FMEA-034, unit: M-UI-REPAIR-027, failure_mode: "(ECO-005)一括自動修復が候補2件以上(曖昧)の missing まで自動 relink する/1件の失敗で一括処理が止まる", effect: "曖昧な画像を誤った候補へ自動付け替え/大量 missing の一括修復が途中で停止", targeted_by: "CP-REPAIR-AUTOALL-023(auto-repairable=ちょうど1件のみ修復・失敗スキップ=unit)" }
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:

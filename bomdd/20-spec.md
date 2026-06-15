@@ -619,6 +619,7 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
 | T6 △ | deleted→normal | トラッシュ復元 **かつ 記録パスに物理ファイル存在** | status=normal | deleted 以外は拒否 |
 | T7 △ | deleted→missing | トラッシュ復元 **だが 物理ファイル不在** | status=missing(幽霊 normal 防止) | deleted 以外は拒否 |
 | T8 △ | deleted→(行消滅) | 完全削除 | images 行 DELETE → image_tags/image_features/image_similarity は FK CASCADE。**物理ファイル非破壊** | deleted 以外は拒否 |
+| T9 △ | missing→deleted | 除外(修復 UI・§2.11.6 / ECO-005) | status=deleted(物理非破壊・トラッシュへ。復元は T6/T7 経路) | **missing 以外は拒否**(ValidationError) |
 
 **2.11.1 criteria 条件検索 (REQ-068, OC-19)**
 - 条件(指定されたもののみ AND): hash(SHA-256 完全一致)/ ファイル名(部分一致・大小無視)/ 拡張子 /
@@ -672,9 +673,22 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
   (M=hash+拡張子+サイズで候補が**ちょうど 1 件**の missing 数 — 原典 RepairModal の auto-repair count 準拠)
 - **完全削除は非破壊を明示する文言を必須**(例『DB から完全に除去します(画像ファイルは削除されません)』— 裁定 6)。
   復元で物理不在のため missing 化した場合は結果が分かるよう表示。破壊的に見える操作(完全削除)は実行前確認を伴う
+- **(GF-V4-04・表示パリティ契約 — 原典 AdvancedRepairModal 準拠) 再リンク候補は、ユーザーが再リンク可否を判断するに
+  足る情報を提示する**: **サムネイル + ファイル名 + 相対パス + サイズ + 更新日時**。原典は各候補をこの 5 要素のカードで
+  描画する(`AdvancedRepairModal.tsx` の検索結果カード)。サムネイルは候補(実体が存在する pending/normal)の物理パスから
+  生成する(missing 自身は実体欠損のためサムネイルを持たない=ファイル名+パスのみ)。**表示パリティは固定オラクル(論理)
+  では捕捉されない**(ヘッドレス工場は視覚を検証不能)ため、ported 画面ごとに「提示すべき情報」を本契約として明記し golden で
+  確認する。注: 旧 RelinkWindow(フォルダ管理経由)はサムネイル非表示の簡易 UI として残置(本契約の対象は修復ライフサイクル UI)
 
 - 核/表面: criteria マッチ・relink 確定規則・復元の存在分岐・完全削除の CASCADE=core(OC-19〜22)。検索/修復/トラッシュ UI=surface
 - 受入観点: 核は unit exact(OC-19〜22)+復元/完全削除の物理非破壊は L3 物理差分(S-26)。表面は golden G-10+承認者
+
+**2.11.6 一括自動修復・除外 (REQ-072/073, ECO-005)**
+- **自動修復可能**=その missing の hash+拡張子+サイズ(§2.11.2 の auto-criteria)で候補が**ちょうど 1 件**(一意=曖昧でない)。0/2 件以上は自動修復可能としない(§2.11.5 の auto-repair count と同基準)。
+- **単一自動修復**: 当該 missing の auto-candidate(1 件)を relink 確定(T4・§2.11.2)する。1 件でなければ何もしない。
+- **すべて自動修復**: 自動修復可能な全 missing を順に relink する。**タグ付き候補で拒否(INV-015)等の失敗は当該 1 件をスキップ**し、成功数を結果に出す(原典 RepairModal の失敗握り潰しと同義。一括処理を 1 件の失敗で止めない)。
+- **除外(T9 / missing→deleted)**: 修復をあきらめる missing を status=deleted にしてトラッシュへ移す(復元可=T6/T7)。**missing 以外は拒否**(ValidationError)。物理ファイルに触れない(INV-009)。relink・除外は core サービス(RelinkService.CommitRelinkAsync / TrashService.ExcludeAsync)経由のみ。一括/単一の判定・反復は ViewModel に置き unit 検査可能にする
+- 受入: ExcludeAsync(missing→deleted・missing 限定・物理非破壊)は unit + 固定オラクル S-31。AutoRepairAll(auto-repairable 集合のみ修復・失敗スキップ)は unit。ボタン動線・結果文言は golden(G-10)
 
 ## 3. 不変条件(M-BOM へ前倒し)
 

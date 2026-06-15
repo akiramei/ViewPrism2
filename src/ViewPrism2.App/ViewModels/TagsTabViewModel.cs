@@ -20,6 +20,15 @@ public sealed partial class ViewRowViewModel : ObservableObject
 
     public string Name => View.Name;
 
+    /// <summary>お気に入りビュー(DC-VIEWLIST-001/A-4)。★ アイコンで提示する(原典 ViewManagementPanel 準拠)。</summary>
+    public bool IsFavorite => View.IsFavorite;
+
+    /// <summary>説明(DC-VIEWLIST-001/A-4)。一覧 2 行目に truncate 表示する。null/空なら非表示。</summary>
+    public string? Description => View.Description;
+
+    /// <summary>説明が非空か(2 行目の表示制御。空文字・空白のみは非表示)。</summary>
+    public bool HasDescription => !string.IsNullOrWhiteSpace(View.Description);
+
     [ObservableProperty]
     private bool _isSelected;
 }

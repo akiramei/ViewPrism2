@@ -22,20 +22,29 @@ public sealed partial class RepairViewModel : ObservableObject
 {
     private readonly string _collectionId;
     private readonly IImageRepository _images;
+    private readonly ISyncFolderRepository _folders;
     private readonly RelinkService _relink;
+    private readonly TrashService _trash;
     private readonly LocalizationService _localization;
     private readonly IWindowService? _windows;
+
+    /// <summary>collection の物理ルート(サムネイル絶対パス解決用)。LoadAsync で解決する。</summary>
+    private string? _rootPath;
 
     public RepairViewModel(
         string collectionId,
         IImageRepository images,
+        ISyncFolderRepository folders,
         RelinkService relink,
+        TrashService trash,
         LocalizationService localization,
         IWindowService? windows = null)
     {
         _collectionId = collectionId;
         _images = images;
+        _folders = folders;
         _relink = relink;
+        _trash = trash;
         _localization = localization;
         _windows = windows;
         Loc = new LocalizationProxy(localization);
@@ -100,6 +109,18 @@ public sealed partial class RepairViewModel : ObservableObject
     /// <summary>候補検索(検索ボタン)が可能か。missing が選択されている必要がある(候補は missing 単位)。</summary>
     public bool CanSearchCandidates => SelectedMissing is not null;
 
+    /// <summary>除外(選択 missing をトラッシュへ)が可能か。missing が選択されている必要がある。</summary>
+    public bool CanExcludeSelected => SelectedMissing is not null;
+
+    /// <summary>「すべて自動修復」ボタンの活性条件(自動修復可能な missing が 1 件以上)。</summary>
+    public bool HasAutoRepairable => AutoRepairableCount > 0;
+
+    /// <summary>「すべて自動修復 (M件)」ボタン文言。count を埋め込む(RepairSummary と同じ T(key, dict) 方式)。</summary>
+    public string AutoRepairAllLabel => _localization.T("repair.autoRepairAll", new Dictionary<string, string>
+    {
+        ["count"] = AutoRepairableCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    });
+
     public bool HasNoMissing => MissingImages.Count == 0;
 
     public bool HasNoCandidates => Candidates.Count == 0 && SelectedMissing is not null;
@@ -111,11 +132,15 @@ public sealed partial class RepairViewModel : ObservableObject
         SelectedMissing = null;
         SelectedCandidate = null;
 
+        // collection 物理ルートを解決(サムネイル絶対パス用)。TrashViewModel と同パターン。
+        var folder = await _folders.GetByIdAsync(_collectionId);
+        _rootPath = folder?.Path;
+
         var records = await _images.GetByFolderAsync(_collectionId);
         foreach (var record in records.Where(r => r.Status == ImageStatus.Missing)
                      .OrderBy(r => r.RelativePath, StringComparer.OrdinalIgnoreCase))
         {
-            MissingImages.Add(new MissingImageViewModel(record));
+            MissingImages.Add(new MissingImageViewModel(record, ResolveAbsolute(record.RelativePath)));
         }
 
         AutoRepairableCount = await CountAutoRepairableAsync();
@@ -190,6 +215,120 @@ public sealed partial class RepairViewModel : ObservableObject
         }
     }
 
+    // ---- 自動修復(VM オーケストレーション・新遷移なし。relink は CommitRelinkAsync 経由のみ) ----
+
+    /// <summary>
+    /// すべて自動修復(C-AUTOREPAIR-001 / 原典 autoRepairAll): MissingImages を走査し、各 missing の
+    /// DeriveAutoCriteria(hash+拡張子+サイズ)で候補が**ちょうど 1 件**なら CommitRelinkAsync。成功数を数える。
+    /// タグ付き拒否等の失敗(IsSuccess=false)はスキップし、一括を止めない(原典の per-item try/catch と同義)。
+    /// 完了後 LoadAsync で再読込し、結果文言を出す。戻り値=成功数(unit 検査用)。
+    /// </summary>
+    public async Task<int> AutoRepairAllAsync()
+    {
+        var repaired = 0;
+        // LoadAsync が MissingImages を差し替えるため、走査対象のスナップショットを取る
+        foreach (var missing in MissingImages.ToList())
+        {
+            var candidates = await _relink.GetCandidatesAsync(
+                missing.Record.Id, DeriveAutoCriteria(missing.Record));
+            if (candidates.Count != 1)
+            {
+                continue;
+            }
+
+            var result = await _relink.CommitRelinkAsync(missing.Record.Id, candidates[0].ImageId);
+            if (result.IsSuccess)
+            {
+                repaired++;
+            }
+            // 失敗(タグ付き拒否等)はスキップ — 数えない・一括を止めない
+        }
+
+        await LoadAsync();
+        StatusMessage = _localization.T("repair.autoRepair.result", new Dictionary<string, string>
+        {
+            ["count"] = repaired.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        });
+        return repaired;
+    }
+
+    /// <summary>
+    /// 単一自動修復(C-AUTOREPAIR-001 / 原典 autoRepairSingle): 指定 missing の auto-candidate
+    /// (DeriveAutoCriteria でちょうど 1 件)を CommitRelink する。1 件でなければ何もしない。完了後 LoadAsync+文言。
+    /// </summary>
+    public async Task AutoRepairSingleAsync(MissingImageViewModel missing)
+    {
+        ArgumentNullException.ThrowIfNull(missing);
+
+        var candidates = await _relink.GetCandidatesAsync(
+            missing.Record.Id, DeriveAutoCriteria(missing.Record));
+        if (candidates.Count != 1)
+        {
+            return; // 0 件/2 件以上は自動修復対象外(曖昧)— 何もしない
+        }
+
+        var result = await _relink.CommitRelinkAsync(missing.Record.Id, candidates[0].ImageId);
+        await LoadAsync();
+        StatusMessage = result.IsSuccess
+            ? _localization.T("repair.autoRepair.result", new Dictionary<string, string>
+            {
+                ["count"] = "1",
+            })
+            : _localization.T("repair.relink.failed") + ": "
+                + ErrorMessages.Resolve(_localization, result.Error);
+    }
+
+    /// <summary>
+    /// 除外(C-AUTOREPAIR-001 / T9 / 原典 excludeSelectedImages): 指定 missing を TrashService.ExcludeAsync で
+    /// トラッシュへ移す(missing→deleted・物理非破壊・復元可)。成功で LoadAsync+結果文言、失敗で失敗文言。
+    /// </summary>
+    public async Task ExcludeAsync(MissingImageViewModel missing)
+    {
+        ArgumentNullException.ThrowIfNull(missing);
+
+        var result = await _trash.ExcludeAsync(missing.Record.Id);
+        if (result.IsSuccess)
+        {
+            await LoadAsync();
+            StatusMessage = _localization.T("repair.exclude.result");
+        }
+        else
+        {
+            StatusMessage = _localization.T("repair.exclude") + ": "
+                + ErrorMessages.Resolve(_localization, result.Error);
+        }
+    }
+
+    /// <summary>UI バインド: 「すべて自動修復」ボタン(AutoRepairableCount>0 で活性)→ AutoRepairAllAsync。</summary>
+    [RelayCommand]
+    private Task AutoRepairAllCommandAsync() => AutoRepairAllAsync();
+
+    /// <summary>UI バインド: 選択中 missing の単一自動修復(行ボタンが項目を直接渡せない場合のフォールバック)。</summary>
+    [RelayCommand]
+    private async Task AutoRepairSelectedAsync()
+    {
+        if (SelectedMissing is { } missing)
+        {
+            await AutoRepairSingleAsync(missing);
+        }
+    }
+
+    /// <summary>UI バインド: 選択中 missing を除外(SelectedMissing 選択時に活性)。</summary>
+    [RelayCommand]
+    private async Task ExcludeSelectedAsync()
+    {
+        if (SelectedMissing is { } missing)
+        {
+            await ExcludeAsync(missing);
+        }
+    }
+
+    partial void OnAutoRepairableCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(HasAutoRepairable));
+        OnPropertyChanged(nameof(AutoRepairAllLabel));
+    }
+
     partial void OnSelectedMissingChanged(MissingImageViewModel? value)
     {
         // GF-V4-01(golden 是正・view-prism 自動修復準拠 §2.11.5): 選択した missing 自身の
@@ -197,6 +336,7 @@ public sealed partial class RepairViewModel : ObservableObject
         // (view-prism RepairModal の既定 useHash/useExtension/useSize。filename/mtime はリネームで変わるため OFF)。
         PrefillCriteriaFromMissing(value);
         OnPropertyChanged(nameof(CanSearchCandidates));
+        OnPropertyChanged(nameof(CanExcludeSelected));
         _ = LoadCandidatesAsync(value);
     }
 
@@ -246,15 +386,27 @@ public sealed partial class RepairViewModel : ObservableObject
                 missing.Record.Id, HasAnyCriteria(criteria) ? criteria : null);
             foreach (var candidate in candidates)
             {
+                // GF-V4-04(§2.11.5 表示パリティ): 候補カードはサムネイル+ファイル名+パス+サイズ+更新日時を提示し、
+                // ユーザーが再リンク可否を判断できるようにする(原典 AdvancedRepairModal 準拠)。
                 Candidates.Add(new RelinkCandidateViewModel(
                     candidate,
                     ByteSizeFormatter.Format(candidate.FileSize),
-                    LocaleFormats.FormatTimestamp(candidate.ModifiedDate, _localization.CurrentLocale)));
+                    LocaleFormats.FormatTimestamp(candidate.ModifiedDate, _localization.CurrentLocale),
+                    ResolveAbsolute(candidate.RelativePath)));
             }
         }
 
         OnPropertyChanged(nameof(HasNoCandidates));
     }
+
+    /// <summary>
+    /// 正規形(スラッシュ区切り)の相対パスを物理絶対パスへ解決する(サムネイル描画用)。
+    /// ルート未解決なら null(ThumbnailImage はプレースホルダ表示)。物理 I/O はしない純粋な文字列結合。
+    /// </summary>
+    private string? ResolveAbsolute(string relativePath)
+        => _rootPath is null
+            ? null
+            : System.IO.Path.Combine(_rootPath, relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar));
 
     private SearchCriteria BuildCriteria() => new()
     {

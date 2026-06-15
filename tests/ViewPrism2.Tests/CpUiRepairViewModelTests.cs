@@ -28,6 +28,9 @@ public sealed class CpUiRepairViewModelTests
         {
             ["repair.relink.success"] = "再リンクしました",
             ["repair.relink.failed"] = "再リンクに失敗しました",
+            ["repair.autoRepair.result"] = "{count} 件を自動修復しました",
+            ["repair.exclude"] = "除外",
+            ["repair.exclude.result"] = "除外しました（トラッシュへ・復元可）",
             ["trash.restore.success"] = "復元しました",
             ["trash.restore.missing"] = "リンク切れになりました",
             ["trash.restore.failed"] = "復元に失敗しました",
@@ -101,7 +104,9 @@ public sealed class CpUiRepairViewModelTests
         => new(
             Folder,
             db.Images,
+            db.Folders,
             new RelinkService(db.Images, db.Tags),
+            new TrashService(db.Images, db.Folders, new FakeProbe(exists: false)),
             CreateLoc(),
             new AcceptingWindows());
 
@@ -212,6 +217,163 @@ public sealed class CpUiRepairViewModelTests
 
         Assert.Equal(3, vm.MissingImages.Count);
         Assert.Equal(1, vm.AutoRepairableCount);   // M1 のみ(M2=2件曖昧・M3=0件 は除外)
+    }
+
+    // ---- CP-REPAIR-AUTOALL-023: すべて自動修復(VM オーケストレーション・T9 なし) ----
+
+    [Fact]
+    public async Task CP_REPAIR_AUTOALL_023_候補ちょうど1件のmissingのみ修復し成功数を返す()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        // M1: 候補ちょうど 1 件(同一 hash+拡張子+サイズの normal)→ 自動修復される
+        await db.Images.AddAsync(Image("m1", "sub/a.jpg", ImageStatus.Missing, hash: "H1", size: 100));
+        await db.Images.AddAsync(Image("c1", "moved-a.jpg", ImageStatus.Normal, hash: "H1", size: 100));
+        // M2: 候補 2 件(曖昧)→ 未修復
+        await db.Images.AddAsync(Image("m2", "sub/b.jpg", ImageStatus.Missing, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2a", "dup-a.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2b", "dup-b.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+        // M3: 候補 0 件 → 未修復
+        await db.Images.AddAsync(Image("m3", "sub/c.jpg", ImageStatus.Missing, hash: "H3", size: 300));
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        var repaired = await vm.AutoRepairAllAsync();
+
+        Assert.Equal(1, repaired);                                                   // M1 のみ
+        Assert.Equal(ImageStatus.Normal, (await db.Images.GetByIdAsync("m1"))!.Status); // 修復された
+        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("m2"))!.Status); // 曖昧=未修復
+        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("m3"))!.Status); // 候補なし=未修復
+        // 完了後 LoadAsync で再読込: 修復された M1 は missing 一覧から消え、M2/M3 が残る
+        Assert.Equal(2, vm.MissingImages.Count);
+        Assert.Equal("1 件を自動修復しました", vm.StatusMessage);
+    }
+
+    [Fact]
+    public async Task CP_REPAIR_AUTOALL_023_タグ付き候補は安全ガードで修復対象外_スキップして数えない()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        // 唯一の一致候補にタグが付く → INV-015 タグ安全ガードで候補から除外され、自動修復されない。
+        // (原典 autoRepairAll の per-item 失敗握り潰しに相当: 数えず・一括を止めない)
+        await db.Images.AddAsync(Image("m1", "sub/a.jpg", ImageStatus.Missing, hash: "H1", size: 100));
+        var tagged = Image("c1", "moved-a.jpg", ImageStatus.Normal, hash: "H1", size: 100);
+        await db.Images.AddAsync(tagged);
+        var tag = new Tag { Id = "t1", Name = "T", Type = TagType.Simple };
+        await db.Tags.AddAsync(tag);
+        await db.Tags.UpsertImageTagAsync(new ImageTag { ImageId = tagged.Id, TagId = tag.Id });
+        // M2: タグなしの一意候補 → 修復される(タグ付きスキップが一括を止めないことの確認)
+        await db.Images.AddAsync(Image("m2", "sub/b.jpg", ImageStatus.Missing, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2", "moved-b.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        var repaired = await vm.AutoRepairAllAsync();
+
+        Assert.Equal(1, repaired);                                                    // M2 のみ
+        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("m1"))!.Status); // タグ付きはスキップ=未修復
+        Assert.Equal(ImageStatus.Normal, (await db.Images.GetByIdAsync("m2"))!.Status); // 一括は止まらず M2 は修復
+        Assert.Contains(await db.Tags.GetImageTagsAsync("c1"), t => t.TagId == tag.Id);  // タグは失われない
+    }
+
+    [Fact]
+    public async Task CP_REPAIR_AUTOALL_023_自動修復対象なしは0件で何も変えない()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        // 候補 0 件の missing のみ
+        await db.Images.AddAsync(Image("m1", "sub/a.jpg", ImageStatus.Missing, hash: "H1", size: 100));
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        var repaired = await vm.AutoRepairAllAsync();
+
+        Assert.Equal(0, repaired);
+        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("m1"))!.Status);
+        Assert.Single(vm.MissingImages);
+    }
+
+    [Fact]
+    public async Task 単一自動修復_候補1件で修復_2件以上は何もしない()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        await db.Images.AddAsync(Image("m1", "sub/a.jpg", ImageStatus.Missing, hash: "H1", size: 100));
+        await db.Images.AddAsync(Image("c1", "moved-a.jpg", ImageStatus.Normal, hash: "H1", size: 100));
+        // 曖昧 missing(候補 2 件)
+        await db.Images.AddAsync(Image("m2", "sub/b.jpg", ImageStatus.Missing, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2a", "dup-a.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+        await db.Images.AddAsync(Image("c2b", "dup-b.jpg", ImageStatus.Normal, hash: "H2", size: 200));
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        var m2 = vm.MissingImages.First(m => m.Record.Id == "m2");
+        await vm.AutoRepairSingleAsync(m2);
+        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("m2"))!.Status); // 曖昧=何もしない
+
+        await vm.LoadAsync();
+        var m1 = vm.MissingImages.First(m => m.Record.Id == "m1");
+        await vm.AutoRepairSingleAsync(m1);
+        Assert.Equal(ImageStatus.Normal, (await db.Images.GetByIdAsync("m1"))!.Status); // 一意候補=修復
+    }
+
+    [Fact]
+    public async Task 除外_missingをトラッシュへ_成功文言_復元可()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        await db.Images.AddAsync(Image("m1", "sub/a.jpg", ImageStatus.Missing, hash: "H1"));
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+        var m1 = vm.MissingImages.First();
+
+        await vm.ExcludeAsync(m1);
+
+        Assert.Equal(ImageStatus.Deleted, (await db.Images.GetByIdAsync("m1"))!.Status); // missing→deleted(T9)
+        Assert.Empty(vm.MissingImages);                                                 // 一覧から消える
+        Assert.Equal("除外しました（トラッシュへ・復元可）", vm.StatusMessage);
+    }
+
+    [Fact]
+    public async Task GF_V4_04_候補は判断材料を備える_ファイル名_サムネイル絶対パス_更新時刻()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db, path: "C:/coll");
+        await db.Images.AddAsync(Image("m1", "sub/old.png", ImageStatus.Missing, hash: "H1", size: 6395402));
+        // リネーム後の同一内容ファイル(pending)。候補カードはこれの判断材料を提示する
+        await db.Images.AddAsync(Image("p1", "_old.png", ImageStatus.Pending, hash: "H1", size: 6395402));
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+        vm.SelectedMissing = vm.MissingImages.First();
+        await vm.RefreshCandidatesAsync();
+
+        var candidate = Assert.Single(vm.Candidates);
+        Assert.Equal("_old.png", candidate.FileName);                         // ファイル名(原典カードの主見出し)
+        Assert.Equal("_old.png", candidate.RelativePath);                     // パス
+        Assert.False(string.IsNullOrEmpty(candidate.SizeText));               // サイズ
+        Assert.False(string.IsNullOrEmpty(candidate.ModifiedText));           // 更新日時(V4 表面化で欠落していた)
+        Assert.NotNull(candidate.AbsolutePath);                               // サムネイル描画用の物理パス
+        Assert.Contains("_old.png", candidate.AbsolutePath);                  // collection root + relative
+        Assert.Contains("coll", candidate.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GF_V4_04_リンク切れ画像行はファイル名を備える()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db, path: "C:/coll");
+        await db.Images.AddAsync(Image("m1", "sub/broken.png", ImageStatus.Missing, hash: "H1"));
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+
+        var missing = Assert.Single(vm.MissingImages);
+        Assert.Equal("sub/broken.png", missing.FileName);   // ImageRecord.FileName(seed では name と同値)
+        Assert.Equal("sub/broken.png", missing.RelativePath);
     }
 
     // ---- トラッシュ復元/完全削除(TrashViewModel 拡張) ----

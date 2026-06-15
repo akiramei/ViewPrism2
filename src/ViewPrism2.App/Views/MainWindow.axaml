@@ -296,7 +296,11 @@
                             </Grid>
                             <!-- ファイル名: セル下部 1 行・中央寄せ・末尾省略(K-DESIGN / G-1) -->
                             <TextBlock Text="{Binding FileName}" FontSize="12" TextAlignment="Center"
-                                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="2" />
+                                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="2,2,2,0" />
+                            <!-- DC-GRID-001(A-2): ファイル名の下にファイルサイズを従テキスト(小フォント・ミュート色)で提示 -->
+                            <TextBlock Text="{Binding SizeText}" FontSize="11" TextAlignment="Center"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="2,0,2,2" />
                           </StackPanel>
                         </Border>
                       </DataTemplate>

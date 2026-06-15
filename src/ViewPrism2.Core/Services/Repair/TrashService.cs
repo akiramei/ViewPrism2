@@ -63,6 +63,32 @@ public sealed class TrashService
     }
 
     /// <summary>
+    /// 除外(OC-19 / T9): missing 限定。リンク切れ画像をトラッシュへ移す(status=deleted)。物理ファイルには
+    /// 一切触れず(INV-009)、タグ/ID/特徴量も不変(status 更新のみ)。復元(T6/T7)で戻せる。
+    /// missing 以外は <see cref="ErrorCode.ValidationError"/>。T5(normal→deleted=マージ)と対称。
+    /// </summary>
+    public async Task<Result> ExcludeAsync(string imageId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(imageId);
+
+        var image = await _images.GetByIdAsync(imageId).ConfigureAwait(false);
+        if (image is null)
+        {
+            return Result.Fail(ErrorCode.NotFound, "画像が存在しません。");
+        }
+
+        if (image.Status != ImageStatus.Missing)
+        {
+            return Result.Fail(
+                ErrorCode.ValidationError, "除外できるのはリンク切れ(missing)画像のみです。");
+        }
+
+        // status=deleted のみ(物理非破壊・INV-009)。タグ/ID/特徴量は触れない。
+        await _images.UpdateStatusAsync(imageId, ImageStatus.Deleted).ConfigureAwait(false);
+        return Result.Ok();
+    }
+
+    /// <summary>
     /// 完全削除(OC-22 / T8): deleted 限定。images 行を削除し、image_tags/image_features/image_similarity は
     /// FK CASCADE で消滅する。物理ファイルには一切触れない(INV-014)。deleted 以外は
     /// <see cref="ErrorCode.ValidationError"/>。

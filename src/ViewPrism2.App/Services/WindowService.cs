@@ -183,7 +183,8 @@ public sealed class WindowService : IWindowService
             return;
         }
 
-        var vm = new RelinkViewModel(folderId, _images, _relink, _localization, this);
+        // _folders は候補/missing 行のサムネイル絶対パス解決用(DC-RELINK-001/ECO-004。RepairViewModel と同型)。
+        var vm = new RelinkViewModel(folderId, _images, _folders, _relink, _localization, this);
         var window = new RelinkWindow { DataContext = vm };
         await vm.LoadAsync();
         await window.ShowDialog(Owner);
@@ -261,8 +262,9 @@ public sealed class WindowService : IWindowService
         // ルート消失時の一括 missing 化は ScanService 側が抑止(INV-009/V1 F-3 保護)。
         await _scan.ScanAsync(collectionId, null, System.Threading.CancellationToken.None);
 
-        // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): relink フロー(検索=候補絞り込みに統一)
-        var vm = new RepairViewModel(collectionId, _images, _relink, _localization, this);
+        // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): relink フロー(検索=候補絞り込みに統一)。
+        // _folders は候補/missing のサムネイル絶対パス解決用(GF-V4-04)。
+        var vm = new RepairViewModel(collectionId, _images, _folders, _relink, _trashService, _localization, this);
         var window = new RepairWindow { DataContext = vm };
         await vm.LoadAsync();
         await window.ShowDialog(Owner);

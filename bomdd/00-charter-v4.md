@@ -53,6 +53,7 @@
   - **ORB / detailed 精度モード**(OpenCvSharp/Emgu): 新規ネイティブ依存 + 別 ADR。P-09 の adapter 基盤を将来活用(後続)
   - **作業スペース・バックアップ**(チャーター後続)
   - **タグ制御モード**(viewer-spec §5・V2 で defer 済み)
+  - **rating(評価 ★1-5)**: 原典 ImageDetailModal は rating セクションを持つが、ViewPrism2 は**意図的にスコープ除外**(ImageRecord にも列を持たない)。表示パリティ read-across(2026-06-15・ECO-003 横展開・B-1)で原典差分として顕在化したが、maintainer 裁定により out-of-scope 確定。再採用は将来ループで rating データモデル(列追加=スキーマ変更)+詳細パネル UI を別途要件化する。表示 omission(GF-V4-04 同型)ではなく**意図的機能非採用**として記録(将来の golden/read-across で再指摘しないため)
   - 既存 V1/V2/V3 の defer 群(動的ソート・view_revisions 等)は据え置き
 
 ## 工場構成(受入経済性 — playbook §5.2)— V1/V2/V3 踏襲で固定

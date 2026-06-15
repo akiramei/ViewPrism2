@@ -98,6 +98,12 @@ public sealed partial class ImageItemViewModel : ObservableObject
 
     public string AbsolutePath => Entry.AbsolutePath;
 
+    /// <summary>
+    /// ファイルサイズの整形文字列(DC-GRID-001/A-2、ByteSizeFormatter)。
+    /// リスト列にはサイズ列があるが、グリッドセルには欠落していた(原典準拠で従テキストとして提示)。
+    /// </summary>
+    public string SizeText => ByteSizeFormatter.Format(Record.FileSize);
+
     [ObservableProperty]
     private bool _isSelected;
 

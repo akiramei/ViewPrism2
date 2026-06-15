@@ -263,10 +263,10 @@ ebom:
       acceptance_refs: [CP-CRITERIA-019]
 
     - id: E-TRASH-038
-      name: トラッシュ復元(存在分岐 T6/T7)+完全削除(T8・CASCADE・物理非破壊)— v4.0 新設
+      name: トラッシュ復元(存在分岐 T6/T7)+完全削除(T8・CASCADE・物理非破壊)+除外(T9・missing→deleted)— v4.0 新設(ECO-005 で T9 追加)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-070, REQ-071]
+      requirement_refs: [REQ-070, REQ-071, REQ-073]
       kbom_refs: [K-WINFS, K-SQLITE]
       depends_on: [E-DOMAIN-001, E-DB-010]
       invariants:
@@ -274,7 +274,8 @@ ebom:
         - INV-014 完全削除は images 行削除のみ(image_tags/features/similarity は FK CASCADE)・deleted 限定
         - INV-009 物理画像ファイルへ触れない(復元の存在確認は読み取りのみ・L3 物理差分 S-26/CP-TRASH-020 で実証)
         - 層規律: 物理存在確認(File.Exists 相当)は Infrastructure。状態遷移判断は Core(bool 存在を受けて分岐)
-      acceptance_refs: [CP-TRASH-020, CP-TRASH-001]
+        - (ECO-005/T9) 除外は **missing→deleted のみ**(missing 以外は ValidationError)。status 更新のみ・物理非破壊(INV-009)。タグ/ID/特徴量不変。復元(T6/T7)で戻せる可逆操作
+      acceptance_refs: [CP-TRASH-020, CP-TRASH-001, CP-TRASH-021]
 
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
@@ -315,7 +316,8 @@ ebom:
         - 列数はコンテンツ幅から自動算出(clamp(⌊幅/220px⌋,2,8))。固定列数セレクタを置かない(v1.3)
         - SHIFT 範囲選択は union(置換しない)・選択順は index 昇順で末尾へ追番(v1.3)
         - グリッドの選択視覚はセル強調枠+バッジのみ。行背景の選択視覚を出さない(v2.0/GF-02。リスト表示の行選択視覚は正)
-      acceptance_refs: [CP-UI-G1, CP-UI-G2]
+        - (ECO-004/DC-GRID-001) グリッドセルは サムネイル+ファイル名+**ファイルサイズ** を提示する(原典準拠。リスト列にはサイズ有・セルのみ欠落していた)
+      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022]
 
     - id: E-UI-DETAIL-023
       name: 画像詳細パネル(メタデータ・ノート編集・タグ一覧)
@@ -367,7 +369,9 @@ ebom:
       invariants:
         - タグ作成/編集ダイアログは高さ固定。候補値リスト内部のみスクロール(v2.0/GF-01)
         - パレット選択中タグは明確な選択視覚で判別可能(v2.0/GF-04)
-      acceptance_refs: [CP-UI-G6]
+        - (ECO-004/DC-VIEWLIST-001) ビュー一覧は ビュー名+**お気に入り★(View.IsFavorite)+説明(View.Description)** を提示する(原典 ViewManagementPanel 準拠。説明は空なら非表示)
+        - (ECO-004/DC-TAGPALETTE-001) タグパレット行は 色+名前+型+**説明(Tag.Description)** を提示する(原典 TagItem 準拠。説明は空なら非表示/tooltip)
+      acceptance_refs: [CP-UI-G6, CP-DISPLAY-PARITY-022]
 
     - id: E-UI-TAGASSIGN-029
       name: タグ付与パネル(画像タブ右・タグ編集モード。現在タグ/追加/適用、numeric 固定値/連番ダイアログ)— v1.2 追加(ずる裁定)
@@ -435,11 +439,11 @@ ebom:
 
     # ---------- v4.0 表面(loop-v4-repair-lifecycle) ----------
     - id: E-UI-REPAIR-039
-      name: 修復ライフサイクル UI(criteria 検索フォーム+結果・relink 候補提示/確定・トラッシュ復元/完全削除・非破壊明示)— v4.0 新設
+      name: 修復ライフサイクル UI(criteria 検索フォーム+結果・relink 候補提示/確定・トラッシュ復元/完全削除・非破壊明示・候補カード表示パリティ)— v4.0 新設(ECO-003 で表示契約を補完)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-072, REQ-068, REQ-069, REQ-070, REQ-071]
-      external_source_ref: "原典 RepairModal/TrashModal(仕様 §2.11.5)"
+      external_source_ref: "原典 RepairModal/AdvancedRepairModal(候補カード)/TrashModal(仕様 §2.11.5)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-CRITERIA-037, E-RELINK-007, E-TRASH-038, E-UI-MERGE-036, E-THUMB-020]
       invariants:
@@ -448,7 +452,11 @@ ebom:
         - relink でタグ付き候補は選べない/拒否されマージ案内(タグ損失防止 — INV-015)
         - 候補選択・確認・結果表示のロジックは ViewModel に置き unit 検査可能にする
         - 各操作は E-CRITERIA-037/E-RELINK-007/E-TRASH-038 の API のみ経由(UI 側で状態遷移を再実装しない)
-      acceptance_refs: [CP-UI-G10]
+        - (ECO-003) **再リンク候補は サムネイル+ファイル名+相対パス+サイズ+更新日時 を提示**し再リンク可否を判断可能にする(原典 AdvancedRepairModal カード準拠/§2.11.5 表示パリティ契約)。サムネイルは E-THUMB-020 を用い、実体が存在する候補(pending/normal)の物理パスから生成する(collection root + relative)。表示フィールドは ViewModel が公開し unit 検査可能にする(視覚描画は golden)
+        - (ECO-004/DC-RELINK-001) **旧 RelinkWindow(フォルダ管理経由)の候補も同じ表示契約**(サムネイル+ファイル名+パス+サイズ+更新日時)を満たす。ECO-003 是正が RepairWindow の1経路に閉じ RelinkWindow へ波及していなかった(read-across で捕捉)。RelinkViewModel に ISyncFolderRepository 注入で AbsolutePath 供給
+        - (ECO-004/DC-TRASH-001) トラッシュ項目は サムネイル+ファイル名+**サイズ** を提示する(原典 TrashModal 準拠。削除/完全削除の判断材料)
+        - (ECO-005) 修復 UI は **一括自動修復「すべて自動修復(M件)」+ 単一自動修復(行内)+ 除外(missing→deleted)** の動線を持つ(原典 RepairModal 準拠)。relink/除外は core API(E-RELINK-007.CommitRelinkAsync / E-TRASH-038.ExcludeAsync)経由のみ・一括/単一の判定反復は ViewModel
+      acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-DISPLAY-PARITY-022, CP-REPAIR-AUTOALL-023]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
 nfr_targets:

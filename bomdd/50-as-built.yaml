@@ -226,12 +226,14 @@ as_built_v4:
     inv009_second_real_action: "復元(status 遷移)・完全削除(images 行削除+FK CASCADE)とも物理ファイル非破壊。S-26 L3 で前後不変"
   interventions: 0
   cheats: { total: 5, blocker: 0, friction: 1, minor: 4, ref: "bomdd/51-cheat-log.md(V4 全 accept)" }
-  golden_approved: [CP-UI-G10]   # 2026-06-14 maintainer 実機ウォークスルー(GF-V4-01/02/03 是正後 OK)
-  golden_rounds: 2               # 第1回(復元/完全削除/物理非破壊 OK・criteria/relink 所見)→ GF 是正 → 第2回 OK
+  golden_approved: [CP-UI-G1, CP-UI-G6, CP-UI-G10]   # 2026-06-14 G10 初承認 / 2026-06-15 ECO-003/004/005 で CP-UI-G1(グリッド)・G6(タグタブ)・G10(修復)を再ウォークスルー再承認
+  golden_rounds: 4               # …第3回 GF-V4-04 是正 → 第4回(2026-06-15)ECO-003/004/005 の表示・修復UX を maintainer 実機で全項目 OK
+  golden_readacross_2026_06_15: "ECO-003/004/005 の golden 再ウォークスルー=maintainer 実機で全項目 OK: A-1 旧再リンク候補サムネ+名前 / A-2 グリッドサイズ / A-3 トラッシュサイズ / A-4 ビュー★+説明 / A-5 タグ説明 / ECO-003 候補カード5要素 / ECO-005 すべて自動修復+除外。実施前に**無関係な本番 DB 破損**(images テーブルのページ破損・運用起因)を sqlite3 .recover で復旧(コレクション4/タグ1 保全・破損ファイルは退避保持)。別件 BL-001(階層構造ナビでビュー名と空状態が重なる=既存 V1/V2 ナビ・MainWindow.axaml:202-214 の Panel 重ね・ECO 無関係)を bomdd/backlog.md へ記録"
   golden_findings_v4:
     GF-V4-01: "missing 選択時に候補が自動探索されず SHA-256 手入力が必要 → hash+拡張子+サイズを自動事前入力し候補を手入力なし提示(原典 RepairModal 準拠)。commit e002a6d"
     GF-V4-02: "読み込み失敗(ファイル不在)の normal が修復一覧に出ない(再スキャン未実施)→ 修復を開く時にスキャンして検出(missing 化+リネーム後 pending 登録)+『N 件(M 件自動修復可能)』表示。commit 2a50dd8"
     GF-V4-03: "再リンク候補(Pending∪Normal)は出るのに左検索(Normal 限定)が空の不一致 → 検索を再リンク候補探索に統一(原典 AdvancedRepairModal 準拠)。commit 5c52827"
+    GF-V4-04: "再リンク候補が相対パス+サイズのみで、原典 AdvancedRepairModal が出すサムネイル/ファイル名/更新時刻を欠き再リンク可否を判断できない(更新時刻は VM が計算済みなのに XAML 未バインド=V4 表面化の二重後退。サムネイル欠落は REQ-017/REQ-072 ポーティング段階の脱漏)→ 候補カードを5要素(サムネイル+ファイル名+パス+サイズ+更新時刻)に是正(§2.11.5 表示パリティ契約)。SimilarSearch/Trash と同じ ThumbnailImage 経路を流用。root_cause=表示パリティに固定オラクルが無く golden 過去2回は挙動所見に集中。**是正は ECO-003(遡及 BOM 再構築・maintainer 選択 Option B)**: 欠陥は仕様(REQ-072)で生まれ E-039/M-027/CP-UI-G10 へ伝播 → REQ-072(d)→E-039 invariant→M-027 candidate_card+FMEA-031→CP-REPAIR-CARD-021(unit 新設)+CP-UI-G10(視覚パリティ突合)を正しく作成。**真の工程欠陥=所見トリアージの誤り**(BOM gap(c)を直接修正可(a)と誤分類)。コードは設計者製で保持=工場由来でない逸脱を 60-change-order-eco-003.md §4 に記録。golden 再ウォークスルー待ち"
   deferred_to_v5:
     - "元パスに戻した missing 自身の自動復元(missing→normal)— 原典にも無い improve-on-port"
     - "コレクション展開時のグリッド自動検出(現状は修復を開いた時のスキャンで代替)"
@@ -241,7 +243,11 @@ as_built_v4:
     - { criterion: "blocker ずるゼロ", evidence: "factory-05 計 5 件・blocker 0(friction 1=ITagRepository optional 注入・minor 4。51-cheat-log V4 全 accept)", status: met }
     - { criterion: "L3 物理差分(INV-009 第2の実アクション=復元/完全削除)", evidence: "CP-TRASH-001+S-26 で復元・完全削除前後の物理ファイル(SHA-256・mtime・集合)不変を実証=PASS", status: met }
     - { criterion: "スキーマ変更なし(S-05 マイグレーション同値 不変)", evidence: "migration 追加ゼロ・既存列+FK CASCADE で完結・S-05 緑維持", status: met }
-    - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build 0 警告・Tests 379/379・BOM v4.0・S-26〜30 オラクル・As-Built/cheat-log/metrics", status: met }
-    - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G10 承認(2026-06-14・maintainer 実機。第1回所見 GF-V4-01/02/03 を是正後 OK)", status: met }
-  verdict: "Loop V4 (loop-v4-repair-lifecycle) 完了 — G4 全条件充足(2026-06-14 クローズ)"
+    - { criterion: "納品物(成果物+bomdd 改訂一式)", evidence: "build compile-clean・Tests 381/381・Oracle 73 PASS+2 skip・BOM v4.0・S-26〜30 オラクル・As-Built/cheat-log/metrics", status: met }
+    - { criterion: "golden 承認(human-approval-required CP)", evidence: "CP-UI-G10 承認(2026-06-14・maintainer 実機。第1回 GF-V4-01/02/03 是正後 OK)。クローズ後 GF-V4-04(表示パリティ)を追加是正", status: met }
+  eco:
+    ECO-003: "再リンク候補カードの表示パリティ(2026-06-15)。クローズ後発見の仕様欠陥(REQ-072 表示契約脱漏→E-039/M-027/CP-UI-G10 伝播)。遡及 BOM 再構築(コード保持・maintainer Option B)で仕様→E→M→CP を是正。CP-REPAIR-CARD-021 新設。工場隔離逸脱(設計者製コード保持)を明示記録。詳細 60-change-order-eco-003.md"
+    ECO-005: "修復UX完全性: すべて自動修復+除外(2026-06-15)。read-across B-2(maintainer 裁定=V4 スコープ内)の是正。原典 RepairModal の autoRepairAll/autoRepairSingle/excludeSelectedImages が欠落=V4 修復ライフサイクルが実は未完だった。**除外=新状態遷移 T9 missing→deleted**(状態機械に欠落していた)=TrashService.ExcludeAsync(missing 限定・物理非破壊・トラッシュへ・復元可)。すべて/単一自動修復=既存 relink(T4)の VM オーケストレーション(タグ付き拒否はスキップ・新遷移なし)。spec-first(REQ-073 新設・§2.11.0 T9・§2.11.6)→ 隔離工場 factory-07 が原典・固定オラクル非開示で製造=castability 合格。**固定オラクル S-31(cross-factory・設計者実装)新設**・CP-TRASH-021/CP-REPAIR-AUTOALL-023。Tests 395/Oracle 74 PASS+2 skip(S-01〜S-30 回帰ゼロ)。golden 再ウォークスルー待ち。詳細 60-change-order-eco-005.md"
+    ECO-004: "表示パリティ read-across 是正・A群5件(2026-06-15)。ECO-003 ゲートの CAPA read-across(9画面監査)で確定した表示 omission を是正: A-1 RelinkWindow 候補(=ECO-003 の波及漏れ・read-across が捕捉)/A-2 グリッドセルのサイズ/A-3 トラッシュ項目のサイズ/A-4 ビュー一覧の★+説明/A-5 タグパレットの説明。**spec-first で BOM 連鎖を先に整え、隔離工場(factory-06)が原典・固定オラクル非開示で製造=castability 合格・cheat 0**。CP-DISPLAY-PARITY-022 新設。Tests 387/Oracle 73 回帰ゼロ。B-1 rating=意図的 out-of-scope(charter 記録)。B-2 修復UX(すべて自動修復+除外)=ECO-005 へ(V4 スコープ内)。golden 再ウォークスルー待ち。詳細 60-change-order-eco-004.md / bomdd/reports/display-parity-readacross-2026-06-15.md"
+  verdict: "Loop V4 (loop-v4-repair-lifecycle) 完了 — G4 全条件充足(2026-06-14 クローズ)。クローズ後の golden 追加所見 GF-V4-04 を ECO-003(遡及 BOM 再構築・仕様→E→M→CP)として是正(2026-06-15)。さらに read-across で ECO-004(表示 omission A群5件)・ECO-005(修復UX=すべて自動修復+除外・新遷移 T9)を是正し、CP-UI-G1/G6/G10 を maintainer 実機で再承認(2026-06-15)。Tests 395/Oracle 74(S-31 追加)。既存ナビ別件 BL-001 は backlog"
   metrics_ref: bomdd/52-metrics.yaml(metrics_v4)

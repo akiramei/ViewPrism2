@@ -1,0 +1,245 @@
+using ViewPrism2.App.Services;
+using ViewPrism2.App.ViewModels;
+using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Repair;
+using ViewPrism2.Infrastructure.Scanning;
+using Xunit;
+
+namespace ViewPrism2.Tests;
+
+/// <summary>
+/// CP-DISPLAY-PARITY-022(ECO-004): read-across で確定した表示 omission(A-1〜A-6)の VM フィールド公開を
+/// exact 検査する。視覚描画は各 golden(CP-UI-G1/G6/G10)が担うため、ここでは各 ViewModel が表示要素を
+/// 公開していることのみを検査する(原典 view-prism は非開示=§3 表示契約マニフェストから製造)。
+///   A-1/A-6: RelinkCandidateViewModel.AbsolutePath/FileName + MissingImageViewModel.FileName/AbsolutePath
+///   A-2: グリッド項目 VM(ImageItemViewModel).SizeText
+///   A-3: TrashItemViewModel.SizeText
+///   A-4: ViewRowViewModel.IsFavorite/Description
+///   A-5: タグパレット行 VM(TagPaletteRowViewModel).Description
+/// </summary>
+[Trait("cp", "CP-DISPLAY-PARITY-022")]
+public sealed class CpDisplayParity022Tests
+{
+    private const string Folder = "folder-1";
+
+    private static LocalizationService CreateLoc()
+        => new(new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal)
+        {
+            ["ja"] = new Dictionary<string, string>
+            {
+                ["image.gridView.noImages"] = "画像がありません",
+                ["common.name"] = "名前",
+                ["tag.type.simple"] = "単純",
+                ["tag.type.textual"] = "テキスト",
+                ["tag.type.numeric"] = "数値",
+            },
+        });
+
+    private static ImageRecord Image(string id, string name, ImageStatus status, string hash = "h", long size = 100)
+        => new()
+        {
+            Id = id,
+            SyncFolderId = Folder,
+            RelativePath = name,
+            FileName = name,
+            FileSize = size,
+            Hash = hash,
+            Status = status,
+            CreatedDate = "2026-01-01T00:00:00.000Z",
+            ModifiedDate = "2026-01-01T00:00:00.000Z",
+        };
+
+    private sealed class NoopWindows : IWindowService
+    {
+        public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(false);
+
+        public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
+
+        public Task ShowFolderManagementAsync() => Task.CompletedTask;
+
+        public Task ShowSettingsAsync() => Task.CompletedTask;
+
+        public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
+
+        public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);
+
+        public Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(
+            Tag tag, NumericTagSettings? settings, int selectionCount)
+            => Task.FromResult<IReadOnlyList<string>?>(null);
+
+        public Task<NodeConditionResult?> ShowNodeConditionDialogAsync(
+            Tag tag, HierarchyConditionType? currentType, string? currentValueJson)
+            => Task.FromResult<NodeConditionResult?>(null);
+
+        public Task ShowRelinkAsync(string folderId) => Task.CompletedTask;
+
+        public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
+        {
+        }
+
+        public Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries)
+            => Task.CompletedTask;
+
+        public Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources)
+            => Task.FromResult(false);
+
+        public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
+    }
+
+    // ---- A-1 / A-6: RelinkViewModel(旧 RelinkWindow 経路)の候補/missing 行の表示パリティ ----
+
+    private static RelinkViewModel CreateRelinkVm(TempDb db)
+        => new(
+            Folder,
+            db.Images,
+            db.Folders,
+            new RelinkService(db.Images, db.Tags),
+            CreateLoc(),
+            new NoopWindows());
+
+    [Fact]
+    public async Task A1_候補はファイル名とサムネイル絶対パスを公開する()
+    {
+        using var db = new TempDb();
+        await db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = "C:/coll" });
+        await db.Images.AddAsync(Image("m1", "sub/old.png", ImageStatus.Missing, hash: "H1", size: 6395402));
+        // リネーム後の同一内容ファイル(pending)= exact-hash 候補
+        await db.Images.AddAsync(Image("p1", "_old.png", ImageStatus.Pending, hash: "H1", size: 6395402));
+
+        var vm = CreateRelinkVm(db);
+        await vm.LoadAsync();
+        vm.SelectedMissing = vm.MissingImages.First();
+        // 候補ロードは selection 変更で fire-and-forget 発火するが、unit では awaitable 経路で確実に待つ
+        // (RepairViewModel と同型の RefreshCandidatesAsync)。
+        await vm.RefreshCandidatesAsync();
+
+        var candidate = Assert.Single(vm.Candidates);
+        Assert.Equal("_old.png", candidate.FileName);                  // A-1: ファイル名(主見出し)
+        Assert.Equal("_old.png", candidate.RelativePath);              // パス
+        Assert.False(string.IsNullOrEmpty(candidate.SizeText));        // サイズ
+        Assert.False(string.IsNullOrEmpty(candidate.ModifiedText));    // 更新日時
+        Assert.NotNull(candidate.AbsolutePath);                        // A-1: サムネイル描画用の物理パス
+        Assert.Contains("_old.png", candidate.AbsolutePath);           // collection root + relative
+        Assert.Contains("coll", candidate.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task A6_リンク切れ画像行はファイル名と絶対パスを公開する()
+    {
+        using var db = new TempDb();
+        await db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = "C:/coll" });
+        await db.Images.AddAsync(Image("m1", "sub/broken.png", ImageStatus.Missing, hash: "H1"));
+
+        var vm = CreateRelinkVm(db);
+        await vm.LoadAsync();
+
+        var missing = Assert.Single(vm.MissingImages);
+        Assert.Equal("sub/broken.png", missing.FileName);              // A-6: ファイル名(主表示)
+        Assert.Equal("sub/broken.png", missing.RelativePath);          // パス(従)
+        Assert.NotNull(missing.AbsolutePath);                          // collection root 解決済み
+        Assert.Contains("coll", missing.AbsolutePath);
+    }
+
+    // ---- A-2: グリッド項目 VM(ImageItemViewModel)の SizeText ----
+
+    [Fact]
+    public void A2_グリッド項目VMはサイズ文字列を公開する()
+    {
+        var browser = new ImageBrowserViewModel(CreateLoc(), new ImageSorter());
+        var record = new ImageRecord
+        {
+            Id = "i1",
+            SyncFolderId = Folder,
+            RelativePath = "a.jpg",
+            FileName = "a.jpg",
+            FileSize = 1024,
+            Hash = new string('0', 64),
+            CreatedDate = "2026-01-01T00:00:00.000Z",
+            ModifiedDate = "2026-01-01T00:00:00.000Z",
+        };
+        browser.SetImages([new ImageEntry(record, @"C:\img\a.jpg", [])]);
+
+        var item = Assert.Single(browser.SortedItems);
+        Assert.Equal("1.0 KB", item.SizeText);                         // A-2: ByteSizeFormatter(1024 → 1.0 KB)
+    }
+
+    // ---- A-3: TrashItemViewModel.SizeText ----
+
+    [Fact]
+    public async Task A3_トラッシュ項目VMはサイズ文字列を公開する()
+    {
+        using var db = new TempDb();
+        await db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = "C:/coll" });
+        await db.Images.AddAsync(Image("d1", "d1.jpg", ImageStatus.Deleted, size: 1048576));
+
+        var vm = new TrashViewModel(Folder, db.Images, db.Folders, CreateLoc());
+        await vm.LoadAsync();
+
+        var item = Assert.Single(vm.Items);
+        Assert.Equal("1.0 MB", item.SizeText);                         // A-3: ByteSizeFormatter(1048576 → 1.0 MB)
+    }
+
+    // ---- A-4: ViewRowViewModel.IsFavorite/Description ----
+
+    [Fact]
+    public void A4_ビュー行VMはお気に入りと説明を公開する()
+    {
+        var favWithDesc = new ViewRowViewModel(new View
+        {
+            Id = "v1",
+            Name = "Fav",
+            Description = "とても便利なビュー",
+            IsFavorite = true,
+            ModifiedAt = "2026-01-01T00:00:00.000Z",
+        });
+        Assert.True(favWithDesc.IsFavorite);                           // A-4: お気に入り★
+        Assert.Equal("とても便利なビュー", favWithDesc.Description);    // A-4: 説明
+        Assert.True(favWithDesc.HasDescription);
+
+        var plain = new ViewRowViewModel(new View
+        {
+            Id = "v2",
+            Name = "Plain",
+            Description = null,
+            IsFavorite = false,
+            ModifiedAt = "2026-01-01T00:00:00.000Z",
+        });
+        Assert.False(plain.IsFavorite);
+        Assert.Null(plain.Description);
+        Assert.False(plain.HasDescription);                           // 空説明は非表示
+
+        var blank = new ViewRowViewModel(new View
+        {
+            Id = "v3",
+            Name = "Blank",
+            Description = "   ",
+            IsFavorite = false,
+            ModifiedAt = "2026-01-01T00:00:00.000Z",
+        });
+        Assert.False(blank.HasDescription);                           // 空白のみも非表示
+    }
+
+    // ---- A-5: タグパレット行 VM(TagPaletteRowViewModel)の Description ----
+
+    [Fact]
+    public void A5_タグパレット行VMは説明を公開する()
+    {
+        var withDesc = new TagPaletteRowViewModel(
+            new Tag { Id = "t1", Name = "色", Type = TagType.Simple, Description = "作品の主要色" },
+            typeText: "単純");
+        Assert.Equal("作品の主要色", withDesc.Description);            // A-5: タグ説明
+        Assert.True(withDesc.HasDescription);
+
+        var noDesc = new TagPaletteRowViewModel(
+            new Tag { Id = "t2", Name = "型", Type = TagType.Simple, Description = null },
+            typeText: "単純");
+        Assert.Null(noDesc.Description);
+        Assert.False(noDesc.HasDescription);                          // 空説明は非表示
+
+        var blank = new TagPaletteRowViewModel(
+            new Tag { Id = "t3", Name = "空", Type = TagType.Simple, Description = "  " },
+            typeText: "単純");
+        Assert.False(blank.HasDescription);                           // 空白のみも非表示
+    }
+}

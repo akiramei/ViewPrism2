@@ -72,8 +72,18 @@
                               Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).DeleteViewCommand}"
                               CommandParameter="{Binding}" />
                     </StackPanel>
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    <!-- DC-VIEWLIST-001(A-4): ビュー名(★ お気に入り時)+説明 2 行目(非空時)。原典 ViewManagementPanel 準拠。 -->
+                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="★" IsVisible="{Binding IsFavorite}" Foreground="{StaticResource AccentBrush}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding Description}" IsVisible="{Binding HasDescription}"
+                                 FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                                 TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    </StackPanel>
                   </DockPanel>
                 </Border>
               </DataTemplate>
@@ -208,6 +218,11 @@
                         <TextBlock Text="{Binding TypeText}" FontSize="11"
                                    Foreground="{StaticResource TextMutedBrush}" />
                       </Border>
+                      <!-- DC-TAGPALETTE-001(A-5): タグ説明を truncate 表示+全文 tooltip(非空時のみ)。原典 TagItem 準拠。 -->
+                      <TextBlock Text="{Binding Description}" IsVisible="{Binding HasDescription}"
+                                 FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                                 VerticalAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                 ToolTip.Tip="{Binding Description}" />
                     </StackPanel>
                   </DockPanel>
                 </Border>

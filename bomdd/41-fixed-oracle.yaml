@@ -269,3 +269,11 @@ fixed_oracle:
       spec_ref: §2.11.4(OC-22・INV-014・REQ-071)
       equivalence_ref: EQ-001
       depth: unit〜L2
+    - id: S-31
+      scope: cross-factory
+      added_by: ECO-005
+      scenario: "除外(T9): missing 画像(タグ付与あり)を ExcludeAsync。さらに normal/pending/deleted 画像の除外を試行"
+      contract_expectation: "missing→status=deleted(T9。トラッシュへ・復元可)。タグ/image_id/特徴量は不変。normal/pending/deleted の除外→ValidationError(missing 限定)。物理ファイルは不変(status 更新のみ・INV-009)"
+      spec_ref: §2.11.6(REQ-073・状態機械 T9)
+      equivalence_ref: EQ-001
+      depth: unit

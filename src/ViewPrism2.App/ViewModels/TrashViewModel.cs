@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ViewPrism2.App.Services;
+using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
@@ -13,6 +14,12 @@ namespace ViewPrism2.App.ViewModels;
 public sealed record TrashItemViewModel(ImageRecord Record, string AbsolutePath)
 {
     public string FileName => Record.FileName;
+
+    /// <summary>
+    /// ファイルサイズの整形文字列(DC-TRASH-001/A-3、ByteSizeFormatter)。
+    /// 削除/完全削除の判断材料として原典 TrashModal が提示する(従テキスト)。
+    /// </summary>
+    public string SizeText => ByteSizeFormatter.Format(Record.FileSize);
 }
 
 /// <summary>

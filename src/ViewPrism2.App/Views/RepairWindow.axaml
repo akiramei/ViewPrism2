@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:c="using:ViewPrism2.App.Controls"
         x:Class="ViewPrism2.App.Views.RepairWindow"
         x:DataType="vm:RepairViewModel"
         Title="{Binding Loc[repair.title]}"
@@ -15,8 +16,26 @@
     <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[repair.title]}" FontSize="16" FontWeight="SemiBold"
                Margin="0,0,0,12" />
 
-    <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,12,0,0"
-               Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+    <!-- フッター(C-REPAIR-UI-001): 一括自動修復(AutoRepairableCount>0 で活性)+ 選択行の単一自動修復・除外
+         (SelectedMissing 選択時に活性)+ 結果文言。状態遷移は VM の API のみ経由(UI で再実装しない)。 -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="{Binding AutoRepairAllLabel}"
+                Command="{Binding AutoRepairAllCommandCommand}"
+                IsEnabled="{Binding HasAutoRepairable}"
+                Background="{StaticResource AccentBrush}" Foreground="White" Padding="14,8" />
+        <Button Content="{Binding Loc[repair.autoRepair]}"
+                Command="{Binding AutoRepairSelectedCommand}"
+                IsEnabled="{Binding CanExcludeSelected}"
+                Padding="14,8" />
+        <Button Content="{Binding Loc[repair.exclude]}"
+                Command="{Binding ExcludeSelectedCommand}"
+                IsEnabled="{Binding CanExcludeSelected}"
+                Padding="14,8" />
+      </StackPanel>
+      <TextBlock Text="{Binding StatusMessage}"
+                 Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" />
+    </StackPanel>
 
     <Grid ColumnDefinitions="*,16,*">
       <!-- 左: criteria 条件検索 -->
@@ -74,7 +93,12 @@
                      Background="Transparent">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:MissingImageViewModel">
-                  <TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                  <!-- リンク切れ画像行: ファイル名(主)+相対パス(従)。実体は欠損のためサムネイルは持たない。 -->
+                  <StackPanel Spacing="1" Margin="0,2">
+                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding RelativePath}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
@@ -89,10 +113,25 @@
                      Background="Transparent">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:RelinkCandidateViewModel">
-                  <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Grid.Column="0" Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Text="{Binding SizeText}" Margin="8,0,0,0"
-                               Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
+                  <!-- GF-V4-04(§2.11.5 表示パリティ・原典 AdvancedRepairModal 準拠):
+                       サムネイル+ファイル名+パス+サイズ+更新日時で再リンク可否を判断できる情報を提示する。 -->
+                  <Grid ColumnDefinitions="56,8,*" Margin="0,2">
+                    <Border Grid.Column="0" Width="56" Height="56" CornerRadius="4" ClipToBounds="True"
+                            Background="{StaticResource AppBackgroundBrush}"
+                            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="1">
+                      <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding RelativePath}" FontSize="12"
+                                 Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                      <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{Binding SizeText}" FontSize="12"
+                                   Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Text="{Binding ModifiedText}" FontSize="12"
+                                   Foreground="{StaticResource TextMutedBrush}" />
+                      </StackPanel>
+                    </StackPanel>
                   </Grid>
                 </DataTemplate>
               </ListBox.ItemTemplate>
