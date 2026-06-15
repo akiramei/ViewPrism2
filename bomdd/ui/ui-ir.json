@@ -165,7 +165,7 @@
       "source": ["M2"],
       "confidence": "high",
       "elements": ["9色 swatch", "選択強調", "HEX 表示"],
-      "notes": "色集合は E-DESIGN-028 のトークンに対応。"
+      "notes": "色集合は E-DESIGN-028 のトークンに対応。決定(E7): プリセットはモックの9色(Radix系 #e5484d/#f2912b/#e8b931/#30a46c/#12a594/#2f6bed/#8b5cf6/#e93d82/#5b6473)で確定。現実装の Material-500 18色を置換。色は自由hex継続で既存タグ影響なし。"
     },
     {
       "tempPartNo": "TMP-UI-CMP-0011",

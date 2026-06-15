@@ -150,7 +150,7 @@
       "name": "カラーパレット(swatches)",
       "parent": "TMP-UI-CMP-0007",
       "bomRationale": "色トークン選択。デザインシステム依存。",
-      "ebomCandidate": { "promoteAs": "デザインシステム連動部品", "items": ["E-UI-TAGS-026"], "designToken": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high" }
+      "ebomCandidate": { "promoteAs": "デザインシステム連動部品", "items": ["E-UI-TAGS-026"], "designToken": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high", "decision": "E7: プリセットをモックの9色(Radix系)へ統一(現実装 Material-500 18色を置換)", "ecoImpact": "ECO-007: E-DESIGN-028 タグ色プリセット9色化。色は自由hexのため既存タグ影響なし(低リスク)" }
     },
     {
       "tempPartNo": "TMP-UI-CMP-0011",
