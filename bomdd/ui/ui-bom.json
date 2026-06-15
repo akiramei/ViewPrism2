@@ -263,7 +263,7 @@
     {
       "tempPartNo": "TMP-UI-ACT-0010", "uiId": "action.tag.set-type", "kind": "action", "name": "種別切替", "parent": "TMP-UI-CMP-0009",
       "bomRationale": "業務操作(種別=ドメイン分岐)。",
-      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "requirementRefs": ["REQ-020"], "confidence": "high", "decision": "UQ-007/ECO-008: 作成後も種別変更可・付与ありなら不可・定義設定は保持して非表示", "ecoImpact": "ECO-008: E-DOMAIN-001(型可変)+E-TAGSVC-008(変更ガード/保持)+E-UI-TAGS-026(セグメント条件活性)" }
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGS-026"], "coreRefs": ["E-DOMAIN-001"], "requirementRefs": ["REQ-020"], "confidence": "high", "decision": "UQ-007/ECO-008 改訂: 種別は作成後変更不可(安全側・現実装どおり)", "ecoImpact": "ECO-008(改訂): 仕様§2.6/モックcopyを『作成後変更不可』へ訂正。コード変更なし(型依存の整合面=付与値/配置条件/インデックスを避ける)" }
     },
     {
       "tempPartNo": "TMP-UI-ACT-0011", "uiId": "action.tag.pick-color", "kind": "action", "name": "カラー選択", "parent": "TMP-UI-CMP-0010",
