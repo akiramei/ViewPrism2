@@ -291,7 +291,7 @@ mbom:
         gf01: "TagEditorWindow: 高さ固定(SizeToContent=Manual 相当)。候補値リストは内部 ScrollViewer のみ伸縮"
         gf02: "グリッドの行コンテナから行選択視覚を除去(セル強調枠+選択順バッジのみ)。リスト表示の行選択視覚は変更しない"
         gf03: "ホームタグのトグル/強調アイコンを家アイコンへ変更(K-DESIGN のアイコン規定)"
-        gf04: "タグパレット選択行に明確な選択視覚(K-DESIGN)。階層エディタの追加ボタン文言: i18n キーで『「{tagName}」をルートに追加 / 子に追加』。パレット未選択時は非活性+選択を促す文言"
+        gf04: "タグパレット選択行に明確な選択視覚(K-DESIGN・維持)。(ECO-007/E3)階層エディタの追加ボタン文言は汎用ラベル『タグを配置』(対象タグ名は出さない=GF-04 の {tagName} 文言を撤回)。パレット未選択時は非活性+選択を促す文言は維持"
         gf05: "ConditionSummaryFormatter.Format(conditionType, conditionValueJson, ILocalizationService) → 表示文字列  // 仕様 §2.6 の条件型別 i18n テンプレート(equals/range(片側含む)/pattern/values)。格納 JSON は不変。unit 検査対象(CP-GF-015)"
       invariants:
         - 機能の意味論は不変(視覚・表示整形のみ。既存 unit 234 件と凍結オラクルの回帰ゼロが前提)
