@@ -8,25 +8,40 @@ using ViewPrism2.Core.Services;
 
 namespace ViewPrism2.App.ViewModels;
 
-/// <summary>タグタブ左「ビュー管理」の 1 行(名前+編集/削除アイコン、仕様 §2.6 v1.2)。</summary>
+/// <summary>
+/// タグタブ左「ビュー管理」の 1 行(名前+タグ数バッジ+説明 tooltip+編集/削除アイコン、
+/// 仕様 §2.6・ECO-007/E1)。
+/// </summary>
 public sealed partial class ViewRowViewModel : ObservableObject
 {
-    public ViewRowViewModel(View view)
+    public ViewRowViewModel(View view, int tagCount = 0)
     {
         View = view;
+        TagCount = tagCount;
     }
 
     public View View { get; }
 
     public string Name => View.Name;
 
-    /// <summary>お気に入りビュー(DC-VIEWLIST-001/A-4)。★ アイコンで提示する(原典 ViewManagementPanel 準拠)。</summary>
+    /// <summary>
+    /// お気に入りデータ(View.IsFavorite)。ECO-007/E1: タグタブ ビュー行には★を出さない
+    /// (DC-VIEWLIST-001/DE-2 撤回)。データは保持する(作成/編集ダイアログ・他画面で利用)。
+    /// </summary>
     public bool IsFavorite => View.IsFavorite;
 
-    /// <summary>説明(DC-VIEWLIST-001/A-4)。一覧 2 行目に truncate 表示する。null/空なら非表示。</summary>
-    public string? Description => View.Description;
+    /// <summary>
+    /// 配置タグ数=このビューの階層ノード数(ECO-007/E1・DC-VIEWLIST-001/DE-4)。行末バッジで表示する。
+    /// </summary>
+    public int TagCount { get; }
 
-    /// <summary>説明が非空か(2 行目の表示制御。空文字・空白のみは非表示)。</summary>
+    /// <summary>
+    /// 説明(ECO-007/E1・DC-VIEWLIST-001/DE-3)。行内 truncate ではなく tooltip で表示する。
+    /// null/空白のみなら tooltip を出さない(null を返す)。
+    /// </summary>
+    public string? Description => HasDescription ? View.Description : null;
+
+    /// <summary>説明が非空か(tooltip の表示制御。空文字・空白のみは非表示)。</summary>
     public bool HasDescription => !string.IsNullOrWhiteSpace(View.Description);
 
     [ObservableProperty]
@@ -120,7 +135,9 @@ public sealed partial class TagsTabViewModel : ObservableObject
             .OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(v => v.Id, StringComparer.Ordinal))
         {
-            Views.Add(new ViewRowViewModel(view));
+            // ECO-007/E1: 配置タグ数=階層ノード数をバッジ表示するために件数を取得する
+            var tagCount = await _views.GetHierarchyCountAsync(view.Id);
+            Views.Add(new ViewRowViewModel(view, tagCount));
         }
 
         OnPropertyChanged(nameof(IsViewsEmpty));
@@ -215,16 +232,19 @@ public sealed partial class TagsTabViewModel : ObservableObject
     public bool CanAddNode => Palette.SelectedTag is not null;
 
     /// <summary>
-    /// ルート追加ボタンの文言(GF-04・REQ-060(d))。選択中は『「{tagName}」をルートに追加』、
-    /// 未選択は選択を促す文言。i18n キー経由(生文字列直書き禁止)。
+    /// ルート追加ボタンの文言(ECO-007/E3・GF-04 撤回)。汎用ラベル『タグを配置』(ルート)を表示し、
+    /// 対象タグ名は出さない。未選択時は非活性(CanAddNode=false)+選択を促す文言。i18n キー経由。
     /// </summary>
-    public string AddRootButtonText => Palette.SelectedTag is { } row
-        ? _localization.T("hierarchy.addRootNamed", new Dictionary<string, string> { ["tagName"] = row.Tag.Name })
+    public string AddRootButtonText => Palette.SelectedTag is not null
+        ? _localization.T("hierarchy.placeTagRoot")
         : _localization.T("hierarchy.selectTagToAdd");
 
-    /// <summary>子追加ボタンの文言(GF-04・REQ-060(d))。選択中は『「{tagName}」を子に追加』。</summary>
-    public string AddChildButtonText => Palette.SelectedTag is { } row
-        ? _localization.T("hierarchy.addChildNamed", new Dictionary<string, string> { ["tagName"] = row.Tag.Name })
+    /// <summary>
+    /// 子追加ボタンの文言(ECO-007/E3・GF-04 撤回)。汎用ラベル『タグを配置』(子)を表示し、
+    /// 対象タグ名は出さない。未選択時は選択を促す文言。
+    /// </summary>
+    public string AddChildButtonText => Palette.SelectedTag is not null
+        ? _localization.T("hierarchy.placeTagChild")
         : _localization.T("hierarchy.selectTagToAdd");
 
     /// <summary>パレット選択タグをルートへ追加(ボタン経路、仕様 §2.6)。未選択時は非活性(GF-04)。</summary>

@@ -12,7 +12,69 @@
        GF-01(REQ-060(a)): 外側 ScrollViewer で全体を包まない。SizeToContent=Height で窓は内容に
        フィットし、候補値リスト(ValuesList)は固定 Height=140 で内部スクロール。リストが固定高のため
        候補値を追加しても窓は伸長せず(最初から固定サイズ・リスト内でスクロール)、保存/キャンセルは
-       下端固定で常に見える。MaxHeight=820 は小画面の安全網。 -->
+       下端固定で常に見える。MaxHeight=820 は小画面の安全網。
+       ECO-007: E6=種別セグメント3タブ / E7=カラー9色(Radix) / E5=付与プレビュー帯。 -->
+  <Window.Styles>
+    <!-- E6: 種別セグメント(3タブ横並びトグル)。コンテナは控えめな背景・選択タブは塗りで強調。 -->
+    <Style Selector="Border.segment">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="3" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="RadioButton.segmentTab">
+      <!-- ラジオの丸は隠し、タブ状の塗り分けにする -->
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="seg" Background="Transparent" CornerRadius="7" Padding="0,8" Margin="1">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="RadioButton.segmentTab:checked /template/ Border#seg">
+      <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+      <Setter Property="BoxShadow" Value="0 1 2 0 #20142040" />
+    </Style>
+    <Style Selector="RadioButton.segmentTab:checked">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- E5: 付与プレビュー帯 -->
+    <Style Selector="Border.previewStrip">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+      <Setter Property="Padding" Value="0,10,0,0" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+    <Style Selector="Border.previewChip">
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="9,3" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+    </Style>
+    <Style Selector="Border.previewChip.selected">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.previewChip.selected TextBlock">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.stepper">
+      <Setter Property="Width" Value="30" />
+      <Setter Property="Height" Value="30" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
   <DockPanel Margin="16" LastChildFill="True">
     <!-- 下端固定: エラー文言+保存/キャンセル(候補値が増えても常に見える) -->
     <StackPanel DockPanel.Dock="Bottom" Spacing="8">
@@ -23,19 +85,107 @@
         <Button Content="{Binding Loc[tag.editor.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
       </StackPanel>
     </StackPanel>
+
+    <!-- ECO-007/E5(DC-TAGPREVIEW-001): 付与プレビュー帯(下端固定・保存ボタンの上)。
+         「画像に付けたときの見え方」を種別別に表示し、画像タブ実付与 UI と表現を一致させる。
+         整形は核側ヘルパ(Preview/PreviewStars)。視覚は golden G-6。 -->
+    <Border DockPanel.Dock="Bottom" Classes="previewStrip">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Text="{Binding Loc[tag.preview.label]}" FontSize="11"
+                   FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}"
+                   VerticalAlignment="Center" Margin="0,0,12,0" />
+        <TextBlock DockPanel.Dock="Right" Text="{Binding Loc[tag.preview.caption]}" FontSize="11"
+                   Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"
+                   Margin="12,0,0,0" />
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <!-- 色ドット+名前(全種別共通) -->
+          <Ellipse Width="13" Height="13" Fill="{Binding Preview.Color, FallbackValue=Transparent}"
+                   VerticalAlignment="Center" />
+          <TextBlock Text="{Binding Preview.Name}" FontSize="15" FontWeight="SemiBold"
+                     VerticalAlignment="Center" />
+
+          <!-- テキスト: 候補値チップ(先頭=選択強調) -->
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                      IsVisible="{Binding IsPreviewTextual}">
+            <TextBlock Text="=" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding PreviewChips}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="6" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TagPreviewChipViewModel">
+                  <Border Classes="previewChip" Classes.selected="{Binding IsSelected}">
+                    <TextBlock Text="{Binding Label}" FontSize="13" />
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <!-- 数値: ±ステッパ(両モード共通)+ ★並び or 数値ラベル -->
+          <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center"
+                      IsVisible="{Binding IsPreviewNumeric}">
+            <TextBlock Text="=" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+            <Button Classes="stepper" Content="−" IsEnabled="False" />
+            <!-- ★モード: 点灯★(アクセント)と非点灯★(境界色)を IsFilled で出し分け -->
+            <ItemsControl ItemsSource="{Binding PreviewStars}" IsVisible="{Binding IsPreviewStar}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="2" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TagPreviewStarViewModel">
+                  <Panel>
+                    <TextBlock Text="★" FontSize="18" Foreground="{StaticResource AccentBrush}"
+                               IsVisible="{Binding IsFilled}" />
+                    <TextBlock Text="★" FontSize="18" Foreground="{StaticResource BorderLineBrush}"
+                               IsVisible="{Binding !IsFilled}" />
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- プレーンモード: 数値ラベル -->
+            <TextBlock Text="{Binding Preview.NumericLabel}" FontSize="15" FontWeight="Bold"
+                       MinWidth="48" TextAlignment="Center" VerticalAlignment="Center"
+                       IsVisible="{Binding IsPreviewNumericPlain}" />
+            <Button Classes="stepper" Content="+" IsEnabled="False" />
+            <!-- ★モード: 値ラベルを補足表示 -->
+            <TextBlock Text="{Binding Preview.NumericLabel}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"
+                       IsVisible="{Binding IsPreviewStar}" />
+          </StackPanel>
+        </StackPanel>
+      </DockPanel>
+    </Border>
     <StackPanel Spacing="8">
       <TextBlock x:Name="TitleText" FontSize="16" />
       <TextBlock Text="{Binding Loc[tag.editor.name]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
       <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[tag.editor.namePlaceholder]}" />
       <TextBlock Text="{Binding Loc[tag.editor.typeLabel]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-      <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType}"
-                IsEnabled="{Binding TypeEditable}" HorizontalAlignment="Stretch">
-        <ComboBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:TagTypeOption">
-            <TextBlock Text="{Binding Label}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
+      <!-- ECO-007/E6: 種別セグメント(3タブ横並びトグル: シンプル/テキスト/数値)。従来 ComboBox を置換。
+           SelectedType/TypeOptions にバインド。TypeEditable=false(既存タグ編集時)は非活性のまま
+           (ECO-008: 種別は作成後変更不可・挙動は不変)。 -->
+      <Border Classes="segment" IsEnabled="{Binding TypeEditable}">
+        <ItemsControl ItemsSource="{Binding TypeOptions}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TagTypeOption">
+              <RadioButton Classes="segmentTab" GroupName="tagType"
+                           Content="{Binding Label}"
+                           IsChecked="{Binding IsActive, Mode=OneWay}"
+                           Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).SelectTypeCommand}"
+                           CommandParameter="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
       <TextBlock Text="{Binding Loc[tag.editor.typeCannotChange]}" IsVisible="{Binding !TypeEditable}"
                  FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
       <TextBlock Text="{Binding Loc[tag.editor.color]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />

@@ -100,7 +100,11 @@
 - golden: タグ管理(ビュー行★無し+タグ数・パレット説明無し)・配置(「タグを配置」汎用ラベル)・作成ダイアログ(プレビュー=実付与 UI と表示一致)を CP-UI-G6 で視覚承認。E3 は「D&D 主導線で対象選択」を併せて確認。
 
 ## 7. 製造記録
-- **未着手(起票のみ)**。製造は隔離工場で実施予定。本コミットは ECO-007 ドキュメント+UI-BOM 一式(`bomdd/ui/`)の起票まで。
+- **製造済(factory-run-05・隔離工場 general-purpose)** — 2026-06-16。詳細: [reports/factory-run-05.md](reports/factory-run-05.md)。
+- 変更: Core `TagAssignmentPreviewBuilder.cs`(新規・E5 純粋整形器)/`ViewService.GetHierarchyCountAsync`(E1)。App VM `TagsTabViewModel`(E1/E3)・`TagPaletteViewModel`(E2)・`TagEditorViewModel`(E5/E6/E7)。View `TagsTabView.axaml`(E1/E2)・`TagEditorWindow.axaml`(E5/E6/E7)。i18n ja/en 5キー。Tests `CpTagPreview001Tests`(新規11)・`CpDisplayParity022Tests`(A-4/A-5 を ECO-007 契約へ改訂)。
+- 検証(メイン独立再実行): build Debug 0警告/0エラー。Tests 406/0・Oracle 74 pass/2 skip(S-01〜S-31 退行ゼロ)。`tests/ViewPrism2.Oracle`/`41-fixed-oracle.yaml` 未読・未変更(castability 規律遵守)。
+- cheat 5件(全 minor): CHEAT-067 代表値=中点round / 068 テキストチップ先頭選択 / 069 ±ステッパ表示専用 / 070 K-DESIGN 寸法 / 071 E3 を root/child 2ボタンのまま維持(単一化見送り)。
+- **残: golden 視覚承認(CP-UI-G6・E1〜E7)=承認者 maintainer 待ち**。実アプリ起動中(単一インスタンス)のためライブ目視は未実施。
 
 ## 8. provenance / lesson 連結
 - 本 ECO は **UI-IR/UI-BOM 方法論(`BomDD/method/ui-ir-ui-bom.md`)の初適用**の産物。HTML+JS モックを UI-IR→UI-BOM 化し、既存 E-BOM へ read-across した結果、表示契約差分5件を機械的に捕捉してユーザー裁定に乗せられた(`bomdd/ui/ui-trace-map.json` で逆引き可能)。

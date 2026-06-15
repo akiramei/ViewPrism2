@@ -180,22 +180,25 @@ public sealed class CpDisplayParity022Tests
         Assert.Equal("1.0 MB", item.SizeText);                         // A-3: ByteSizeFormatter(1048576 → 1.0 MB)
     }
 
-    // ---- A-4: ViewRowViewModel.IsFavorite/Description ----
+    // ---- A-4(ECO-007/E1 改訂): ViewRowViewModel は TagCount 公開・★は行非表示・Description は tooltip ----
 
     [Fact]
-    public void A4_ビュー行VMはお気に入りと説明を公開する()
+    public void A4_ビュー行VMはタグ数を公開し説明はtooltip用に公開する()
     {
-        var favWithDesc = new ViewRowViewModel(new View
-        {
-            Id = "v1",
-            Name = "Fav",
-            Description = "とても便利なビュー",
-            IsFavorite = true,
-            ModifiedAt = "2026-01-01T00:00:00.000Z",
-        });
-        Assert.True(favWithDesc.IsFavorite);                           // A-4: お気に入り★
-        Assert.Equal("とても便利なビュー", favWithDesc.Description);    // A-4: 説明
+        var favWithDesc = new ViewRowViewModel(
+            new View
+            {
+                Id = "v1",
+                Name = "Fav",
+                Description = "とても便利なビュー",
+                IsFavorite = true,
+                ModifiedAt = "2026-01-01T00:00:00.000Z",
+            },
+            tagCount: 3);
+        Assert.Equal(3, favWithDesc.TagCount);                         // E1/DE-4: タグ数バッジ
+        Assert.Equal("とても便利なビュー", favWithDesc.Description);    // E1/DE-3: 説明(tooltip)
         Assert.True(favWithDesc.HasDescription);
+        Assert.True(favWithDesc.IsFavorite);                           // E1/DE-2: ★データは保持(行には出さない)
 
         var plain = new ViewRowViewModel(new View
         {
@@ -205,9 +208,10 @@ public sealed class CpDisplayParity022Tests
             IsFavorite = false,
             ModifiedAt = "2026-01-01T00:00:00.000Z",
         });
+        Assert.Equal(0, plain.TagCount);                               // 既定 0(配置なし)
         Assert.False(plain.IsFavorite);
-        Assert.Null(plain.Description);
-        Assert.False(plain.HasDescription);                           // 空説明は非表示
+        Assert.Null(plain.Description);                                // null は tooltip 非表示
+        Assert.False(plain.HasDescription);
 
         var blank = new ViewRowViewModel(new View
         {
@@ -217,29 +221,30 @@ public sealed class CpDisplayParity022Tests
             IsFavorite = false,
             ModifiedAt = "2026-01-01T00:00:00.000Z",
         });
-        Assert.False(blank.HasDescription);                           // 空白のみも非表示
+        Assert.False(blank.HasDescription);                           // 空白のみは tooltip 非表示
+        Assert.Null(blank.Description);                               // 空白のみは null を返す(tooltip 抑止)
     }
 
-    // ---- A-5: タグパレット行 VM(TagPaletteRowViewModel)の Description ----
+    // ---- A-5(ECO-007/E2 撤回): タグパレット行 VM は説明を行に公開しない ----
 
     [Fact]
-    public void A5_タグパレット行VMは説明を公開する()
+    public void A5_タグパレット行VMは説明を行に公開しない()
     {
-        var withDesc = new TagPaletteRowViewModel(
-            new Tag { Id = "t1", Name = "色", Type = TagType.Simple, Description = "作品の主要色" },
-            typeText: "単純");
-        Assert.Equal("作品の主要色", withDesc.Description);            // A-5: タグ説明
-        Assert.True(withDesc.HasDescription);
+        // E2: パレット行 VM に Description/HasDescription は無い(Tag.Description はデータとして残るが
+        // 行 VM では非公開 — 作成/編集ダイアログでのみ参照)。型に当該メンバが無いことを reflection で検査。
+        var rowType = typeof(TagPaletteRowViewModel);
+        Assert.Null(rowType.GetProperty("Description"));
+        Assert.Null(rowType.GetProperty("HasDescription"));
 
-        var noDesc = new TagPaletteRowViewModel(
-            new Tag { Id = "t2", Name = "型", Type = TagType.Simple, Description = null },
+        // 行の公開要素(色+名前+型)は維持されること
+        var row = new TagPaletteRowViewModel(
+            new Tag { Id = "t1", Name = "色", Type = TagType.Simple, Color = "#30a46c", Description = "作品の主要色" },
             typeText: "単純");
-        Assert.Null(noDesc.Description);
-        Assert.False(noDesc.HasDescription);                          // 空説明は非表示
-
-        var blank = new TagPaletteRowViewModel(
-            new Tag { Id = "t3", Name = "空", Type = TagType.Simple, Description = "  " },
-            typeText: "単純");
-        Assert.False(blank.HasDescription);                           // 空白のみも非表示
+        Assert.Equal("色", row.Name);
+        Assert.Equal("#30a46c", row.Color);
+        Assert.True(row.HasColor);
+        Assert.Equal("単純", row.TypeText);
+        // Tag 本体の Description はデータとして保持(ダイアログ参照用)
+        Assert.Equal("作品の主要色", row.Tag.Description);
     }
 }

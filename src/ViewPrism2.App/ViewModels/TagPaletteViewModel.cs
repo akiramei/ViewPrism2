@@ -22,11 +22,8 @@ public sealed partial class TagPaletteRowViewModel : ObservableObject
 
     public string Name => Tag.Name;
 
-    /// <summary>タグ説明(DC-TAGPALETTE-001/A-5)。行に truncate/tooltip 表示する。null/空なら非表示。</summary>
-    public string? Description => Tag.Description;
-
-    /// <summary>説明が非空か(表示制御。空文字・空白のみは非表示)。</summary>
-    public bool HasDescription => !string.IsNullOrWhiteSpace(Tag.Description);
+    // ECO-007/E2(DC-TAGPALETTE-001/DE-4 撤回): タグパレット行に説明を出さない。
+    // Tag.Description はデータとして残し、作成/編集ダイアログでのみ参照する(行 VM では公開しない)。
 
     public string? Color => Tag.Color;
 

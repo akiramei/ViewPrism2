@@ -264,6 +264,15 @@ public sealed class ViewService
     public Task<IReadOnlyList<HierarchyNode>> GetHierarchyAsync(string viewId) => _views.GetHierarchyAsync(viewId);
 
     /// <summary>
+    /// 配置タグ数(=階層ノード数)を取得する(ECO-007/E1 ビュー行のタグ数バッジ)。閲覧のみ。
+    /// </summary>
+    public async Task<int> GetHierarchyCountAsync(string viewId)
+    {
+        var nodes = await _views.GetHierarchyAsync(viewId).ConfigureAwait(false);
+        return nodes.Count;
+    }
+
+    /// <summary>
     /// タグ階層の一括置換保存(v1.2 階層エディタのバッチ保存)。
     /// メモリ内編集の結果を単一トランザクションで全置換し、ホームタグ(home_tag_id=階層ノード id)と
     /// modified_at を保存時に 1 回だけ更新する(REQ-032)。循環・不正親参照は拒否(INV-004)。

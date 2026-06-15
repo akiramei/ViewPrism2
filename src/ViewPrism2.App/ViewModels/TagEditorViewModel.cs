@@ -9,8 +9,8 @@ using ViewPrism2.Core.Services;
 
 namespace ViewPrism2.App.ViewModels;
 
-/// <summary>タグ種別の選択肢(作成時のみ変更可)。</summary>
-public sealed class TagTypeOption : ObservableObject
+/// <summary>タグ種別の選択肢(作成時のみ変更可。ECO-007/E6 セグメントタブの 1 トグル)。</summary>
+public sealed partial class TagTypeOption : ObservableObject
 {
     private readonly LocalizationService _localization;
     private readonly string _labelKey;
@@ -26,10 +26,20 @@ public sealed class TagTypeOption : ObservableObject
     public TagType Value { get; }
 
     public string Label => _localization.T(_labelKey);
+
+    /// <summary>このタブが選択中か(ECO-007/E6 セグメントの強調・IsChecked バインド)。</summary>
+    [ObservableProperty]
+    private bool _isActive;
 }
 
 /// <summary>カラープリセットの 1 色(v1.2 タグ作成ダイアログ: プリセット+hex 表示)。</summary>
 public sealed record ColorPresetViewModel(string Hex);
+
+/// <summary>付与プレビューの候補値チップ(ECO-007/E5 テキスト型・axaml バインド用)。</summary>
+public sealed record TagPreviewChipViewModel(string Label, bool IsSelected);
+
+/// <summary>付与プレビューの★ 1 個(ECO-007/E5 数値★モード・点灯/非点灯)。</summary>
+public sealed record TagPreviewStarViewModel(bool IsFilled);
 
 /// <summary>
 /// タグ編集ダイアログ(E-UI-TAGS-026、REQ-021〜025、v1.2 §2.6)。
@@ -40,14 +50,13 @@ public sealed record ColorPresetViewModel(string Hex);
 public sealed partial class TagEditorViewModel : ObservableObject
 {
     /// <summary>
-    /// プリセットカラー(原典 colorPicker の 18 カテゴリに対応する Material 500 値。
-    /// K-DESIGN に定義が無いため工場判断 — cheat-log 参照)。
+    /// プリセットカラー(ECO-007/E7・E-DESIGN-028: モックの 9 色(Radix 系)。
+    /// 従来の Material-500 18 色を置換。色は自由 hex 継続(プリセットは入力ショートカット)。
     /// </summary>
     public static readonly IReadOnlyList<ColorPresetViewModel> ColorPresets =
     [
-        new("#F44336"), new("#E91E63"), new("#9C27B0"), new("#673AB7"), new("#3F51B5"), new("#2196F3"),
-        new("#03A9F4"), new("#00BCD4"), new("#009688"), new("#4CAF50"), new("#8BC34A"), new("#CDDC39"),
-        new("#FFEB3B"), new("#FFC107"), new("#FF9800"), new("#795548"), new("#9E9E9E"), new("#607D8B"),
+        new("#e5484d"), new("#f2912b"), new("#e8b931"), new("#30a46c"), new("#12a594"),
+        new("#2f6bed"), new("#8b5cf6"), new("#e93d82"), new("#5b6473"),
     ];
 
     private readonly TagService _tagService;
@@ -85,6 +94,15 @@ public sealed partial class TagEditorViewModel : ObservableObject
             _description = existing.Description ?? string.Empty;
             _selectedType = TypeOptions.First(o => o.Value == existing.Type);
         }
+
+        // ECO-007/E6: セグメントタブの選択強調(IsActive)を初期同期する
+        SyncTypeActive();
+
+        // 候補値の追加/削除/並べ替えでプレビュー(テキストチップ)を再評価する
+        PredefinedValues.CollectionChanged += (_, _) => RaisePreviewChanged();
+
+        // Loc 差し替え(CultureChanged)でプレビューのプレースホルダも再評価
+        localization.CultureChanged += (_, _) => RaisePreviewChanged();
     }
 
     public LocalizationProxy Loc { get; private set; }
@@ -134,6 +152,53 @@ public sealed partial class TagEditorViewModel : ObservableObject
     public bool IsTextual => SelectedType.Value == TagType.Textual;
 
     public bool IsNumeric => SelectedType.Value == TagType.Numeric;
+
+    /// <summary>
+    /// 付与プレビュー(DC-TAGPREVIEW-001・E5)。「画像に付けたときの見え方」を種別別に整形する。
+    /// 整形は核側ヘルパ TagAssignmentPreviewBuilder(unit 検査可)。名前・色・種別・候補値・数値設定の
+    /// 変化で再評価する。★モード(単位=★・span 0..9 整数)/ テキスト候補チップ / 数値ラベルを供給。
+    /// </summary>
+    public TagAssignmentPreview Preview => TagAssignmentPreviewBuilder.Build(
+        SelectedType.Value,
+        Name,
+        Color,
+        PredefinedValues,
+        BuildNumericForPreview(),
+        _localization.T(TagAssignmentPreviewBuilder.NamePlaceholderKey));
+
+    /// <summary>テキスト型プレビューの候補値チップ(axaml バインド用・先頭が選択強調)。</summary>
+    public IReadOnlyList<TagPreviewChipViewModel> PreviewChips =>
+        Preview.Chips.Select(c => new TagPreviewChipViewModel(c.Label, c.IsSelected)).ToList();
+
+    /// <summary>★モードのプレビュー(NumericStar 時)で ★ 並びを描画するための列挙。</summary>
+    public IReadOnlyList<TagPreviewStarViewModel> PreviewStars
+    {
+        get
+        {
+            var preview = Preview;
+            if (preview.Kind != TagPreviewKind.NumericStar)
+            {
+                return [];
+            }
+
+            var stars = new List<TagPreviewStarViewModel>(preview.TotalStars);
+            for (var i = 0; i < preview.TotalStars; i++)
+            {
+                stars.Add(new TagPreviewStarViewModel(i < preview.FilledStars)); // 先頭から FilledStars 個が点灯
+            }
+
+            return stars;
+        }
+    }
+
+    public bool IsPreviewTextual => Preview.Kind == TagPreviewKind.Textual;
+
+    public bool IsPreviewStar => Preview.Kind == TagPreviewKind.NumericStar;
+
+    public bool IsPreviewNumericPlain => Preview.Kind == TagPreviewKind.NumericPlain;
+
+    /// <summary>数値型のプレビュー(±ステッパ・★)を表示するか。</summary>
+    public bool IsPreviewNumeric => IsPreviewStar || IsPreviewNumericPlain;
 
     /// <summary>保存成功(ウィンドウが閉じる)。</summary>
     public event EventHandler? Saved;
@@ -192,6 +257,21 @@ public sealed partial class TagEditorViewModel : ObservableObject
     /// <summary>プリセットカラーの選択(hex 表示欄へ反映)。</summary>
     [RelayCommand]
     private void PickColor(ColorPresetViewModel preset) => Color = preset.Hex;
+
+    /// <summary>
+    /// 種別セグメントタブの選択(ECO-007/E6)。TypeEditable=false(既存タグ)では非活性のため呼ばれない
+    /// (axaml の IsEnabled で抑止。ECO-008: 種別は作成後変更不可)。
+    /// </summary>
+    [RelayCommand]
+    private void SelectType(TagTypeOption option)
+    {
+        if (!TypeEditable)
+        {
+            return;
+        }
+
+        SelectedType = option;
+    }
 
     /// <summary>候補値の D&D 並べ替え(順序保持、REQ-024。View 層の Drop ハンドラから呼ぶ)。</summary>
     public void MoveValue(int fromIndex, int toIndex)
@@ -276,8 +356,58 @@ public sealed partial class TagEditorViewModel : ObservableObject
 
     partial void OnSelectedTypeChanged(TagTypeOption value)
     {
+        SyncTypeActive();
         OnPropertyChanged(nameof(IsTextual));
         OnPropertyChanged(nameof(IsNumeric));
+        RaisePreviewChanged();
+    }
+
+    /// <summary>ECO-007/E6: 現在の SelectedType に合わせて各タブの IsActive を更新する。</summary>
+    private void SyncTypeActive()
+    {
+        foreach (var option in TypeOptions)
+        {
+            option.IsActive = ReferenceEquals(option, SelectedType);
+        }
+    }
+
+    partial void OnNameChanged(string value) => RaisePreviewChanged();
+
+    partial void OnColorChanged(string value) => RaisePreviewChanged();
+
+    partial void OnMinTextChanged(string value) => RaisePreviewChanged();
+
+    partial void OnMaxTextChanged(string value) => RaisePreviewChanged();
+
+    partial void OnUnitChanged(string value) => RaisePreviewChanged();
+
+    /// <summary>付与プレビュー(DC-TAGPREVIEW-001)の全派生プロパティを再評価する。</summary>
+    private void RaisePreviewChanged()
+    {
+        OnPropertyChanged(nameof(Preview));
+        OnPropertyChanged(nameof(PreviewChips));
+        OnPropertyChanged(nameof(PreviewStars));
+        OnPropertyChanged(nameof(IsPreviewTextual));
+        OnPropertyChanged(nameof(IsPreviewStar));
+        OnPropertyChanged(nameof(IsPreviewNumericPlain));
+        OnPropertyChanged(nameof(IsPreviewNumeric));
+    }
+
+    /// <summary>
+    /// プレビュー用の numeric 設定(min/max/unit)。入力欄(MinText/MaxText/Unit)から組み立てる。
+    /// 不正数値は null(=既定 0/100 をビルダが用いる)。プレビューは表示のみで保存値とは独立。
+    /// </summary>
+    private NumericTagSettings? BuildNumericForPreview()
+    {
+        if (!IsNumeric)
+        {
+            return null;
+        }
+
+        TryParseOptional(MinText, out var min);
+        TryParseOptional(MaxText, out var max);
+        var unit = string.IsNullOrWhiteSpace(Unit) ? null : Unit.Trim();
+        return new NumericTagSettings { TagId = string.Empty, Min = min, Max = max, Step = null, Unit = unit };
     }
 
     private void MoveSelected(int delta)
