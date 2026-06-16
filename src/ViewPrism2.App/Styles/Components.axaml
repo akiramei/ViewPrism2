@@ -184,7 +184,8 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+    <!-- ECO-009 golden: アイコンの視認性を上げる(淡色すぎを是正。選択/ホバー行でも読める) -->
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
@@ -192,7 +193,7 @@
     <Setter Property="Background" Value="{StaticResource IconBtnHoverBg}" />
   </Style>
   <Style Selector="Button.iconBtn:pointerover">
-    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="Button.iconBtn.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource DangerHoverBg}" />
@@ -284,5 +285,25 @@
   </Style>
   <Style Selector="Border.condChip.mono PathIcon">
     <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
+
+  <!-- ============ TreeView 行 選択/ホバー(ECO-009 ③ golden) ============ -->
+  <!-- Fluent 既定の濃い選択バー → モックの淡青(選択)/淡灰(ホバー)。アイコン・名前が読める。 -->
+  <Style Selector="TreeViewItem /template/ Border#PART_LayoutRoot">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Margin" Value="0,1" />
+  </Style>
+  <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{StaticResource ValueChipBg}" />
+  </Style>
+  <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+  </Style>
+  <Style Selector="TreeViewItem:selected:pointerover /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+  </Style>
+  <!-- ノード名は明示色(淡青選択上でも読めるよう、継承の選択前景に左右されない)。home はアクセント。 -->
+  <Style Selector="TextBlock.nodeName">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
 </Styles>
