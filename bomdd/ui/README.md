@@ -11,6 +11,7 @@ E-BOM の **前段**。正式品番は採番せず `TMP-UI-*` の仮品番で候
 | [ui-trace-map.json](ui-trace-map.json) | HTML locator / UI-IR / UI-BOM / E-BOM 候補の対応 |
 | [extraction-report.md](extraction-report.md) | 抽出概要・対象/対象外理由・E-BOM 連携候補・read-across ギャップ |
 | [unresolved-questions.md](unresolved-questions.md) | 仕様/UI 設計/E-BOM 昇格前に確認すべき事項 |
+| [visual-gap-tag-tab.md](visual-gap-tag-tab.md) | 製造品(実機)を CAD(モック+UI-IR)と視覚突合した製造検査。設計言語の乖離全量(ECO-009 の入力) |
 
 入力モック:
 - `work/tag-tab/ViewPrism2 タグ管理.dc.html`(M1: 3ペイン全体)
