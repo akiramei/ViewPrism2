@@ -65,6 +65,34 @@ public sealed partial class EditNodeViewModel : ObservableObject
 
     public bool HasCondition => ConditionType is not null;
 
+    // ---- ECO-009 ③: 行の視覚要素(色ドット/型チップ/条件チップ配色) ----
+    public string? Color => Tag?.Color;
+
+    public bool HasColor => Tag?.Color is not null;
+
+    public bool HasType => Tag is not null;
+
+    public bool IsSimple => Tag?.Type == TagType.Simple;
+
+    public bool IsTextual => Tag?.Type == TagType.Textual;
+
+    public bool IsNumeric => Tag?.Type == TagType.Numeric;
+
+    public string TypeText => _localization is null || Tag is null
+        ? string.Empty
+        : _localization.T(Tag.Type switch
+        {
+            TagType.Simple => "tag.type.simple",
+            TagType.Textual => "tag.type.textual",
+            _ => "tag.type.numeric",
+        });
+
+    /// <summary>条件チップ配色: 数値(等値/範囲)=amber。</summary>
+    public bool IsConditionAmber => ConditionType is HierarchyConditionType.Equals or HierarchyConditionType.Range;
+
+    /// <summary>条件チップ配色: パターン(regex)=mono 青。Values=緑(既定)。</summary>
+    public bool IsConditionMono => ConditionType is HierarchyConditionType.Pattern;
+
     /// <summary>
     /// 条件サマリの整形表示(GF-05・REQ-060(e)、仕様 §2.6)。i18n テンプレートで人間可読化し、
     /// 生 JSON や Unicode エスケープを露出しない(ConditionSummaryFormatter)。
@@ -80,6 +108,8 @@ public sealed partial class EditNodeViewModel : ObservableObject
         ConditionValue = type is null ? null : valueJson;
         OnPropertyChanged(nameof(HasCondition));
         OnPropertyChanged(nameof(ConditionSummary));
+        OnPropertyChanged(nameof(IsConditionAmber));
+        OnPropertyChanged(nameof(IsConditionMono));
     }
 
     partial void OnAliasChanged(string? value) => OnPropertyChanged(nameof(DisplayName));
@@ -137,6 +167,15 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     /// <summary>階層ノード 0 件 → 「まだタグが追加されていません」(仕様 §2.6 空状態)。</summary>
     public bool IsTreeEmpty => HasView && Roots.Count == 0;
 
+    /// <summary>階層の総ノード数(コンテナヘッダの「N タグ」、ECO-009 ③)。</summary>
+    public int NodeCount => Flatten().Count();
+
+    /// <summary>「N タグ」表示(i18n)。</summary>
+    public string NodeCountText => _localization.T("hierarchy.tagCount", new Dictionary<string, string>
+    {
+        ["count"] = NodeCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    });
+
     public View? View => _view;
 
     /// <summary>バッチ保存が完了した(modified_at が更新されたためビュー一覧の再読込が必要)。</summary>
@@ -187,6 +226,8 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         SetDirty(false);
         OnPropertyChanged(nameof(ViewName));
         OnPropertyChanged(nameof(IsTreeEmpty));
+        OnPropertyChanged(nameof(NodeCount));
+        OnPropertyChanged(nameof(NodeCountText));
     }
 
     /// <summary>ノード追加(タグパレットから D&D またはボタン)。同一親の末尾に追加。</summary>
@@ -212,6 +253,8 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         SelectedNode = node;
         SetDirty(true);
         OnPropertyChanged(nameof(IsTreeEmpty));
+        OnPropertyChanged(nameof(NodeCount));
+        OnPropertyChanged(nameof(NodeCountText));
         return node;
     }
 
@@ -232,6 +275,8 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
 
         SetDirty(true);
         OnPropertyChanged(nameof(IsTreeEmpty));
+        OnPropertyChanged(nameof(NodeCount));
+        OnPropertyChanged(nameof(NodeCountText));
     }
 
     /// <summary>別名のインライン編集を開始する。</summary>

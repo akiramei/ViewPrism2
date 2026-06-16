@@ -204,4 +204,85 @@
     <Setter Property="Width" Value="15" />
     <Setter Property="Height" Value="15" />
   </Style>
+  <!-- ホーム設定中のアイコンボタンはアクセント色(GF-03) -->
+  <Style Selector="Button.iconBtn.homeOn PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- ============ コンテナカード/カードヘッダ(中央 階層構造) ============ -->
+  <Style Selector="Border.containerCard">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.cardHeader">
+    <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="MinHeight" Value="52" />
+  </Style>
+  <!-- アクセント pill(N タグ 等) -->
+  <Style Selector="Border.accentPill">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.accentPill TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
+  <!-- HOME ピル(amber) -->
+  <Style Selector="Border.homePill">
+    <Setter Property="Background" Value="{StaticResource RangePillBg}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.homePill TextBlock">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
+  </Style>
+
+  <!-- ============ 条件チップ(配置タグ条件。既定=緑/amber=数値/mono=regex) ============ -->
+  <Style Selector="Border.condChip">
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{StaticResource ChipNumBg}" />
+  </Style>
+  <Style Selector="Border.condChip.amber">
+    <Setter Property="Background" Value="{StaticResource RangePillBg}" />
+  </Style>
+  <Style Selector="Border.condChip.mono">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+  </Style>
+  <Style Selector="Border.condChip TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource ChipNumFg}" />
+  </Style>
+  <Style Selector="Border.condChip.amber TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
+  </Style>
+  <Style Selector="Border.condChip.mono TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+    <Setter Property="FontFamily" Value="Consolas, monospace" />
+  </Style>
+  <Style Selector="Border.condChip PathIcon">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource ChipNumFg}" />
+  </Style>
+  <Style Selector="Border.condChip.amber PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
+  </Style>
+  <Style Selector="Border.condChip.mono PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
 </Styles>
