@@ -49,32 +49,45 @@
     <!-- 左: ビュー管理(新規ビュー・一覧・編集/削除・選択) -->
     <DockPanel Grid.Column="0" Background="{StaticResource PanelBrush}">
       <TextBlock DockPanel.Dock="Top" Classes="sectionHeader" Text="{Binding Loc[view.viewManagement]}" />
-      <Button DockPanel.Dock="Top" Content="{Binding Loc[view.newView]}" Command="{Binding NewViewCommand}"
-              Margin="12,4,12,8" HorizontalAlignment="Stretch" />
+      <!-- ECO-009 ②: 新規ビュー CTA(青グラデ) -->
+      <Button DockPanel.Dock="Top" Classes="cta" Command="{Binding NewViewCommand}"
+              Margin="12,4,12,10" HorizontalAlignment="Stretch">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource PlusIcon}" Width="14" Height="14" Foreground="White" />
+          <TextBlock Text="{Binding Loc[view.newView]}" />
+        </StackPanel>
+      </Button>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[view.savedViews]}" FontSize="11"
+                 Foreground="{StaticResource FaintTextBrush}" Margin="14,2,14,8" />
       <Panel>
-        <ScrollViewer>
+        <ScrollViewer Padding="12,0,12,8">
           <ItemsControl ItemsSource="{Binding Views}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ViewRowViewModel">
-                <Border Classes="navItem" Classes.selected="{Binding IsSelected}"
-                        Background="Transparent" PointerPressed="OnViewRowPressed">
+                <!-- ECO-009 ②: ビューカード行(先頭アイコン+名前+タグ数+編集/削除。選択=淡青) -->
+                <Border Classes="navCard" Classes.selected="{Binding IsSelected}" PointerPressed="OnViewRowPressed">
                   <DockPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-                      <Button Classes="mini" Content="✎"
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                      <Button Classes="iconBtn"
                               Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).EditViewCommand}"
-                              CommandParameter="{Binding}" />
-                      <Button Classes="mini" Content="✕"
+                              CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource PencilIcon}" />
+                      </Button>
+                      <Button Classes="iconBtn danger"
                               Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).DeleteViewCommand}"
-                              CommandParameter="{Binding}" />
+                              CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource TrashIcon}" />
+                      </Button>
                     </StackPanel>
-                    <!-- ECO-007/E1(DC-VIEWLIST-001 改訂): ビュー名+タグ数バッジ。★は出さない(DE-2 撤回)・
-                         説明は行内 truncate をやめ tooltip 表示(DE-3)。非空時のみ tooltip 付与。 -->
-                    <Border DockPanel.Dock="Right" Classes="tagCountBadge" VerticalAlignment="Center"
+                    <!-- ECO-007/E1: タグ数バッジ(★なし・説明 tooltip)。 -->
+                    <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center"
                             ToolTip.Tip="{Binding Description}">
-                      <TextBlock Text="{Binding TagCount}" FontSize="11"
-                                 Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Text="{Binding TagCount}" />
                     </Border>
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                    <Border DockPanel.Dock="Left" Classes="leadIcon" Margin="0,0,10,0">
+                      <PathIcon Data="{StaticResource ViewListIcon}" />
+                    </Border>
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="14" FontWeight="Medium"
                                TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
                                ToolTip.Tip="{Binding Description}" />
                   </DockPanel>
@@ -84,7 +97,7 @@
           </ItemsControl>
         </ScrollViewer>
         <TextBlock Text="{Binding Loc[view.noViews]}" IsVisible="{Binding IsViewsEmpty}"
-                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="12,4" TextWrapping="Wrap" />
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="14,4" TextWrapping="Wrap" />
       </Panel>
     </DockPanel>
 

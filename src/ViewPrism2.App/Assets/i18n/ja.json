@@ -788,6 +788,7 @@
   "view.mergeNeedAtLeastOne": "マージには少なくとも1枚の画像が必要です",
   "view.mergeProcessFailed": "マージ処理に失敗しました",
   "view.newView": "新規ビュー",
+  "view.savedViews": "保存したビュー（視点）",
   "view.newViewCreated": "新しいビューを作成しました",
   "view.noCollectionSelected": "コレクションが選択されていません",
   "view.noHierarchy": "まだ階層がありません",

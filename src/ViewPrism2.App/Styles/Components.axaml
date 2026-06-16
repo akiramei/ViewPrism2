@@ -22,6 +22,51 @@
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
   </Style>
 
+  <!-- ============ ナビ/ビューカード行(左ペイン ビュー管理) ============ -->
+  <Style Selector="Border.navCard">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="Padding" Value="8,0,6,0" />
+    <Setter Property="MinHeight" Value="46" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="Border.navCard:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource CardHoverBorderBrush}" />
+  </Style>
+  <Style Selector="Border.navCard.selected">
+    <Setter Property="BorderBrush" Value="{StaticResource CardSelectedBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+  </Style>
+  <!-- 先頭アイコン(30px 角丸・非選択=淡灰/微弱、選択=淡青/アクセント) -->
+  <Style Selector="Border.leadIcon">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.leadIcon PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.navCard.selected Border.leadIcon">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+  </Style>
+  <Style Selector="Border.navCard.selected Border.leadIcon PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.navCard.selected Border.countBadge">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+  </Style>
+  <Style Selector="Border.navCard.selected Border.countBadge TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
+
   <!-- ============ Card ============ -->
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />

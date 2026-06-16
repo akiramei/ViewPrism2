@@ -788,6 +788,7 @@
   "view.mergeNeedAtLeastOne": "At least one image is required for merge",
   "view.mergeProcessFailed": "Merge process failed",
   "view.newView": "New View",
+  "view.savedViews": "Saved views",
   "view.newViewCreated": "New view created",
   "view.noCollectionSelected": "No collection selected",
   "view.noHierarchy": "No hierarchy yet",
