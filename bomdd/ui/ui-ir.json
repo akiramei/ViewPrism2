@@ -331,7 +331,7 @@
 
   "unmodeledElements": [
     { "selector": "M1/M2/M3 ロゴ三角(clip-path polygon)", "reason": "装飾(ブランドマーク)", "handling": "nonBom" },
-    { "selector": "M1 DESIGN DIRECTION バンド/原則カード4枚/トークンデモ(COLOR・TYPE・ROW)", "reason": "プレゼン用説明(マーケ)。アプリ画面ではない", "handling": "nonBom", "note": "ただしトークンデモは E-DESIGN-028 の根拠資料として reference 保持。" },
+    { "selector": "M1/M2/M3 DESIGN DIRECTION 01/02/03(思想・4原則・COLOR/TYPE/ROW トークン)", "reason": "【訂正】初回は『プレゼン用マーケ・nonBom』と誤分類し破棄。実際は CAD の権威ある設計意図(ひとつの思想で束ねる=統一デザイン言語の憲章)。装飾ではなく設計要求。", "handling": "designIntent", "ref": "design-intent.md", "note": "maintainer 指摘により再抽出(2026-06-16)。COLOR(青基調 #2F6BED)・TYPE(IBM Plex)・ROW(44px)・4原則を design-intent.md へ抽出。K-DESIGN/E-DESIGN-028/ECO-009 の基盤。" },
     { "selector": "M1/M2/M3 『NEXT STEPS / NEXT』フッタ", "reason": "ドキュメント注記", "handling": "nonBom" },
     { "selector": "M2 ghost backdrop(blur)+scrim", "reason": "モーダル提示のための背景演出", "handling": "nonBom" },
     { "selector": "M1 タイトルバー window controls(min/max/close)", "reason": "OSウィンドウ装飾。シェル所有・タグタブ外", "handling": "trace", "ebomItemRef": ["E-UI-SHELL-021"] },
