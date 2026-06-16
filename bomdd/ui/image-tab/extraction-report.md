@@ -52,7 +52,7 @@
 | 5 | コレクション行に **相対パス表示・276/64 折り畳み** | `display_contract_gap`(軽) | 未決。E-UI-SHELL-021 コレクション一覧 display contract の精緻化 | UQ-I03 |
 | 6 | 新規 surface 部品 6点(軸セレクタ・ソート・パンくず・グリッドカード・リスト行・パネルタブ) | `design_system_part_missing`(予防) | [design-system-bom.md](design-system-bom.md) の `new` を製造前に Components.axaml へ | — |
 
-> **重要**: #1・#2 は「設計の根幹」。E-UI-NODEGRAPH-025 と E-UI-TAGASSIGN-029 は v1.2 で原典(view-prism)から起こした surface であり、本モックはそれを**作り直す**判断。承認済(2026-06-17)につき、次フェーズで E-BOM を改訂 ECO で同期する(本抽出フェーズでは BOM 本体は未編集)。
+> **重要**: #1・#2 は「設計の根幹」。E-UI-NODEGRAPH-025 と E-UI-TAGASSIGN-029 は v1.2 で原典(view-prism)から起こした surface であり、本モックはそれを**作り直す**判断。**ECO-010 起票 + E-BOM(30)同期済**(2026-06-17・`bomdd/60-change-order-eco-010.md`)。spec/M-BOM/Control Plan の全面同期と実装は画像タブ製造フェーズ。
 
 ## 5. read-across ギャップ
 
@@ -64,6 +64,6 @@
 ## 6. 次段への申し送り
 
 1. **unresolved 解消**: 根幹3点(UQ-I01 ナビ・I02 付与インライン・I05 グリッドサイズ)は **2026-06-17 承認で確定(モック採用)**。残 UQ-I03/I04/I06〜I15・DS ゲートは継続。
-2. **E-BOM 同期(ECO 起票)**: 確定分につき、E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / E-UI-GRID-022(+ DC-GRID-001)の改訂 ECO を起票(タグタブ ECO-007/008 と同じ手続き)。E-UI-SHELL-021 は UQ-I03 解決後。
+2. **E-BOM 同期(ECO-010 起票済)**: 確定分につき E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / E-UI-GRID-022(+ DC-GRID-001)を `30-ebom.yaml` で同期済(`bomdd/60-change-order-eco-010.md`)。E-UI-SHELL-021(UQ-I03)・表示軸概念(UQ-I04)は未決のため未同期。
 3. **Design System BOM ゲート**: [design-system-bom.md](design-system-bom.md) の `new` 6 部品を製造計画へ。Components.axaml 再利用が前提。
 4. **製造**: golden-in-the-loop(実機 ⇄ モック M 突合)。E1〜E7・GF 是正・固定オラクルを退行させない。

@@ -71,5 +71,5 @@
 
 本書は **CAD に明記された画像タブ設計意図の正典記録**。今後:
 - E-DESIGN-028 / K-DESIGN は変更不要(トークン・部品言語はタグタブと共有・ECO-009 で確立済)。画像タブ固有 surface 部品の追加は [design-system-bom.md](design-system-bom.md) のカバレッジで管理。
-- §5 の design_decision 3点は **2026-06-17 maintainer 承認で確定**(モック採用)。次フェーズ(E-BOM 同期)で E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / E-UI-GRID-022(+ DC-GRID-001)の改訂 ECO を起票する(タグタブ ECO-007/008 と同じ手続き・「なぜ前回入れた設計を外すか」を明記)。
+- §5 の design_decision 3点は **2026-06-17 maintainer 承認で確定**(モック採用)→ **ECO-010 起票 + E-BOM(30)同期済**(`bomdd/60-change-order-eco-010.md`。E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / E-UI-GRID-022+DC-GRID-001)。spec/M-BOM/Control Plan の全面同期と実装は画像タブ製造フェーズ。
 - 製造時は本書のトークン・部品言語に従い、Components.axaml を再利用する(その場スタイル禁止)。golden 基準=モック(golden-in-the-loop)。
