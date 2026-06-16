@@ -6,8 +6,16 @@
        デザイントークン(E-DESIGN-028)は K-DESIGN の値のみ使用する。
        ECO-009(タグタブ デザイン言語移植): モック(CAD)準拠のトークン+コンポーネント層を追加。 -->
   <Application.Resources>
-    <!-- 基本トークン(既存) -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
+    <!-- ECO-009: Fluent アクセントをモック青 #2F6BED へ統一(全コントロールの選択/フォーカス/チェック/アクセントに波及) -->
+    <Color x:Key="SystemAccentColor">#2F6BED</Color>
+    <Color x:Key="SystemAccentColorLight1">#4A82F0</Color>
+    <Color x:Key="SystemAccentColorLight2">#6B9AF3</Color>
+    <Color x:Key="SystemAccentColorLight3">#8FB3F7</Color>
+    <Color x:Key="SystemAccentColorDark1">#255ED6</Color>
+    <Color x:Key="SystemAccentColorDark2">#1E4FB5</Color>
+    <Color x:Key="SystemAccentColorDark3">#173E91</Color>
+    <!-- 基本トークン(既存。AccentBrush も #2F6BED へ統一) -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#2F6BED" />
     <SolidColorBrush x:Key="DangerBrush" Color="#DC2626" />
     <SolidColorBrush x:Key="WarnBrush" Color="#D97706" />
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1F2937" />
