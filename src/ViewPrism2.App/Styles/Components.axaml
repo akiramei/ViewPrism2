@@ -1,0 +1,146 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- ECO-009: タグタブ デザイン言語移植 — 再利用コンポーネント層(モック CAD 準拠)。
+       Card / 型チップ / 候補値チップ / 範囲ピル / CTA / アイコンボタン / バッジ / 凡例。
+       色は E-DESIGN-028 トークン(App.axaml)を参照。 -->
+
+  <!-- 行内アイコン geometry は App.axaml Application.Resources に定義(グローバル参照)。 -->
+
+  <!-- ============ Card ============ -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="11,10" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="Border.card:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource CardHoverBorderBrush}" />
+  </Style>
+  <Style Selector="Border.card.selected">
+    <Setter Property="BorderBrush" Value="{StaticResource CardSelectedBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+    <Setter Property="BoxShadow" Value="0 1 3 0 #1F2F6BED" />
+  </Style>
+
+  <!-- ============ 型チップ ============ -->
+  <Style Selector="Border.typeChip">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.typeChip.simple">
+    <Setter Property="Background" Value="{StaticResource ChipSimpleBg}" />
+  </Style>
+  <Style Selector="Border.typeChip.text">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+  </Style>
+  <Style Selector="Border.typeChip.number">
+    <Setter Property="Background" Value="{StaticResource ChipNumBg}" />
+  </Style>
+  <Style Selector="Border.typeChip TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.typeChip.simple TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource ChipSimpleFg}" />
+  </Style>
+  <Style Selector="Border.typeChip.text TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
+  <Style Selector="Border.typeChip.number TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource ChipNumFg}" />
+  </Style>
+
+  <!-- ============ 候補値チップ / 範囲ピル ============ -->
+  <Style Selector="Border.valueChip">
+    <Setter Property="Background" Value="{StaticResource ValueChipBg}" />
+    <Setter Property="BorderBrush" Value="{StaticResource ValueChipBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="8,2" />
+  </Style>
+  <Style Selector="Border.valueChip TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{StaticResource ValueChipFg}" />
+  </Style>
+  <Style Selector="Border.rangePill">
+    <Setter Property="Background" Value="{StaticResource RangePillBg}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="9,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.rangePill TextBlock">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
+  </Style>
+
+  <!-- ============ バッジ(件数) ============ -->
+  <Style Selector="Border.countBadge">
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.countBadge TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource BadgeFg}" />
+  </Style>
+
+  <!-- ============ CTA ボタン(青グラデ) ============ -->
+  <Style Selector="Button.cta">
+    <Setter Property="Background" Value="{StaticResource CtaBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.cta /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource CtaBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.cta:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource CtaHoverBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.cta:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource CtaHoverBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- ============ アイコンボタン(行内 編集/削除) ============ -->
+  <Style Selector="Button.iconBtn">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.iconBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource IconBtnHoverBg}" />
+  </Style>
+  <Style Selector="Button.iconBtn:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="Button.iconBtn.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource DangerHoverBg}" />
+  </Style>
+  <Style Selector="Button.iconBtn.danger:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+  </Style>
+  <Style Selector="Button.iconBtn PathIcon">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+  </Style>
+</Styles>

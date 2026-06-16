@@ -7,13 +7,20 @@ using ViewPrism2.Core.Services;
 
 namespace ViewPrism2.App.ViewModels;
 
-/// <summary>タグパレットの 1 行(色スウォッチ+名前+種類チップ+編集/削除、仕様 §2.6 v1.2)。</summary>
+/// <summary>
+/// タグパレットの 1 行(色+名前+型チップ+候補値/範囲+編集/削除、ECO-009/E-UI-TAGS-026)。
+/// ECO-009: テキスト型は候補値チップ、数値型は範囲ピル+刻みを提示する(モック CAD 準拠)。
+/// </summary>
 public sealed partial class TagPaletteRowViewModel : ObservableObject
 {
-    public TagPaletteRowViewModel(Tag tag, string typeText)
+    public TagPaletteRowViewModel(
+        Tag tag, string typeText, IReadOnlyList<string> predefinedValues, NumericTagSettings? numeric)
     {
         Tag = tag;
         TypeText = typeText;
+        CandidateValues = predefinedValues;
+        RangeText = BuildRangeText(numeric);
+        StepValue = numeric?.Step is { } step ? FormatNum(step) : null;
     }
 
     public Tag Tag { get; }
@@ -30,8 +37,60 @@ public sealed partial class TagPaletteRowViewModel : ObservableObject
     /// <summary>color=NULL のタグは境界線色のリング表示(K-DESIGN)。</summary>
     public bool HasColor => Tag.Color is not null;
 
+    public bool IsSimple => Tag.Type == TagType.Simple;
+
+    public bool IsTextual => Tag.Type == TagType.Textual;
+
+    public bool IsNumeric => Tag.Type == TagType.Numeric;
+
+    /// <summary>テキスト型の候補値(順序保持)。ECO-009: パレット行に候補値チップで提示。</summary>
+    public IReadOnlyList<string> CandidateValues { get; }
+
+    public bool HasCandidateValues => IsTextual && CandidateValues.Count > 0;
+
+    /// <summary>数値型の範囲表示(例: "1–5 ★")。null は範囲表示なし。</summary>
+    public string? RangeText { get; }
+
+    public bool HasRange => IsNumeric && RangeText is not null;
+
+    /// <summary>数値型の刻み値(例: "1")。null は刻み表示なし。</summary>
+    public string? StepValue { get; }
+
+    public bool HasStep => IsNumeric && StepValue is not null;
+
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>範囲ラベル: "{min}–{max}"(+単位)。min/max・単位とも無ければ null。INV-007 不変表現。</summary>
+    private static string? BuildRangeText(NumericTagSettings? n)
+    {
+        if (n is null)
+        {
+            return null;
+        }
+
+        var min = FormatNum(n.Min);
+        var max = FormatNum(n.Max);
+        if (min is null && max is null && string.IsNullOrEmpty(n.Unit))
+        {
+            return null;
+        }
+
+        var range = $"{min ?? "—"}–{max ?? "—"}";
+        return string.IsNullOrEmpty(n.Unit) ? range : $"{range} {n.Unit}";
+    }
+
+    private static string? FormatNum(double? v)
+    {
+        if (v is not { } d)
+        {
+            return null;
+        }
+
+        return d == Math.Floor(d)
+            ? ((long)d).ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : d.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    }
 }
 
 /// <summary>
@@ -44,7 +103,7 @@ public sealed partial class TagPaletteViewModel : ObservableObject
     private readonly TagService _tagService;
     private readonly LocalizationService _localization;
     private readonly IWindowService _windows;
-    private List<Tag> _all = [];
+    private List<PaletteTagItem> _all = [];
 
     public TagPaletteViewModel(TagService tagService, LocalizationService localization, IWindowService windows)
     {
@@ -76,14 +135,26 @@ public sealed partial class TagPaletteViewModel : ObservableObject
 
     public bool IsEmpty => Tags.Count == 0;
 
+    /// <summary>絞り込み後の件数(ECO-009: 件数/凡例行)。</summary>
+    public int ItemCount => Tags.Count;
+
+    /// <summary>全件数(検索前)。</summary>
+    public int TotalCount => _all.Count;
+
+    /// <summary>"{count}/{total} アイテム"(ECO-009)。i18n キー経由。</summary>
+    public string ItemCountText => _localization.T("tag.palette.itemCount", new Dictionary<string, string>
+    {
+        ["count"] = ItemCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["total"] = TotalCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    });
+
     /// <summary>タグの作成・編集・削除があった(シェル・エディタの再読込用)。</summary>
     public event EventHandler? TagsChanged;
 
     public async Task LoadAsync()
     {
-        // 一覧は name 昇順(REQ-029。GetAllWithUsageAsync と同じ整列)
-        var all = await _tagService.GetAllWithUsageAsync();
-        _all = all.Select(t => t.Tag).ToList();
+        // 一覧は name 昇順(REQ-029)。ECO-009: 候補値/数値範囲を含めて取得しパレット行に提示
+        _all = (await _tagService.GetPaletteItemsAsync()).ToList();
         ApplyFilter();
     }
 
@@ -139,25 +210,32 @@ public sealed partial class TagPaletteViewModel : ObservableObject
     {
         var selectedId = SelectedTag?.Tag.Id;
         Tags.Clear();
-        foreach (var tag in _all)
+        foreach (var item in _all)
         {
             // 検索: 名前の部分一致・大文字小文字無視(仕様 §2.6)
-            if (SearchText.Length > 0 && !tag.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            if (SearchText.Length > 0 && !item.Tag.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            Tags.Add(new TagPaletteRowViewModel(tag, _localization.T(tag.Type switch
-            {
-                TagType.Simple => "tag.type.simple",
-                TagType.Textual => "tag.type.textual",
-                _ => "tag.type.numeric",
-            })));
+            Tags.Add(new TagPaletteRowViewModel(
+                item.Tag,
+                _localization.T(item.Tag.Type switch
+                {
+                    TagType.Simple => "tag.type.simple",
+                    TagType.Textual => "tag.type.textual",
+                    _ => "tag.type.numeric",
+                }),
+                item.PredefinedValues,
+                item.Numeric));
         }
 
         SelectedTag = selectedId is null
             ? null
             : Tags.FirstOrDefault(t => string.Equals(t.Tag.Id, selectedId, StringComparison.Ordinal));
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(ItemCount));
+        OnPropertyChanged(nameof(TotalCount));
+        OnPropertyChanged(nameof(ItemCountText));
     }
 }

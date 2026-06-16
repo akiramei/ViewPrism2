@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ViewPrism2.App.ViewModels"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              x:Class="ViewPrism2.App.Views.TagsTabView"
              x:DataType="vm:TagsTabViewModel">
   <!-- タグタブ(3 ペイン、仕様 §2.6 v1.2 / G-6):
@@ -29,25 +30,8 @@
       <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
-    <!-- GF-04(REQ-060(d)): タグパレットの選択中タグ行を明確に強調する(K-DESIGN v2.0):
-         アクセント色 12% 不透明の背景+左端 3px アクセントバー(選択が一目で判別できる強さ)。 -->
-    <Style Selector="Border.paletteRow">
-      <Setter Property="Padding" Value="9,6" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Margin" Value="4,0" />
-      <Setter Property="BorderThickness" Value="3,0,0,0" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
-    <Style Selector="Border.paletteRow.selected">
-      <Setter Property="Background" Value="#1F3B82F6" />
-      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-    </Style>
-    <Style Selector="Border.typeChip">
-      <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="6,1" />
-    </Style>
+    <!-- ECO-009: パレットの選択強調・型チップは Styles/Components.axaml の card / typeChip へ移行。 -->
+
     <!-- ECO-007/E1: ビュー行のタグ数バッジ(配置タグ数=階層ノード数)。控えめなピル。 -->
     <Style Selector="Border.tagCountBadge">
       <Setter Property="Background" Value="{StaticResource BorderLineBrush}" />
@@ -189,55 +173,124 @@
 
     <Border Grid.Column="3" Background="{StaticResource BorderLineBrush}" />
 
-    <!-- 右: タグパレット(検索・追加・一覧。D&D/ボタンで階層へ追加) -->
+    <!-- 右: タグパレット(ECO-009: モック CAD 準拠の再実装。Card/型チップ/候補値・範囲/CTA/アイコンボタン/件数・凡例) -->
     <DockPanel Grid.Column="4" Background="{StaticResource PanelBrush}">
-      <TextBlock DockPanel.Dock="Top" Classes="sectionHeader" Text="{Binding Loc[navigation.tagPalette]}" />
-      <DockPanel DockPanel.Dock="Top" Margin="12,0,12,8">
-        <Button DockPanel.Dock="Right" Content="{Binding Loc[common.add]}"
-                Command="{Binding Palette.NewTagCommand}" Margin="8,0,0,0" />
-        <TextBox Text="{Binding Palette.SearchText}" PlaceholderText="{Binding Loc[tag.searchTags]}" />
+      <!-- ヘッダ: タイトル+件数バッジ -->
+      <DockPanel DockPanel.Dock="Top" Margin="16,14,16,8">
+        <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Palette.TotalCount}" />
+        </Border>
+        <TextBlock Text="{Binding Loc[navigation.tagPalette]}" FontSize="15" FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+      </DockPanel>
+      <!-- 検索 + 追加 CTA -->
+      <DockPanel DockPanel.Dock="Top" Margin="16,0,16,10">
+        <Button DockPanel.Dock="Right" Classes="cta" Command="{Binding Palette.NewTagCommand}" Margin="10,0,0,0">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource PlusIcon}" Width="14" Height="14" Foreground="White" />
+            <TextBlock Text="{Binding Loc[common.add]}" />
+          </StackPanel>
+        </Button>
+        <TextBox Text="{Binding Palette.SearchText}" PlaceholderText="{Binding Loc[tag.searchTags]}"
+                 VerticalAlignment="Center" CornerRadius="10" Height="40" />
+      </DockPanel>
+      <!-- 件数 + 型凡例 -->
+      <DockPanel DockPanel.Dock="Top" Margin="18,0,18,8">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Border Width="8" Height="8" CornerRadius="2" Background="{StaticResource ChipSimpleFg}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Loc[tag.type.simple]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Border Width="8" Height="8" CornerRadius="2" Background="{StaticResource ChipTextFg}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Loc[tag.type.textual]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Border Width="8" Height="8" CornerRadius="2" Background="{StaticResource ChipNumFg}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Loc[tag.type.numeric]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+        </StackPanel>
+        <TextBlock Text="{Binding Palette.ItemCountText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                   VerticalAlignment="Center" />
       </DockPanel>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding Palette.StatusMessage}"
-                 Foreground="{StaticResource DangerBrush}" FontSize="12" Margin="12,4" TextWrapping="Wrap" />
+                 Foreground="{StaticResource DangerBrush}" FontSize="12" Margin="16,4" TextWrapping="Wrap" />
       <Panel>
-        <ScrollViewer>
+        <ScrollViewer Padding="14,0,14,8">
           <ItemsControl ItemsSource="{Binding Palette.Tags}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TagPaletteRowViewModel">
-                <Border Classes="paletteRow" Classes.selected="{Binding IsSelected}"
-                        Background="Transparent" PointerPressed="OnPaletteItemPressed">
-                  <DockPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-                      <Button Classes="mini" Content="✎"
-                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Palette.EditCommand}"
-                              CommandParameter="{Binding}" />
-                      <Button Classes="mini" Content="✕"
-                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Palette.DeleteCommand}"
-                              CommandParameter="{Binding}" />
+                <Border Classes="card" Classes.selected="{Binding IsSelected}" PointerPressed="OnPaletteItemPressed">
+                  <StackPanel Spacing="9">
+                    <!-- 行1: 色ドット+名前+型チップ+アクション -->
+                    <DockPanel>
+                      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                        <Button Classes="iconBtn"
+                                Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Palette.EditCommand}"
+                                CommandParameter="{Binding}">
+                          <PathIcon Data="{StaticResource PencilIcon}" />
+                        </Button>
+                        <Button Classes="iconBtn danger"
+                                Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Palette.DeleteCommand}"
+                                CommandParameter="{Binding}">
+                          <PathIcon Data="{StaticResource TrashIcon}" />
+                        </Button>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                        <Ellipse Width="11" Height="11" Fill="{Binding Color, FallbackValue=Transparent}"
+                                 IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                        <Ellipse Width="11" Height="11" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                                 IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <Border Classes="typeChip" Classes.simple="{Binding IsSimple}"
+                                Classes.text="{Binding IsTextual}" Classes.number="{Binding IsNumeric}">
+                          <TextBlock Text="{Binding TypeText}" />
+                        </Border>
+                      </StackPanel>
+                    </DockPanel>
+                    <!-- テキスト: 候補値チップ -->
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="20,0,0,0"
+                                IsVisible="{Binding HasCandidateValues}">
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.candidateValues]}"
+                                 FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
+                      <ItemsControl ItemsSource="{Binding CandidateValues}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="sys:String">
+                            <Border Classes="valueChip" Margin="0,0,6,4">
+                              <TextBlock Text="{Binding}" />
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <!-- タグ色見本: 16px 円形スウォッチ。color=NULL は境界線色のリング(K-DESIGN) -->
-                      <Ellipse Width="16" Height="16" Fill="{Binding Color, FallbackValue=Transparent}"
-                               IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
-                      <Ellipse Width="16" Height="16" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
-                               IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
-                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis" />
-                      <Border Classes="typeChip" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding TypeText}" FontSize="11"
-                                   Foreground="{StaticResource TextMutedBrush}" />
-                      </Border>
-                      <!-- ECO-007/E2(DC-TAGPALETTE-001/DE-4 撤回): パレット行に説明を出さない
-                           (Tag.Description は作成/編集ダイアログでのみ参照)。 -->
+                    <!-- 数値: 範囲ピル+刻み -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="20,0,0,0"
+                                IsVisible="{Binding HasRange}" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.range]}"
+                                 FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
+                      <Border Classes="rangePill"><TextBlock Text="{Binding RangeText}" /></Border>
+                      <StackPanel Orientation="Horizontal" Spacing="3" IsVisible="{Binding HasStep}" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.step]}"
+                                   FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
+                        <TextBlock Text="{Binding StepValue}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
+                      </StackPanel>
                     </StackPanel>
-                  </DockPanel>
+                    <!-- シンプル: 注記 -->
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.simpleNote]}"
+                               IsVisible="{Binding IsSimple}" Margin="20,0,0,0" FontSize="11.5"
+                               Foreground="{StaticResource FaintTextBrush}" />
+                  </StackPanel>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
         <TextBlock Text="{Binding Loc[tag.noTags]}" IsVisible="{Binding Palette.IsEmpty}"
-                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="12,4" TextWrapping="Wrap" />
+                   Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="16,4" TextWrapping="Wrap" />
       </Panel>
     </DockPanel>
   </Grid>

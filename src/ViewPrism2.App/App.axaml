@@ -3,8 +3,10 @@
              x:Class="ViewPrism2.App.App"
              RequestedThemeVariant="Light">
   <!-- K-DESIGN: テーマは Fluent(ライトのみ。ダーク不要 — 仕様 §4)。
-       デザイントークン(E-DESIGN-028)は K-DESIGN の値のみ使用する。 -->
+       デザイントークン(E-DESIGN-028)は K-DESIGN の値のみ使用する。
+       ECO-009(タグタブ デザイン言語移植): モック(CAD)準拠のトークン+コンポーネント層を追加。 -->
   <Application.Resources>
+    <!-- 基本トークン(既存) -->
     <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
     <SolidColorBrush x:Key="DangerBrush" Color="#DC2626" />
     <SolidColorBrush x:Key="WarnBrush" Color="#D97706" />
@@ -13,8 +15,48 @@
     <SolidColorBrush x:Key="BorderLineBrush" Color="#E5E7EB" />
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="PanelBrush" Color="#F9FAFB" />
+
+    <!-- ECO-009 トークン(モック CAD 準拠) -->
+    <!-- カード -->
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#E8EBF0" />
+    <SolidColorBrush x:Key="CardSelectedBorderBrush" Color="#CFE0FC" />
+    <SolidColorBrush x:Key="CardSelectedBgBrush" Color="#F6FAFF" />
+    <SolidColorBrush x:Key="CardHoverBorderBrush" Color="#CFD6E1" />
+    <!-- 型チップ: シンプル(灰)/テキスト(青)/数値(緑) -->
+    <SolidColorBrush x:Key="ChipSimpleBg" Color="#F0F2F6" />
+    <SolidColorBrush x:Key="ChipSimpleFg" Color="#5B6473" />
+    <SolidColorBrush x:Key="ChipTextBg" Color="#EAF1FE" />
+    <SolidColorBrush x:Key="ChipTextFg" Color="#2459CF" />
+    <SolidColorBrush x:Key="ChipNumBg" Color="#EAFAF3" />
+    <SolidColorBrush x:Key="ChipNumFg" Color="#0F8A5E" />
+    <!-- 候補値チップ / 範囲ピル -->
+    <SolidColorBrush x:Key="ValueChipBg" Color="#F4F6FA" />
+    <SolidColorBrush x:Key="ValueChipBorder" Color="#E8EBF0" />
+    <SolidColorBrush x:Key="ValueChipFg" Color="#5B6473" />
+    <SolidColorBrush x:Key="RangePillBg" Color="#FBF3DF" />
+    <SolidColorBrush x:Key="RangePillFg" Color="#9A7B1A" />
+    <!-- バッジ -->
+    <SolidColorBrush x:Key="BadgeBg" Color="#F1F3F7" />
+    <SolidColorBrush x:Key="BadgeFg" Color="#5B6473" />
+    <SolidColorBrush x:Key="FaintTextBrush" Color="#AAB1BD" />
+    <!-- CTA(青グラデーション) -->
+    <LinearGradientBrush x:Key="CtaBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#4A82F0" Offset="0" />
+      <GradientStop Color="#2F6BED" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CtaHoverBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#3F76EB" Offset="0" />
+      <GradientStop Color="#255ED6" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="IconBtnHoverBg" Color="#EEF1F5" />
+    <SolidColorBrush x:Key="DangerHoverBg" Color="#FBEAEA" />
+    <!-- 行内アイコン(Material 系 filled。PathIcon=塗り。ECO-009) -->
+    <StreamGeometry x:Key="PencilIcon">M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z</StreamGeometry>
+    <StreamGeometry x:Key="TrashIcon">M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z</StreamGeometry>
+    <StreamGeometry x:Key="PlusIcon">M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z</StreamGeometry>
   </Application.Resources>
   <Application.Styles>
     <FluentTheme />
+    <StyleInclude Source="avares://ViewPrism2.App/Styles/Components.axaml" />
   </Application.Styles>
 </Application>

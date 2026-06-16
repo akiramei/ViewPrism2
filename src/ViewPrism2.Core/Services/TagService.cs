@@ -10,6 +10,10 @@ namespace ViewPrism2.Core.Services;
 /// <summary>タグ+使用数(REQ-029)。</summary>
 public sealed record TagWithUsage(Tag Tag, int UsageCount);
 
+/// <summary>パレット表示用のタグ+型別設定(ECO-009: 候補値/数値範囲をパレット行に提示)。</summary>
+public sealed record PaletteTagItem(
+    Tag Tag, int UsageCount, IReadOnlyList<string> PredefinedValues, NumericTagSettings? Numeric);
+
 /// <summary>
 /// タグ管理サービス(M-VIEWSVC-012、仕様 §2.2)。
 /// バリデーション(色形式・名前空白・numeric 範囲・循環)・UPSERT 付与・原子バッチ・使用数。
@@ -258,6 +262,33 @@ public sealed class TagService
             .ThenBy(t => t.Id, StringComparer.Ordinal)
             .Select(t => new TagWithUsage(t, usage.TryGetValue(t.Id, out var count) ? count : 0))
             .ToList();
+    }
+
+    /// <summary>
+    /// パレット表示用に、各タグ+型別設定(textual 候補値 / numeric 範囲)を name 昇順で取得する
+    /// (ECO-009/E-UI-TAGS-026 タグパレット行: 色+名前+型+候補値/範囲)。閲覧のみ。
+    /// </summary>
+    public async Task<IReadOnlyList<PaletteTagItem>> GetPaletteItemsAsync()
+    {
+        var withUsage = await GetAllWithUsageAsync().ConfigureAwait(false);
+        var items = new List<PaletteTagItem>(withUsage.Count);
+        foreach (var tu in withUsage)
+        {
+            IReadOnlyList<string> values = [];
+            NumericTagSettings? numeric = null;
+            if (tu.Tag.Type == TagType.Textual)
+            {
+                values = (await _tags.GetTextualSettingsAsync(tu.Tag.Id).ConfigureAwait(false))?.PredefinedValues ?? [];
+            }
+            else if (tu.Tag.Type == TagType.Numeric)
+            {
+                numeric = await _tags.GetNumericSettingsAsync(tu.Tag.Id).ConfigureAwait(false);
+            }
+
+            items.Add(new PaletteTagItem(tu.Tag, tu.UsageCount, values, numeric));
+        }
+
+        return items;
     }
 
     /// <summary>name 空白のみ・color 形式のバリデーション(REQ-021/023)。問題なければ null。</summary>

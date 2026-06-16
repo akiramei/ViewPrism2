@@ -239,11 +239,14 @@ public sealed class CpDisplayParity022Tests
         // 行の公開要素(色+名前+型)は維持されること
         var row = new TagPaletteRowViewModel(
             new Tag { Id = "t1", Name = "色", Type = TagType.Simple, Color = "#30a46c", Description = "作品の主要色" },
-            typeText: "単純");
+            typeText: "単純",
+            predefinedValues: [],
+            numeric: null);
         Assert.Equal("色", row.Name);
         Assert.Equal("#30a46c", row.Color);
         Assert.True(row.HasColor);
         Assert.Equal("単純", row.TypeText);
+        Assert.True(row.IsSimple);
         // Tag 本体の Description はデータとして保持(ダイアログ参照用)
         Assert.Equal("作品の主要色", row.Tag.Description);
     }
