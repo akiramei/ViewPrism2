@@ -1,4 +1,12 @@
-# タグタブ UI-IR / UI-BOM 抽出一式
+# UI-IR / UI-BOM 抽出一式
+
+> このディレクトリは画面(タブ)単位の UI-IR/UI-BOM 抽出を集約する。直下=**タグタブ**(初出のため平置き)、サブフォルダ=タブ別。
+> - タグタブ: 本ディレクトリ直下(下記)。入力モックは旧 `work/tag-tab/`。
+> - **画像タブ: [image-tab/](image-tab/)**(入力モックは `ViewPrismUI:資料/画像タブ/`)。
+>
+> モックの一次資料は **ViewPrismUI**(`C:/Demo/source/repos/ViewPrismUI`= UI/UX 設計の正典/CAD 源泉)へ移管。本 `bomdd/ui/` は E-BOM へ接続する抽出成果物を置く。
+
+## タグタブ(直下)
 
 HTML+JS+CSS で作られた **タグタブのUI/UXモック**(`work/tag-tab/`)から、BomDD `method/ui-ir-ui-bom.md` に従って抽出した観測・追跡・BOM 化用の成果物。
 

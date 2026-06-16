@@ -1,0 +1,434 @@
+{
+  "meta": {
+    "schema": "ui-bom/candidate",
+    "product": "ViewPrism2",
+    "scope": "画像タブ (image tab)",
+    "status": "candidate / 未昇格",
+    "derivedFrom": "ui-ir.json",
+    "extractedAt": "2026-06-17",
+    "note": "UI-IR から BOM 対象だけを昇格した候補部品表。正式品番は未採番。E-BOM への接続は『候補』であり、昇格は別途確認(unresolved-questions.md / §E-BOM昇格規則)を要する。装飾・余白・意味なし wrapper は ui-ir.json の unmodeledElements と ui-trace-map.json の nonBom に残す。decision/ecoImpact は maintainer 承認前の『候補』であり確定ではない(tag-tab の UQ-E* に相当する判断待ち)。",
+    "ebomItemsReferenced": [
+      "E-UI-SHELL-021", "E-UI-GRID-022", "E-UI-NODEGRAPH-025", "E-UI-TAGS-026",
+      "E-UI-TAGASSIGN-029", "E-UI-DETAIL-023", "E-UI-VIEWER-024", "E-DESIGN-028",
+      "E-SORT-004", "E-THUMB-020", "E-SCAN-005", "E-VIEWSVC-009", "E-TAGSVC-008",
+      "E-DOMAIN-001", "E-DB-010"
+    ],
+    "designSystemBomRef": "design-system-bom.md"
+  },
+
+  "items": [
+    {
+      "tempPartNo": "TMP-UI-SCR-0002",
+      "uiId": "screen.image-management",
+      "kind": "screen",
+      "name": "画像タブ画面",
+      "parent": null,
+      "bomRationale": "タブ単位の上位構成。画像閲覧+タグ付与の表示契約群の上位。",
+      "ebomCandidate": { "promoteAs": "上位構成(複数 E-BOM item の束ね)", "items": ["E-UI-GRID-022", "E-UI-TAGASSIGN-029", "E-UI-NODEGRAPH-025"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-REG-0001",
+      "uiId": "region.shell-nav",
+      "kind": "region",
+      "name": "シェルナビ",
+      "parent": "TMP-UI-SCR-0002",
+      "bomRationale": "ナビゲーション surface(tag-tab と共有)。タグタブ外=シェル所有のため trace 主体。",
+      "ebomCandidate": { "promoteAs": "既存 surface 部品(再昇格不要)", "items": ["E-UI-SHELL-021"], "confidence": "high", "note": "新規昇格ではなく既存 E-UI-SHELL-021 への trace。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0005",
+      "uiId": "region.collections",
+      "kind": "region",
+      "name": "コレクションペイン(左)",
+      "parent": "TMP-UI-SCR-0002",
+      "bomRationale": "コレクション選択の display surface。E-UI-SHELL-021『コレクション選択スコープ』に対応。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-SHELL-021"], "coreRefs": ["E-SCAN-005", "E-DB-010"], "confidence": "high", "decision": "候補: モックはコレクション行に パス表示+件数バッジ+276/64 折り畳み を持つ。既存スコープ(名前+画像数+スキャン中)に対する表示契約の精緻化。", "ecoImpact": "候補: E-UI-SHELL-021 のコレクション一覧 display contract に『相対パス表示・折り畳み(rail)』を追記するか要判断(UQ-I03)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0006",
+      "uiId": "region.browse",
+      "kind": "region",
+      "name": "ブラウズ領域(中央・主役)",
+      "parent": "TMP-UI-SCR-0002",
+      "bomRationale": "画像一覧+二軸ブラウズ+ツールバーの中核 surface。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SORT-004", "E-THUMB-020"], "confidence": "high", "note": "二軸ブラウズ(FS/view)とパンくず/チップは E-UI-GRID-022 の周辺に新概念を加える(UQ-I01/I04)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0007",
+      "uiId": "region.tag-edit",
+      "kind": "region",
+      "name": "タグ編集ペイン(右・モード時)",
+      "parent": "TMP-UI-SCR-0002",
+      "bomRationale": "タグ付与の文脈 surface。E-UI-TAGASSIGN-029 に直接対応。",
+      "ebomCandidate": { "promoteAs": "既存 surface 部品の改訂", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008", "E-UI-GRID-022"], "confidence": "high", "decision": "確定(2026-06-17 maintainer 承認・UQ-I02): 値入力をダイアログ→インライン。連番は別アクションで存置(UQ-I02b)。", "ecoImpact": "確定・ECO 起票待ち: E-UI-TAGASSIGN-029 の『numeric 固定値ダイアログ』をインライン値ピッカーへ改訂。連番付与は独立アクションとして保持(REQ-027 連番計算・原子バッチ維持)。" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-CMP-0020",
+      "uiId": "component.collection-row",
+      "kind": "component",
+      "name": "コレクション行カード",
+      "parent": "TMP-UI-REG-0005",
+      "bomRationale": "再利用される行カード部品。tag-tab ビュー行(CMP-0001)と同系の部品言語。",
+      "ebomCandidate": { "promoteAs": "再利用 surface 部品(行カード)", "items": ["E-UI-SHELL-021"], "designToken": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high", "controlPlan": "CP-UI-G1" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0021",
+      "uiId": "component.axis-selector",
+      "kind": "component",
+      "name": "表示軸セレクタ",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "二軸ブラウズの分岐源。view 軸ナビの宿主。E-UI-NODEGRAPH-025 の『画像タブ NodeGraph ナビ』想定と構造が異なる。",
+      "ebomCandidate": { "promoteAs": "既存改訂(軸セレクタ+チップへ)", "items": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "high", "decision": "確定(2026-06-17 maintainer 承認・UQ-I01): view 軸ナビを左 NodeGraph ツリー廃止 → 中央の軸セレクタ+チップ+パンくず。二軸対称が思想の核。", "ecoImpact": "確定・ECO 起票待ち(重大): E-UI-NODEGRAPH-025 を『タグタブ中央のビュー階層エディタ』に絞り、画像タブ左 NodeGraph ナビゲーションツリーを撤回。ECO-006/BL-001(画像タブ NodeGraph ナビのルート表示規律)は対象消滅で撤回。画像タブのビューナビは E-UI-GRID-022 周辺へ。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0022",
+      "uiId": "component.toolbar-button",
+      "kind": "component",
+      "name": "ツールバーボタン",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "セカンダリ操作ボタンのアトム。タグ編集トグルを含む。",
+      "ebomCandidate": { "promoteAs": "デザインシステム部品", "items": ["E-DESIGN-028"], "kbom": ["K-DESIGN"], "confidence": "high", "note": "整理/作業/⋯ は挙動未定(UQ-I07)で表示のみ。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0023",
+      "uiId": "component.sort-control",
+      "kind": "component",
+      "name": "ソートコントロール",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "列+方向のソート操作 surface。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SORT-004"], "requirementRefs": ["REQ-042"], "confidence": "high", "note": "フォルダ先頭固定の安定ソート。ソートなし時の方向無効を受入観点に。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0024",
+      "uiId": "component.layout-toggle",
+      "kind": "component",
+      "name": "グリッド/リスト切替",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "表示形式切替セグメント。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-GRID-022"], "requirementRefs": ["REQ-041"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0025",
+      "uiId": "component.breadcrumb",
+      "kind": "component",
+      "name": "パンくず",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "FS/view 両軸の『戻る』を統一する再利用部品。",
+      "ebomCandidate": { "promoteAs": "新規 surface 部品(再利用候補)", "items": ["E-UI-GRID-022"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium", "note": "FS フォルダ階層と view 階層の双方を辿る。既存 E-BOM に明示が薄い(UQ-I04)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0026",
+      "uiId": "component.filter-nav-chip",
+      "kind": "component",
+      "name": "タグチップ(絞り込み/ナビ)",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "二軸で意味が変わる多機能チップ。tag-tab の chip 部品言語(色トークン依存)を継承。",
+      "ebomCandidate": { "promoteAs": "デザインシステム連動 surface 部品", "items": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "designToken": ["E-DESIGN-028"], "coreRefs": ["E-EVAL-002", "E-VIEWSVC-009"], "kbom": ["K-DESIGN"], "confidence": "medium", "note": "view 軸ナビは E-UI-NODEGRAPH-025 のビュー階層解決を消費。FS 軸フィルタはフォルダ内タグ集計。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0027",
+      "uiId": "component.image-grid-card",
+      "kind": "component",
+      "name": "画像グリッドカード",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "グリッドセルの中核部品。E-UI-GRID-022/DC-GRID-001 の表示契約対象。",
+      "ebomCandidate": { "promoteAs": "display contract(セル) — 改訂", "items": ["E-UI-GRID-022"], "coreRefs": ["E-THUMB-020"], "designToken": ["E-DESIGN-028"], "confidence": "high", "controlPlan": "CP-DISPLAY-PARITY-022", "decision": "確定(2026-06-17 maintainer 承認・UQ-I05): グリッドセルはサムネ+名前のみ(サイズ除去)。サイズはリスト列で担保。閲覧時タグ色ドット追加。", "ecoImpact": "確定・ECO 起票待ち: DC-GRID-001(ECO-004 で復活させたグリッドセル size)を差し戻す。リスト列のサイズは維持。『過去是正の差し戻し』根拠を ECO に明記(tag-tab UQ-E1/E2 と同型)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0028",
+      "uiId": "component.image-list-row",
+      "kind": "component",
+      "name": "画像リスト行",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "リスト表示行(名前/サイズ/更新日)。選択行視覚。",
+      "ebomCandidate": { "promoteAs": "display contract(行)", "items": ["E-UI-GRID-022"], "confidence": "high", "controlPlan": "CP-UI-G2", "note": "選択行 淡青は GF-02『リスト行選択視覚は正』に整合。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0029",
+      "uiId": "component.empty-tag-note",
+      "kind": "component",
+      "name": "空タグ注記バー",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "FS 軸でタグ付き画像0の空状態。",
+      "ebomCandidate": { "promoteAs": "受入観点(空状態)", "items": ["E-UI-GRID-022"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0030",
+      "uiId": "component.tag-edit-panel",
+      "kind": "component",
+      "name": "タグ編集パネル(右)",
+      "parent": "TMP-UI-REG-0007",
+      "bomRationale": "タグ付与の主要 surface。E-UI-TAGASSIGN-029 のホスト。",
+      "ebomCandidate": { "promoteAs": "既存 surface 部品(改訂)", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-046", "REQ-026", "REQ-027"], "confidence": "high", "controlPlan": "CP-TAGUI-013" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0031",
+      "uiId": "component.panel-tabs",
+      "kind": "component",
+      "name": "パネルタブ(現在のタグ/タグ追加)",
+      "parent": "TMP-UI-REG-0007",
+      "bomRationale": "確認/追加の切替セグメント。",
+      "ebomCandidate": { "promoteAs": "trace のみ(パネル内部部品)", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0032",
+      "uiId": "component.current-tag-pill",
+      "kind": "component",
+      "name": "現在タグピル(削除付き)",
+      "parent": "TMP-UI-CMP-0030",
+      "bomRationale": "付与済みタグの可視化+削除。複数選択時は共通タグのみ。",
+      "ebomCandidate": { "promoteAs": "display contract(付与表現)", "items": ["E-UI-TAGASSIGN-029"], "designToken": ["E-DESIGN-028"], "readAcross": ["E-UI-TAGS-026"], "confidence": "high", "note": "DC-TAGPREVIEW-001(タグ作成プレビュー↔実付与 UI の表示一致)の実付与側。color-dot/chip 言語を共有。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0033",
+      "uiId": "component.add-tag-row",
+      "kind": "component",
+      "name": "タグ追加行(種別グループ内)",
+      "parent": "TMP-UI-CMP-0030",
+      "bomRationale": "タグ付与の入口行。種別でグルーピング。シンプル=即時/テキスト・数値=インライン展開。",
+      "ebomCandidate": { "promoteAs": "display contract / surface 部品", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008"], "readAcross": ["E-UI-TAGS-026"], "confidence": "high", "note": "種別と候補値は E-UI-TAGS-026/E-DOMAIN-001 の定義を消費。グループ見出し=種別チップ CMP-0004 再利用。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0034",
+      "uiId": "component.inline-text-picker",
+      "kind": "component",
+      "name": "インライン候補値ピッカー",
+      "parent": "TMP-UI-CMP-0033",
+      "bomRationale": "テキスト値付与(候補値チップ)。ポップアップ廃止のインライン展開。",
+      "ebomCandidate": { "promoteAs": "display contract(付与) — 改訂", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008"], "readAcross": ["E-UI-TAGS-026"], "confidence": "high", "decision": "確定(2026-06-17・UQ-I02): テキスト値入力をインライン候補値チップへ。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0035",
+      "uiId": "component.inline-number-picker",
+      "kind": "component",
+      "name": "インライン数値ピッカー",
+      "parent": "TMP-UI-CMP-0033",
+      "bomRationale": "数値値付与(範囲セル)。E-UI-TAGASSIGN-029 の『numeric 固定値/連番ダイアログ』の置換候補。",
+      "ebomCandidate": { "promoteAs": "display contract(付与) — 改訂", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-DOMAIN-001"], "readAcross": ["E-UI-TAGS-026"], "confidence": "high", "decision": "確定(2026-06-17・UQ-I02): numeric 固定値ダイアログをインライン範囲セルへ。連番は別アクションで存置(UQ-I02b)。", "ecoImpact": "確定・ECO 起票待ち: 固定値=インライン。連番付与は独立アクション(小ポップオーバー or インライン連番設定)として保持。REQ-027 連番計算は維持。" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-OCC-0011", "uiId": "component.image-grid-card.image", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0027", "name": "グリッドカード/画像",
+      "bomRationale": "出現(variant)。タグ色ドット/選択チェック。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-GRID-022"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0012", "uiId": "component.image-grid-card.folder", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0027", "name": "グリッドカード/フォルダ",
+      "bomRationale": "出現(variant)。FS 階層へ潜る入口。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-GRID-022"], "confidence": "medium", "note": "コレクション内サブフォルダの存在自体が UQ-I04。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0013", "uiId": "component.filter-nav-chip.filter", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0026", "name": "タグチップ/FS 絞り込み",
+      "bomRationale": "出現(variant)。記述的フィルタ(トグル)。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-GRID-022"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0014", "uiId": "component.filter-nav-chip.nav", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0026", "name": "タグチップ/ビュー ナビ",
+      "bomRationale": "出現(variant)。ビュー階層ナビ(潜る)。",
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-ACT-0040", "uiId": "action.collection.select", "kind": "action", "name": "コレクション選択", "parent": "TMP-UI-REG-0005",
+      "bomRationale": "業務操作(閲覧スコープ切替)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-SHELL-021"], "coreRefs": ["E-SCAN-005", "E-DB-010"], "requirementRefs": ["REQ-052", "REQ-053"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0041", "uiId": "action.sidebar.toggle", "kind": "action", "name": "サイドバー開閉", "parent": "TMP-UI-REG-0005",
+      "bomRationale": "UI 操作(ペイン幅 276/64)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-SHELL-021"], "confidence": "medium", "note": "ペイン折り畳み可否は UQ-I03。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0042", "uiId": "action.axis.switch", "kind": "action", "name": "表示軸切替", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(閲覧モデル切替)。二軸ブラウズの中核。",
+      "ebomCandidate": { "promoteAs": "仕様への接続(新概念)", "items": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium", "decision": "確定(2026-06-17・UQ-I01): view 軸ナビはチップ+パンくず(左ツリー廃止)。二軸切替の正式仕様化(表示軸概念)と FS サブフォルダ階層の扱いは UQ-I04 で継続。", "ecoImpact": "確定・ECO 起票待ち(UQ-I01 分): ナビ表現の改訂。表示軸概念の E-BOM 導入は UQ-I04 解決後。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0043", "uiId": "action.folder.drill", "kind": "action", "name": "フォルダへ潜る(FS)", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(OS フォルダ階層ナビ)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続(要確認)", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SCAN-005"], "confidence": "medium", "note": "コレクション内サブフォルダ階層の閲覧は既存 E-BOM に明示が薄い(UQ-I04)。INV-009 読み取り専用は維持。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0044", "uiId": "action.breadcrumb.navigate", "kind": "action", "name": "パンくず/ホームで戻る", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "UI 操作(階層を戻る)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-GRID-022"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0045", "uiId": "action.chip.filter", "kind": "action", "name": "FS タグチップで絞り込み", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(タグで一覧絞り込み)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-GRID-022"], "coreRefs": ["E-EVAL-002"], "requirementRefs": ["REQ-060"], "confidence": "medium" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0046", "uiId": "action.chip.nav-into", "kind": "action", "name": "ビューチップで潜る", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(ビュー階層ナビ)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009", "E-GRAPH-003"], "requirementRefs": ["REQ-060"], "confidence": "medium", "note": "E-UI-NODEGRAPH-025 のビュー階層を消費。ナビ表現がチップである点が乖離(UQ-I01)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0047", "uiId": "action.sort.set", "kind": "action", "name": "ソート列選択", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(並べ替え)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SORT-004"], "requirementRefs": ["REQ-042"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0048", "uiId": "action.sort.toggle-dir", "kind": "action", "name": "昇順/降順切替", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(ソート方向)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SORT-004"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0049", "uiId": "action.layout.set", "kind": "action", "name": "グリッド/リスト切替", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(表示形式)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-GRID-022"], "requirementRefs": ["REQ-041"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0050", "uiId": "action.edit.toggle", "kind": "action", "name": "タグ編集モード", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(閲覧⇄編集モード)。右ペイン+選択を有効化。",
+      "ebomCandidate": { "promoteAs": "仕様/要求への接続", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-UI-GRID-022"], "requirementRefs": ["REQ-046"], "controlPlan": "CP-TAGUI-013", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0051", "uiId": "action.image.select", "kind": "action", "name": "画像 単一選択", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(選択。付与対象の決定)。",
+      "ebomCandidate": { "promoteAs": "仕様/受入", "items": ["E-UI-GRID-022"], "requirementRefs": ["REQ-046"], "controlPlan": "CP-UI-G7", "confidence": "high", "note": "選択ロジックは ViewModel で unit 検査可能に(E-UI-GRID-022 INV)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0052", "uiId": "action.image.multi-select", "kind": "action", "name": "Ctrl/Cmd トグル選択", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(複数選択)。",
+      "ebomCandidate": { "promoteAs": "仕様/受入", "items": ["E-UI-GRID-022"], "requirementRefs": ["REQ-046"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0053", "uiId": "action.image.range-select", "kind": "action", "name": "Shift 連続選択(union)", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "業務操作(範囲選択)。E-UI-GRID-022 INV(union・置換しない)に直結。",
+      "ebomCandidate": { "promoteAs": "仕様/受入", "items": ["E-UI-GRID-022"], "requirementRefs": ["REQ-046"], "controlPlan": "CP-UI-G7", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0054", "uiId": "action.panel.switch-tab", "kind": "action", "name": "現在のタグ/タグ追加 切替", "parent": "TMP-UI-REG-0007",
+      "bomRationale": "UI 操作(パネルタブ)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0055", "uiId": "action.assign.add-simple", "kind": "action", "name": "シンプルタグ付与", "parent": "TMP-UI-REG-0007",
+      "bomRationale": "業務操作(タグ付与・原子バッチ)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求+受入", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-026", "REQ-027"], "controlPlan": "CP-TAGUI-013", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0056", "uiId": "action.assign.expand-value", "kind": "action", "name": "テキスト/数値行を展開", "parent": "TMP-UI-REG-0007",
+      "bomRationale": "UI 操作(インライン値ピッカー表示)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high", "decision": "確定(2026-06-17・UQ-I02): ダイアログでなくインライン展開。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0057", "uiId": "action.assign.set-text-value", "kind": "action", "name": "テキスト値を付与", "parent": "TMP-UI-CMP-0034",
+      "bomRationale": "業務操作(テキストタグ+値付与)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求+受入", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-026", "REQ-027"], "controlPlan": "CP-TAGUI-013", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0058", "uiId": "action.assign.set-number-value", "kind": "action", "name": "数値を付与", "parent": "TMP-UI-CMP-0035",
+      "bomRationale": "業務操作(数値タグ付与)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求+受入", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-DOMAIN-001", "E-TAGSVC-008"], "requirementRefs": ["REQ-026", "REQ-027"], "controlPlan": "CP-TAGUI-013", "confidence": "high", "note": "連番付与(REQ-027 連番計算)の動線がインラインに無い → UQ-I02b。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0059", "uiId": "action.assign.remove-tag", "kind": "action", "name": "現在タグを削除", "parent": "TMP-UI-CMP-0032",
+      "bomRationale": "業務操作(付与解除)。",
+      "ebomCandidate": { "promoteAs": "仕様/要求+受入", "items": ["E-UI-TAGASSIGN-029"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-026", "REQ-027"], "confidence": "high", "note": "モックは base タグ削除を emulate。base/付与の区別は要確認(UQ-I09)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0060", "uiId": "action.assign.search", "kind": "action", "name": "タグ追加検索", "parent": "TMP-UI-REG-0007",
+      "bomRationale": "検索操作(追加候補の絞り込み)。",
+      "ebomCandidate": { "promoteAs": "仕様への接続", "items": ["E-UI-TAGASSIGN-029"], "readAcross": ["E-UI-TAGS-026"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-INP-0020", "uiId": "input.assign.search", "kind": "input", "name": "タグ追加検索欄", "parent": "TMP-UI-REG-0007",
+      "bomRationale": "データ項目(検索クエリ)。",
+      "ebomCandidate": { "promoteAs": "trace のみ", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-STA-0023", "uiId": "state.image.selected", "kind": "state", "name": "画像選択中", "parent": "TMP-UI-CMP-0027",
+      "bomRationale": "受入観点(GF-02 選択視覚)。グリッド=枠+チェック / リスト=行淡青。",
+      "ebomCandidate": { "promoteAs": "受入観点/表示パリティ", "items": ["E-UI-GRID-022"], "controlPlan": "CP-UI-G2", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0024", "uiId": "state.edit.mode", "kind": "state", "name": "タグ編集モード", "parent": "TMP-UI-REG-0006",
+      "bomRationale": "受入観点(閲覧⇄編集の遷移)。",
+      "ebomCandidate": { "promoteAs": "受入観点", "items": ["E-UI-TAGASSIGN-029"], "controlPlan": "CP-TAGUI-013", "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0025", "uiId": "state.panel.empty", "kind": "state", "name": "編集・未選択", "parent": "TMP-UI-CMP-0030",
+      "bomRationale": "空状態の受入観点。",
+      "ebomCandidate": { "promoteAs": "受入観点(空状態)", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0026", "uiId": "state.panel.active", "kind": "state", "name": "編集・選択中", "parent": "TMP-UI-CMP-0030",
+      "bomRationale": "受入観点(選択枚数+編集 UI)。",
+      "ebomCandidate": { "promoteAs": "受入観点", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0029", "uiId": "state.current.empty", "kind": "state", "name": "現在タグなし(空状態)", "parent": "TMP-UI-REG-0007",
+      "bomRationale": "空状態の受入観点(単数=タグ0/複数=共通タグ0)。",
+      "ebomCandidate": { "promoteAs": "受入観点(空状態)", "items": ["E-UI-TAGASSIGN-029"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0030", "uiId": "state.fs.no-tagged-images", "kind": "state", "name": "フォルダにタグ付き画像なし", "parent": "TMP-UI-CMP-0029",
+      "bomRationale": "空状態の受入観点(チップ行の代替注記)。",
+      "ebomCandidate": { "promoteAs": "受入観点(空状態)", "items": ["E-UI-GRID-022"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0031", "uiId": "state.sort.none", "kind": "state", "name": "ソートなし", "parent": "TMP-UI-CMP-0023",
+      "bomRationale": "受入観点(方向ボタン無効)。",
+      "ebomCandidate": { "promoteAs": "受入観点", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SORT-004"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0033", "uiId": "state.multi-select.common-tags", "kind": "state", "name": "複数選択の共通タグ", "parent": "TMP-UI-CMP-0032",
+      "bomRationale": "受入観点(複数選択時は共通タグのみ表示・付与は全選択へ)。",
+      "ebomCandidate": { "promoteAs": "受入観点", "items": ["E-UI-TAGASSIGN-029"], "requirementRefs": ["REQ-027"], "confidence": "high" }
+    },
+
+    {
+      "tempPartNo": "TMP-UI-DOM-0020", "uiId": "domain.image", "kind": "domain", "name": "画像",
+      "bomRationale": "中核ドメイン(閲覧/付与の対象)。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-DB-010"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0021", "uiId": "domain.collection", "kind": "domain", "name": "コレクション",
+      "bomRationale": "物理フォルダ1:1の閲覧単位。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-SCAN-005", "E-DB-010"], "requirementRefs": ["REQ-052", "REQ-053"], "confidence": "high" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0022", "uiId": "domain.folder", "kind": "domain", "name": "フォルダ(FS階層)",
+      "bomRationale": "コレクション内のサブフォルダ階層。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル(要確認)", "items": ["E-DOMAIN-001"], "coreRefs": ["E-SCAN-005"], "confidence": "medium", "note": "既存 E-BOM での扱い未確認(UQ-I04)。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0023", "uiId": "domain.display-axis", "kind": "domain", "name": "表示軸",
+      "bomRationale": "FS/タグビューの2つの閲覧軸。新概念。",
+      "ebomCandidate": { "promoteAs": "ドメイン/仕様概念(新規)", "items": ["E-DOMAIN-001"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium", "note": "正式仕様化の要否は UQ-I01。" }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0024", "uiId": "domain.image-tagging", "kind": "domain", "name": "画像へのタグ付与",
+      "bomRationale": "単数/複数画像へのタグ付与・削除・共通タグ。",
+      "ebomCandidate": { "promoteAs": "ドメインモデル", "items": ["E-DOMAIN-001"], "coreRefs": ["E-TAGSVC-008"], "requirementRefs": ["REQ-026", "REQ-027", "REQ-046"], "confidence": "high" }
+    }
+  ],
+
+  "reusedFromTagTab": {
+    "note": "共有候補は tag-tab UI-BOM を再利用。画像タブで新規昇格しない。",
+    "items": [
+      { "tempPartNo": "TMP-UI-CMP-0004", "name": "種別チップ", "ebom": ["E-DESIGN-028"], "kbom": ["K-DESIGN"] },
+      { "tempPartNo": "TMP-UI-CMP-0005", "name": "カラードット", "ebom": ["E-DESIGN-028"], "kbom": ["K-DESIGN"] },
+      { "tempPartNo": "TMP-UI-DOM-0001", "name": "タグ", "ebom": ["E-DOMAIN-001"] },
+      { "tempPartNo": "TMP-UI-DOM-0002", "name": "タグ種別", "ebom": ["E-DOMAIN-001"] },
+      { "tempPartNo": "TMP-UI-DOM-0003", "name": "ビュー(視点)", "ebom": ["E-DOMAIN-001", "E-VIEWSVC-009"], "note": "画像タブが消費(view 軸)。" },
+      { "tempPartNo": "TMP-UI-DOM-0010", "name": "候補値", "ebom": ["E-DOMAIN-001"] },
+      { "tempPartNo": "TMP-UI-DOM-0011", "name": "数値範囲", "ebom": ["E-DOMAIN-001"] }
+    ]
+  },
+
+  "notModeledFromIr": {
+    "note": "ui-ir.json の以下は UI-BOM へ昇格しない(装飾/シェル外/低情報)。trace のみ ui-trace-map.json 参照。",
+    "tempPartNos": [
+      "TMP-UI-ACT-0061/0062/0063(整理/作業/⋯ — 挙動未定 UQ-I07・表示 trace)",
+      "TMP-UI-OCC-0010(コレクション rail — CMP-0020 の折り畳み出現・trace)",
+      "TMP-UI-STA-0020/0021/0022/0027/0028/0032(純 UI 表示状態・trace 保持)"
+    ]
+  }
+}

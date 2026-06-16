@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "schema": "ui-trace-map/candidate",
+    "product": "ViewPrism2",
+    "scope": "画像タブ (image tab)",
+    "extractedAt": "2026-06-17",
+    "note": "HTML locator(file + 記述子)→ UI-IR → UI-BOM → E-BOM 候補 の対応表。モックはインラインスタイル+テンプレート(sc-for/sc-if)+DCLogic state のため安定 CSS セレクタが無く、locator はデータバインド名/節ラベルで記述する。handling: bom=UI-BOM 昇格済 / trace=追跡のみ / nonBom=BOM 対象外。ebomItemRef は昇格『候補』であり確定ではない。",
+    "files": {
+      "M": "ViewPrismUI:資料/画像タブ/ViewPrism2 画像タブ.dc.html"
+    }
+  },
+
+  "entries": [
+    { "file": "M", "locator": "ルート .dc 全体(画像タブ)", "uiIr": "TMP-UI-SCR-0002", "uiBom": "TMP-UI-SCR-0002", "ebomItemRef": ["E-UI-GRID-022", "E-UI-TAGASSIGN-029", "E-UI-NODEGRAPH-025"], "handling": "bom" },
+
+    { "file": "M", "locator": "direction band(同じ画像を…ひとつの操作で、ふたつの視点)+ interaction hints", "uiIr": "unmodeled / designIntent", "uiBom": null, "ebomItemRef": ["E-DESIGN-028"], "handling": "designIntent", "note": "原則3。design-intent.md へ抽出。nonBom にしない。" },
+    { "file": "M", "locator": "titlebar(ロゴ+ViewPrism 2+window controls)", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
+    { "file": "M", "locator": "menu strip(File/Edit/View/Window/Help)", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
+    { "file": "M", "locator": "nav bar tabs(タグ/画像[active]/作業)", "uiIr": "TMP-UI-ACT-0029", "uiBom": "TMP-UI-ACT-0029", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
+    { "file": "M", "locator": "nav bar 検索(画像・ファイルを検索 ⌘K)", "uiIr": "unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "nonBom", "note": "tag-tab UQ-E4 整合で不採用方針。画像タブ再検討は UQ-I08。" },
+    { "file": "M", "locator": "nav bar 設定", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
+
+    { "file": "M", "locator": "SIDEBAR コンテナ(sidebarStyle 276/64)", "uiIr": "TMP-UI-REG-0005 / TMP-UI-STA-0020", "uiBom": "TMP-UI-REG-0005", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "bom" },
+    { "file": "M", "locator": "sc-if collapsed > rail(toggleSidebar / + / sc-for collections railStyle)", "uiIr": "TMP-UI-OCC-0010 / TMP-UI-ACT-0041", "uiBom": "TMP-UI-ACT-0041", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace", "note": "折り畳み rail。collection-row の出現。" },
+    { "file": "M", "locator": "sc-if expanded > header(コレクション + 追加 + 畳む«)", "uiIr": "TMP-UI-REG-0005 / TMP-UI-ACT-0041", "uiBom": "TMP-UI-REG-0005", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "bom" },
+    { "file": "M", "locator": "sc-for collections > c.rowStyle(行カード: icon+name+path+count)", "uiIr": "TMP-UI-CMP-0020 / TMP-UI-STA-0022", "uiBom": "TMP-UI-CMP-0020", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "bom", "note": "onClick=c.select → TMP-UI-ACT-0040。path 表示はモック追加(UQ-I03)。" },
+
+    { "file": "M", "locator": "MAIN > toolbar コンテナ", "uiIr": "TMP-UI-REG-0006", "uiBom": "TMP-UI-REG-0006", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom" },
+    { "file": "M", "locator": "toolbar 表示(axis: toggleAxisMenu / axisLabel / sc-if axisMenuOpen > axisOptions)", "uiIr": "TMP-UI-CMP-0021 / TMP-UI-ACT-0042 / TMP-UI-STA-0021", "uiBom": "TMP-UI-CMP-0021", "ebomItemRef": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "handling": "bom", "note": "決定候補 UQ-I01: view 軸ナビをチップ化(左ツリーでない)。E-UI-NODEGRAPH-025 改訂候補。" },
+    { "file": "M", "locator": "toolbar action(toggleEdit / 整理 / 作業 / ⋯)", "uiIr": "TMP-UI-CMP-0022 / TMP-UI-ACT-0050 / TMP-UI-ACT-0061/0062/0063", "uiBom": "TMP-UI-ACT-0050", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom", "note": "整理/作業/⋯ は挙動未定(UQ-I07)= trace。タグ編集=bom。" },
+    { "file": "M", "locator": "toolbar 右 sort(toggleSortMenu / sortLabel / toggleSortDir / sc-if sortMenuOpen)", "uiIr": "TMP-UI-CMP-0023 / TMP-UI-ACT-0047 / TMP-UI-ACT-0048 / TMP-UI-STA-0031", "uiBom": "TMP-UI-CMP-0023", "ebomItemRef": ["E-UI-GRID-022", "E-SORT-004"], "handling": "bom" },
+    { "file": "M", "locator": "toolbar 右 layout(setGrid / setList segBtn)", "uiIr": "TMP-UI-CMP-0024 / TMP-UI-ACT-0049", "uiBom": "TMP-UI-CMP-0024", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom" },
+
+    { "file": "M", "locator": "breadcrumb(goHome / sc-for crumbs cr.go / countLabel)", "uiIr": "TMP-UI-CMP-0025 / TMP-UI-ACT-0044", "uiBom": "TMP-UI-CMP-0025", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom", "note": "FS/view 両軸の戻る操作を統一。" },
+
+    { "file": "M", "locator": "sc-if showChips > chip row(chipHintLabel + sc-for chips)", "uiIr": "TMP-UI-CMP-0026", "uiBom": "TMP-UI-CMP-0026", "ebomItemRef": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "handling": "bom" },
+    { "file": "M", "locator": "chip(FS: __clear + def chips / ch.onClick=tagFilter toggle)", "uiIr": "TMP-UI-OCC-0013 / TMP-UI-ACT-0045 / TMP-UI-STA-0032", "uiBom": "TMP-UI-OCC-0013", "ebomItemRef": ["E-UI-GRID-022", "E-EVAL-002"], "handling": "bom", "note": "chipMode=fs。記述的フィルタ。" },
+    { "file": "M", "locator": "chip(view: nav into / ch.isNav › / samplealbum・評価1-5)", "uiIr": "TMP-UI-OCC-0014 / TMP-UI-ACT-0046", "uiBom": "TMP-UI-OCC-0014", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-VIEWSVC-009"], "handling": "bom", "note": "chipMode=view。階層ナビ。現モックは samplealbum のみ有効。" },
+    { "file": "M", "locator": "sc-if showEmptyTagNote(このフォルダにはタグ付き画像がありません)", "uiIr": "TMP-UI-CMP-0029 / TMP-UI-STA-0030", "uiBom": "TMP-UI-CMP-0029", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom" },
+
+    { "file": "M", "locator": "body sc-if isGrid > grid(sc-for items it.cardStyle)", "uiIr": "TMP-UI-CMP-0027 / TMP-UI-OCC-0011/0012", "uiBom": "TMP-UI-CMP-0027", "ebomItemRef": ["E-UI-GRID-022", "E-THUMB-020"], "handling": "bom", "note": "決定候補 UQ-I05: グリッドセルにサイズを出さない(DC-GRID-001 と矛盾)。" },
+    { "file": "M", "locator": "grid card sc-if it.isFolder(フォルダアイコン)", "uiIr": "TMP-UI-OCC-0012 / TMP-UI-ACT-0043", "uiBom": "TMP-UI-OCC-0012", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom", "note": "onClick=fsPath push(FS 潜る)。" },
+    { "file": "M", "locator": "grid card sc-if it.selectable(checkStyle/selected)", "uiIr": "TMP-UI-OCC-0011 / TMP-UI-STA-0023 / TMP-UI-ACT-0051/0052/0053", "uiBom": "TMP-UI-OCC-0011", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom", "note": "編集モードのみ。GF-02 セル枠+チェック。" },
+    { "file": "M", "locator": "grid card sc-if it.hasTagDots(左下 tagDots)", "uiIr": "TMP-UI-CMP-0005 / TMP-UI-OCC-0011", "uiBom": "TMP-UI-CMP-0005", "ebomItemRef": ["E-DESIGN-028"], "handling": "trace", "note": "閲覧時のタグ色ドット(最大3)。color-dot 再利用。" },
+    { "file": "M", "locator": "body sc-if isList > list(列ヘッダ + sc-for items it.rowStyle)", "uiIr": "TMP-UI-CMP-0028 / TMP-UI-STA-0023", "uiBom": "TMP-UI-CMP-0028", "ebomItemRef": ["E-UI-GRID-022"], "handling": "bom", "note": "名前/サイズ/更新日。フォルダは — 表示。選択行 淡青(GF-02 リスト行視覚は正)。" },
+
+    { "file": "M", "locator": "sc-if editMode > TAG EDIT PANEL コンテナ(344px)", "uiIr": "TMP-UI-REG-0007 / TMP-UI-CMP-0030 / TMP-UI-STA-0024", "uiBom": "TMP-UI-CMP-0030", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom" },
+    { "file": "M", "locator": "panel header(タグ編集 + sc-if hasSelection selectionLabel pill + × toggleEdit)", "uiIr": "TMP-UI-CMP-0030 / TMP-UI-STA-0026", "uiBom": "TMP-UI-CMP-0030", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom" },
+    { "file": "M", "locator": "sc-if panelEmpty(画像を選択ガイド / Ctrl・Shift 説明)", "uiIr": "TMP-UI-STA-0025", "uiBom": "TMP-UI-STA-0025", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom" },
+    { "file": "M", "locator": "sc-if panelActive > tabs(tabCurrent / tabAdd)", "uiIr": "TMP-UI-CMP-0031 / TMP-UI-ACT-0054", "uiBom": "TMP-UI-CMP-0031", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "trace" },
+
+    { "file": "M", "locator": "sc-if onCurrent > sc-if hasCurrentTags(currentNote + sc-for currentTags t.pillStyle + t.remove)", "uiIr": "TMP-UI-CMP-0032 / TMP-UI-ACT-0059 / TMP-UI-STA-0033", "uiBom": "TMP-UI-CMP-0032", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom", "note": "複数選択=共通タグのみ(currentNote 切替)。" },
+    { "file": "M", "locator": "sc-if onCurrent > sc-if noCurrentTags(noCurrentLabel 空状態)", "uiIr": "TMP-UI-STA-0029", "uiBom": "TMP-UI-STA-0029", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom", "note": "単数=まだタグがありません / 複数=共通のタグはありません。" },
+
+    { "file": "M", "locator": "sc-if onAdd > search(addQuery / onAddSearch)", "uiIr": "TMP-UI-INP-0020 / TMP-UI-ACT-0060", "uiBom": "TMP-UI-ACT-0060", "ebomItemRef": ["E-UI-TAGASSIGN-029"], "handling": "bom" },
+    { "file": "M", "locator": "sc-if onAdd > sc-for addGroups g(g.labelStyle 種別チップ + g.hint)", "uiIr": "TMP-UI-CMP-0004", "uiBom": "TMP-UI-CMP-0004", "ebomItemRef": ["E-DESIGN-028"], "handling": "trace", "note": "種別グループ見出し=種別チップ再利用(シンプル灰/テキスト青/数値緑)。" },
+    { "file": "M", "locator": "addGroups > sc-for g.tags t(t.rowStyle: dot+name+ added✓/caret/plus)", "uiIr": "TMP-UI-CMP-0033 / TMP-UI-ACT-0055/0056 / TMP-UI-STA-0027/0028", "uiBom": "TMP-UI-CMP-0033", "ebomItemRef": ["E-UI-TAGASSIGN-029", "E-TAGSVC-008"], "handling": "bom", "note": "シンプル=onClick addTag(即時)、テキスト/数値=expandTag。" },
+    { "file": "M", "locator": "sc-if t.showText > inline(候補値から選んで付与 / sc-for valueChips v.onClick)", "uiIr": "TMP-UI-CMP-0034 / TMP-UI-ACT-0057", "uiBom": "TMP-UI-CMP-0034", "ebomItemRef": ["E-UI-TAGASSIGN-029", "E-TAGSVC-008"], "handling": "bom", "note": "決定候補 UQ-I02: ポップアップ廃止インライン。候補値は E-UI-TAGS-026 定義を消費。" },
+    { "file": "M", "locator": "sc-if t.showNum > inline(値を選んで付与 range / numCurrent ★ / sc-for numCells n.onClick)", "uiIr": "TMP-UI-CMP-0035 / TMP-UI-ACT-0058", "uiBom": "TMP-UI-CMP-0035", "ebomItemRef": ["E-UI-TAGASSIGN-029", "E-DOMAIN-001"], "handling": "bom", "note": "決定候補 UQ-I02: numeric 固定値ダイアログ→インラインセル。連番付与の動線が無い(UQ-I02b)。" },
+
+    { "file": "M", "locator": "末尾 注記(※プレビュー用ダミー画像/ビューアー無効化)", "uiIr": "unmodeled", "uiBom": null, "ebomItemRef": [], "handling": "nonBom", "note": "ビューアー起動=スコープ外(E-UI-VIEWER-024)。" }
+  ]
+}
