@@ -244,6 +244,15 @@
                                       </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                   </ItemsControl>
+                                  <!-- 連番別アクション(UQ-I02b): 固定値はセル、連番はダイアログ経由で別途付与 -->
+                                  <Button Classes="toolbarBtn" HorizontalAlignment="Left" Height="32" MinHeight="32" Padding="11,0"
+                                          Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).ApplySequentialCommand}"
+                                          CommandParameter="{Binding Id}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                      <PathIcon Data="{StaticResource SortIcon}" Width="14" Height="14" />
+                                      <TextBlock Text="連番で付与…" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                  </Button>
                                 </StackPanel>
                               </Border>
                             </StackPanel>

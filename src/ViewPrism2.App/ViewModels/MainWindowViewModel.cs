@@ -79,7 +79,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Tagging = tagging;
 
         // M3: 画像タブ実 VM(モック準拠 surface)。注入済みリポジトリ/サービスを共有(ctor 不変)。
-        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator);
+        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, windows);
 
         AllImagesItem = new ViewListItemViewModel(null, localization.T("view.allImages"));
         Browser.SelectionChanged += async (_, _) => await OnSelectionChangedAsync();

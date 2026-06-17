@@ -7,6 +7,7 @@ using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ViewPrism2.App.Services;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
@@ -35,6 +36,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly NodeGraphBuilder _graphBuilder;
     private readonly PathConditionConverter _pathConverter;
     private readonly ConditionEvaluator _evaluator;
+    private readonly IWindowService _windows;
 
     // ---- ロード済みデータ ----
     private List<SyncFolder> _collections = new();
@@ -78,7 +80,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         ViewService views,
         NodeGraphBuilder graphBuilder,
         PathConditionConverter pathConverter,
-        ConditionEvaluator evaluator)
+        ConditionEvaluator evaluator,
+        IWindowService windows)
     {
         _folders = folders;
         _images = images;
@@ -89,6 +92,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _graphBuilder = graphBuilder;
         _pathConverter = pathConverter;
         _evaluator = evaluator;
+        _windows = windows;
     }
 
     // ---------------- 色ヘルパ ----------------
@@ -716,6 +720,23 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     [RelayCommand]
     private async Task ApplyRating(NumCellVM cell) => await ApplyTagAsync(cell.TagId, cell.Label);
+
+    /// <summary>連番別アクション(UQ-I02b): NumericValueDialog で固定値/連番を生成し選択画像へ原子バッチ付与。</summary>
+    [RelayCommand]
+    private async Task ApplySequential(string tagId)
+    {
+        if (_selected.Count == 0) return;
+        if (!_tagById.TryGetValue(tagId, out var tag) || tag.Type != TagType.Numeric) return;
+        await EnsureSettingsAsync(tagId);
+        var settings = _numSettings.GetValueOrDefault(tagId);
+        var values = await _windows.ShowNumericValueDialogAsync(tag, settings, _selected.Count).ConfigureAwait(true);
+        if (values is null || values.Count != _selected.Count) return; // キャンセル or 数不一致
+        var assignments = new List<(string ImageId, string? Value)>(_selected.Count);
+        for (int i = 0; i < _selected.Count; i++)
+            assignments.Add((_selected[i], values[i]));
+        var result = await _tagService.TagImagesWithValuesAsync(tagId, assignments).ConfigureAwait(true);
+        if (result.IsSuccess) await ReloadTagsAsync();
+    }
 
     private async Task ApplyTagAsync(string tagId, string? value)
     {
