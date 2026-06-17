@@ -126,6 +126,11 @@
       <DockPanel>
         <Button DockPanel.Dock="Right" Classes="tab" Content="{Binding Loc[navigation.settings]}"
                 Command="{Binding OpenSettingsCommand}" Margin="0,0,8,0" />
+        <!-- M2 scaffold: 画像タブ harness ⇄ 原典 surface トグル(画像タブ表示時のみ。M3 で撤去)。 -->
+        <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowImageTabPreview}" Content="harness"
+                  VerticalAlignment="Center" Margin="0,0,12,0"
+                  IsVisible="{Binding IsImagesTabSelected}" />
+
         <StackPanel Orientation="Horizontal">
           <Button Classes="tab" Classes.selected="{Binding IsTagsTabSelected}"
                   Content="{Binding Loc[navigation.tags]}" Command="{Binding ShowTagsTabCommand}" />
@@ -147,8 +152,12 @@
       <v:TagsTabView DataContext="{Binding TagsTab}"
                      IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsTagsTabSelected}" />
 
-      <!-- ===== 画像タブ ===== -->
-      <Grid ColumnDefinitions="240,1,*,1,280" IsVisible="{Binding IsImagesTabSelected}">
+      <!-- ===== 画像タブ(M2 golden ハーネス: モック準拠の作り直し。dev トグル ON で表示) ===== -->
+      <v:ImageTabView DataContext="{Binding ImageTabPreview}"
+                      IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ShowImageTabHarness}" />
+
+      <!-- ===== 画像タブ(原典 surface: 配線済み。harness OFF 時のみ表示。M3 で作り直し統合) ===== -->
+      <Grid ColumnDefinitions="240,1,*,1,280" IsVisible="{Binding ShowImageTabLegacy}">
         <!-- 左: 同期フォルダ(コレクション)+ビュー(お気に入り/最近)+NodeGraph+「全画像」固定入口 -->
         <DockPanel Grid.Column="0" Background="{StaticResource PanelBrush}">
           <StackPanel DockPanel.Dock="Top">

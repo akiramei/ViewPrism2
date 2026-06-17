@@ -1,0 +1,558 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ViewPrism2.App.ViewModels"
+             xmlns:media="clr-namespace:Avalonia.Media;assembly=Avalonia.Base"
+             x:Class="ViewPrism2.App.Views.ImageTabView"
+             x:DataType="vm:ImageTabSeedViewModel">
+  <!-- 画像タブ製造(M2)golden ハーネス。3 ペイン content(左=コレクション/中央=ブラウズ/右=タグ編集モード時)。
+       部品は Styles/Components.axaml(M1)。シェル(titlebar/menu/navbar/⌘K)はシェル所有のため含めない。
+       タグ色依存の塗りは ImageTabSeedViewModel が IBrush で供給(Background/BorderBrush/Foreground バインド)。 -->
+
+  <DockPanel LastChildFill="True" Background="{StaticResource AppBackgroundBrush}">
+
+    <!-- ===== 左: コレクション(折り畳み 64 / 展開 276) ===== -->
+    <Border DockPanel.Dock="Left" Width="{Binding SidebarWidth}"
+            Background="{StaticResource AppBackgroundBrush}"
+            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,1,0" ClipToBounds="True">
+      <Panel>
+        <!-- 折り畳み: 縦アイコン列 -->
+        <StackPanel IsVisible="{Binding Collapsed}" HorizontalAlignment="Center" Spacing="10" Margin="0,12">
+          <Button Classes="railIcon" Command="{Binding ToggleSidebarCommand}">
+            <PathIcon Data="{StaticResource ChevronRightIcon}" />
+          </Button>
+          <Border Width="30" Height="1" Background="{StaticResource CardBorderBrush}" Margin="0,2" />
+          <ItemsControl ItemsSource="{Binding Collections}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CollectionRowVM">
+                <Button Classes="railIcon" Classes.selected="{Binding IsSelected}" ToolTip.Tip="{Binding Name}"
+                        PointerPressed="OnCollectionPressed">
+                  <PathIcon Data="{StaticResource FolderIcon}" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- 展開: ヘッダ + コレクション行 -->
+        <DockPanel IsVisible="{Binding Expanded}">
+          <Border DockPanel.Dock="Top" MinHeight="58" Padding="18,0,16,0"
+                  BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
+            <DockPanel VerticalAlignment="Center">
+              <Button DockPanel.Dock="Right" Classes="crumbHome" Command="{Binding ToggleSidebarCommand}">
+                <PathIcon Data="{StaticResource ChevronLeftIcon}" />
+              </Button>
+              <TextBlock Text="コレクション" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+          <ScrollViewer Padding="12">
+            <ItemsControl ItemsSource="{Binding Collections}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CollectionRowVM">
+                  <Border Classes="navCard" Classes.selected="{Binding IsSelected}" MinHeight="52"
+                          PointerPressed="OnCollectionPressed" ToolTip.Tip="{Binding Path}">
+                    <DockPanel>
+                      <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CountText}" />
+                      </Border>
+                      <Border DockPanel.Dock="Left" Classes="leadIcon" Width="34" Height="34" Margin="0,0,11,0">
+                        <PathIcon Data="{StaticResource FolderIcon}" />
+                      </Border>
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Medium"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                        <TextBlock Text="{Binding Path}" FontSize="11" Foreground="{StaticResource FaintTextBrush}"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                      </StackPanel>
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Panel>
+    </Border>
+
+    <!-- ===== 右: タグ編集パネル(編集モード時のみ) ===== -->
+    <Border DockPanel.Dock="Right" Classes="editPanel" Width="344" IsVisible="{Binding EditMode}">
+      <DockPanel>
+        <!-- ヘッダ -->
+        <Border DockPanel.Dock="Top" Classes="editPanelHeader">
+          <DockPanel VerticalAlignment="Center">
+            <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding ToggleEditCommand}">
+              <PathIcon Data="{StaticResource CloseIcon}" />
+            </Button>
+            <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+              <PathIcon Data="{StaticResource PencilIcon}" Width="17" Height="17" Foreground="{StaticResource AccentBrush}" />
+              <TextBlock Text="タグ編集" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <Border Classes="accentPill" IsVisible="{Binding HasSelection}">
+                <TextBlock Text="{Binding SelectionLabel}" />
+              </Border>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- 空(選択なし) -->
+        <StackPanel IsVisible="{Binding PanelEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Spacing="14" Margin="30">
+          <Border Width="58" Height="58" CornerRadius="15" Background="{StaticResource BadgeBg}"
+                  HorizontalAlignment="Center">
+            <PathIcon Data="{StaticResource CheckIcon}" Width="26" Height="26" Foreground="{StaticResource FaintTextBrush}"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="画像を選択" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource ChipSimpleFg}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="タグ付けする画像をグリッドから選んでください。Ctrl＝複数選択 / Shift＝連続選択"
+                     FontSize="12.5" Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap"
+                     TextAlignment="Center" MaxWidth="220" />
+        </StackPanel>
+
+        <!-- アクティブ(選択あり) -->
+        <DockPanel IsVisible="{Binding PanelActive}">
+          <!-- タブ -->
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*" Margin="14,10,14,0">
+            <Button Grid.Column="0" Classes="panelTab" Classes.active="{Binding OnCurrentTab}"
+                    Content="現在のタグ" Command="{Binding TabCurrentCommand}" />
+            <Button Grid.Column="1" Classes="panelTab" Classes.active="{Binding OnAddTab}"
+                    Content="タグ追加" Command="{Binding TabAddCommand}" />
+          </Grid>
+          <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource CardBorderBrush}" />
+
+          <!-- 現在のタグ -->
+          <ScrollViewer IsVisible="{Binding OnCurrentTab}" Padding="16">
+            <StackPanel>
+              <StackPanel IsVisible="{Binding HasCurrentTags}">
+                <TextBlock Text="{Binding CurrentNote}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}"
+                           Margin="0,0,0,11" />
+                <ItemsControl ItemsSource="{Binding CurrentTags}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CurrentTagVM">
+                      <Border Height="30" Padding="11,0,6,0" CornerRadius="9" BorderThickness="1"
+                              Background="{Binding PillBackground}" BorderBrush="{Binding PillBorderBrush}"
+                              Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                          <Ellipse Width="8" Height="8" Fill="{Binding DotBrush}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Label}" FontSize="12.5" FontWeight="SemiBold"
+                                     Foreground="{Binding PillForeground}" VerticalAlignment="Center" />
+                          <Button Classes="iconBtn" Width="18" Height="18"
+                                  Command="{Binding $parent[UserControl].((vm:ImageTabSeedViewModel)DataContext).RemoveCurrentTagCommand}"
+                                  CommandParameter="{Binding}">
+                            <PathIcon Data="{StaticResource CloseIcon}" Width="11" Height="11" />
+                          </Button>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <StackPanel IsVisible="{Binding NoCurrentTags}" HorizontalAlignment="Center" Spacing="10" Margin="10,32">
+                <PathIcon Data="{StaticResource TagIcon}" Width="28" Height="28" Foreground="{StaticResource FaintTextBrush}"
+                          HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding NoCurrentLabel}" FontSize="12.5" Foreground="{StaticResource FaintTextBrush}"
+                           TextAlignment="Center" TextWrapping="Wrap" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- タグ追加 -->
+          <ScrollViewer IsVisible="{Binding OnAddTab}" Padding="16,14,16,20">
+            <StackPanel>
+              <Border Background="{StaticResource BadgeBg}" CornerRadius="10" Height="40" Padding="12,0" Margin="0,0,0,14">
+                <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />
+                  <TextBox Text="" PlaceholderText="タグを検索…" BorderThickness="0" Background="Transparent"
+                           VerticalAlignment="Center" Padding="0" Width="240" />
+                </StackPanel>
+              </Border>
+              <ItemsControl ItemsSource="{Binding AddGroups}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AddGroupVM">
+                    <StackPanel Margin="0,0,0,16">
+                      <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,9">
+                        <Border Background="{Binding LabelBackground}" CornerRadius="6" Padding="9,3" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold" Foreground="{Binding LabelForeground}" />
+                        </Border>
+                        <TextBlock Text="{Binding Hint}" FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <ItemsControl ItemsSource="{Binding Tags}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:AddRowVM">
+                            <StackPanel Margin="0,0,0,6">
+                              <Border Classes="tagAddRow" Classes.added="{Binding Added}"
+                                      Background="{Binding RowBackground}" BorderBrush="{Binding RowBorderBrush}"
+                                      PointerPressed="OnAddRowPressed">
+                                <DockPanel VerticalAlignment="Center">
+                                  <Panel DockPanel.Dock="Right" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="3" IsVisible="{Binding Added}">
+                                      <PathIcon Data="{StaticResource CheckIcon}" Width="13" Height="13"
+                                                Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
+                                      <TextBlock Classes="addedBadge" Text="追加済" />
+                                    </StackPanel>
+                                    <PathIcon Classes="addAffordance" Data="{StaticResource ChevronDownIcon}"
+                                              IsVisible="{Binding ShowCaret}" RenderTransformOrigin="50%,50%">
+                                      <PathIcon.RenderTransform>
+                                        <RotateTransform Angle="{Binding CaretAngle}" />
+                                      </PathIcon.RenderTransform>
+                                    </PathIcon>
+                                    <PathIcon Classes="addAffordance" Data="{StaticResource PlusIcon}" IsVisible="{Binding Plain}" />
+                                  </Panel>
+                                  <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Ellipse Width="9" Height="9" Fill="{Binding DotBrush}" Opacity="{Binding DotOpacity}"
+                                             VerticalAlignment="Center" />
+                                    <TextBlock Classes="addName" Text="{Binding Name}" />
+                                  </StackPanel>
+                                </DockPanel>
+                              </Border>
+
+                              <!-- インライン候補値(テキスト型) -->
+                              <Border Classes="inlinePicker" IsVisible="{Binding ShowText}">
+                                <StackPanel Spacing="8">
+                                  <TextBlock Classes="pickerHint" Text="候補値から選んで付与" />
+                                  <ItemsControl ItemsSource="{Binding ValueChips}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                      <DataTemplate x:DataType="vm:ValueChipVM">
+                                        <Border Height="30" Padding="13,0" CornerRadius="9" BorderThickness="1"
+                                                Background="{Binding Background}" BorderBrush="{Binding BorderBrush}"
+                                                Margin="0,0,7,7" PointerPressed="OnValueChipPressed">
+                                          <TextBlock Text="{Binding Label}" FontSize="12.5" FontWeight="SemiBold"
+                                                     Foreground="{Binding Foreground}" VerticalAlignment="Center" />
+                                        </Border>
+                                      </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                  </ItemsControl>
+                                </StackPanel>
+                              </Border>
+
+                              <!-- インライン数値セル(数値型) -->
+                              <Border Classes="inlinePicker" IsVisible="{Binding ShowNum}">
+                                <StackPanel Spacing="9">
+                                  <DockPanel>
+                                    <TextBlock Classes="numCurrent" DockPanel.Dock="Right" Text="{Binding NumCurrent}" />
+                                    <TextBlock Classes="pickerHint" Text="{Binding NumRange, StringFormat='値を選んで付与（{0}）'}" />
+                                  </DockPanel>
+                                  <ItemsControl ItemsSource="{Binding NumCells}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                      <DataTemplate x:DataType="vm:NumCellVM">
+                                        <Border Classes="numCell" Background="{Binding Background}" BorderBrush="{Binding BorderBrush}"
+                                                Margin="3,0" PointerPressed="OnNumCellPressed">
+                                          <TextBlock Text="{Binding Label}" Foreground="{Binding Foreground}" />
+                                        </Border>
+                                      </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                  </ItemsControl>
+                                </StackPanel>
+                              </Border>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- ===== 中央: ツールバー + パンくず + チップ + 本体 ===== -->
+    <DockPanel>
+
+      <!-- ツールバー -->
+      <Border DockPanel.Dock="Top" MinHeight="60" Padding="18,0"
+              BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
+        <DockPanel VerticalAlignment="Center">
+          <!-- 右クラスタ: ソート + レイアウト -->
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Panel>
+                <Button x:Name="SortTrigger" Classes="toolbarBtn" Command="{Binding ToggleSortMenuCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource SortIcon}" Foreground="{StaticResource FaintTextBrush}" />
+                    <TextBlock Text="{Binding SortLabel}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
+                  </StackPanel>
+                </Button>
+                <Popup PlacementTarget="{Binding #SortTrigger}" Placement="BottomEdgeAlignedRight"
+                       VerticalOffset="6" IsOpen="{Binding SortMenuOpen}" IsLightDismissEnabled="True"
+                       Closed="OnMenuClosed">
+                  <Border Classes="popupMenu" Width="180">
+                    <StackPanel>
+                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="">
+                        <DockPanel>
+                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortNoneActive}" />
+                          <TextBlock Text="クリア" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </DockPanel>
+                      </Button>
+                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="name">
+                        <DockPanel>
+                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortNameActive}" />
+                          <TextBlock Text="名前" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </DockPanel>
+                      </Button>
+                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="date">
+                        <DockPanel>
+                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortDateActive}" />
+                          <TextBlock Text="更新日" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </DockPanel>
+                      </Button>
+                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="size">
+                        <DockPanel>
+                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortSizeActive}" />
+                          <TextBlock Text="サイズ" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </DockPanel>
+                      </Button>
+                    </StackPanel>
+                  </Border>
+                </Popup>
+              </Panel>
+              <Button Classes="sortDirBtn" IsEnabled="{Binding SortEnabled}" Command="{Binding ToggleSortDirCommand}"
+                      ToolTip.Tip="昇順 / 降順">
+                <PathIcon Data="{StaticResource ArrowUpIcon}" RenderTransformOrigin="50%,50%">
+                  <PathIcon.RenderTransform>
+                    <RotateTransform Angle="{Binding SortArrowAngle}" />
+                  </PathIcon.RenderTransform>
+                </PathIcon>
+              </Button>
+            </StackPanel>
+            <Border Classes="segmented">
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="segBtn" Classes.active="{Binding IsGrid}" Command="{Binding SetGridCommand}" ToolTip.Tip="グリッド">
+                  <PathIcon Data="{StaticResource GridIcon}" />
+                </Button>
+                <Button Classes="segBtn" Classes.active="{Binding IsList}" Command="{Binding SetListCommand}" ToolTip.Tip="リスト">
+                  <PathIcon Data="{StaticResource ViewListIcon}" />
+                </Button>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- 左: 表示軸 + アクション -->
+          <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="表示" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource FaintTextBrush}"
+                         VerticalAlignment="Center" />
+              <Panel>
+                <Button x:Name="AxisTrigger" Classes="toolbarBtn" Padding="12,0" Command="{Binding ToggleAxisMenuCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                    <Border Classes="axisIcon" Classes.view="{Binding IsViewAxis}">
+                      <Panel>
+                        <PathIcon Data="{StaticResource FolderIcon}" IsVisible="{Binding !IsViewAxis}" />
+                        <PathIcon Data="{StaticResource TagIcon}" IsVisible="{Binding IsViewAxis}" />
+                      </Panel>
+                    </Border>
+                    <TextBlock Text="{Binding AxisLabel}" FontSize="13.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                    <PathIcon Data="{StaticResource ChevronDownIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />
+                  </StackPanel>
+                </Button>
+                <Popup PlacementTarget="{Binding #AxisTrigger}" Placement="BottomEdgeAlignedLeft"
+                       VerticalOffset="6" IsOpen="{Binding AxisMenuOpen}" IsLightDismissEnabled="True"
+                       Closed="OnMenuClosed">
+                  <Border Classes="popupMenu" Width="240">
+                    <StackPanel>
+                      <Button Classes="menuRow" Command="{Binding SelectAxisCommand}" CommandParameter="fs">
+                        <DockPanel>
+                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                    IsVisible="{Binding IsFsActive}" />
+                          <Border Classes="axisIcon lg"><Panel><PathIcon Data="{StaticResource FolderIcon}" /></Panel></Border>
+                          <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="ファイルシステム" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                            <TextBlock Text="OS のフォルダ階層" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
+                          </StackPanel>
+                        </DockPanel>
+                      </Button>
+                      <Button Classes="menuRow" Command="{Binding SelectAxisCommand}" CommandParameter="view">
+                        <DockPanel>
+                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                    IsVisible="{Binding IsViewAxis}" />
+                          <Border Classes="axisIcon lg view"><Panel><PathIcon Data="{StaticResource TagIcon}" /></Panel></Border>
+                          <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="サンプルアルバム" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                            <TextBlock Text="タグで組んだビュー" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
+                          </StackPanel>
+                        </DockPanel>
+                      </Button>
+                    </StackPanel>
+                  </Border>
+                </Popup>
+              </Panel>
+            </StackPanel>
+
+            <Border Width="1" Height="26" Background="{StaticResource CardBorderBrush}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+              <Button Classes="toolbarBtn" Classes.active="{Binding EditMode}" FontWeight="SemiBold"
+                      Command="{Binding ToggleEditCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource PencilIcon}" />
+                  <TextBlock Text="{Binding EditButtonLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="toolbarBtn">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource TuneIcon}" />
+                  <TextBlock Text="整理" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="toolbarBtn">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource WorkIcon}" />
+                  <TextBlock Text="作業" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="toolbarBtn square">
+                <PathIcon Data="{StaticResource MoreIcon}" />
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- パンくず -->
+      <Border DockPanel.Dock="Top" Classes="breadcrumbBar">
+        <DockPanel VerticalAlignment="Center">
+          <TextBlock DockPanel.Dock="Right" Classes="crumbCount" Text="{Binding CountLabel}" />
+          <StackPanel Orientation="Horizontal" Spacing="3">
+            <Button Classes="crumbHome" Classes.active="{Binding HomeActive}" Command="{Binding GoHomeCommand}">
+              <PathIcon Data="{StaticResource HomeIcon}" />
+            </Button>
+            <ItemsControl ItemsSource="{Binding Crumbs}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CrumbVM">
+                  <StackPanel Orientation="Horizontal" Spacing="3">
+                    <PathIcon Classes="crumbSep" Data="{StaticResource ChevronRightIcon}" VerticalAlignment="Center" />
+                    <Button Classes="crumb" Classes.last="{Binding IsLast}" Content="{Binding Name}"
+                            Command="{Binding $parent[UserControl].((vm:ImageTabSeedViewModel)DataContext).GoCrumbCommand}"
+                            CommandParameter="{Binding Depth}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- チップ行(絞り込み/ナビ) -->
+      <Border DockPanel.Dock="Top" IsVisible="{Binding ShowChips}" Background="{StaticResource AppBackgroundBrush}"
+              BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="18,11">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock Classes="chipHint" Text="{Binding ChipHintLabel}" IsVisible="{Binding ShowChipHint}" />
+          <ItemsControl ItemsSource="{Binding Chips}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ChipVM">
+                <Border Classes="tagChip" Background="{Binding Background}" BorderBrush="{Binding BorderBrush}"
+                        Margin="0,0,8,0" PointerPressed="OnChipPressed">
+                  <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                    <Ellipse Width="9" Height="9" Fill="{Binding DotBrush}" IsVisible="{Binding HasDot}" VerticalAlignment="Center" />
+                    <TextBlock Classes="chipLabel" Text="{Binding Label}" Foreground="{Binding LabelBrush}" />
+                    <Border Classes="chipCount" Background="{Binding CountBackground}" IsVisible="{Binding HasCount}">
+                      <TextBlock Text="{Binding Count}" Foreground="{Binding CountForeground}" />
+                    </Border>
+                    <PathIcon Classes="chipNav" Data="{StaticResource ChevronRightIcon}" IsVisible="{Binding IsNav}"
+                              Foreground="{Binding LabelBrush}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- 空タグ注記 -->
+      <Border DockPanel.Dock="Top" Classes="noteBar" IsVisible="{Binding ShowEmptyTagNote}"
+              Background="{StaticResource AppBackgroundBrush}">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource InfoIcon}" />
+          <TextBlock Text="このフォルダにはタグ付き画像がありません" />
+        </StackPanel>
+      </Border>
+
+      <!-- 本体: グリッド or リスト -->
+      <Panel>
+        <!-- グリッド -->
+        <ScrollViewer IsVisible="{Binding IsGrid}">
+          <ItemsControl ItemsSource="{Binding Items}" Margin="11">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ImageItemVM">
+                <StackPanel Width="150" Margin="7" Background="Transparent" PointerPressed="OnItemPressed">
+                  <Border Classes="thumbCell" Classes.selected="{Binding IsSelected}" Height="150">
+                    <Panel>
+                      <Border Background="{Binding ThumbBrush}" IsVisible="{Binding HasThumb}" />
+                      <PathIcon Data="{StaticResource FolderIcon}" Width="46" Height="46" Foreground="#9AA6F0"
+                                IsVisible="{Binding IsFolder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <PathIcon Data="{StaticResource ImageIcon}" Width="38" Height="38" Foreground="#C6CDD8"
+                                IsVisible="{Binding IsPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <Border Classes="thumbCheck" Classes.selected="{Binding IsSelected}" IsVisible="{Binding Selectable}">
+                        <PathIcon Data="{StaticResource CheckIcon}" IsVisible="{Binding IsSelected}" />
+                      </Border>
+                      <ItemsControl ItemsSource="{Binding TagDots}" IsVisible="{Binding HasTagDots}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="7">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="media:IBrush">
+                            <Ellipse Width="8" Height="8" Fill="{Binding}" Stroke="White" StrokeThickness="1.5" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Panel>
+                  </Border>
+                  <TextBlock Classes="thumbName" Text="{Binding Name}" HorizontalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <!-- リスト -->
+        <DockPanel IsVisible="{Binding IsList}">
+          <Border DockPanel.Dock="Top" Classes="imageListHeader">
+            <DockPanel VerticalAlignment="Center">
+              <TextBlock Text="" Width="34" DockPanel.Dock="Left" />
+              <TextBlock Text="更新日" Width="150" DockPanel.Dock="Right" />
+              <TextBlock Text="サイズ" Width="120" DockPanel.Dock="Right" />
+              <TextBlock Text="名前" />
+            </DockPanel>
+          </Border>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ImageItemVM">
+                  <Border Classes="imageListRow" Classes.selected="{Binding IsSelected}" PointerPressed="OnItemPressed">
+                    <DockPanel VerticalAlignment="Center">
+                      <Border DockPanel.Dock="Left" Classes="imageListMini" Margin="0,0,12,0">
+                        <Panel>
+                          <Border Background="{Binding ThumbBrush}" IsVisible="{Binding HasThumb}" />
+                          <PathIcon Data="{StaticResource FolderIcon}" Width="18" Height="18" Foreground="#9AA6F0"
+                                    IsVisible="{Binding IsFolder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          <PathIcon Data="{StaticResource ImageIcon}" Width="16" Height="16" Foreground="#C6CDD8"
+                                    IsVisible="{Binding IsPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Panel>
+                      </Border>
+                      <TextBlock DockPanel.Dock="Right" Classes="listMeta" Width="150" Text="{Binding DateLabel}" />
+                      <TextBlock DockPanel.Dock="Right" Classes="listMeta" Width="120" Text="{Binding SizeLabel}" />
+                      <TextBlock Classes="listName" Text="{Binding Name}" />
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Panel>
+    </DockPanel>
+  </DockPanel>
+</UserControl>

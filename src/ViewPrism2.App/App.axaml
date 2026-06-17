@@ -43,6 +43,11 @@
     <SolidColorBrush x:Key="ValueChipFg" Color="#5B6473" />
     <SolidColorBrush x:Key="RangePillBg" Color="#FBF3DF" />
     <SolidColorBrush x:Key="RangePillFg" Color="#9A7B1A" />
+    <!-- 画像タブ製造(M1・design-intent §3): タグビュー軸 amber。数値型 amber(RangePill)とは別色で
+         二軸(FS=中立グレー / view=琥珀)を視覚分離する。ハイブリッド方針で新規追加するのはこの軸色のみ
+         (中立グレー段・選択青/淡青・FS軸グレーは既存 E-DESIGN-028 トークンへ写像)。 -->
+    <SolidColorBrush x:Key="ViewAxisBg" Color="#FDEEDE" />
+    <SolidColorBrush x:Key="ViewAxisFg" Color="#C47D18" />
     <!-- バッジ -->
     <SolidColorBrush x:Key="BadgeBg" Color="#F1F3F7" />
     <SolidColorBrush x:Key="BadgeFg" Color="#5B6473" />
@@ -65,6 +70,25 @@
     <StreamGeometry x:Key="ViewListIcon">M3 5h18v2H3zM3 11h18v2H3zM3 17h11v2H3z</StreamGeometry>
     <StreamGeometry x:Key="FunnelIcon">M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z</StreamGeometry>
     <StreamGeometry x:Key="FolderIcon">M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z</StreamGeometry>
+    <!-- 画像タブ製造(M2): 追加 geometry(Material filled。PathIcon=塗り)。
+         list はリスト=ViewListIcon・folder=FolderIcon・edit=PencilIcon・plus=PlusIcon を再利用。 -->
+    <StreamGeometry x:Key="ChevronRightIcon">M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z</StreamGeometry>
+    <StreamGeometry x:Key="ChevronLeftIcon">M15.41 16.59 10.83 12l4.58-4.59L14 6l-6 6 6 6z</StreamGeometry>
+    <StreamGeometry x:Key="ChevronDownIcon">M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z</StreamGeometry>
+    <StreamGeometry x:Key="HomeIcon">M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z</StreamGeometry>
+    <StreamGeometry x:Key="SortIcon">M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3 5 6.99h3V14h2V6.99h3L9 3z</StreamGeometry>
+    <StreamGeometry x:Key="ArrowUpIcon">M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8z</StreamGeometry>
+    <StreamGeometry x:Key="GridIcon">M3 11h8V3H3v8zm0 10h8v-8H3v8zm10 0h8v-8h-8v8zm0-18v8h8V3h-8z</StreamGeometry>
+    <StreamGeometry x:Key="ImageIcon">M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z</StreamGeometry>
+    <StreamGeometry x:Key="CheckIcon">M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z</StreamGeometry>
+    <StreamGeometry x:Key="CloseIcon">M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z</StreamGeometry>
+    <StreamGeometry x:Key="InfoIcon">M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z</StreamGeometry>
+    <StreamGeometry x:Key="SearchIcon">M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z</StreamGeometry>
+    <StreamGeometry x:Key="TuneIcon">M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z</StreamGeometry>
+    <StreamGeometry x:Key="WorkIcon">M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 0h-4V4h4v2z</StreamGeometry>
+    <StreamGeometry x:Key="MoreIcon">M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z</StreamGeometry>
+    <StreamGeometry x:Key="TagIcon">M21.41 11.58 12.41 2.58C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z</StreamGeometry>
+    <StreamGeometry x:Key="ImageTabIcon">M21 4H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM8.5 9.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5S6.17 8 7 8s1.5.67 1.5 1.5zM5 18l3.5-4.5 2.5 3.01L14.5 12l4.5 6H5z</StreamGeometry>
   </Application.Resources>
   <Application.Styles>
     <FluentTheme />

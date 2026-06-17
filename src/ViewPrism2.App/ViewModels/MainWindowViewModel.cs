@@ -155,9 +155,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isTagEditMode;
 
+    // M2 golden ハーネス scaffold(画像タブ製造): ImageTabView をシード VM で重畳表示する dev トグル。
+    // 既定 ON(モック突合用)。M3 で実データ配線へ差し替えた時点で本 scaffold(VM 側 3 メンバ+
+    // MainWindow.axaml の重畳+トグル)は撤去する。
+    public ImageTabSeedViewModel ImageTabPreview { get; } = new();
+
+    [ObservableProperty]
+    private bool _showImageTabPreview = true;
+
+    partial void OnShowImageTabPreviewChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowImageTabHarness));
+        OnPropertyChanged(nameof(ShowImageTabLegacy));
+    }
+
     public bool IsTagsTabSelected => SelectedTabIndex == 0;
 
     public bool IsImagesTabSelected => SelectedTabIndex == 1;
+
+    /// <summary>画像タブ harness(M2 scaffold)を表示中か。</summary>
+    public bool ShowImageTabHarness => IsImagesTabSelected && ShowImageTabPreview;
+
+    /// <summary>従来(原典)画像タブ surface を表示中か(harness OFF 時のみ)。</summary>
+    public bool ShowImageTabLegacy => IsImagesTabSelected && !ShowImageTabPreview;
 
     /// <summary>コレクション選択済みか(REQ-053: 未選択時は中央に選択を促す空状態)。</summary>
     public bool IsCollectionSelected => SelectedCollectionId is not null;
@@ -307,6 +327,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsTagsTabSelected));
         OnPropertyChanged(nameof(IsImagesTabSelected));
+        OnPropertyChanged(nameof(ShowImageTabHarness));
+        OnPropertyChanged(nameof(ShowImageTabLegacy));
         if (value == 0)
         {
             _ = TagsTab.EnsureLoadedAsync();
