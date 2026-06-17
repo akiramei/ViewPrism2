@@ -153,7 +153,7 @@
                      IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsTagsTabSelected}" />
 
       <!-- ===== 画像タブ(M2 golden ハーネス: モック準拠の作り直し。dev トグル ON で表示) ===== -->
-      <v:ImageTabView DataContext="{Binding ImageTabPreview}"
+      <v:ImageTabView DataContext="{Binding ImageTab}"
                       IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ShowImageTabHarness}" />
 
       <!-- ===== 画像タブ(原典 surface: 配線済み。harness OFF 時のみ表示。M3 で作り直し統合) ===== -->

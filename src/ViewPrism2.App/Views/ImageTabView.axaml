@@ -1,9 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ViewPrism2.App.ViewModels"
+             xmlns:c="using:ViewPrism2.App.Controls"
              xmlns:media="clr-namespace:Avalonia.Media;assembly=Avalonia.Base"
              x:Class="ViewPrism2.App.Views.ImageTabView"
-             x:DataType="vm:ImageTabSeedViewModel">
+             x:DataType="vm:ImageTabViewModel">
   <!-- 画像タブ製造(M2)golden ハーネス。3 ペイン content(左=コレクション/中央=ブラウズ/右=タグ編集モード時)。
        部品は Styles/Components.axaml(M1)。シェル(titlebar/menu/navbar/⌘K)はシェル所有のため含めない。
        タグ色依存の塗りは ImageTabSeedViewModel が IBrush で供給(Background/BorderBrush/Foreground バインド)。 -->
@@ -136,7 +137,7 @@
                           <TextBlock Text="{Binding Label}" FontSize="12.5" FontWeight="SemiBold"
                                      Foreground="{Binding PillForeground}" VerticalAlignment="Center" />
                           <Button Classes="iconBtn" Width="18" Height="18"
-                                  Command="{Binding $parent[UserControl].((vm:ImageTabSeedViewModel)DataContext).RemoveCurrentTagCommand}"
+                                  Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).RemoveCurrentTagCommand}"
                                   CommandParameter="{Binding}">
                             <PathIcon Data="{StaticResource CloseIcon}" Width="11" Height="11" />
                           </Button>
@@ -434,7 +435,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="3">
                     <PathIcon Classes="crumbSep" Data="{StaticResource ChevronRightIcon}" VerticalAlignment="Center" />
                     <Button Classes="crumb" Classes.last="{Binding IsLast}" Content="{Binding Name}"
-                            Command="{Binding $parent[UserControl].((vm:ImageTabSeedViewModel)DataContext).GoCrumbCommand}"
+                            Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).GoCrumbCommand}"
                             CommandParameter="{Binding Depth}" />
                   </StackPanel>
                 </DataTemplate>
@@ -492,6 +493,8 @@
                   <Border Classes="thumbCell" Classes.selected="{Binding IsSelected}" Height="150">
                     <Panel>
                       <Border Background="{Binding ThumbBrush}" IsVisible="{Binding HasThumb}" />
+                      <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill"
+                                        IsVisible="{Binding HasRealThumb}" />
                       <PathIcon Data="{StaticResource FolderIcon}" Width="46" Height="46" Foreground="#9AA6F0"
                                 IsVisible="{Binding IsFolder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                       <PathIcon Data="{StaticResource ImageIcon}" Width="38" Height="38" Foreground="#C6CDD8"
@@ -536,6 +539,8 @@
                       <Border DockPanel.Dock="Left" Classes="imageListMini" Margin="0,0,12,0">
                         <Panel>
                           <Border Background="{Binding ThumbBrush}" IsVisible="{Binding HasThumb}" />
+                          <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill"
+                                            IsVisible="{Binding HasRealThumb}" />
                           <PathIcon Data="{StaticResource FolderIcon}" Width="18" Height="18" Foreground="#9AA6F0"
                                     IsVisible="{Binding IsFolder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                           <PathIcon Data="{StaticResource ImageIcon}" Width="16" Height="16" Foreground="#C6CDD8"

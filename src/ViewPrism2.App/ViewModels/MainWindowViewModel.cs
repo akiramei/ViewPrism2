@@ -78,6 +78,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         TagsTab = tagsTab;
         Tagging = tagging;
 
+        // M3: 画像タブ実 VM(モック準拠 surface)。注入済みリポジトリ/サービスを共有(ctor 不変)。
+        ImageTab = new ImageTabViewModel(folders, images, tags, sorter);
+
         AllImagesItem = new ViewListItemViewModel(null, localization.T("view.allImages"));
         Browser.SelectionChanged += async (_, _) => await OnSelectionChangedAsync();
         Browser.OpenItemRequested += (_, item) => OpenViewer(item);
@@ -155,10 +158,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isTagEditMode;
 
-    // M2 golden ハーネス scaffold(画像タブ製造): ImageTabView をシード VM で重畳表示する dev トグル。
-    // 既定 ON(モック突合用)。M3 で実データ配線へ差し替えた時点で本 scaffold(VM 側 3 メンバ+
-    // MainWindow.axaml の重畳+トグル)は撤去する。
-    public ImageTabSeedViewModel ImageTabPreview { get; } = new();
+    // M3 dev scaffold(画像タブ製造): モック準拠の新 surface(ImageTabView)を実データ VM で重畳する
+    // dev トグル。既定 ON。M3 完了(view 軸+原典撤去)時に本 scaffold(VM 側 3 メンバ+
+    // MainWindow.axaml の重畳+トグル+原典 Grid)を撤去し、画像タブを ImageTabView 一本化する。
+    public ImageTabViewModel ImageTab { get; }
 
     [ObservableProperty]
     private bool _showImageTabPreview = true;
@@ -211,6 +214,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ? FindViewItem(lastId)
             : null;
         await SelectViewItemAsync(last ?? AllImagesItem);
+
+        // M3: 画像タブ実 VM(モック準拠 surface)の初期ロード(コレクション+FS 軸)。
+        await ImageTab.InitializeAsync(SelectedCollectionId);
     }
 
     /// <summary>全データ再読込(スキャン・タグ変更後)。選択中のビュー/ノードを可能なら復元する。</summary>

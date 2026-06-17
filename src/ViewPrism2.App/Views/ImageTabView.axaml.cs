@@ -13,7 +13,7 @@ public partial class ImageTabView : UserControl
 {
     public ImageTabView() => InitializeComponent();
 
-    private ImageTabSeedViewModel? Vm => DataContext as ImageTabSeedViewModel;
+    private ImageTabViewModel? Vm => DataContext as ImageTabViewModel;
 
     private void OnCollectionPressed(object? sender, PointerPressedEventArgs e)
     {

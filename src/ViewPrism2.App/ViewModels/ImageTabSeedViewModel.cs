@@ -733,11 +733,12 @@ public sealed class ImageItemVM
 {
     public ImageItemVM(string id, string name, bool isFolder, bool isPlaceholder, bool hasThumb,
         IBrush? thumbBrush, bool selectable, bool isSelected, bool hasTagDots, List<IBrush> tagDots,
-        string sizeLabel, string dateLabel, string? target)
+        string sizeLabel, string dateLabel, string? target, string? absolutePath = null)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
         ThumbBrush = thumbBrush; Selectable = selectable; IsSelected = isSelected;
-        HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel; Target = target;
+        HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
+        Target = target; AbsolutePath = absolutePath;
     }
     public string Id { get; }
     public string Name { get; }
@@ -752,6 +753,9 @@ public sealed class ImageItemVM
     public string SizeLabel { get; }
     public string DateLabel { get; }
     public string? Target { get; }
+    /// <summary>実画像の絶対パス(M3: ThumbnailImage 用)。シードハーネスでは null(ThumbBrush 使用)。</summary>
+    public string? AbsolutePath { get; }
+    public bool HasRealThumb => AbsolutePath is not null;
 }
 
 public sealed class AddGroupVM
@@ -809,7 +813,9 @@ public sealed class NumCellVM
     { TagId = tagId; Value = value; Background = bg; BorderBrush = border; Foreground = fg; }
     public string TagId { get; }
     public int Value { get; }
-    public string Label => Value.ToString();
+    /// <summary>表示・付与する値文字列(実 VM は非整数も扱うため明示)。null ならシードの整数値。</summary>
+    public string? ValueText { get; set; }
+    public string Label => ValueText ?? Value.ToString();
     public IBrush Background { get; }
     public IBrush BorderBrush { get; }
     public IBrush Foreground { get; }
