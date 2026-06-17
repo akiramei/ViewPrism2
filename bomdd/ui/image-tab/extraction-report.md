@@ -48,7 +48,7 @@
 | 1 | タグビュー軸ナビが **左 NodeGraph ツリー → 中央の軸セレクタ+チップ+パンくず** | `design_decision` | **✓決定: モック採用**。E-UI-NODEGRAPH-025 を「タグタブ中央エディタ」に絞り、画像タブ左ツリー+ECO-006/BL-001 を撤回 | UQ-I01 |
 | 2 | タグ値入力が **numeric 固定値/連番ダイアログ → 右パネル内インライン** | `design_decision` | **✓決定: インライン採用**。固定値=インライン。連番は別アクションで存置(UQ-I02b) | UQ-I02 / I02b |
 | 3 | グリッドセルに **ファイルサイズを出さない**(リスト列のみ) | `display_contract_gap` | **✓決定: サイズ除去**(モック準拠)。リスト列のサイズは維持。ECO-004 の差し戻し根拠を ECO に明記 | UQ-I05 |
-| 4 | **コレクション内サブフォルダの FS 階層ブラウズ** | 要確認 | 未決。コレクション=物理フォルダ1:1 に対し、サブ階層 potter の扱いが既存 E-BOM に薄い | UQ-I04 |
+| 4 | **コレクション内サブフォルダの FS 階層ブラウズ** | `design_decision` | **✓決定(ECO-011): FS フォルダ軸採用**。relative_path 派生・新スキーマ/スキャン不要・読取専用(INV-009)。表示軸=FS フォルダ/タグビューの2軸+全画像フラット入口維持。原典フォルダ+パンくず復権 | UQ-I04 |
 | 5 | コレクション行に **相対パス表示・276/64 折り畳み** | `display_contract_gap`(軽) | 未決。E-UI-SHELL-021 コレクション一覧 display contract の精緻化 | UQ-I03 |
 | 6 | 新規 surface 部品 6点(軸セレクタ・ソート・パンくず・グリッドカード・リスト行・パネルタブ) | `design_system_part_missing`(予防) | [design-system-bom.md](design-system-bom.md) の `new` を製造前に Components.axaml へ | — |
 

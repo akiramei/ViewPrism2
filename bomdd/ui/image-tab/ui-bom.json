@@ -116,7 +116,7 @@
       "name": "パンくず",
       "parent": "TMP-UI-REG-0006",
       "bomRationale": "FS/view 両軸の『戻る』を統一する再利用部品。",
-      "ebomCandidate": { "promoteAs": "新規 surface 部品(再利用候補)", "items": ["E-UI-GRID-022"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium", "note": "FS フォルダ階層と view 階層の双方を辿る。既存 E-BOM に明示が薄い(UQ-I04)。" }
+      "ebomCandidate": { "promoteAs": "新規 surface 部品(再利用候補)", "items": ["E-UI-GRID-022"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium", "note": "FS フォルダ階層と view 階層の双方を辿る。既存 E-BOM に明示が薄い(UQ-I04 解決済・ECO-011: FS フォルダ軸採用)。" }
     },
     {
       "tempPartNo": "TMP-UI-CMP-0026",
@@ -217,7 +217,7 @@
     {
       "tempPartNo": "TMP-UI-OCC-0012", "uiId": "component.image-grid-card.folder", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0027", "name": "グリッドカード/フォルダ",
       "bomRationale": "出現(variant)。FS 階層へ潜る入口。",
-      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-GRID-022"], "confidence": "medium", "note": "コレクション内サブフォルダの存在自体が UQ-I04。" }
+      "ebomCandidate": { "promoteAs": "trace / display contract の出現", "items": ["E-UI-GRID-022"], "confidence": "medium", "note": "コレクション内サブフォルダの存在自体が UQ-I04 解決済(ECO-011: FS フォルダ軸採用)。" }
     },
     {
       "tempPartNo": "TMP-UI-OCC-0013", "uiId": "component.filter-nav-chip.filter", "kind": "componentOccurrence", "master": "TMP-UI-CMP-0026", "name": "タグチップ/FS 絞り込み",
@@ -243,12 +243,12 @@
     {
       "tempPartNo": "TMP-UI-ACT-0042", "uiId": "action.axis.switch", "kind": "action", "name": "表示軸切替", "parent": "TMP-UI-REG-0006",
       "bomRationale": "業務操作(閲覧モデル切替)。二軸ブラウズの中核。",
-      "ebomCandidate": { "promoteAs": "仕様への接続(新概念)", "items": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "medium", "decision": "確定(2026-06-17・UQ-I01): view 軸ナビはチップ+パンくず(左ツリー廃止)。二軸切替の正式仕様化(表示軸概念)と FS サブフォルダ階層の扱いは UQ-I04 で継続。", "ecoImpact": "確定・ECO-010 起票済(E-BOM 30 同期・spec/M-BOM/CP は製造時)(UQ-I01 分): ナビ表現の改訂。表示軸概念の E-BOM 導入は UQ-I04 解決後。" }
+      "ebomCandidate": { "promoteAs": "仕様への接続(新概念)", "items": ["E-UI-GRID-022", "E-UI-NODEGRAPH-025"], "coreRefs": ["E-VIEWSVC-009"], "confidence": "high", "decision": "確定(2026-06-17): view 軸ナビはチップ+パンくず(左ツリー廃止・UQ-I01)。表示軸モデル(FS フォルダ軸/タグビュー軸・全画像入口維持・コレクションスコープ)は UQ-I04 解決(ECO-011)。", "ecoImpact": "確定・起票済: I01=ECO-010(ナビ表現改訂)+ I04=ECO-011(表示軸モデル: FS フォルダ軸=relative_path 派生・全画像入口維持)を E-UI-GRID-022 へ導入済。" }
     },
     {
       "tempPartNo": "TMP-UI-ACT-0043", "uiId": "action.folder.drill", "kind": "action", "name": "フォルダへ潜る(FS)", "parent": "TMP-UI-REG-0006",
       "bomRationale": "業務操作(OS フォルダ階層ナビ)。",
-      "ebomCandidate": { "promoteAs": "仕様への接続(要確認)", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SCAN-005"], "confidence": "medium", "note": "コレクション内サブフォルダ階層の閲覧は既存 E-BOM に明示が薄い(UQ-I04)。INV-009 読み取り専用は維持。" }
+      "ebomCandidate": { "promoteAs": "仕様への接続(要確認)", "items": ["E-UI-GRID-022"], "coreRefs": ["E-SCAN-005"], "confidence": "medium", "note": "コレクション内サブフォルダ階層の閲覧は既存 E-BOM に明示が薄い(UQ-I04 解決済・ECO-011: FS フォルダ軸採用)。INV-009 読み取り専用は維持。" }
     },
     {
       "tempPartNo": "TMP-UI-ACT-0044", "uiId": "action.breadcrumb.navigate", "kind": "action", "name": "パンくず/ホームで戻る", "parent": "TMP-UI-REG-0006",
@@ -396,7 +396,7 @@
     {
       "tempPartNo": "TMP-UI-DOM-0022", "uiId": "domain.folder", "kind": "domain", "name": "フォルダ(FS階層)",
       "bomRationale": "コレクション内のサブフォルダ階層。",
-      "ebomCandidate": { "promoteAs": "ドメインモデル(要確認)", "items": ["E-DOMAIN-001"], "coreRefs": ["E-SCAN-005"], "confidence": "medium", "note": "既存 E-BOM での扱い未確認(UQ-I04)。" }
+      "ebomCandidate": { "promoteAs": "ドメインモデル(要確認)", "items": ["E-DOMAIN-001"], "coreRefs": ["E-SCAN-005"], "confidence": "medium", "note": "既存 E-BOM での扱い未確認(UQ-I04 解決済・ECO-011: FS フォルダ軸採用)。" }
     },
     {
       "tempPartNo": "TMP-UI-DOM-0023", "uiId": "domain.display-axis", "kind": "domain", "name": "表示軸",
