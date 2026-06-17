@@ -63,7 +63,7 @@
 
 ## 6. 次段への申し送り
 
-1. **unresolved 解消**: 根幹3点(UQ-I01 ナビ・I02 付与インライン・I05 グリッドサイズ)は **2026-06-17 承認で確定(モック採用)**。残 UQ-I03/I04/I06〜I15・DS ゲートは継続。
+1. **unresolved 全件決着(2026-06-17)**: 根幹4決定(I01 ナビ・I02 付与インライン・I05 グリッド・I04 表示軸)=ECO-010/011、残 UQ(I03/I06〜I15・DS1/DS2)=ECO-012 でクローズ。**画像タブ設計フェーズ完了**。詳細は [unresolved-questions.md](unresolved-questions.md)。
 2. **E-BOM 同期(ECO-010 起票済)**: 確定分につき E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / E-UI-GRID-022(+ DC-GRID-001)を `30-ebom.yaml` で同期済(`bomdd/60-change-order-eco-010.md`)。E-UI-SHELL-021(UQ-I03)・表示軸概念(UQ-I04)は未決のため未同期。
 3. **Design System BOM ゲート**: [design-system-bom.md](design-system-bom.md) の `new` 6 部品を製造計画へ。Components.axaml 再利用が前提。
 4. **製造**: golden-in-the-loop(実機 ⇄ モック M 突合)。E1〜E7・GF 是正・固定オラクルを退行させない。

@@ -47,6 +47,7 @@
 - **out-of-scope: 2**(ビューア・⌘K)。
 
 > **ゲート判定**: `new`/`extend` の 13 部品は製造フェーズで Components.axaml に定義してから surface へ適用する(原則03)。`design_system_part_missing` を避けるため、実装着手前に本台帳の `new` を全て製造計画へ載せること。golden 基準=モック。
+> **合意済(2026-06-17・ECO-012)**: DS1 — `new` 6部品は製造前に Components.axaml へ追加で合意。DS2 — `extend` 7部品は既存クラスに variant class を足す(構造が異なるもののみ新クラスに分ける)。
 
 ## E-DESIGN-028 / K-DESIGN への含意
 
