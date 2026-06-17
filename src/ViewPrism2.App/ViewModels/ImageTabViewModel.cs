@@ -37,6 +37,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly PathConditionConverter _pathConverter;
     private readonly ConditionEvaluator _evaluator;
     private readonly IWindowService _windows;
+    private readonly AppSettings _settings;
 
     // ---- ロード済みデータ ----
     private List<SyncFolder> _collections = new();
@@ -81,7 +82,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         NodeGraphBuilder graphBuilder,
         PathConditionConverter pathConverter,
         ConditionEvaluator evaluator,
-        IWindowService windows)
+        IWindowService windows,
+        AppSettings settings)
     {
         _folders = folders;
         _images = images;
@@ -93,6 +95,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _pathConverter = pathConverter;
         _evaluator = evaluator;
         _windows = windows;
+        _settings = settings;
     }
 
     // ---------------- 色ヘルパ ----------------
@@ -129,13 +132,37 @@ public sealed partial class ImageTabViewModel : ObservableObject
         await RefreshImageTagsAsync().ConfigureAwait(true);
         _allViews = (await _views.GetAllAsync().ConfigureAwait(true)).ToList();
 
-        _collectionId = preferredCollectionId is not null && _collections.Any(c => c.Id == preferredCollectionId)
-            ? preferredCollectionId
-            : _collections.FirstOrDefault()?.Id;
+        // 表示モード復元(REQ-052 v1.3/CR-6)
+        _layout = string.Equals(_settings.DisplayMode, "list", StringComparison.Ordinal) ? "list" : "grid";
+
+        // 選択コレクション復元(REQ-053/REQ-052 v1.3/CR-5)。引数優先(harness 併走中はシェルが
+        // 検証済 id を渡す)、無ければ settings から復元する。解決不能なら未選択(REQ-053 の選択を
+        // 促す空状態)へフォールバックし、無効 id は settings からも除去する。先頭への自動選択はしない。
+        var restoreId = preferredCollectionId ?? _settings.LastCollectionId;
+        if (restoreId is not null && _collections.Any(c => string.Equals(c.Id, restoreId, StringComparison.Ordinal)))
+        {
+            _collectionId = restoreId;
+            _settings.LastCollectionId = restoreId;
+        }
+        else
+        {
+            _collectionId = null;
+            _settings.LastCollectionId = null;
+        }
 
         BuildEntries();
         _loaded = true;
         Recompute();
+    }
+
+    /// <summary>
+    /// 終了時の永続化スナップショット(REQ-052 v1.3/CR-5・CR-6)。選択・表示モードの変更時にも
+    /// 逐次 settings へ書くが(堅牢化)、最終確定もここで行う。Locale/LastViewId はシェルが担う。
+    /// </summary>
+    public void CaptureSettings()
+    {
+        _settings.LastCollectionId = _collectionId;
+        _settings.DisplayMode = _layout == "list" ? "list" : "grid";
     }
 
     private async Task RefreshImageTagsAsync()
@@ -267,6 +294,19 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public double SidebarWidth => _collapsed ? 64 : 276;
     public bool IsGrid => _layout == "grid";
     public bool IsList => _layout == "list";
+
+    // ---- REQ-053: コレクション=選択スコープ(ECO-013 で原典 MainWindowViewModel から移管・等価維持) ----
+    public string? SelectedCollectionId => _collectionId;
+    public bool IsCollectionSelected => _collectionId is not null;
+    /// <summary>未選択時に中央へ「コレクションを選択」プロンプトを出す(REQ-053)。</summary>
+    public bool ShowCollectionPrompt => _loaded && _collectionId is null;
+    /// <summary>グリッドペイン表示(コレクション選択済み かつ グリッドモード)。</summary>
+    public bool ShowGridPane => IsCollectionSelected && IsGrid;
+    /// <summary>リストペイン表示(コレクション選択済み かつ リストモード)。</summary>
+    public bool ShowListPane => IsCollectionSelected && IsList;
+    /// <summary>画像 0 件の空状態(コレクション選択済みのときのみ・未選択はプロンプトを優先)。</summary>
+    public bool ShowEmptyMessage => IsCollectionSelected && Items.Count == 0;
+
     public bool IsViewAxis => _axis == "view";
     public bool IsFsActive => _axis == "fs";
     public string AxisLabel => _axis == "fs" ? "ファイルシステム" : _viewLabel;
@@ -521,7 +561,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private async Task SelectCollection(string id)
     {
         if (_collectionId == id) return;
-        _collectionId = id; _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
+        _collectionId = id;
+        _settings.LastCollectionId = id; // CR-5 書き戻し(永続化は SettingsStore / CaptureSettings)
+        _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
         BuildEntries();
         // view 軸なら新コレクション scope で NodeGraph(値ノード)を再構築する。
         if (_axis == "view" && _viewId is not null) await LoadViewAsync(_viewId);
@@ -530,6 +572,21 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleSidebar() { _collapsed = !_collapsed; Recompute(); }
+
+    /// <summary>
+    /// コレクション「追加(+)」(ECO-013/IMG-009): コレクション管理(追加・スキャン・削除)ビューを開く
+    /// 単一入口。閉じた後はベースデータを読み直し、FS 軸ルートへ戻す(選択コレクションは存続していれば維持・
+    /// 削除されていれば未選択へフォールバック=REQ-053)。
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenFolderManagement()
+    {
+        var keep = _collectionId;
+        await _windows.ShowFolderManagementAsync().ConfigureAwait(true);
+        _axis = "fs"; _viewId = null; _viewRoot = null; _viewPath.Clear();
+        _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
+        await InitializeAsync(keep).ConfigureAwait(true);
+    }
 
     [RelayCommand]
     private void ToggleAxisMenu() { AxisMenuOpen = !AxisMenuOpen; SortMenuOpen = false; OnPropertyChanged(string.Empty); }
@@ -590,10 +647,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleSortDir() { _sortDir = _sortDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc; Recompute(); }
 
     [RelayCommand]
-    private void SetGrid() { _layout = "grid"; Recompute(); }
+    private void SetGrid() { _layout = "grid"; _settings.DisplayMode = "grid"; Recompute(); } // CR-6
 
     [RelayCommand]
-    private void SetList() { _layout = "list"; Recompute(); }
+    private void SetList() { _layout = "list"; _settings.DisplayMode = "list"; Recompute(); } // CR-6
 
     [RelayCommand]
     private void ToggleEdit()

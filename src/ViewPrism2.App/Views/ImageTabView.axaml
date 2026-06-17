@@ -21,6 +21,10 @@
           <Button Classes="railIcon" Command="{Binding ToggleSidebarCommand}">
             <PathIcon Data="{StaticResource ChevronRightIcon}" />
           </Button>
+          <!-- コレクション管理(追加/スキャン/削除)入口(ECO-013/IMG-009) -->
+          <Button Classes="railIcon" Command="{Binding OpenFolderManagementCommand}" ToolTip.Tip="コレクションを管理">
+            <PathIcon Data="{StaticResource PlusIcon}" />
+          </Button>
           <Border Width="30" Height="1" Background="{StaticResource CardBorderBrush}" Margin="0,2" />
           <ItemsControl ItemsSource="{Binding Collections}">
             <ItemsControl.ItemTemplate>
@@ -41,6 +45,10 @@
             <DockPanel VerticalAlignment="Center">
               <Button DockPanel.Dock="Right" Classes="crumbHome" Command="{Binding ToggleSidebarCommand}">
                 <PathIcon Data="{StaticResource ChevronLeftIcon}" />
+              </Button>
+              <!-- コレクション管理(追加/スキャン/削除)入口(ECO-013/IMG-009) -->
+              <Button DockPanel.Dock="Right" Classes="crumbHome" Command="{Binding OpenFolderManagementCommand}" ToolTip.Tip="コレクションを管理">
+                <PathIcon Data="{StaticResource PlusIcon}" />
               </Button>
               <TextBlock Text="コレクション" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
             </DockPanel>
@@ -492,10 +500,22 @@
         </StackPanel>
       </Border>
 
-      <!-- 本体: グリッド or リスト -->
+      <!-- 本体: グリッド or リスト(コレクション未選択時はプロンプト=REQ-053) -->
       <Panel>
+        <!-- 未選択プロンプト(REQ-053): コレクションを選ぶまで横断表示しない -->
+        <StackPanel IsVisible="{Binding ShowCollectionPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <PathIcon Data="{StaticResource FolderIcon}" Width="44" Height="44" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="左のコレクションを選択してください" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- 画像 0 件の空状態(コレクション選択済み) -->
+        <StackPanel IsVisible="{Binding ShowEmptyMessage}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <PathIcon Data="{StaticResource ImageIcon}" Width="40" Height="40" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="画像がありません" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+        </StackPanel>
+
         <!-- グリッド -->
-        <ScrollViewer IsVisible="{Binding IsGrid}">
+        <ScrollViewer IsVisible="{Binding ShowGridPane}">
           <ItemsControl ItemsSource="{Binding Items}" Margin="11">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -532,7 +552,7 @@
         </ScrollViewer>
 
         <!-- リスト -->
-        <DockPanel IsVisible="{Binding IsList}">
+        <DockPanel IsVisible="{Binding ShowListPane}">
           <Border DockPanel.Dock="Top" Classes="imageListHeader">
             <DockPanel VerticalAlignment="Center">
               <TextBlock Text="" Width="34" DockPanel.Dock="Left" />

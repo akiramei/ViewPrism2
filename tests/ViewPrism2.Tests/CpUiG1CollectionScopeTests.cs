@@ -11,9 +11,12 @@ using Xunit;
 namespace ViewPrism2.Tests;
 
 /// <summary>
-/// CP-UI-G1(unit 部分・v1.3): コレクション=選択スコープ(REQ-053、ECO-002 CR-2/5/8)。
-/// 一覧・「全画像」入口・NodeGraph 評価の母集合が選択中コレクションの normal 画像に限られること、
-/// 未選択時の空状態、画像数表示、settings への永続化・復元(CR-5/6)を実 DB+実 VM で検査する。
+/// CP-UI-G1(unit 部分・v1.3 + ECO-013): コレクション=選択スコープ(REQ-053、ECO-002 CR-2/5/8)。
+/// ECO-013 で画像タブ surface を新 <see cref="ImageTabViewModel"/> 一本へ統合したのに伴い、本カバレッジを
+/// 原典 MainWindowViewModel 契約から新 VM 契約へ移行する(挙動は等価維持)。
+/// 一覧・表示軸評価の母集合が選択中コレクションの normal 画像に限られること、未選択時の選択プロンプト、
+/// 画像数表示(モック準拠=数値のみ)、settings への永続化・復元(CR-5/6)・消失フォールバックを実 DB+実 VM で検査する。
+/// 描画(セル整列・省略表示)は golden(承認者 maintainer)。
 /// </summary>
 [Trait("cp", "CP-UI-G1")]
 public sealed class CpUiG1CollectionScopeTests : IDisposable
@@ -78,29 +81,14 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
         public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
     }
 
-    private MainWindowViewModel NewShell(AppSettings settings)
+    /// <summary>実 ImageTabViewModel(ECO-013 後の画像タブ surface の唯一の VM)を実 Core サービスで組む。</summary>
+    private ImageTabViewModel NewImageTab(AppSettings settings)
     {
-        var localization = new LocalizationService(
-            new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal)
-            {
-                ["ja"] = new Dictionary<string, string>
-                {
-                    ["view.allImages"] = "全画像",
-                    ["collection.sidebar.imageCount"] = "{count}枚",
-                },
-            });
-        var windows = new StubWindowService();
-        var scan = new ScanService(_db.Folders, _db.Images, _db.Clock);
-        var viewService = new ViewService(_db.Views, _db.Clock);
-        var tagService = new TagService(_db.Tags);
-        return new MainWindowViewModel(
-            _db.Folders, _db.Images, _db.Tags, viewService,
+        var views = new ViewService(_db.Views, _db.Clock);
+        return new ImageTabViewModel(
+            _db.Folders, _db.Images, _db.Tags, new ImageSorter(), views,
             new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
-            new ImageSorter(), new ThumbnailService(Path.Combine(_root, "thumbs")),
-            localization, settings, windows,
-            new FolderManagementViewModel(_db.Folders, scan, localization, windows),
-            new TagsTabViewModel(viewService, tagService, _db.Tags, localization, windows),
-            new TaggingPanelViewModel(tagService, _db.Tags, localization, windows));
+            new StubWindowService(), settings);
     }
 
     private async Task<(SyncFolder A, SyncFolder B)> SeedTwoCollectionsAsync()
@@ -135,14 +123,18 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
         return record;
     }
 
-    private static FolderRowViewModel RowOf(MainWindowViewModel vm, SyncFolder folder)
-        => vm.FolderPane.Folders.Single(r => r.Folder.Id == folder.Id);
+    private static CollectionRowVM RowOf(ImageTabViewModel vm, SyncFolder folder)
+        => vm.Collections.Single(r => r.Id == folder.Id);
+
+    /// <summary>FS 軸で現在表示中の画像(フォルダ以外)のファイル名列。</summary>
+    private static IEnumerable<string> ImageNames(ImageTabViewModel vm)
+        => vm.Items.Where(i => !i.IsFolder).Select(i => i.Name);
 
     [Fact]
     public async Task 未選択時は母集合が空で選択を促す空状態になる()
     {
         await SeedTwoCollectionsAsync();
-        var vm = NewShell(new AppSettings());
+        var vm = NewImageTab(new AppSettings()); // LastCollectionId 未設定
 
         await vm.InitializeAsync();
 
@@ -151,28 +143,28 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
         Assert.False(vm.ShowGridPane);
         Assert.False(vm.ShowListPane);
         Assert.False(vm.ShowEmptyMessage); // 「画像がありません」ではなく選択プロンプトを出す
-        Assert.True(vm.Browser.IsEmpty);   // 横断表示は行わない(REQ-053)
+        Assert.Empty(vm.Items);            // 横断表示は行わない(REQ-053)
     }
 
     [Fact]
     public async Task コレクション選択で当該コレクションのnormal画像のみが母集合になる()
     {
         var (a, b) = await SeedTwoCollectionsAsync();
-        var vm = NewShell(new AppSettings());
+        var vm = NewImageTab(new AppSettings());
         await vm.InitializeAsync();
 
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(RowOf(vm, a));
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
 
         Assert.True(vm.IsCollectionSelected);
         Assert.True(vm.ShowGridPane);
         Assert.False(vm.ShowCollectionPrompt);
-        Assert.Equal(["a1.jpg", "a2.jpg"], vm.Browser.SortedItems.Select(i => i.FileName)); // missing は出ない
+        Assert.Equal(["a1.jpg", "a2.jpg"], ImageNames(vm)); // missing は出ない
         Assert.True(RowOf(vm, a).IsSelected);
         Assert.False(RowOf(vm, b).IsSelected);
 
         // 切替で母集合が切り替わる(横断しない)
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(RowOf(vm, b));
-        Assert.Equal(["b1.jpg"], vm.Browser.SortedItems.Select(i => i.FileName));
+        await vm.SelectCollectionCommand.ExecuteAsync(b.Id);
+        Assert.Equal(["b1.jpg"], ImageNames(vm));
         Assert.False(RowOf(vm, a).IsSelected);
         Assert.True(RowOf(vm, b).IsSelected);
     }
@@ -181,17 +173,17 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
     public async Task コレクション項目に画像数が表示される()
     {
         var (a, b) = await SeedTwoCollectionsAsync();
-        var vm = NewShell(new AppSettings());
+        var vm = NewImageTab(new AppSettings());
         await vm.InitializeAsync();
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(RowOf(vm, a));
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
 
-        Assert.Equal(2, RowOf(vm, a).ImageCount); // normal のみ計上
-        Assert.Equal(1, RowOf(vm, b).ImageCount);
-        Assert.Equal("2枚", RowOf(vm, a).ImageCountText);
+        // normal のみ計上。モック準拠でバッジは数値のみ(原典の「N枚」表記は CAD 採用で廃止)
+        Assert.Equal("2", RowOf(vm, a).CountText);
+        Assert.Equal("1", RowOf(vm, b).CountText);
     }
 
     [Fact]
-    public async Task NodeGraph評価の母集合も選択中コレクションに限られる()
+    public async Task 表示軸評価の母集合も選択中コレクションに限られる()
     {
         var (a, b) = await SeedTwoCollectionsAsync();
 
@@ -207,19 +199,18 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
         Assert.True(view.IsSuccess);
         Assert.True((await viewService.AddNodeAsync(view.Value!.Id, tag.Value.Id, null, 0)).IsSuccess);
 
-        var vm = NewShell(new AppSettings());
+        var vm = NewImageTab(new AppSettings());
         await vm.InitializeAsync();
 
-        // A 選択中: 値「赤」は A の normal 画像に存在しない → 値ノードなし(タグ名ノードのみ)
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(RowOf(vm, a));
-        var viewItem = vm.Recents.First(i => i.View?.Id == view.Value.Id);
-        await ((IAsyncRelayCommand)vm.SelectViewListItemCommand).ExecuteAsync(viewItem);
-        Assert.Single(vm.TreeRoots);
-        Assert.Equal("色", vm.TreeRoots[0].Children.Single().DisplayName);
+        // A 選択中にタグビュー軸へ: 値「赤」は A の normal 画像に存在しない → 値ノードなし(タグ名ノードのみ)
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
+        await vm.SelectAxisCommand.ExecuteAsync(view.Value.Id);
+        Assert.True(vm.IsViewAxis);
+        Assert.Equal("色", vm.Chips.Single().Label);
 
-        // B 選択中: distinct 値 1 件 → 一体型「色: 赤」(REQ-035)
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(RowOf(vm, b));
-        Assert.Equal("色: 赤", vm.TreeRoots[0].Children.Single().DisplayName);
+        // B 選択中: 母集合が B へ切り替わり distinct 値 1 件 → 一体型「色: 赤」(REQ-035)
+        await vm.SelectCollectionCommand.ExecuteAsync(b.Id);
+        Assert.Equal("色: 赤", vm.Chips.Single().Label);
     }
 
     [Fact]
@@ -227,22 +218,22 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
     {
         var (a, _) = await SeedTwoCollectionsAsync();
         var settings = new AppSettings();
-        var vm = NewShell(settings);
+        var vm = NewImageTab(settings);
         await vm.InitializeAsync();
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(RowOf(vm, a));
-        vm.Browser.IsListMode = true;
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
+        vm.SetListCommand.Execute(null);
 
         vm.CaptureSettings();
         Assert.Equal(a.Id, settings.LastCollectionId); // CR-5
         Assert.Equal("list", settings.DisplayMode);    // CR-6
 
-        // 「再起動」: 同じ settings で新しいシェルを作ると選択コレクションと表示モードが復元される
-        var restored = NewShell(settings);
+        // 「再起動」: 同じ settings で新しい VM を作ると選択コレクションと表示モードが復元される
+        var restored = NewImageTab(settings);
         await restored.InitializeAsync();
         Assert.Equal(a.Id, restored.SelectedCollectionId);
-        Assert.True(restored.Browser.IsListMode);
+        Assert.True(restored.IsList);
         Assert.True(restored.ShowListPane);
-        Assert.Equal(["a1.jpg", "a2.jpg"], restored.Browser.SortedItems.Select(i => i.FileName));
+        Assert.Equal(["a1.jpg", "a2.jpg"], ImageNames(restored));
     }
 
     [Fact]
@@ -250,7 +241,7 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
     {
         await SeedTwoCollectionsAsync();
         var settings = new AppSettings { LastCollectionId = "missing-folder-id" };
-        var vm = NewShell(settings);
+        var vm = NewImageTab(settings);
 
         await vm.InitializeAsync();
 
