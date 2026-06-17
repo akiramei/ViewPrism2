@@ -358,33 +358,35 @@
                 <Popup PlacementTarget="{Binding #AxisTrigger}" Placement="BottomEdgeAlignedLeft"
                        VerticalOffset="6" IsOpen="{Binding AxisMenuOpen}" IsLightDismissEnabled="True"
                        Closed="OnMenuClosed">
-                  <Border Classes="popupMenu" Width="240">
-                    <StackPanel>
-                      <Button Classes="menuRow" Command="{Binding SelectAxisCommand}" CommandParameter="fs">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
-                                    IsVisible="{Binding IsFsActive}" />
-                          <Border Classes="axisIcon lg"><Panel><PathIcon Data="{StaticResource FolderIcon}" /></Panel></Border>
-                          <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="ファイルシステム" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                            <TextBlock Text="OS のフォルダ階層" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
-                          </StackPanel>
-                        </DockPanel>
-                      </Button>
-                      <Button Classes="menuRow" Command="{Binding SelectAxisCommand}" CommandParameter="view">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
-                                    IsVisible="{Binding IsViewAxis}" />
-                          <Border Classes="axisIcon lg view"><Panel><PathIcon Data="{StaticResource TagIcon}" /></Panel></Border>
-                          <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="サンプルアルバム" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                            <TextBlock Text="タグで組んだビュー" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
-                          </StackPanel>
-                        </DockPanel>
-                      </Button>
-                    </StackPanel>
+                  <Border Classes="popupMenu" Width="260" MaxHeight="360">
+                    <ScrollViewer>
+                      <ItemsControl ItemsSource="{Binding AxisOptions}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:AxisOptionVM">
+                            <Button Classes="menuRow"
+                                    Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).SelectAxisCommand}"
+                                    CommandParameter="{Binding Id}">
+                              <DockPanel>
+                                <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
+                                          Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                          IsVisible="{Binding IsActive}" />
+                                <Border Classes="axisIcon lg" Classes.view="{Binding IsView}">
+                                  <Panel>
+                                    <PathIcon Data="{StaticResource FolderIcon}" IsVisible="{Binding !IsView}" />
+                                    <PathIcon Data="{StaticResource TagIcon}" IsVisible="{Binding IsView}" />
+                                  </Panel>
+                                </Border>
+                                <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding Label}" FontSize="13.5" FontWeight="SemiBold"
+                                             Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Text="{Binding Sub}" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
+                                </StackPanel>
+                              </DockPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
                   </Border>
                 </Popup>
               </Panel>

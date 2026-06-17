@@ -683,6 +683,18 @@ public sealed class CrumbVM
     public int Depth { get; }
 }
 
+/// <summary>表示軸セレクタのメニュー項目(M3b: FS + 保存ビュー)。</summary>
+public sealed class AxisOptionVM
+{
+    public AxisOptionVM(string id, string label, string sub, bool isView, bool isActive)
+    { Id = id; Label = label; Sub = sub; IsView = isView; IsActive = isActive; }
+    public string Id { get; }
+    public string Label { get; }
+    public string Sub { get; }
+    public bool IsView { get; }
+    public bool IsActive { get; }
+}
+
 public sealed class ChipVM
 {
     private ChipVM() { }

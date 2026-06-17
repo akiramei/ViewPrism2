@@ -31,6 +31,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly ITagRepository _tags;
     private readonly ImageSorter _sorter;
     private readonly TagService _tagService;
+    private readonly ViewService _views;
+    private readonly NodeGraphBuilder _graphBuilder;
+    private readonly PathConditionConverter _pathConverter;
+    private readonly ConditionEvaluator _evaluator;
 
     // ---- ロード済みデータ ----
     private List<SyncFolder> _collections = new();
@@ -47,6 +51,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private string? _collectionId;
     private string _axis = "fs"; // fs | view
     private readonly List<string> _fsPath = new();
+    // ---- view 軸(M3b): 保存ビューを閲覧軸として消費 ----
+    private List<View> _allViews = new();
+    private string? _viewId;
+    private string _viewLabel = "タグビュー";
+    private IReadOnlyList<ViewCondition> _viewConditions = Array.Empty<ViewCondition>();
+    private GraphNode? _viewRoot;
+    private readonly List<GraphNode> _viewPath = new();
+    private readonly Dictionary<string, GraphNode> _currentChildren = new(StringComparer.Ordinal);
     private string _layout = "grid";
     private SortField _sortField = SortField.Name;
     private SortDirection _sortDir = SortDirection.Asc;
@@ -62,13 +74,21 @@ public sealed partial class ImageTabViewModel : ObservableObject
         ISyncFolderRepository folders,
         IImageRepository images,
         ITagRepository tags,
-        ImageSorter sorter)
+        ImageSorter sorter,
+        ViewService views,
+        NodeGraphBuilder graphBuilder,
+        PathConditionConverter pathConverter,
+        ConditionEvaluator evaluator)
     {
         _folders = folders;
         _images = images;
         _tags = tags;
         _sorter = sorter;
         _tagService = new TagService(tags);
+        _views = views;
+        _graphBuilder = graphBuilder;
+        _pathConverter = pathConverter;
+        _evaluator = evaluator;
     }
 
     // ---------------- 色ヘルパ ----------------
@@ -103,6 +123,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
         _tagById = (await _tags.GetAllAsync().ConfigureAwait(true)).ToDictionary(t => t.Id, StringComparer.Ordinal);
         await RefreshImageTagsAsync().ConfigureAwait(true);
+        _allViews = (await _views.GetAllAsync().ConfigureAwait(true)).ToList();
 
         _collectionId = preferredCollectionId is not null && _collections.Any(c => c.Id == preferredCollectionId)
             ? preferredCollectionId
@@ -200,14 +221,37 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     private List<ImageEntry> AllLoadedImagesInContext()
     {
-        // 編集モードの選択母集合=現在のフォルダに直接ある画像(サブフォルダは含めない)
-        return ResolveFs().Files;
+        // 編集モードの選択母集合=現在の文脈で表示中の画像。
+        if (_axis == "view" && _viewRoot is not null)
+        {
+            var fullPath = new List<GraphNode> { _viewRoot };
+            fullPath.AddRange(_viewPath);
+            return ViewMatched(fullPath);
+        }
+        return ResolveFs().Files; // FS: 現在のフォルダに直接ある画像(サブフォルダは含めない)
+    }
+
+    private static List<GraphNode> Append(List<GraphNode> path, GraphNode child)
+    {
+        var list = new List<GraphNode>(path) { child };
+        return list;
+    }
+
+    /// <summary>ビュー条件 + ノードパス条件で _entries(選択コレクション scope)を絞り込む(OC-1/OC-3 再利用)。</summary>
+    private List<ImageEntry> ViewMatched(IReadOnlyList<GraphNode> fullPath)
+    {
+        var conds = new List<ViewCondition>(_viewConditions);
+        conds.AddRange(_pathConverter.BuildConditions(fullPath));
+        if (conds.Count == 0) return _entries.ToList();
+        var res = _evaluator.Evaluate(_entries.Select(e => e.ToImageWithTags()), conds);
+        return _entries.Where(e => res.MatchedImageIds.Contains(e.Record.Id)).ToList();
     }
 
     // =====================================================================
     //  公開: 派生コレクション + スカラー(ImageTabView がバインド)
     // =====================================================================
     public ObservableCollection<CollectionRowVM> Collections { get; } = new();
+    public ObservableCollection<AxisOptionVM> AxisOptions { get; } = new();
     public ObservableCollection<CrumbVM> Crumbs { get; } = new();
     public ObservableCollection<ChipVM> Chips { get; } = new();
     public ObservableCollection<ImageItemVM> Items { get; } = new();
@@ -221,7 +265,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool IsList => _layout == "list";
     public bool IsViewAxis => _axis == "view";
     public bool IsFsActive => _axis == "fs";
-    public string AxisLabel => _axis == "fs" ? "ファイルシステム" : "タグビュー";
+    public string AxisLabel => _axis == "fs" ? "ファイルシステム" : _viewLabel;
     public bool AxisMenuOpen { get; private set; }
     public bool SortMenuOpen { get; private set; }
     public string SortLabel => _sortField switch
@@ -270,47 +314,79 @@ public sealed partial class ImageTabViewModel : ObservableObject
             Collections.Add(new CollectionRowVM(c.Id, c.Name, c.Path,
                 _collectionCounts.GetValueOrDefault(c.Id), c.Id == _collectionId));
 
-        // FS 軸のみ(M3a)。view 軸は M3b。
-        var ctx = ResolveFs();
-        var sortedFiles = SortFiles(ctx.Files);
-        var folders = ctx.Folders
-            .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (_sortDir == SortDirection.Desc) folders.Reverse();
+        // ---- AxisOptions(FS + 保存ビュー) ----
+        AxisOptions.Clear();
+        AxisOptions.Add(new AxisOptionVM("fs", "ファイルシステム", "OS のフォルダ階層", isView: false, _axis == "fs"));
+        foreach (var v in _allViews)
+            AxisOptions.Add(new AxisOptionVM(v.Id, v.Name, "タグで組んだビュー", isView: true, _axis == "view" && _viewId == v.Id));
 
-        // ---- breadcrumb ----
-        HomeActive = _fsPath.Count == 0;
-        Crumbs.Clear();
-        for (int i = 0; i < _fsPath.Count; i++)
-            Crumbs.Add(new CrumbVM(_fsPath[i], i == _fsPath.Count - 1, i));
-        CountLabel = $"{folders.Count + sortedFiles.Count} 項目";
-
-        // ---- chips(FS 記述的) ----
+        var folders = new List<(string Name, int Count)>();
+        List<ImageEntry> files;
+        List<string> crumbNames;
         Chips.Clear();
         ShowChips = false; ShowChipHint = false; ShowEmptyTagNote = false;
-        if (_axis == "fs" && ctx.AnyTagged)
+        _currentChildren.Clear();
+
+        if (_axis == "view" && _viewRoot is not null)
         {
-            ShowChips = true; ShowChipHint = true; ChipHintLabel = "タグで絞り込み";
-            Chips.Add(ChipVM.Neutral("クリア", _tagFilter is null));
-            foreach (var (tid, count) in ctx.Chips.OrderBy(c => c.TagId, StringComparer.Ordinal))
+            // ---- view 軸(M3b): ノード階層をチップで潜り・パンくずで戻る ----
+            var fullPath = new List<GraphNode> { _viewRoot };
+            fullPath.AddRange(_viewPath);
+            var current = fullPath[^1];
+            files = SortFiles(ViewMatched(fullPath));
+            crumbNames = _viewPath.Select(n => n.DisplayName).ToList();
+            HomeActive = _viewPath.Count == 0;
+
+            int ci = 0;
+            foreach (var child in current.Children)
             {
-                if (!_tagById.TryGetValue(tid, out var def)) continue;
-                Chips.Add(ChipVM.Colored(tid, def.Name, TagColor(def), count, _tagFilter == tid, isNav: false));
+                var key = "vc" + ci++;
+                _currentChildren[key] = child;
+                int count = ViewMatched(Append(fullPath, child)).Count;
+                var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
+                Chips.Add(ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
+            }
+            if (Chips.Count > 0) { ShowChips = true; ShowChipHint = true; ChipHintLabel = "階層を掘る"; }
+        }
+        else
+        {
+            // ---- FS 軸 ----
+            var ctx = ResolveFs();
+            files = SortFiles(ctx.Files);
+            folders = ctx.Folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            if (_sortDir == SortDirection.Desc) folders.Reverse();
+            crumbNames = _fsPath.ToList();
+            HomeActive = _fsPath.Count == 0;
+            if (ctx.AnyTagged)
+            {
+                ShowChips = true; ShowChipHint = true; ChipHintLabel = "タグで絞り込み";
+                Chips.Add(ChipVM.Neutral("クリア", _tagFilter is null));
+                foreach (var (tid, count) in ctx.Chips.OrderBy(c => c.TagId, StringComparer.Ordinal))
+                {
+                    if (!_tagById.TryGetValue(tid, out var def)) continue;
+                    Chips.Add(ChipVM.Colored(tid, def.Name, TagColor(def), count, _tagFilter == tid, isNav: false));
+                }
+            }
+            else if (_fsPath.Count > 0)
+            {
+                ShowEmptyTagNote = true;
             }
         }
-        else if (_axis == "fs" && _fsPath.Count > 0)
-        {
-            ShowEmptyTagNote = true;
-        }
+
+        // ---- breadcrumb ----
+        Crumbs.Clear();
+        for (int i = 0; i < crumbNames.Count; i++)
+            Crumbs.Add(new CrumbVM(crumbNames[i], i == crumbNames.Count - 1, i));
+        CountLabel = $"{folders.Count + files.Count} 項目";
 
         // ---- items ----
         var selSet = new HashSet<string>(_selected);
         Items.Clear();
-        foreach (var (name, count) in folders)
+        foreach (var (name, _) in folders)
             Items.Add(new ImageItemVM(name, name, isFolder: true, isPlaceholder: false, hasThumb: false,
                 thumbBrush: null, selectable: false, isSelected: false, hasTagDots: false,
                 tagDots: new List<IBrush>(), sizeLabel: "—", dateLabel: "—", target: name));
-        foreach (var e in sortedFiles)
+        foreach (var e in files)
         {
             bool selected = selSet.Contains(e.Record.Id);
             var tagsOf = ImgTagIds(e);
@@ -438,12 +514,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
     //  コマンド
     // =====================================================================
     [RelayCommand]
-    private void SelectCollection(string id)
+    private async Task SelectCollection(string id)
     {
         if (_collectionId == id) return;
         _collectionId = id; _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
         BuildEntries();
-        Recompute();
+        // view 軸なら新コレクション scope で NodeGraph(値ノード)を再構築する。
+        if (_axis == "view" && _viewId is not null) await LoadViewAsync(_viewId);
+        else Recompute();
     }
 
     [RelayCommand]
@@ -460,12 +538,30 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SelectAxis(string axis)
+    private async Task SelectAxis(string id)
     {
-        // M3a: FS 軸のみ実装。view 軸は M3b(現状は FS に留める)。
-        _axis = axis == "view" ? "view" : "fs";
         AxisMenuOpen = false;
-        _fsPath.Clear(); _tagFilter = null; _selected.Clear();
+        _tagFilter = null; _selected.Clear(); _expandTag = null;
+        if (id == "fs")
+        {
+            _axis = "fs"; _viewId = null; _viewRoot = null; _viewPath.Clear(); _fsPath.Clear();
+            Recompute();
+            return;
+        }
+        await LoadViewAsync(id);
+    }
+
+    private async Task LoadViewAsync(string viewId)
+    {
+        var view = _allViews.FirstOrDefault(v => v.Id == viewId);
+        if (view is null) { _axis = "fs"; _viewId = null; _viewRoot = null; Recompute(); return; }
+        _axis = "view"; _viewId = viewId; _viewLabel = view.Name;
+        _viewConditions = await _views.GetConditionsAsync(viewId).ConfigureAwait(true);
+        var hierarchy = await _views.GetHierarchyAsync(viewId).ConfigureAwait(true);
+        var valueIndex = TagValueIndex.Build(_entries.Select(e => e.ToImageWithTags()));
+        var result = _graphBuilder.BuildGraph(hierarchy, _tagById, valueIndex);
+        _viewRoot = result.Root;
+        _viewPath.Clear();
         Recompute();
     }
 
@@ -503,21 +599,41 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void GoHome() { _fsPath.Clear(); _tagFilter = null; Recompute(); }
+    private void GoHome()
+    {
+        if (_axis == "view") _viewPath.Clear();
+        else { _fsPath.Clear(); _tagFilter = null; }
+        _selected.Clear();
+        Recompute();
+    }
 
     [RelayCommand]
     private void GoCrumb(int depth)
     {
-        while (_fsPath.Count > depth + 1) _fsPath.RemoveAt(_fsPath.Count - 1);
-        _tagFilter = null;
+        if (_axis == "view")
+        {
+            while (_viewPath.Count > depth + 1) _viewPath.RemoveAt(_viewPath.Count - 1);
+        }
+        else
+        {
+            while (_fsPath.Count > depth + 1) _fsPath.RemoveAt(_fsPath.Count - 1);
+            _tagFilter = null;
+        }
+        _selected.Clear();
         Recompute();
     }
 
     [RelayCommand]
     private void ClickChip(ChipVM chip)
     {
+        if (chip.IsNav)
+        {
+            // view 軸: 子ノードへ潜る
+            if (_currentChildren.TryGetValue(chip.Id, out var node)) { _viewPath.Add(node); _selected.Clear(); Recompute(); }
+            return;
+        }
         if (chip.IsNeutral) _tagFilter = null;
-        else if (!chip.IsNav) _tagFilter = _tagFilter == chip.Id ? null : chip.Id;
+        else _tagFilter = _tagFilter == chip.Id ? null : chip.Id;
         Recompute();
     }
 
