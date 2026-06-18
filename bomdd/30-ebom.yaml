@@ -255,7 +255,7 @@ ebom:
       depends_on: [E-DOMAIN-001, E-DB-010]
       graph_edges:
         owner: E-CRITERIA-037
-        consumers: [E-RELINK-007, E-UI-REPAIR-039]
+        consumers: [E-RELINK-007, E-UI-REPAIR-039, E-UI-SIMILARITY-035]   # (ECO-014) 整理トレイの条件検索 find
       invariants:
         - 指定条件のみ AND 結合・同一コレクション内。対象 status は呼び出し用途で固定(単体=normal / relink 候補=pending∪normal)
         - 結果は安定順(relative_path 昇順・同値 id 昇順)。条件が 1 つも未指定なら非実行(全件を返さない)
@@ -325,6 +325,7 @@ ebom:
         - (ECO-012/I06) 画像タブのタグビュー軸の選択は、表示軸セレクタがビュー管理のビュー一覧を展開して行う(画像タブ自完結・E-VIEWSVC-009 消費)。単一ビューは直接入る
         - (ECO-012/I10・I13) FS 軸のタグチップは現フォルダ表示中の画像に実在するタグを集計(現階層スコープ・再帰しない)。閲覧時グリッドのタグ色ドットは左下・最大3(超過は先頭3)
         - (ECO-013) 画像タブのグリッド/リストは新 ImageTabView(ImageTabViewModel)が単独で描画する(原典 MainWindow の重畳 Grid・harness を撤去)。選択ロジックの unit 検査点は MainWindowViewModel でなく ImageTabViewModel(母集合=選択コレクションの status=normal・REQ-053)に移る
+        - (ECO-014) 画像タブ右ペインは2つの文脈モード(タグ編集 = E-UI-TAGASSIGN-029 / 整理 = E-UI-SIMILARITY-035 + E-UI-MERGE-036 の整理トレイ)を**排他**で持つ。整理モードでは中央ペインが「検索結果」表示へ切替わり候補+一致率を提示する。整理中のグリッドクリックは選択(連番バッジ)でなく**マージ先/整理対象の割当**へ振る舞いを切替える(タグ編集モードの選択視覚とは別系統)
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022]
 
     - id: E-UI-DETAIL-023
@@ -429,30 +430,33 @@ ebom:
 
     # ---------- v3.0 表面(loop-v3-similarity) ----------
     - id: E-UI-SIMILARITY-035
-      name: 類似検索 UI(起動・閾値スライダー・精度モード非表示・結果一覧(類似度%降順)・進捗・空状態)— v3.0 新設
+      name: 類似検索 UI(起動・閾値スライダー・精度モード非表示・結果一覧(類似度%降順)・進捗・空状態)— v3.0 新設+ECO-014(整理トレイの find へ統合)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-065, REQ-064]
-      external_source_ref: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)"
+      external_source_ref: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-SIMSEARCH-032, E-UI-GRID-022, E-THUMB-020]
+      depends_on: [E-SIMSEARCH-032, E-CRITERIA-037, E-UI-GRID-022, E-THUMB-020]
       invariants:
         - 照合は pHash のみ。simple/detailed(精度モード)の選択 UI を出さない(仕様 §2.10.4)
         - 結果整列・選択・空状態のロジックは ViewModel に置き unit 検査可能にする
+        - (ECO-014/UQ-I07・IMG-005) 類似検索は独立モーダル(原典 SimilarImageSearchModal)でなく、画像タブ右ペインの**整理トレイ**(整理モード)の find として提供する。整理は「整理」ボタンで開始しタグ編集モードと排他。find「似た画像を探す」は ①類似画像検索(E-SIMSEARCH-032・pHash 閾値スライダー)②条件検索(**E-CRITERIA-037 を消費**・hash/拡張子/サイズ/名前/mtime)の2方式。検索結果は中央ペイン全面に候補+**一致率**(見比べ重視)・候補ごとに「整理対象に追加」。Core(E-SIMSEARCH-032/E-CRITERIA-037)の意味論は不変(候補=normal・同一コレクション REQ-053・閾値以上を類似度降順安定)
       acceptance_refs: [CP-UI-G9]
 
     - id: E-UI-MERGE-036
-      name: マージ UI(マージ先/元選択・統合タグプレビュー・非破壊明示)+マージ元 deleted の最小トラッシュ表示 — v3.0 新設
+      name: マージ UI(マージ先/元選択・統合タグプレビュー・非破壊明示)+マージ元 deleted の最小トラッシュ表示 — v3.0 新設+ECO-014(整理トレイの merge へ統合)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-067, REQ-066]
-      external_source_ref: "原典 ImageMergeModal/TrashModal(仕様 §2.10.5)"
+      external_source_ref: "原典 ImageMergeModal/TrashModal(仕様 §2.10.5)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-MERGE-034, E-UI-SIMILARITY-035, E-THUMB-020]
       invariants:
         - 実行前にマージ先・元・統合後タグのプレビューと「物理ファイルは削除されない」旨を明示
         - トラッシュは選択中コレクションの deleted 一覧+件数のみ(復元/完全削除なし — 仕様 §2.10.5)
         - マージ実行は E-MERGE-034 の原子 API のみ経由(UI 側でタグ操作を再実装しない)
+        - (ECO-014/UQ-I07・IMG-005) マージは独立モーダル(原典 ImageMergeModal)でなく、**整理トレイ**(整理モード右ペイン)で提供する。トレイ = マージ先(残す1枚)/ 整理対象(統合し削除対象)/ タグ統合トグル(「マージ時にタグを含める」= E-MERGE-034 のタグ union)/ マージを実行(整理対象 ≥1 で有効)。整理中のグリッドクリックはマージ先未設定→マージ先・設定後→整理対象トグル(選択でなくトレイ割当)。完了は「統合しました」+結果(何枚を1枚へ/何枚削除)+「取り消す」「別の整理を続ける」。マージ実行は E-MERGE-034 の原子 API のみ経由(タグ union・マージ先優先・source=deleted・物理非破壊 INV-009)で意味論不変
+        - (ECO-014 スコープ外) **マージ実行の永続化ルール(IMG-011: 削除手段=論理/ゴミ箱・取り消し保持範囲・タグ統合の永続化単位・タグ衝突解決)と実ファイル操作は本 ECO 対象外**(後続 ECO)。整理完了の「取り消す」は affordance のみ提示し Undo 保持範囲は IMG-011 で確定する。トラッシュ復元/完全削除(E-TRASH-038)・修復(E-UI-REPAIR-039)・詳細パネル/ノート(E-UI-DETAIL-023)の整理 surface への配置も後続(UQ-I07 作業/⋯・原典撤去 ECO-013 残)
       acceptance_refs: [CP-UI-G9]
 
     # ---------- v4.0 表面(loop-v4-repair-lifecycle) ----------
