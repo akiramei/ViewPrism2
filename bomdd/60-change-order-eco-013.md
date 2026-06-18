@@ -69,7 +69,7 @@ harness 構成: `MainWindowViewModel.ShowImageTabPreview`(既定 ON)→ `ShowIma
 | 4e | 閲覧ダブルクリックでビューアー起動せず | 機能欠落 | 閲覧モードのダブルクリック=`IWindowService.ShowViewer`(表示順)を配線(DoubleClickDetector で DF-4 堅牢化) |
 | 4d | ホバーで背景色なし | parity | グリッドセルにホバー淡塗り(`thumbCellWrap:pointerover`・エクスプローラー同様) |
 | 5a | 折り畳みコレクションのクリックで切替わらない | bug | railIcon `Button` が PointerPressed を Handled 化し code-behind が発火しない → **`Command` バインドへ変更**(`SelectCollectionCommand`) |
-| 5b | 展開コレクションカードの幅が内容依存 | bug | ScrollViewer `HorizontalScrollBarVisibility=Disabled` + カード `HorizontalAlignment=Stretch` で均一幅 |
+| 5b | 展開コレクションカードの幅が内容依存(長いパス NoWrap がカード desired 幅を駆動しビューポートを超えオーバーフロー→件数バッジがサイドバー端でクリップ) | bug | カード幅を `ScrollViewer.Viewport.Width` に束縛 + 横インセットを Padding→Margin(Viewport 自体を縮め垂直スクロールバーにも自動追従)。`HorizontalScrollBarVisibility=Disabled`+`Stretch` は ItemsControl をビューポート幅に拘束せず無効だった。実機キャプチャ(PrintWindow)で均一幅・バッジ全表示を確認(別コミット 480ec5b) |
 | **4a/4c** | 選択視覚=チェック(原典=①番号順) | **design 差し戻し** | **maintainer 裁定: 連番順の番号バッジを復活**(原典準拠)。**UQ-I12(モック=チェック)を golden 実機検証で差し戻す**(GF 所見)。連番(ページ番号)付与に選択順の可視化が必須。`ImageItemVM.SelectionOrder`(1 起点)+ thumbCheck を番号表示へ |
 | **4f** | 閲覧クリックで選択 | **design 確認** | **maintainer 裁定: 選択はタグ編集モード専用(モック準拠)**。閲覧モードのシングルクリックは無操作(モード分離)。ダブルクリック=ビューアーのみ |
 
