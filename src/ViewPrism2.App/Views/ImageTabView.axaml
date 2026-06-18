@@ -579,29 +579,31 @@
 
             <Border Width="1" Height="26" Background="{StaticResource CardBorderBrush}" />
 
+            <!-- モード中(タグ編集/整理)は他モード入口・作業・⋯ を隠し、当該モードの「終了」と
+                 表示軸/ソート/レイアウトのみ残す(集中・排他可視化・狭い中央列での被り解消)。ECO-014 §8 -->
             <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
               <Button Classes="toolbarBtn" Classes.active="{Binding EditMode}" FontWeight="SemiBold"
-                      Command="{Binding ToggleEditCommand}">
+                      IsVisible="{Binding !OrganizeMode}" Command="{Binding ToggleEditCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource PencilIcon}" />
                   <TextBlock Text="{Binding EditButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <Button Classes="toolbarBtn" Classes.active="{Binding OrganizeMode}" FontWeight="SemiBold"
-                      Command="{Binding ToggleOrganizeCommand}">
+                      IsVisible="{Binding !EditMode}" Command="{Binding ToggleOrganizeCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource TuneIcon}" />
                   <TextBlock Text="{Binding OrganizeButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <!-- 作業 / ⋯ は UQ-I07 残(未設計)。プレースホルダのまま(ECO-014 スコープ外) -->
-              <Button Classes="toolbarBtn">
+              <!-- 作業 / ⋯ は UQ-I07 残(未設計)。モード中は操作対象がないため隠す(maintainer 2026-06-18) -->
+              <Button Classes="toolbarBtn" IsVisible="{Binding !InAnyMode}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource WorkIcon}" />
                   <TextBlock Text="作業" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="toolbarBtn square">
+              <Button Classes="toolbarBtn square" IsVisible="{Binding !InAnyMode}">
                 <PathIcon Data="{StaticResource MoreIcon}" />
               </Button>
             </StackPanel>

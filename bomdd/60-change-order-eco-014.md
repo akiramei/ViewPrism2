@@ -78,3 +78,17 @@
 - 本 ECO は ECO-013 の原典撤去ブロッカー分析(類似/マージ/トラッシュ/修復/詳細が新 surface 未配線)を受け、**類似+マージを CAD 先行で機能完成へ進める第1弾**。
 - read-across: 原典の独立モーダル(SimilarImageSearchModal / ImageMergeModal)を画像タブの「選択→右ペイン」一貫操作へ統合する判断は ECO-010(NodeGraph/TagAssign を原典から作り直し)と同型。**Core(E-SIMSEARCH-032 / E-CRITERIA-037 / E-MERGE-034)は意味論不変で再利用し surface のみ作り直す** = E-BOM 規律「核は requirement、表面は知識更新」どおり。
 - lesson: 機能完成は「原典コマンドを新ボタンへ配線」ではなく「**CAD(整理トレイ)へ surface を作り直し、Core サービスを再利用**」。原典モーダルの単純流用は CAD(モック=正典)に反する。撤去前 golden(ECO-013 §7)で得た「新 surface = 原典の完全な機能等価か」の関門を、機能完成側でも surface ごとに CAD 起点で閉じていく。
+
+## 8. golden 第1回(2026-06-18・maintainer 実機・harness ON)— 所見と是正
+製造②(M1+M2 surface)後の実機 golden。機能は動作(マージ先・検索結果100%・条件入力・整理対象追加・マージ実行(1枚)有効)。視覚所見を是正。
+
+| # | 所見 | 区分 | 是正 |
+|---|---|---|---|
+| 1 | 「類似画像/条件」セグメントの文字切れ | bug | grid/list 用の正方 `segBtn`(Width=38 固定)を流用していた → テキスト用 `segBtnText`(固定幅なし)を新設し差替え |
+| 2 | 右ペインのカード/テキストが右へはみ出す | bug | **ECO-013 #5b と同型**(ScrollViewer 内で幅がビューポート非拘束)。整理トレイ2 ScrollViewer を Padding→Margin + `HorizontalScrollBarVisibility=Disabled` + 内側 StackPanel `Width={Binding $parent[ScrollViewer].Viewport.Width}` 束縛。カード/名前 TextBlock がペイン幅に収まり TextTrimming が効く |
+| 3 | 右ペイン展開時に横長ツールバーが隣ペインへ描画はみ出し(中央列 約582px) | parity/layout | (a) 中央 DockPanel に `ClipToBounds`(左サイドバーと同じ封じ込め)で被り防止。(b) **design 裁定(maintainer): モード中は他モード入口(`タグ編集`⇄`整理`)・`作業`・`⋯` を非表示**にし、表示軸/ソート/レイアウトと当該モードの「終了」のみ残す(集中・排他可視化・狭い中央列でツールバーが収まる=約540px)。`作業`/`⋯` はモード中に操作対象がない(maintainer)。実装: `タグ編集`=`!OrganizeMode` / `整理`=`!EditMode` / `作業`・`⋯`=`!InAnyMode` |
+
+- design 決定の追記(§3 disposition への補遺): **モード中のツールバーは文脈依存で項目を出し分ける**(モード入口の排他可視化 + browse 専用アクション=作業/⋯ を隠す)。モード直接切替(1クリック)は失うが「終了→入り直す」で代替・影響小。`作業`/`⋯` の本体挙動は引き続き **UQ-I07**(本 ECO スコープ外)。レスポンシブ overflow ツールバーは不採用(本質は狭窓制約・最大化/サイドバー折り畳みで解消)。
+- 同期先: ViewPrismUI `docs/screens/image_tab.md`(ツールバー節へ「モード中の項目出し分け」を追記)/ `unresolved-questions.md` UQ-I07(作業/⋯=browse 専用・モード中非表示)。
+- 検証: App build 0 警告 / Tests 416 / Oracle 74+2skip(S-01〜S-31 不変)。コミット列: surface=`795cde7` / GF #1#2=`9196ca1` / ClipToBounds=`13352b8` / モード文脈ツールバー=(本コミット)。
+- lesson: ScrollViewer 内のカード幅は `Viewport.Width` 束縛が必須(`Disabled`+`Stretch` だけでは非拘束)= ECO-013 #5b の横展開。アイコン用 `segBtn` をテキストに流用しない。狭い中央列での横長ツールバーは、サイズを詰めるのでなく **文脈で項目を出し分ける(モード時は browse アクションを隠す)** のが自然解。

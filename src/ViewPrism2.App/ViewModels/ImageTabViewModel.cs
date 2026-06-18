@@ -380,6 +380,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- 整理モード(ECO-014)公開契約 ----
     public bool OrganizeMode => _organizeMode;
     public string OrganizeButtonLabel => _organizeMode ? "整理を終了" : "整理";
+    /// <summary>いずれかの文脈モード中(タグ編集 or 整理)。モード中は他モード入口・作業・⋯ を隠す(集中・排他可視化・幅)。</summary>
+    public bool InAnyMode => _editMode || _organizeMode;
     /// <summary>右ペインの文脈モード(タグ編集 / 整理)は排他。どちらかなら右ペインを出す。</summary>
     public bool ShowRightPane => _editMode || _organizeMode;
     public bool IsTagEditContext => _editMode;
