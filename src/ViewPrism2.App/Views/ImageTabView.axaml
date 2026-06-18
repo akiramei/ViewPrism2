@@ -30,7 +30,8 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:CollectionRowVM">
                 <Button Classes="railIcon" Classes.selected="{Binding IsSelected}" ToolTip.Tip="{Binding Name}"
-                        PointerPressed="OnCollectionPressed">
+                        Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).SelectCollectionCommand}"
+                        CommandParameter="{Binding Id}">
                   <PathIcon Data="{StaticResource FolderIcon}" />
                 </Button>
               </DataTemplate>
@@ -53,11 +54,12 @@
               <TextBlock Text="コレクション" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
             </DockPanel>
           </Border>
-          <ScrollViewer Padding="12">
+          <ScrollViewer Padding="12" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Collections}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:CollectionRowVM">
                   <Border Classes="navCard" Classes.selected="{Binding IsSelected}" MinHeight="52"
+                          HorizontalAlignment="Stretch"
                           PointerPressed="OnCollectionPressed" ToolTip.Tip="{Binding Path}">
                     <DockPanel>
                       <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center">
@@ -520,7 +522,8 @@
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ImageItemVM">
-                <StackPanel Width="150" Margin="7" Background="Transparent" PointerPressed="OnItemPressed">
+                <Border Classes="thumbCellWrap" Width="164" Padding="7" PointerPressed="OnItemPressed">
+                 <StackPanel Width="150">
                   <Border Classes="thumbCell" Classes.selected="{Binding IsSelected}" Height="150">
                     <Panel>
                       <Border Background="{Binding ThumbBrush}" IsVisible="{Binding HasThumb}" />
@@ -530,8 +533,11 @@
                                 IsVisible="{Binding IsFolder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                       <PathIcon Data="{StaticResource ImageIcon}" Width="38" Height="38" Foreground="#C6CDD8"
                                 IsVisible="{Binding IsPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <!-- 選択順バッジ(REQ-041 CR-3): 選択時は連番順の番号・未選択(編集中)は空枠 -->
                       <Border Classes="thumbCheck" Classes.selected="{Binding IsSelected}" IsVisible="{Binding Selectable}">
-                        <PathIcon Data="{StaticResource CheckIcon}" IsVisible="{Binding IsSelected}" />
+                        <TextBlock Text="{Binding SelectionOrderText}" IsVisible="{Binding IsSelected}"
+                                   FontSize="12" FontWeight="Bold" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                       </Border>
                       <ItemsControl ItemsSource="{Binding TagDots}" IsVisible="{Binding HasTagDots}"
                                     HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="7">
@@ -545,7 +551,8 @@
                     </Panel>
                   </Border>
                   <TextBlock Classes="thumbName" Text="{Binding Name}" HorizontalAlignment="Center" />
-                </StackPanel>
+                 </StackPanel>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

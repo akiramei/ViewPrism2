@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using ViewPrism2.App.ViewModels;
@@ -11,6 +12,8 @@ namespace ViewPrism2.App.Views;
 /// </summary>
 public partial class ImageTabView : UserControl
 {
+    private readonly DoubleClickDetector _doubleClick = new();
+
     public ImageTabView() => InitializeComponent();
 
     private ImageTabViewModel? Vm => DataContext as ImageTabViewModel;
@@ -29,12 +32,29 @@ public partial class ImageTabView : UserControl
 
     private void OnItemPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Control { DataContext: ImageItemVM item } && Vm is { } vm)
+        if (sender is Control { DataContext: ImageItemVM item } control && Vm is { } vm &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
         {
-            var m = e.KeyModifiers;
-            vm.HandleItemClick(item, m.HasFlag(KeyModifiers.Control), m.HasFlag(KeyModifiers.Shift));
+            var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+            var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+            // ダブルクリック判定は ClickCount に加え自前検出で補完する(DF-4 堅牢化・原典と同流儀)
+            var detected = _doubleClick.ObserveClick(item, (long)e.Timestamp, SystemDoubleClickTimeMs, ctrl || shift);
+            vm.HandleItemClick(item, ctrl, shift, e.ClickCount >= 2 || detected);
         }
     }
+
+    /// <summary>OS のダブルクリック時間(ms)。本アプリは Windows 専用(仕様 §1)。</summary>
+    private static double SystemDoubleClickTimeMs
+    {
+        get
+        {
+            try { return GetDoubleClickTime(); }
+            catch (EntryPointNotFoundException) { return 500; }
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
 
     private void OnAddRowPressed(object? sender, PointerPressedEventArgs e)
     {

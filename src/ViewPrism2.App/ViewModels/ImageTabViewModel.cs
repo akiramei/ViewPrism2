@@ -252,14 +252,15 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     private List<ImageEntry> AllLoadedImagesInContext()
     {
-        // 編集モードの選択母集合=現在の文脈で表示中の画像。
+        // 編集モードの選択母集合・ビューアー順=現在の文脈で表示中の画像を**表示と同じソート順**で返す。
+        // (SHIFT 範囲選択が表示順と一致する=歯抜け防止。連番/ビューアーの順序も表示順に一致する)
         if (_axis == "view" && _viewRoot is not null)
         {
             var fullPath = new List<GraphNode> { _viewRoot };
             fullPath.AddRange(_viewPath);
-            return ViewMatched(fullPath);
+            return SortFiles(ViewMatched(fullPath));
         }
-        return ResolveFs().Files; // FS: 現在のフォルダに直接ある画像(サブフォルダは含めない)
+        return SortFiles(ResolveFs().Files); // FS: 現在のフォルダに直接ある画像(サブフォルダは含めない)
     }
 
     private static List<GraphNode> Append(List<GraphNode> path, GraphNode child)
@@ -433,6 +434,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         foreach (var e in files)
         {
             bool selected = selSet.Contains(e.Record.Id);
+            int? order = selected ? _selected.IndexOf(e.Record.Id) + 1 : null; // 選択順バッジ(1 起点・REQ-041 CR-3)
             var tagsOf = ImgTagIds(e);
             var dots = (!_editMode && tagsOf.Count > 0)
                 ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
@@ -441,7 +443,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 hasThumb: true, thumbBrush: null, selectable: _editMode, isSelected: selected,
                 hasTagDots: !_editMode && tagsOf.Count > 0, tagDots: dots,
                 sizeLabel: FmtSize(e.Record.FileSize), dateLabel: FmtDate(e.Record.ModifiedDate),
-                target: null, absolutePath: e.AbsolutePath));
+                target: null, absolutePath: e.AbsolutePath, selectionOrder: order));
         }
 
         // ---- edit panel ----
@@ -698,15 +700,29 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
-    public void HandleItemClick(ImageItemVM item, bool ctrl, bool shift)
+    public void HandleItemClick(ImageItemVM item, bool ctrl, bool shift, bool isDoubleClick = false)
     {
         if (item.IsFolder)
         {
             if (item.Target is not null) { _fsPath.Add(item.Target); _tagFilter = null; _selected.Clear(); Recompute(); }
             return;
         }
-        if (!_editMode) return; // 閲覧時クリック=ビューア(本スコープ外)
-        ToggleSelect(item.Id, ctrl, shift);
+        if (!_editMode)
+        {
+            // 閲覧モード(モック準拠): シングルクリックは無操作・ダブルクリックでビューアー起動(REQ-041)
+            if (isDoubleClick) OpenViewer(item.Id);
+            return;
+        }
+        ToggleSelect(item.Id, ctrl, shift); // 編集モード: 選択(ダブルクリックでもビューアーは開かない)
+    }
+
+    /// <summary>閲覧モードのダブルクリック=ビューアー起動(REQ-041)。表示順(SortFiles)で開く。</summary>
+    private void OpenViewer(string id)
+    {
+        var ordered = AllLoadedImagesInContext();
+        int idx = ordered.FindIndex(e => string.Equals(e.Record.Id, id, StringComparison.Ordinal));
+        if (idx < 0) return;
+        _windows.ShowViewer(ordered, idx);
     }
 
     private void ToggleSelect(string id, bool ctrl, bool shift)

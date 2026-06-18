@@ -323,10 +323,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// </summary>
     public void CaptureSettings()
     {
-        _settings.DisplayMode = Browser.IsListMode ? "list" : "grid";
         _settings.LastViewId = CurrentView?.Id;
-        _settings.LastCollectionId = SelectedCollectionId;
         _settings.Locale = _localization.CurrentLocale;
+        // 表示モード(CR-6)と選択コレクション(CR-5)は ECO-013 で画像タブ surface(ImageTab)が所有する。
+        // harness 併走中に legacy Browser/SelectedCollectionId で新 surface の値を上書きしない。
+        ImageTab.CaptureSettings();
     }
 
     partial void OnSelectedTabIndexChanged(int value)

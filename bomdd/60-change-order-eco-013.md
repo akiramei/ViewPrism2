@@ -56,3 +56,22 @@ harness 構成: `MainWindowViewModel.ShowImageTabPreview`(既定 ON)→ `ShowIma
 ## 6. provenance / lesson 連結
 - 本 ECO は M3 繰り越し(task #5)を spec-first で正式化したもの。撤去が「単純削除」でなく「機能移行(管理入口)+ 挙動保全(REQ-053)」を伴うことを撤去前に可視化し、ECO 連鎖((c) gap)で扱った(直接ハンドコードしない・ECO-003 で institutional 化した所見トリアージ)。
 - lesson: 「harness 併走 → 原典撤去」は、新 surface が原典の**機能(管理入口)と契約(REQ-053 永続化/未選択)を等価に引き受けられるか**を撤去前に検証すべき。CAD を読み直すと管理入口(`+`)は既にモックに設計されており(抽出漏れ)、「ゼロから新規設計」でなく**既存 CAD アフォーダンスの正式化**で済んだ=read-across(モック→実機)を撤去設計でも行う価値。
+
+## 7. golden 第1回(2026-06-18・maintainer 実機・harness ON)— 所見と裁定
+撤去前 golden で、新 surface が **M1–M3 で「タグ編集/ブラウズ設計」を golden ハーネス化した範囲**に留まり、原典の一部挙動を deferred のままにしていたことが判明(撤去をブロック=golden-in-the-loop の有効性)。
+
+| # | 所見 | 区分 | 是正 |
+|---|---|---|---|
+| 1 | 管理入口(`+`) | OK | — |
+| 2 | リスト→再起動でグリッドに戻る | bug | harness ON 中、原典 `MainWindowViewModel.CaptureSettings` が legacy `Browser.IsListMode` で新 VM の値を上書き(App 終了時)→ **CaptureSettings を `ImageTab` へ委譲**(DisplayMode/LastCollectionId は ImageTab が所有) |
+| 3 | 未選択プロンプト | OK | — |
+| 4b | SHIFT 連続選択が歯抜け | bug | `ToggleSelect`/ビューアーの母集合 `AllLoadedImagesInContext()` が**未ソート**で表示順とズレ → **表示順(SortFiles)に統一**。回帰テスト追加 |
+| 4e | 閲覧ダブルクリックでビューアー起動せず | 機能欠落 | 閲覧モードのダブルクリック=`IWindowService.ShowViewer`(表示順)を配線(DoubleClickDetector で DF-4 堅牢化) |
+| 4d | ホバーで背景色なし | parity | グリッドセルにホバー淡塗り(`thumbCellWrap:pointerover`・エクスプローラー同様) |
+| 5a | 折り畳みコレクションのクリックで切替わらない | bug | railIcon `Button` が PointerPressed を Handled 化し code-behind が発火しない → **`Command` バインドへ変更**(`SelectCollectionCommand`) |
+| 5b | 展開コレクションカードの幅が内容依存 | bug | ScrollViewer `HorizontalScrollBarVisibility=Disabled` + カード `HorizontalAlignment=Stretch` で均一幅 |
+| **4a/4c** | 選択視覚=チェック(原典=①番号順) | **design 差し戻し** | **maintainer 裁定: 連番順の番号バッジを復活**(原典準拠)。**UQ-I12(モック=チェック)を golden 実機検証で差し戻す**(GF 所見)。連番(ページ番号)付与に選択順の可視化が必須。`ImageItemVM.SelectionOrder`(1 起点)+ thumbCheck を番号表示へ |
+| **4f** | 閲覧クリックで選択 | **design 確認** | **maintainer 裁定: 選択はタグ編集モード専用(モック準拠)**。閲覧モードのシングルクリックは無操作(モード分離)。ダブルクリック=ビューアーのみ |
+
+- 検証: build 0 警告 / Tests 410(+4 回帰=選択順・SHIFT 表示順・閲覧クリック無操作・閲覧ダブルクリック起動) / Oracle 74+2skip(S-01〜S-31 不変)。
+- lesson: 「golden ハーネス surface」は設計範囲(タグ編集/ブラウズ)を忠実化する一方、**原典の周辺挙動(ビューアー起動・選択順・ホバー・閲覧操作)が暗黙に脱落**しうる。撤去前 golden は「新 surface=原典の完全な機能等価か」をモード横断で突合する関門。UQ-I12 のように**モックの静的決定が実ワークフロー(連番)で破れる**ケースは実機 golden でのみ捕捉でき、差し戻し(GF)で是正する。

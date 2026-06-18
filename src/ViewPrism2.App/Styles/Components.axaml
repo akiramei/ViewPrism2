@@ -628,6 +628,17 @@
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
     <Setter Property="BoxShadow" Value="0 0 0 3 #382F6BED" />
   </Style>
+  <!-- ECO-013: グリッドセルのホバー淡塗り(エクスプローラー同様・セル単位)+ 枠の淡い強調 -->
+  <Style Selector="Border.thumbCellWrap">
+    <Setter Property="CornerRadius" Value="13" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.thumbCellWrap:pointerover">
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+  </Style>
+  <Style Selector="Border.thumbCellWrap:pointerover Border.thumbCell">
+    <Setter Property="BorderBrush" Value="{StaticResource CardHoverBorderBrush}" />
+  </Style>
   <Style Selector="TextBlock.thumbName">
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="FontWeight" Value="Medium" />
