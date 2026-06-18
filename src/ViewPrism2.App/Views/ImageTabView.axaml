@@ -54,12 +54,12 @@
               <TextBlock Text="コレクション" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
             </DockPanel>
           </Border>
-          <ScrollViewer Padding="12" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Margin="12,8,12,8" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Collections}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:CollectionRowVM">
                   <Border Classes="navCard" Classes.selected="{Binding IsSelected}" MinHeight="52"
-                          HorizontalAlignment="Stretch"
+                          Width="{Binding $parent[ScrollViewer].Viewport.Width}"
                           PointerPressed="OnCollectionPressed" ToolTip.Tip="{Binding Path}">
                     <DockPanel>
                       <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center">
