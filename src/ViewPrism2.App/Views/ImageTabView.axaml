@@ -443,7 +443,10 @@
     </Border>
 
     <!-- ===== 中央: ツールバー + パンくず + チップ + 本体 ===== -->
-    <DockPanel>
+    <!-- ClipToBounds: 右ペインを開いて中央が狭い時、横長ツールバーが隣の整理/タグ編集ペインへ
+         描画上はみ出すのを封じる(左サイドバーと同じ封じ込め)。詰め込み自体の本格対応=
+         レスポンシブ overflow は UQ-I07(作業/⋯)設計と一体で別途。Popup メニューは上位層で非クリップ。 -->
+    <DockPanel ClipToBounds="True">
 
       <!-- ツールバー -->
       <Border DockPanel.Dock="Top" MinHeight="60" Padding="18,0"
