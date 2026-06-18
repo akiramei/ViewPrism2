@@ -279,6 +279,173 @@
       </DockPanel>
     </Border>
 
+    <!-- ===== 右: 整理トレイ(整理モード時のみ・ECO-014) ===== -->
+    <Border DockPanel.Dock="Right" Classes="editPanel" Width="344" IsVisible="{Binding IsOrganizeContext}">
+      <DockPanel>
+        <!-- ヘッダ -->
+        <Border DockPanel.Dock="Top" Classes="editPanelHeader">
+          <DockPanel VerticalAlignment="Center">
+            <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding ToggleOrganizeCommand}" ToolTip.Tip="整理を終了">
+              <PathIcon Data="{StaticResource CloseIcon}" />
+            </Button>
+            <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+              <PathIcon Data="{StaticResource TuneIcon}" Width="17" Height="17" Foreground="{StaticResource AccentBrush}" />
+              <TextBlock Text="整理" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- 完了状態(統合しました) -->
+        <ScrollViewer IsVisible="{Binding OrganizeDone}" Padding="16">
+          <StackPanel Spacing="14">
+            <Border Classes="organizeDoneCard">
+              <StackPanel Spacing="11">
+                <StackPanel Orientation="Horizontal" Spacing="9">
+                  <Border Width="34" Height="34" CornerRadius="9" Background="{StaticResource AccentBrush}">
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="18" Height="18" Foreground="White"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <TextBlock Text="統合しました" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                             Foreground="{StaticResource TextPrimaryBrush}" />
+                </StackPanel>
+                <TextBlock Text="{Binding DoneSummary}" FontSize="12.5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <Button Classes="toolbarBtn" Height="40" MinHeight="40" IsEnabled="{Binding CanUndo}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="取り消しは今後対応(IMG-011)">
+              <TextBlock Text="取り消す" VerticalAlignment="Center" />
+            </Button>
+            <Button Classes="primaryAction" Command="{Binding ContinueOrganizeCommand}">
+              <TextBlock Text="別の整理を続ける" />
+            </Button>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 作業トレイ(完了前) -->
+        <ScrollViewer IsVisible="{Binding !OrganizeDone}" Padding="16">
+          <StackPanel Spacing="16">
+            <!-- マージ先 -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="traySection" Text="マージ先(残す1枚)" />
+              <Border Classes="organizeSlot target" IsVisible="{Binding HasMergeTarget}">
+                <DockPanel>
+                  <Border DockPanel.Dock="Left" Classes="organizeMini" Margin="0,0,10,0">
+                    <c:ThumbnailImage SourcePath="{Binding MergeTarget.AbsolutePath}" Stretch="UniformToFill"
+                                      IsVisible="{Binding MergeTarget.HasThumb}" />
+                  </Border>
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding MergeTarget.Name}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding MergeTarget.SizeLabel}" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+              <Border Classes="trayHint" IsVisible="{Binding ShowMergeTargetPrompt}">
+                <TextBlock Text="グリッドで残したい1枚を選ぶとマージ先になります。" />
+              </Border>
+            </StackPanel>
+
+            <!-- 整理対象 -->
+            <StackPanel Spacing="8">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="traySection" Text="{Binding OrganizeTargetsCountLabel}" />
+                <TextBlock Classes="traySection" Text="整理対象(まとめて削除)" />
+              </DockPanel>
+              <Border Classes="trayHint" IsVisible="{Binding ShowOrganizeTargetsPrompt}">
+                <TextBlock Text="まとめる相手がありません。グリッドや検索で追加してください。" />
+              </Border>
+              <ItemsControl ItemsSource="{Binding OrganizeTargets}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:OrganizeSlotVM">
+                    <Border Classes="organizeSlot" Margin="0,0,0,8">
+                      <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                          <Button Classes="iconBtn" ToolTip.Tip="マージ先にする"
+                                  Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).PromoteToMergeTargetCommand}"
+                                  CommandParameter="{Binding Id}">
+                            <PathIcon Data="{StaticResource ArrowUpIcon}" Width="14" Height="14" />
+                          </Button>
+                          <Button Classes="iconBtn" ToolTip.Tip="外す"
+                                  Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).RemoveOrganizeTargetCommand}"
+                                  CommandParameter="{Binding Id}">
+                            <PathIcon Data="{StaticResource CloseIcon}" Width="13" Height="13" />
+                          </Button>
+                        </StackPanel>
+                        <Border DockPanel.Dock="Left" Classes="organizeMini" Margin="0,0,10,0">
+                          <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" IsVisible="{Binding HasThumb}" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
+                                     Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding SizeLabel}" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
+                        </StackPanel>
+                      </DockPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <Border Height="1" Background="{StaticResource CardBorderBrush}" />
+
+            <!-- 似た画像を探す -->
+            <StackPanel Spacing="9">
+              <TextBlock Classes="traySection" Text="似た画像を探す" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtn" Classes.active="{Binding IsSimilarMethod}"
+                          Command="{Binding SetSearchMethodCommand}" CommandParameter="similar">
+                    <TextBlock Text="類似画像" VerticalAlignment="Center" Padding="6,0" />
+                  </Button>
+                  <Button Classes="segBtn" Classes.active="{Binding IsCriteriaMethod}"
+                          Command="{Binding SetSearchMethodCommand}" CommandParameter="criteria">
+                    <TextBlock Text="条件" VerticalAlignment="Center" Padding="6,0" />
+                  </Button>
+                </StackPanel>
+              </Border>
+              <!-- 類似: しきい値 -->
+              <StackPanel Spacing="4" IsVisible="{Binding IsSimilarMethod}">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel}" FontSize="12.5"
+                             FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                  <TextBlock Text="類似度しきい値" FontSize="12" Foreground="{StaticResource FaintTextBrush}" />
+                </DockPanel>
+                <Slider Minimum="50" Maximum="100" Value="{Binding SimilarThreshold}" />
+              </StackPanel>
+              <!-- 条件 -->
+              <StackPanel Spacing="8" IsVisible="{Binding IsCriteriaMethod}">
+                <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
+                  <TextBox Text="{Binding CriteriaName}" PlaceholderText="ファイル名を含む…" BorderThickness="0"
+                           Background="Transparent" VerticalAlignment="Center" Padding="0" />
+                </Border>
+                <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
+                  <TextBox Text="{Binding CriteriaExt}" PlaceholderText="拡張子（例 jpg）…" BorderThickness="0"
+                           Background="Transparent" VerticalAlignment="Center" Padding="0" />
+                </Border>
+              </StackPanel>
+              <Button Classes="toolbarBtn" Height="38" MinHeight="38" HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center" IsEnabled="{Binding CanRunSearch}" Command="{Binding RunSearchCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource SearchIcon}" Width="14" Height="14" />
+                  <TextBlock Text="似た画像を探す" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+
+            <Border Height="1" Background="{StaticResource CardBorderBrush}" />
+
+            <!-- タグ統合 -->
+            <CheckBox IsChecked="{Binding IncludeTags}" Content="マージ時にタグを含める" FontSize="12.5" />
+
+            <!-- マージを実行 -->
+            <Button Classes="primaryAction" IsEnabled="{Binding CanExecuteMerge}" Command="{Binding ExecuteMergeCommand}">
+              <TextBlock Text="{Binding MergeButtonLabel}" />
+            </Button>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
     <!-- ===== 中央: ツールバー + パンくず + チップ + 本体 ===== -->
     <DockPanel>
 
@@ -421,12 +588,14 @@
                   <TextBlock Text="{Binding EditButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="toolbarBtn">
+              <Button Classes="toolbarBtn" Classes.active="{Binding OrganizeMode}" FontWeight="SemiBold"
+                      Command="{Binding ToggleOrganizeCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource TuneIcon}" />
-                  <TextBlock Text="整理" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding OrganizeButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
+              <!-- 作業 / ⋯ は UQ-I07 残(未設計)。プレースホルダのまま(ECO-014 スコープ外) -->
               <Button Classes="toolbarBtn">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource WorkIcon}" />
@@ -517,14 +686,15 @@
         </StackPanel>
 
         <!-- グリッド -->
-        <ScrollViewer IsVisible="{Binding ShowGridPane}">
+        <ScrollViewer IsVisible="{Binding ShowBrowseGrid}">
           <ItemsControl ItemsSource="{Binding Items}" Margin="11">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ImageItemVM">
                 <Border Classes="thumbCellWrap" Width="164" Padding="7" PointerPressed="OnItemPressed">
                  <StackPanel Width="150">
-                  <Border Classes="thumbCell" Classes.selected="{Binding IsSelected}" Height="150">
+                  <Border Classes="thumbCell" Classes.selected="{Binding IsSelected}"
+                          Classes.mergeTarget="{Binding IsMergeTarget}" Height="150">
                     <Panel>
                       <Border Background="{Binding ThumbBrush}" IsVisible="{Binding HasThumb}" />
                       <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill"
@@ -538,6 +708,13 @@
                         <TextBlock Text="{Binding SelectionOrderText}" IsVisible="{Binding IsSelected}"
                                    FontSize="12" FontWeight="Bold" Foreground="White"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <!-- 整理モード(ECO-014): マージ先ラベル / 整理対象チェック(排他) -->
+                      <Border Classes="cellTag" IsVisible="{Binding IsMergeTarget}">
+                        <TextBlock Text="マージ先" />
+                      </Border>
+                      <Border Classes="thumbCheck selected" IsVisible="{Binding IsOrganizeTarget}">
+                        <PathIcon Data="{StaticResource CheckIcon}" />
                       </Border>
                       <ItemsControl ItemsSource="{Binding TagDots}" IsVisible="{Binding HasTagDots}"
                                     HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="7">
@@ -559,7 +736,7 @@
         </ScrollViewer>
 
         <!-- リスト -->
-        <DockPanel IsVisible="{Binding ShowListPane}">
+        <DockPanel IsVisible="{Binding ShowBrowseList}">
           <Border DockPanel.Dock="Top" Classes="imageListHeader">
             <DockPanel VerticalAlignment="Center">
               <TextBlock Text="" Width="34" DockPanel.Dock="Left" />
@@ -595,6 +772,54 @@
             </ItemsControl>
           </ScrollViewer>
         </DockPanel>
+
+        <!-- 整理: 検索結果(中央ペイン全面・候補+一致率)。ECO-014 -->
+        <ScrollViewer IsVisible="{Binding ShowSearchResults}" Background="{StaticResource AppBackgroundBrush}">
+          <StackPanel Margin="18,14">
+            <TextBlock Text="検索結果" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3" />
+            <TextBlock Text="候補を「追加」で整理トレイの整理対象へまとめます。" FontSize="12"
+                       Foreground="{StaticResource FaintTextBrush}" Margin="0,0,0,12" />
+            <StackPanel IsVisible="{Binding NoSearchResults}" HorizontalAlignment="Center" Spacing="10" Margin="0,40">
+              <PathIcon Data="{StaticResource SearchIcon}" Width="34" Height="34" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
+              <TextBlock Text="候補が見つかりませんでした" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding SearchResults}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:OrganizeResultVM">
+                  <Border Classes="resultCard" Classes.added="{Binding Added}" Width="184" Margin="0,0,12,12">
+                    <StackPanel>
+                      <Border Height="150">
+                        <Panel>
+                          <Border Background="{StaticResource ValueChipBg}" />
+                          <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" IsVisible="{Binding HasThumb}" />
+                          <Border Classes="matchBadge"><TextBlock Text="{Binding ScoreText}" /></Border>
+                        </Panel>
+                      </Border>
+                      <DockPanel Margin="10,8,10,10">
+                        <Button DockPanel.Dock="Right" Classes="toolbarBtn" Height="30" MinHeight="30" Padding="9,0"
+                                IsVisible="{Binding !Added}"
+                                Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).AddCandidateToTargetsCommand}"
+                                CommandParameter="{Binding Id}">
+                          <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                            <PathIcon Data="{StaticResource PlusIcon}" Width="13" Height="13" />
+                            <TextBlock Text="追加" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </Button>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding Added}">
+                          <PathIcon Data="{StaticResource CheckIcon}" Width="13" Height="13" Foreground="{StaticResource AccentBrush}" />
+                          <TextBlock Text="追加済" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="Medium" Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      </DockPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
       </Panel>
     </DockPanel>
   </DockPanel>

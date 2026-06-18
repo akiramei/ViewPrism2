@@ -398,7 +398,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public string OrganizeTargetsCountLabel => $"{_organizeTargets.Count} 枚";
 
     // タグ統合(「マージ時にタグを含める」)。E-MERGE-034 は常にタグ union(INV-011)。OFF の no-union は IMG-011(別 ECO)。
-    public bool IncludeTags => _includeTags;
+    public bool IncludeTags { get => _includeTags; set { _includeTags = value; OnPropertyChanged(); } }
 
     // 似た画像を探す
     public bool IsSimilarMethod => _searchMethod == "similar";
@@ -418,6 +418,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>検索結果表示(中央ペインを候補一覧へ切替)。完了状態では出さない。</summary>
     public bool ShowSearchResults => _organizeMode && _hasSearched && !_organizeDone;
     public bool NoSearchResults => ShowSearchResults && SearchResults.Count == 0;
+    /// <summary>検索実行可否: 条件検索は常に / 類似はマージ先(基準)が要る。</summary>
+    public bool CanRunSearch => IsCriteriaMethod || _mergeTargetId is not null;
+    /// <summary>中央ブラウズグリッド: 検索結果表示中は譲る(整理モードでもグリッドで対象を選ぶため出す)。</summary>
+    public bool ShowBrowseGrid => ShowGridPane && !ShowSearchResults;
+    public bool ShowBrowseList => ShowListPane && !ShowSearchResults;
 
     // 実行・完了
     public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
@@ -524,7 +529,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 hasThumb: true, thumbBrush: null, selectable: _editMode, isSelected: selected,
                 hasTagDots: !_editMode && tagsOf.Count > 0, tagDots: dots,
                 sizeLabel: FmtSize(e.Record.FileSize), dateLabel: FmtDate(e.Record.ModifiedDate),
-                target: null, absolutePath: e.AbsolutePath, selectionOrder: order));
+                target: null, absolutePath: e.AbsolutePath, selectionOrder: order,
+                isMergeTarget: _organizeMode && string.Equals(e.Record.Id, _mergeTargetId, StringComparison.Ordinal),
+                isOrganizeTarget: _organizeMode && _organizeTargets.Contains(e.Record.Id)));
         }
 
         // ---- edit panel ----

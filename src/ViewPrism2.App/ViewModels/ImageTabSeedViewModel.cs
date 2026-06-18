@@ -746,12 +746,13 @@ public sealed class ImageItemVM
     public ImageItemVM(string id, string name, bool isFolder, bool isPlaceholder, bool hasThumb,
         IBrush? thumbBrush, bool selectable, bool isSelected, bool hasTagDots, List<IBrush> tagDots,
         string sizeLabel, string dateLabel, string? target, string? absolutePath = null,
-        int? selectionOrder = null)
+        int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
         ThumbBrush = thumbBrush; Selectable = selectable; IsSelected = isSelected;
         HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
         Target = target; AbsolutePath = absolutePath; SelectionOrder = selectionOrder;
+        IsMergeTarget = isMergeTarget; IsOrganizeTarget = isOrganizeTarget;
     }
     public string Id { get; }
     public string Name { get; }
@@ -772,6 +773,10 @@ public sealed class ImageItemVM
     /// <summary>タグ編集モードの選択順(1 起点・REQ-041 CR-3)。未選択は null。連番付与の順序を可視化する。</summary>
     public int? SelectionOrder { get; }
     public string SelectionOrderText => SelectionOrder?.ToString() ?? "";
+    /// <summary>整理モード(ECO-014): このセルがマージ先(残す1枚)か。</summary>
+    public bool IsMergeTarget { get; }
+    /// <summary>整理モード(ECO-014): このセルが整理対象(統合し削除対象)か。</summary>
+    public bool IsOrganizeTarget { get; }
 }
 
 public sealed class AddGroupVM

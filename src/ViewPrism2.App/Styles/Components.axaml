@@ -878,4 +878,138 @@
     <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+
+  <!-- ============================================================================
+       整理トレイ(ECO-014: 類似+マージ統合)— 右ペイン部品 + 中央検索結果 + グリッド整理マーカー。
+       既存の編集パネル/カード/チップ語彙を踏襲。golden 基準=「ViewPrism2 整理マージ」モック。
+       ============================================================================ -->
+
+  <!-- セクション見出し(マージ先 / 整理対象 / 似た画像を探す) -->
+  <Style Selector="TextBlock.traySection">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+  </Style>
+
+  <!-- スロット(マージ先 / 整理対象)カード: ミニサムネ + 名前/サイズ + アクション -->
+  <Style Selector="Border.organizeSlot">
+    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.organizeSlot.target">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+    <Setter Property="BoxShadow" Value="0 0 0 2 #2F2F6BED" />
+  </Style>
+  <Style Selector="Border.organizeMini">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Background" Value="{StaticResource ValueChipBg}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+  </Style>
+
+  <!-- トレイの空状態注記(残したい1枚を選ぶ / まとめる相手がない) -->
+  <Style Selector="Border.trayHint">
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+    <Setter Property="Padding" Value="14,16" />
+  </Style>
+  <Style Selector="Border.trayHint TextBlock">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+
+  <!-- 主要アクション(マージを実行)= 塗りボタン。無効時は沈める。 -->
+  <Style Selector="Button.primaryAction">
+    <Setter Property="Height" Value="44" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.primaryAction /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="CornerRadius" Value="11" />
+  </Style>
+  <Style Selector="Button.primaryAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#2459CF" />
+  </Style>
+  <Style Selector="Button.primaryAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#2459CF" />
+  </Style>
+  <Style Selector="Button.primaryAction:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ValueChipBg}" />
+  </Style>
+  <Style Selector="Button.primaryAction:disabled">
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+  </Style>
+
+  <!-- 検索結果カード(中央ペイン): サムネ + 名前 + 一致率 + 追加アクション -->
+  <Style Selector="Border.resultCard">
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.resultCard.added">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+  </Style>
+  <!-- 一致率バッジ(類似=N% / 条件=条件一致) -->
+  <Style Selector="Border.matchBadge">
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="Background" Value="#E6101828" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Margin" Value="8" />
+  </Style>
+  <Style Selector="Border.matchBadge TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- 完了状態カード(統合しました) -->
+  <Style Selector="Border.organizeDoneCard">
+    <Setter Property="CornerRadius" Value="13" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+    <Setter Property="Padding" Value="18" />
+  </Style>
+
+  <!-- グリッドの整理マーカー: マージ先=accent リング / 整理対象=チェック(thumbCheck 再利用) -->
+  <Style Selector="Border.thumbCell.mergeTarget">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BoxShadow" Value="0 0 0 3 #382F6BED" />
+  </Style>
+  <!-- セル左上の整理ラベル(マージ先) -->
+  <Style Selector="Border.cellTag">
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="7" />
+  </Style>
+  <Style Selector="Border.cellTag TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
 </Styles>
