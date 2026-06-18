@@ -296,8 +296,8 @@
         </Border>
 
         <!-- 完了状態(統合しました) -->
-        <ScrollViewer IsVisible="{Binding OrganizeDone}" Padding="16">
-          <StackPanel Spacing="14">
+        <ScrollViewer IsVisible="{Binding OrganizeDone}" Margin="16,14" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Width="{Binding $parent[ScrollViewer].Viewport.Width}" Spacing="14">
             <Border Classes="organizeDoneCard">
               <StackPanel Spacing="11">
                 <StackPanel Orientation="Horizontal" Spacing="9">
@@ -322,8 +322,8 @@
         </ScrollViewer>
 
         <!-- 作業トレイ(完了前) -->
-        <ScrollViewer IsVisible="{Binding !OrganizeDone}" Padding="16">
-          <StackPanel Spacing="16">
+        <ScrollViewer IsVisible="{Binding !OrganizeDone}" Margin="16,14" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Width="{Binding $parent[ScrollViewer].Viewport.Width}" Spacing="16">
             <!-- マージ先 -->
             <StackPanel Spacing="8">
               <TextBlock Classes="traySection" Text="マージ先(残す1枚)" />
@@ -393,14 +393,10 @@
               <TextBlock Classes="traySection" Text="似た画像を探す" />
               <Border Classes="segmented" HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal" Spacing="2">
-                  <Button Classes="segBtn" Classes.active="{Binding IsSimilarMethod}"
-                          Command="{Binding SetSearchMethodCommand}" CommandParameter="similar">
-                    <TextBlock Text="類似画像" VerticalAlignment="Center" Padding="6,0" />
-                  </Button>
-                  <Button Classes="segBtn" Classes.active="{Binding IsCriteriaMethod}"
-                          Command="{Binding SetSearchMethodCommand}" CommandParameter="criteria">
-                    <TextBlock Text="条件" VerticalAlignment="Center" Padding="6,0" />
-                  </Button>
+                  <Button Classes="segBtnText" Classes.active="{Binding IsSimilarMethod}" Content="類似画像"
+                          Command="{Binding SetSearchMethodCommand}" CommandParameter="similar" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsCriteriaMethod}" Content="条件"
+                          Command="{Binding SetSearchMethodCommand}" CommandParameter="criteria" />
                 </StackPanel>
               </Border>
               <!-- 類似: しきい値 -->

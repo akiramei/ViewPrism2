@@ -540,6 +540,28 @@
     <Setter Property="Width" Value="17" />
     <Setter Property="Height" Value="17" />
   </Style>
+  <!-- テキスト用セグメント(整理トレイの 類似/条件 切替・ECO-014)。固定幅でなく内容に合わせる。 -->
+  <Style Selector="Button.segBtnText">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.segBtnText /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.segBtnText.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+  </Style>
+  <Style Selector="Button.segBtnText.active">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
 
   <!-- ============ extend: タグチップ(絞り込み/ナビ) TMP-UI-CMP-0026 ============
        h32 の押せるチップ。色付き active 状態はタグ色依存→surface バインド。本層は
