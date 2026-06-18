@@ -208,6 +208,8 @@ public partial class App : Application
             sp.GetRequiredService<NodeGraphBuilder>(),
             sp.GetRequiredService<PathConditionConverter>(),
             sp.GetRequiredService<ConditionEvaluator>(),
+            sp.GetRequiredService<SimilaritySearchService>(),
+            sp.GetRequiredService<MergeService>(),
             sp.GetRequiredService<ImageSorter>(),
             sp.GetRequiredService<ThumbnailService>(),
             sp.GetRequiredService<LocalizationService>(),

@@ -848,3 +848,32 @@ public sealed class CurrentTagVM
     public IBrush PillBorderBrush { get; }
     public IBrush PillForeground { get; }
 }
+
+/// <summary>整理トレイのスロット(マージ先 / 整理対象)に表示する 1 枚(ECO-014)。</summary>
+public sealed class OrganizeSlotVM
+{
+    public OrganizeSlotVM(string id, string name, string? absolutePath, string sizeLabel)
+    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; }
+    public string Id { get; }
+    public string Name { get; }
+    public string? AbsolutePath { get; }
+    public bool HasThumb => AbsolutePath is not null;
+    public string SizeLabel { get; }
+}
+
+/// <summary>整理モードの検索結果候補(中央ペイン・一致率付き)(ECO-014)。</summary>
+public sealed class OrganizeResultVM
+{
+    public OrganizeResultVM(string id, string name, string? absolutePath, string sizeLabel, int score, bool isCriteria, bool added)
+    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; Score = score; IsCriteria = isCriteria; Added = added; }
+    public string Id { get; }
+    public string Name { get; }
+    public string? AbsolutePath { get; }
+    public bool HasThumb => AbsolutePath is not null;
+    public string SizeLabel { get; }
+    public int Score { get; }
+    public bool IsCriteria { get; }
+    /// <summary>一致率表示。条件検索は「条件一致」、類似は「N%」。</summary>
+    public string ScoreText => IsCriteria ? "条件一致" : $"{Score}%";
+    public bool Added { get; }
+}

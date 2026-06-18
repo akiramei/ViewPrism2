@@ -6,6 +6,7 @@ using ViewPrism2.App.Services;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Similarity;
 
 namespace ViewPrism2.App.ViewModels;
 
@@ -45,6 +46,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         NodeGraphBuilder graphBuilder,
         PathConditionConverter pathConverter,
         ConditionEvaluator evaluator,
+        SimilaritySearchService similar,
+        MergeService merge,
         ImageSorter sorter,
         Infrastructure.Imaging.ThumbnailService thumbnails,
         LocalizationService localization,
@@ -79,7 +82,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Tagging = tagging;
 
         // M3: 画像タブ実 VM(モック準拠 surface)。注入済みリポジトリ/サービスを共有(ctor 不変)。
-        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, windows, settings);
+        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, windows, settings);
 
         AllImagesItem = new ViewListItemViewModel(null, localization.T("view.allImages"));
         Browser.SelectionChanged += async (_, _) => await OnSelectionChangedAsync();

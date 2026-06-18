@@ -4,6 +4,7 @@ using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Similarity;
 using Xunit;
 
 namespace ViewPrism2.Tests;
@@ -67,7 +68,10 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
         var vm = new ImageTabViewModel(
             _db.Folders, _db.Images, _db.Tags, new ImageSorter(),
             new ViewService(_db.Views, _db.Clock), new NodeGraphBuilder(),
-            new PathConditionConverter(), new ConditionEvaluator(), win, new AppSettings());
+            new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
+            new MergeService(_db.Images, _db.Tags, _db.Merges),
+            win, new AppSettings());
         await vm.InitializeAsync(_col.Id);
         return (vm, win);
     }
