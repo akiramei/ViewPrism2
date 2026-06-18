@@ -603,9 +603,30 @@
                   <TextBlock Text="作業" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="toolbarBtn square" IsVisible="{Binding !InAnyMode}">
-                <PathIcon Data="{StaticResource MoreIcon}" />
-              </Button>
+              <Panel IsVisible="{Binding !InAnyMode}">
+                <Button x:Name="MoreTrigger" Classes="toolbarBtn square" Command="{Binding ToggleMoreMenuCommand}" ToolTip.Tip="その他">
+                  <PathIcon Data="{StaticResource MoreIcon}" />
+                </Button>
+                <Popup PlacementTarget="{Binding #MoreTrigger}" Placement="BottomEdgeAlignedRight"
+                       VerticalOffset="6" IsOpen="{Binding MoreMenuOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
+                  <Border Classes="popupMenu" Width="200">
+                    <StackPanel>
+                      <Button Classes="menuRow" Command="{Binding OpenTrashCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
+                          <TextBlock Text="トラッシュ" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                      </Button>
+                      <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource RepairIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
+                          <TextBlock Text="修復" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                      </Button>
+                    </StackPanel>
+                  </Border>
+                </Popup>
+              </Panel>
             </StackPanel>
           </StackPanel>
         </DockPanel>

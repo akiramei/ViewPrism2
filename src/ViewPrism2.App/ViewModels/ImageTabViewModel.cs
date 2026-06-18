@@ -344,6 +344,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public string AxisLabel => _axis == "fs" ? "ファイルシステム" : _viewLabel;
     public bool AxisMenuOpen { get; private set; }
     public bool SortMenuOpen { get; private set; }
+    public bool MoreMenuOpen { get; private set; }
+    /// <summary>⋯ メンテナンス(トラッシュ/修復)はコレクションスコープ。未選択時は無効(REQ-053)。</summary>
+    public bool CanOpenMaintenance => _collectionId is not null;
     public string SortLabel => _sortField switch
     {
         SortField.Name => "名前",
@@ -709,12 +712,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleAxisMenu() { AxisMenuOpen = !AxisMenuOpen; SortMenuOpen = false; OnPropertyChanged(string.Empty); }
+    private void ToggleAxisMenu() { AxisMenuOpen = !AxisMenuOpen; SortMenuOpen = false; MoreMenuOpen = false; OnPropertyChanged(string.Empty); }
 
     public void CloseMenusFromDismiss()
     {
-        if (!AxisMenuOpen && !SortMenuOpen) return;
-        AxisMenuOpen = false; SortMenuOpen = false;
+        if (!AxisMenuOpen && !SortMenuOpen && !MoreMenuOpen) return;
+        AxisMenuOpen = false; SortMenuOpen = false; MoreMenuOpen = false;
         OnPropertyChanged(string.Empty);
     }
 
@@ -747,7 +750,32 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleSortMenu() { SortMenuOpen = !SortMenuOpen; AxisMenuOpen = false; OnPropertyChanged(string.Empty); }
+    private void ToggleSortMenu() { SortMenuOpen = !SortMenuOpen; AxisMenuOpen = false; MoreMenuOpen = false; OnPropertyChanged(string.Empty); }
+
+    [RelayCommand]
+    private void ToggleMoreMenu() { MoreMenuOpen = !MoreMenuOpen; AxisMenuOpen = false; SortMenuOpen = false; OnPropertyChanged(string.Empty); }
+
+    /// <summary>⋯ メニュー: トラッシュ(復元/完全削除)を既存モーダルで開く(ECO-015)。閉じ後にデータ再読込。</summary>
+    [RelayCommand]
+    private async Task OpenTrash()
+    {
+        MoreMenuOpen = false;
+        if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
+        await _windows.ShowTrashAsync(_collectionId).ConfigureAwait(true);
+        await ReloadImagesAsync().ConfigureAwait(true);
+        Recompute();
+    }
+
+    /// <summary>⋯ メニュー: 修復ライフサイクル(criteria/relink/復元)を既存モーダルで開く(ECO-015)。閉じ後にデータ再読込。</summary>
+    [RelayCommand]
+    private async Task OpenRepair()
+    {
+        MoreMenuOpen = false;
+        if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
+        await _windows.ShowRepairAsync(_collectionId).ConfigureAwait(true);
+        await ReloadImagesAsync().ConfigureAwait(true);
+        Recompute();
+    }
 
     [RelayCommand]
     private void SelectSort(string? col)
