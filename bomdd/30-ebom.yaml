@@ -326,6 +326,8 @@ ebom:
         - (ECO-012/I10・I13) FS 軸のタグチップは現フォルダ表示中の画像に実在するタグを集計(現階層スコープ・再帰しない)。閲覧時グリッドのタグ色ドットは左下・最大3(超過は先頭3)
         - (ECO-013) 画像タブのグリッド/リストは新 ImageTabView(ImageTabViewModel)が単独で描画する(原典 MainWindow の重畳 Grid・harness を撤去)。選択ロジックの unit 検査点は MainWindowViewModel でなく ImageTabViewModel(母集合=選択コレクションの status=normal・REQ-053)に移る
         - (ECO-014) 画像タブ右ペインは2つの文脈モード(タグ編集 = E-UI-TAGASSIGN-029 / 整理 = E-UI-SIMILARITY-035 + E-UI-MERGE-036 の整理トレイ)を**排他**で持つ。整理モードでは中央ペインが「検索結果」表示へ切替わり候補+一致率を提示する。整理中のグリッドクリックは選択(連番バッジ)でなく**マージ先/整理対象の割当**へ振る舞いを切替える(タグ編集モードの選択視覚とは別系統)
+        - (ECO-014 §8) モード中(タグ編集/整理)はツールバーが他モード入口・`作業`・`⋯` を非表示にし、表示軸/ソート/レイアウトと当該モードの「終了」のみ残す(集中・排他可視化・狭い中央列での被り回避)。中央列は ClipToBounds で隣ペインへの描画はみ出しを封じる
+        - (ECO-015) ツールバーの `⋯`(その他)= メンテナンスメニュー。**トラッシュ(E-TRASH-038)/ 修復(E-UI-REPAIR-039)を既存モーダルで開く**(`IWindowService.ShowTrashAsync`/`ShowRepairAsync`)。閉じ後に画像データを再読込し status/件数変化を反映。コレクション未選択時は無効・モード中は非表示。コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(E-UI-DETAIL-023)の新 surface 配置は別 ECO(=原典撤去は保留)
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022]
 
     - id: E-UI-DETAIL-023
