@@ -1,0 +1,74 @@
+bomdd:
+  product: ViewPrism2
+  experiment: "loop-v4-repair-lifecycle ＋ 後続 ECO 群(post-delivery)"
+  layer: Manifest
+
+# 正本マニフェスト(Active Baseline Declaration)
+# ─────────────────────────────────────────────────────────────
+# 目的: charter / routing / as-built が複数版(v1〜v4)並存するのは「履歴を破棄せず
+#       積層する」BomDD の意図的設計だが、そのままでは「今の正本」が推定になる。
+#       本ファイルは現在アクティブな版・baseline・凍結オラクル・ECO 範囲を1枚で宣言する。
+#
+# 規律: 版の統合・削除はしない(履歴は保持)。本マニフェストは「ポインタ」であり、
+#       各版の本文を上書きしない。事実のみ宣言し、未確定は "未確認" と書く。
+
+active:
+  baseline_commit: 8e91b3b            # HEAD(ECO-015 製造)
+  bom_version: "v4.0"
+  frozen_oracle_tag: loop-v4-r1       # 横断固定オラクル S-01〜S-31
+
+  charter: 00-charter-v4.md           # loop-v4-repair-lifecycle
+  routing:
+    file: 34-routing.yaml
+    active_section: routing_v4        # ROUTING-V4REPAIR-001
+  as_built:
+    file: 50-as-built.yaml
+    active_section: as_built_v4
+  control_plan: 33-control-plan.yaml
+  ebom: 30-ebom.yaml                  # forward 権威(画像タブ ECO-010〜015 は E-BOM が先行同期)
+
+  change_register: 60-change-register.yaml
+  eco_range: ECO-001 .. ECO-015
+  open_eco: [ECO-015]                 # golden 待ち
+  next_milestone: >
+    M4 — 画像タブ surface 統合の spec(20)/M-BOM(32)/Control Plan(33) 全面同期、
+    および詳細/ノートの行き先確定後の原典(MainWindow 画像タブ Grid・harness・legacy VM)撤去。
+    現在の残ブロッカー: ECO-015 golden 承認・詳細/ノート ECO(未起票)。
+
+# 版の履歴(積層 — すべて記録として保持。active は上記 active を参照)
+version_history:
+  charter:
+    - { version: V1, file: 00-charter.md,    experiment: loop-v1-core,            state: 完了 }
+    - { version: V2, file: 00-charter-v2.md, experiment: loop-v2-viewer,          state: 完了, baseline: 242955c }
+    - { version: V3, file: 00-charter-v3.md, experiment: loop-v3-similarity,      state: 完了, baseline: 99f8d8e }
+    - { version: V4, file: 00-charter-v4.md, experiment: loop-v4-repair-lifecycle, state: active, baseline: 9467bbd }
+  routing:
+    - { section: routing,    id: ROUTING-V1CORE-001 }
+    - { section: routing_v2, id: ROUTING-V2VIEWER-001 }
+    - { section: routing_v3, id: ROUTING-V3SIMILARITY-001 }
+    - { section: routing_v4, id: ROUTING-V4REPAIR-001, state: active }
+  as_built:
+    # 注: 50-as-built.yaml の top-level セクションは as_built / as_built_v2 / as_built_v4 の3つ。
+    #     V3 は独立セクションではなく base の as_built: ブロックに *_v3 キー(inspection_results_v3 /
+    #     golden_approvals_v3 / carryover_to_v3)として積層されている。
+    - { section: as_built,    loop: V1, bom: "v1.3", oracle: loop-v1-r1 }
+    - { section: as_built_v2, loop: V2, bom: "v2.0", oracle: loop-v2-r1 }
+    - { section: "as_built(*_v3 キー)", loop: V3, bom: "v3.0", oracle: loop-v3-r1 }
+    - { section: as_built_v4, loop: V4, bom: "v4.0", oracle: loop-v4-r1, state: active }
+  frozen_oracle_tags: [loop-v1-r1, loop-v1-r3, loop-v2-r1, loop-v3-r1, loop-v4-r1]
+
+# 補助台帳の扱い(正式 BOM 層ではないものの所在と lifecycle)
+auxiliary:
+  design_system_bom:
+    file: 35-design-system-bom.yaml
+    lifecycle: candidate            # 未採用(部品カタログは実在・coverage/CP 同期は未実施)
+    note: "採用時は E-DESIGN-* を 30-ebom へ、CP-DESIGN-* を 33-control-plan へ同期する"
+  ui_cad:
+    note: "UI-CAD(モック+UI-IR/UI-BOM)は ViewPrismUI リポと bomdd/ui/・bomdd/ui/image-tab/ に分離。mock→IR→BOM の forward フロー"
+
+# 未採用テンプレート(コピー済だが本プロジェクトでは working artifact 化していない)
+# 影響分析・不要改変監査は各 ECO 本文(60-*)に直書き運用。移行オラクルはスキーマ変更 ECO が無く出番なし。
+unused_templates:
+  - { file: 61-impact-analysis.md,  reason: "影響分析は各 ECO 本文 §2 に直書き" }
+  - { file: 62-migration-oracle.md, reason: "スキーマ変更 ECO が皆無(全期間 S-01〜S-31 凍結)" }
+  - { file: 63-diff-audit.md,       reason: "不要改変監査は各 ECO 本文 §5 に直書き(例: ECO-002 §5)" }

@@ -1,0 +1,227 @@
+bomdd:
+  product: ViewPrism2
+  experiment: "loop-v4-repair-lifecycle 横断(単一ループに紐づかない補助台帳)"
+  layer: Design System BOM
+
+# ─────────────────────────────────────────────────────────────
+# [disposition: candidate / 未採用 — PLM は本ファイルを「完成すべき正式 BOM」として扱わない]
+#
+#   状態(2026-06-22 時点):
+#     - ebom_surface_parts / kbom_design_knowledge の部品カタログは ViewPrism2 用に実在内容で記入済。
+#     - 一方 source_cad_refs.ui_mock_ref・K-DESIGN の version/source・coverage_matrix・gates は
+#       テンプレ既定(<...> プレースホルダ)のまま = まだ binding を張っていない。これは未記入欠陥ではなく
+#       「補助台帳として候補状態に置いている」ことの表明(全 lifecycle: candidate)。
+#
+#   正式採用する場合にやること(その時まで上記プレースホルダは意図的に未充足):
+#     1. coverage_matrix を実 UI-BOM(bomdd/ui/ui-bom.json・bomdd/ui/image-tab/ui-bom.json)と突合して埋める。
+#     2. E-DESIGN-* を 30-ebom.yaml の items へ、CP-DESIGN-* を 33-control-plan.yaml へ同期する。
+#     3. gates(G-DS-001/002)を現行 BomDD の子レコード規則に合わせて key 化する。
+#   ※ 現状のデザイン言語の実装来歴は ECO-009(タグタブ デザイン言語移植・Components.axaml/App.axaml)を参照。
+#   正本宣言は 00-manifest.yaml の auxiliary.design_system_bom を参照。
+# ─────────────────────────────────────────────────────────────
+
+# Design System BOM(candidate):
+# UI-CAD(HTML mock + UI-IR/UI-BOM) が要求している見た目・構造・操作言語を、
+# E-BOM surface 部品と K-BOM design knowledge の組として明示する。
+#
+# 目的:
+#   - 実機が素の Border/DockPanel/グリフ文字で薄く実装されるのを防ぐ
+#   - Card / CTA / Chip / Badge / IconButton などを「装飾」ではなく製造対象部品にする
+#   - visual-gap-analysis(43) で CAD と実機の差分を部品欠落として帰属できるようにする
+#
+# 位置づけ:
+#   独立した正式 BOM 層ではなく、E-BOM/K-BOM/Control Plan をまたぐ UI surface 部品の補助台帳。
+#   正式化する場合は E-DESIGN-* を 30-ebom.yaml items へ、K-DESIGN-* を 31-kbom.yaml items へ同期する。
+
+design_system_bom:
+  root:
+    ebom_item_ref: E-DESIGN-028
+    kbom_pack_ref: K-DESIGN
+    name: <UI design language / design system root>
+    purpose: <Card/CTA/Chip/Badge/IconButton などを束ね、各 UI surface へ適用する設計言語の部品層>
+    lifecycle: candidate
+
+  source_cad_refs:
+    ui_mock_ref: <HTML mock / screenshot / Figma ref>
+    ui_ir_ref: bomdd/ui/ui-ir.json
+    ui_bom_ref: bomdd/ui/ui-bom.json
+    ui_trace_map_ref: bomdd/ui/ui-trace-map.json
+    design_intent_ref: bomdd/ui/design-intent.md
+
+  ebom_surface_parts:
+    - id: E-DESIGN-CARD-001
+      name: Card
+      purpose: <枠・余白・見出し・補助文を持つ UI のまとまり>
+      design_language_role: container
+      required_variants: [panel-card, row-card, dialog-card]
+      required_states: [default, hover, selected, disabled]
+      kbom_refs: [K-DESIGN-TOKENS-001]
+      control_plan_refs: [CP-DESIGN-CARD-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-CTA-BUTTON-001
+      name: CTAButton
+      purpose: <主要操作を視覚的に強調するボタン>
+      design_language_role: action
+      required_variants: [primary, secondary, danger]
+      required_states: [default, hover, pressed, disabled, loading]
+      kbom_refs: [K-DESIGN-TOKENS-001]
+      control_plan_refs: [CP-DESIGN-CTA-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-TYPE-CHIP-001
+      name: TypeChip
+      purpose: <型・カテゴリ・条件種別を色とラベルで示すチップ>
+      design_language_role: semantic-marker
+      required_variants: [green, amber, mono, danger, info]
+      required_states: [default, selected, muted]
+      kbom_refs: [K-DESIGN-CHIP-SEMANTICS-001]
+      control_plan_refs: [CP-DESIGN-TYPE-CHIP-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-CONDITION-CHIP-001
+      name: ConditionChip
+      purpose: <条件式・フィルタ・階層条件を視覚的に表すチップ>
+      design_language_role: semantic-condition
+      required_variants: [value-match, range, regex, unset]
+      required_states: [default, editing, invalid]
+      kbom_refs: [K-DESIGN-CHIP-SEMANTICS-001]
+      control_plan_refs: [CP-DESIGN-CONDITION-CHIP-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-VALUE-CHIP-001
+      name: CandidateValueChip
+      purpose: <候補値や選択肢をインラインに表示するチップ>
+      design_language_role: data-token
+      required_variants: [candidate-value, range-value]
+      required_states: [default, selected, overflow]
+      kbom_refs: [K-DESIGN-CHIP-SEMANTICS-001]
+      control_plan_refs: [CP-DESIGN-VALUE-CHIP-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-BADGE-001
+      name: Badge
+      purpose: <件数・状態・凡例を短いラベルで示す>
+      design_language_role: metadata
+      required_variants: [count, status, legend, home]
+      required_states: [default, muted, emphasized]
+      kbom_refs: [K-DESIGN-TOKENS-001]
+      control_plan_refs: [CP-DESIGN-BADGE-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-ICON-BUTTON-001
+      name: IconButton
+      purpose: <編集・設定・削除などを文字グリフではなくアイコンボタンとして提供する>
+      design_language_role: secondary-action
+      required_variants: [edit, settings, delete, drag, home]
+      required_states: [default, hover, pressed, disabled]
+      kbom_refs: [K-DESIGN-ICONS-001]
+      control_plan_refs: [CP-DESIGN-ICON-BUTTON-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-SECTION-HEADER-001
+      name: SectionHeader
+      purpose: <節見出し・件数・凡例・ヘルプを一体で持つ領域ヘッダー>
+      design_language_role: navigation-and-context
+      required_variants: [plain, with-count, with-help, with-legend]
+      required_states: [default]
+      kbom_refs: [K-DESIGN-TOKENS-001]
+      control_plan_refs: [CP-DESIGN-SECTION-HEADER-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-HELP-BOX-001
+      name: HelpBox
+      purpose: <操作ヒント・ドラッグヒント・空状態説明を表示する>
+      design_language_role: guidance
+      required_variants: [hint, empty-state, warning]
+      required_states: [default, dismissed]
+      kbom_refs: [K-DESIGN-TOKENS-001]
+      control_plan_refs: [CP-DESIGN-HELP-BOX-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+    - id: E-DESIGN-DRAG-HANDLE-001
+      name: DragHandle
+      purpose: <ドラッグ可能性を示し、操作 affordance を与える>
+      design_language_role: affordance
+      required_variants: [handle, reorder, drop-target]
+      required_states: [default, dragging, drop-allowed, drop-denied]
+      kbom_refs: [K-DESIGN-INTERACTION-001]
+      control_plan_refs: [CP-DESIGN-DRAG-HANDLE-001]
+      ui_bom_consumers: []
+      lifecycle: candidate
+
+  kbom_design_knowledge:
+    - id: K-DESIGN-TOKENS-001
+      name: Design Tokens
+      knowledge_kind: design-system
+      version: <commit/tag/version>
+      source: <mock / Figma / token file / design note>
+      managed_knowledge:
+        - <spacing scale>
+        - <radius scale>
+        - <color roles for surface, border, muted, primary, danger>
+        - <typography scale>
+      risk_if_implicit: <工場が素の Border/DockPanel や任意配色で実装し、CAD のカード/CTA/チップ言語が消える>
+
+    - id: K-DESIGN-CHIP-SEMANTICS-001
+      name: Chip Semantics
+      knowledge_kind: design-system
+      version: <commit/tag/version>
+      source: <mock / Figma / design note>
+      managed_knowledge:
+        - <green chip = value-match / positive category>
+        - <amber chip = range / attention category>
+        - <mono chip = regex / technical condition>
+      risk_if_implicit: <条件が muted text になり、型・意味・優先度が視覚から失われる>
+
+    - id: K-DESIGN-ICONS-001
+      name: Icon Set and Actions
+      knowledge_kind: design-system
+      version: <commit/tag/version>
+      source: <icon library / design note>
+      managed_knowledge:
+        - <edit/settings/delete/home/drag のアイコンとラベル>
+        - <グリフ文字だけで代替しない>
+      risk_if_implicit: <実機が ✎/⚙/✕ などの文字だけになり、CAD の操作言語と乖離する>
+
+    - id: K-DESIGN-INTERACTION-001
+      name: Interaction Affordances
+      knowledge_kind: design-system
+      version: <commit/tag/version>
+      source: <mock / design note>
+      managed_knowledge:
+        - <ドラッグ可能なものには DragHandle または drop hint を表示>
+        - <配置可能 CTA は primary visual treatment>
+      risk_if_implicit: <操作可能性が見えず、Tree/Palette が素の panel と text に退化する>
+
+  coverage_matrix:
+    - ui_bom_item_no: TMP-UI-CMP-0001
+      ui_name: <例 パレット候補行>
+      required_design_parts:
+        - E-DESIGN-CARD-001
+        - E-DESIGN-TYPE-CHIP-001
+        - E-DESIGN-VALUE-CHIP-001
+        - E-DESIGN-CTA-BUTTON-001
+      implemented_design_parts: []
+      coverage_status: missing          # covered | partial | missing | out-of-scope
+      gap_if_missing: <候補値/範囲/CTA が消え、素テキスト行になる>
+      owner: <E-BOM owner>
+
+  gates:
+    - id: G-DS-001
+      name: Design system coverage gate
+      rule: <UI-BOM の surface item は required_design_parts が covered または理由付き out-of-scope でなければ製造へ進めない>
+      evidence: 35-design-system-bom.yaml coverage_matrix
+    - id: G-DS-002
+      name: Golden-in-the-loop visual gate
+      rule: <実機スクリーンショットを CAD(M1/M2/M3 等)と反復突合し、S1 はゼロ、S2 は covered/out-of-scope 裁定済みにする>
+      evidence: 43-visual-gap-analysis.md
