@@ -1,0 +1,33 @@
+#!/bin/sh
+# bomdd integrity pre-commit hook
+# ─────────────────────────────────────────────────────────────
+# bomdd/ 配下を含むコミット時に integrity validator を実行し、ERROR があれば commit をブロックする。
+# 有効化(クローンごとに1回):  git config core.hooksPath bomdd/hooks
+# 手動実行:                    python bomdd/validate_bom.py
+#
+# 規律: python/PyYAML が無い環境では fail-open(skip)し、コミットを wedge しない。
+#       ブロックするのは「validator が ERROR を返したとき」だけ。
+
+# bomdd/ に触れないコミットは検査しない(高速化)
+git diff --cached --name-only | grep -q '^bomdd/' || exit 0
+
+PY=$(command -v python3 2>/dev/null || command -v python 2>/dev/null)
+if [ -z "$PY" ]; then
+  echo "[bomdd] python 不在 — integrity validator を skip(commit は許可)"
+  exit 0
+fi
+
+echo "[bomdd] integrity validator..."
+"$PY" bomdd/validate_bom.py --quiet
+rc=$?
+
+if [ "$rc" -eq 1 ]; then
+  echo "[bomdd] integrity ERROR — commit をブロックしました。"
+  echo "        修正後に再コミット(詳細: python bomdd/validate_bom.py)。"
+  echo "        どうしても通す場合のみ: git commit --no-verify"
+  exit 1
+fi
+if [ "$rc" -eq 2 ]; then
+  echo "[bomdd] validator 実行不能(PyYAML 不在?)— skip(commit は許可)"
+fi
+exit 0
