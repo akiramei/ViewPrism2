@@ -36,6 +36,11 @@ active:
     および詳細/ノートの行き先確定後の原典(MainWindow 画像タブ Grid・harness・legacy VM)撤去。
     現在の残ブロッカー: ECO-015 golden 承認・詳細/ノート ECO(未起票)。
 
+validation:
+  integrity_command: "python bomdd/validate_bom.py"
+  expected_result: "0 error / 0 warning"
+  scope: "active E-BOM dangling・M-BOM/CP/Service/UI-BOM trace・ECO/register 規律"
+
 # 版の履歴(積層 — すべて記録として保持。active は上記 active を参照)
 version_history:
   charter:
