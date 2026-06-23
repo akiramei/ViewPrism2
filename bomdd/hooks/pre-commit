@@ -11,9 +11,15 @@
 # bomdd/ に触れないコミットは検査しない(高速化)
 git diff --cached --name-only | grep -q '^bomdd/' || exit 0
 
-PY=$(command -v python3 2>/dev/null || command -v python 2>/dev/null)
+# PyYAML を実際に import できるインタプリタを選ぶ(python3 が yaml 無しスタブのことがある)
+PY=""
+for c in python python3 py; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c "import yaml" >/dev/null 2>&1; then
+    PY="$c"; break
+  fi
+done
 if [ -z "$PY" ]; then
-  echo "[bomdd] python 不在 — integrity validator を skip(commit は許可)"
+  echo "[bomdd] PyYAML 付き python が見つからない — integrity validator を skip(commit は許可)"
   exit 0
 fi
 
