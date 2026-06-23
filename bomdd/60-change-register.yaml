@@ -31,7 +31,7 @@ active_scope:
   bom_version: "v4.0"
   frozen_oracle_tag: loop-v4-r1     # S-01〜S-31
   eco_range: ECO-001 .. ECO-016
-  open_eco: [ECO-015]               # golden 待ち
+  open_eco: [ECO-007]               # ECO-007 タグタブ視覚 golden(CP-UI-G6)待ち。ECO-010/011/012 は画像タブ製造フェーズ(staged)
   manifest_ref: 00-manifest.yaml
   note: >
     ECO-001/002 は Loop V1(BOM v1.x)期の変更。ECO-003 以降は Loop V4 完了個体
@@ -74,7 +74,7 @@ change_orders:
     title: "再リンク候補カードの表示パリティ(仕様欠陥)"
     type: 仕様欠陥(表示契約の脱漏)
     status: implemented
-    golden: pending
+    golden: approved
     baseline: "Loop V4 / e08887b(BOM v4.0・loop-v4-r1)"
     bom_rev: "v4.0 → v4.0(eco:ECO-003)"
     impacted_bom:
@@ -82,7 +82,7 @@ change_orders:
        "CP-REPAIR-CARD-021(新設)", "CP-UI-G10(表示パリティ追加)"]
     oracle: "固定オラクル不変(表示は論理オラクル対象外)。loop-v4-r1"
     verification: "Tests 381・Oracle 73 PASS+2 skip(回帰ゼロ)"
-    golden_detail: "残: CP-UI-G10 再ウォークスルー(候補カード5要素の視覚突合)"
+    golden_detail: "CP-UI-G1/G6/G10 承認(2026-06-15・maintainer 実機=50-as-built golden_readacross_2026_06_15。候補カード5要素 OK)"
     body: 60-change-order-eco-003.md
     deviation: "Option B=遡及BOM再構築・コード保持。当該コードは設計者直接記述で工場隔離トレーサビリティを持たない(§4 明示)"
     related: { read_across_to: ECO-004 }
@@ -91,7 +91,7 @@ change_orders:
     title: "表示パリティ read-across A群5件の是正(spec_omission)"
     type: 欠陥修正(表示 omission)
     status: implemented
-    golden: pending
+    golden: approved
     baseline: "Loop V4 / ECO-003 適用後"
     bom_rev: "v4.0 → v4.0(eco:ECO-004)"
     impacted_bom:
@@ -99,7 +99,7 @@ change_orders:
        "CP-DISPLAY-PARITY-022(新設)", "DC-RELINK/GRID/TRASH/VIEWLIST/TAGPALETTE-001"]
     oracle: "S-01〜S-30 回帰ゼロ。loop-v4-r1"
     verification: "factory-06(fresh 隔離)。Tests 387/0・Oracle 73 PASS+2 skip。castability 合格 cheat 0"
-    golden_detail: "残: CP-UI-G1/G6/G10 再ウォークスルー"
+    golden_detail: "CP-UI-G1/G6/G10 承認(2026-06-15・maintainer 実機=50-as-built golden_readacross_2026_06_15。A群5件 OK)"
     body: 60-change-order-eco-004.md
     related: { capa_from: ECO-003 }
     reattributed_by: ECO-016
@@ -109,7 +109,7 @@ change_orders:
     title: "修復UX完全性: すべて自動修復 + 単一自動修復 + 除外(missing→deleted)"
     type: 欠陥修正(spec_omission・機能欠落)
     status: implemented
-    golden: pending
+    golden: approved
     baseline: "Loop V4 / ECO-003/004 適用後"
     bom_rev: "v4.0 → v4.0(eco:ECO-005)"
     impacted_bom:
@@ -117,7 +117,7 @@ change_orders:
        "CP-TRASH-021 / CP-REPAIR-AUTOALL-023(新設)"]
     oracle: "S-31(cross-factory)新設。S-01〜S-30 不変 → Oracle 74 PASS+2 skip"
     verification: "factory-07(fresh 隔離)。Tests 395/0。castability 合格 cheat 4(全 非blocker)"
-    golden_detail: "残: CP-UI-G10 再ウォークスルー(自動修復一括/単一・除外の動線)"
+    golden_detail: "CP-UI-G10 承認(2026-06-15・maintainer 実機=50-as-built golden_readacross_2026_06_15。すべて自動修復+除外 OK)"
     body: 60-change-order-eco-005.md
     notes: "新状態遷移 T9(missing→deleted・物理非破壊 INV-009)。T5(マージ)と対称"
 
@@ -260,13 +260,13 @@ change_orders:
     title: "画像タブ 機能完成②: トラッシュ/修復を ⋯ メニューから既存モーダルで配線"
     type: 設計決定(最小配線・既存資産再利用)
     status: implemented
-    golden: pending
+    golden: approved
     baseline: "0b3069a(ECO-014 §8 golden 第1回 design裁定後)"
     bom_rev: "v4.0(eco:ECO-015)"
     impacted_bom: ["E-UI-MODE-041(⋯ メンテナンスメニュー。旧E-UI-GRID-022)", "E-TRASH-038", "E-UI-REPAIR-039"]
     oracle: "S-01〜S-31 不変。Core 意味論不変(入口追加のみ)"
-    verification: "製造済(commits 890fb93 起票・8e91b3b 配線=HEAD)。受入 golden 待ち"
-    golden_detail: "残: 実機 golden(⋯→トラッシュ/修復 起動・閉じ後のデータ再読込反映)"
+    verification: "製造済(commits 890fb93 起票・8e91b3b 配線=HEAD)。受入 golden approved(2026-06-24・maintainer 実機)"
+    golden_detail: "CP-UI-G10 承認(2026-06-24・maintainer 実機。⋯→トラッシュ/修復 起動・閉じ後の一覧/件数反映・モード中非表示)。権威記録: 50-as-built golden_2026_06_24"
     body: 60-change-order-eco-015.md
     scope_out: "詳細パネル/ノート編集(REQ-043・別ECO)・作業ボタン(UQ-I07 残)"
     reattributed_by: ECO-016

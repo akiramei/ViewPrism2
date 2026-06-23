@@ -29,12 +29,12 @@ active:
 
   change_register: 60-change-register.yaml
   eco_range: ECO-001 .. ECO-016
-  open_eco: [ECO-015]                 # golden 待ち
+  open_eco: [ECO-007]                 # タグタブ視覚 golden(CP-UI-G6)待ち。ECO-010/011/012 は staged(画像タブ製造フェーズ)
   next_milestone: >
     M4 — 画像タブ surface 統合の spec(20)/M-BOM(32)/Control Plan(33) 全面同期、
     ECO-016 で分割した E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041 の M-BOM interface_contract 内容反映、
     および詳細/ノートの行き先確定後の原典(MainWindow 画像タブ Grid・harness・legacy VM)撤去。
-    現在の残ブロッカー: ECO-015 golden 承認・詳細/ノート ECO(未起票)。
+    現在の残ブロッカー: 詳細/ノート ECO(未起票)。ECO-015 golden は 2026-06-24 approved(50-as-built golden_2026_06_24)。
 
 validation:
   integrity_command: "python bomdd/validate_bom.py"
