@@ -1,6 +1,6 @@
 bomdd:
   product: ViewPrism2
-  experiment: "loop-v4-repair-lifecycle(v4.0 — E-CRITERIA-037/E-TRASH-038/E-UI-REPAIR-039 追加・E-RELINK-007 を criteria 候補+タグ安全へ拡張。v1/v2/v3 部品の意味論は不変)。前: loop-v3-similarity(E-PHASH-031〜E-UI-MERGE-036)"
+  experiment: "loop-v4-repair-lifecycle(v4.0 + ECO-016 surface 部品体系化 — 旧 E-UI-GRID-022 を E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041 へ追跡付き再分割。core 意味論と v1/v2/v3 部品の意味論は不変)"
   layer: E-BOM
 
 # 規律(method-v1 §2):
@@ -172,7 +172,7 @@ ebom:
       kbom_refs: []
       depends_on: [E-DOMAIN-001]
       invariants:
-        - 純粋計算(I/O・UI 依存なし)。OC-9〜13 として ViewModel から呼ぶだけにする
+        - 純粋計算(I/O・UI 依存なし)。OC-9〜13 として UI 側から呼ぶだけにする
         - 送り・ペアリングは仕様 §2.9 の規則のみ(端で停止・ループしない)
         - 高さ統一はアスペクト比を常に維持(仕様 §2.9 REQ-058)
       acceptance_refs: [CP-VIEWER-014]
@@ -259,7 +259,7 @@ ebom:
       invariants:
         - 指定条件のみ AND 結合・同一コレクション内。対象 status は呼び出し用途で固定(単体=normal / relink 候補=pending∪normal)
         - 結果は安定順(relative_path 昇順・同値 id 昇順)。条件が 1 つも未指定なら非実行(全件を返さない)
-        - 純粋な絞り込みロジックは ViewModel/サービスから unit 検査可能(OC-19)
+        - 純粋な絞り込みロジックは呼び出し側から独立して unit 検査可能(OC-19)
       acceptance_refs: [CP-CRITERIA-019]
 
     - id: E-TRASH-038
@@ -303,32 +303,71 @@ ebom:
         - 多重起動禁止(2 つ目は既存をアクティブ化)
         - (ECO-012/I03) 画像タブのコレクションペインは折り畳み可(展開 276px / rail 64px)。コレクション行はパスを tooltip 表示し、行は名前+件数に簡潔化(CR-8 踏襲・タグタブ UQ-E1 の行簡潔方針と整合)
         - (ECO-013/IMG-009) コレクションペインの「追加(+)」(展開ヘッダ「コレクション」見出し右 + 折り畳みレール)は**コレクション管理(追加・スキャン・削除)ビューを開く単一入口**。原典 view-prism の行別スキャン(⟳)・独立「管理」導線は本入口へ集約する(モック準拠・VP-UI-006)。コレクション行は閲覧(選択)に専念しクロムを静かに保つ。削除は同期フォルダ登録の解除のみで実ファイル非破壊(INV-009)
-        - (ECO-013) 画像タブ surface を新 ImageTabView 一本へ統合し、原典 MainWindow の画像タブ Grid・harness トグル・legacy 画像タブ VM ロジックを撤去する。これに伴い**コレクション選択スコープ(REQ-053・コレクションファースト/横断なし)・選択コレクションと表示モードの永続化と復元(REQ-052 CR-5/CR-6)・未選択プロンプト・保存コレクション消失時の未選択フォールバック**は新 ImageTabViewModel が担う(原典と等価維持・golden 承認済 REQ-053 を退行させない)。CP-UI-G1(REQ-053 カバレッジ)は新 VM 契約へ移行
+        - (ECO-013) 画像タブ surface を新 ImageTabView 一本へ統合し、原典 MainWindow の画像タブ Grid・harness トグル・legacy 画像タブ実装を撤去する。これに伴い**コレクション選択スコープ(REQ-053・コレクションファースト/横断なし)・選択コレクションと表示モードの永続化と復元(REQ-052 CR-5/CR-6)・未選択プロンプト・保存コレクション消失時の未選択フォールバック**は画像タブの独立した状態/操作ロジックが担う(原典と等価維持・golden 承認済 REQ-053 を退行させない)。CP-UI-G1(REQ-053 カバレッジ)は新契約へ移行
       acceptance_refs: [CP-UI-G1, CP-L1-SMOKE]
 
-    - id: E-UI-GRID-022
-      name: グリッド/リスト表示(レスポンシブ自動列・仮想化・選択(Ctrl トグル/SHIFT 範囲 union)・空状態)— v1.3 改訂(ECO-002 CR-1/3/6)+v2.0 GF-02 是正+ECO-010(画像タブ 二軸ブラウズ ナビ移管・グリッドセル size 撤回)+ECO-011(表示軸モデル確定・FS フォルダ軸/全画像入口)
+    - id: E-UI-BROWSE-022
+      name: 画像ブラウズ表示(グリッド/リスト・レスポンシブ自動列・仮想化・選択・空状態)— 旧 E-UI-GRID-022 から ECO-016 で分割
       classification: surface
+      part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-041, REQ-042, REQ-060]
+      requirement_refs: [REQ-041, REQ-042]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-SORT-004, E-THUMB-020, E-EVAL-002, E-VIEWSVC-009]
+      supersedes: E-UI-GRID-022
+      split_by: ECO-016
+      depends_on: [E-SORT-004, E-THUMB-020]
+      interface_contracts:
+        - E-UI-MODE-041 がクリック意味論(既定選択/整理割当/無操作)を決め、E-UI-BROWSE-022 は描画・母集合・既定選択計算を所有する
       invariants:
-        - 選択ロジックは ViewModel に置き unit 検査可能にする(OC 系)
+        - 選択・範囲選択・選択順は描画から独立した決定論的ロジックとして unit 検査可能にする
         - 列数はコンテンツ幅から自動算出(clamp(⌊幅/220px⌋,2,8))。固定列数セレクタを置かない(v1.3)
         - SHIFT 範囲選択は union(置換しない)・選択順は index 昇順で末尾へ追番(v1.3)
         - グリッドの選択視覚はセル強調枠+バッジのみ。行背景の選択視覚を出さない(v2.0/GF-02。リスト表示の行選択視覚は正)
-        - (ECO-010/DC-GRID-001 改訂) グリッドセルは サムネイル+ファイル名 を提示する。**ファイルサイズはグリッドセルから除去**(リスト列でのみ提示)。閲覧時はタグ色ドット(最大3・左下)を重畳。ECO-004 で原典準拠に復活させた size を新 CAD(画像タブモック)準拠で差し戻す(画像が主役・セル下 size は視覚ノイズ・size はリスト/詳細で担保)
-        - (ECO-010/I01) 画像タブのタグビュー軸ナビゲーションは**左 NodeGraph ツリーでなく**、ブラウズ領域の**チップ+パンくず+表示軸セレクタ**で行う(FS 軸と同一の『チップで潜る・パンくずで戻る』操作)。ビュー階層は E-VIEWSVC-009 を消費
-        - (ECO-011/I04) 画像タブは選択コレクションのスコープ内(REQ-053・横断しない)で**表示軸**を切替える。①**FS フォルダ軸**=OS サブフォルダ階層を relative_path から派生して潜る(新スキーマ/スキャン不要・読み取り専用 INV-009。include_subfolders=false のコレクションはフラットに縮退)②**タグビュー軸**=NodeGraph(E-VIEWSVC-009 消費)。両軸チップ+パンくず。**「全画像」固定入口(選択コレクション内の全 normal 画像・フラット)は2軸ナビとは別に維持**。原典 view-prism のフォルダ+パンくず表示を復権(本実装の左ペインツリー=20-spec:248 意図的差分を上書き)。製造時に 20-spec:241-249 / 32-mbom:201 を同期
-        - (ECO-012/I06) 画像タブのタグビュー軸の選択は、表示軸セレクタがビュー管理のビュー一覧を展開して行う(画像タブ自完結・E-VIEWSVC-009 消費)。単一ビューは直接入る
-        - (ECO-012/I10・I13) FS 軸のタグチップは現フォルダ表示中の画像に実在するタグを集計(現階層スコープ・再帰しない)。閲覧時グリッドのタグ色ドットは左下・最大3(超過は先頭3)
-        - (ECO-013) 画像タブのグリッド/リストは新 ImageTabView(ImageTabViewModel)が単独で描画する(原典 MainWindow の重畳 Grid・harness を撤去)。選択ロジックの unit 検査点は MainWindowViewModel でなく ImageTabViewModel(母集合=選択コレクションの status=normal・REQ-053)に移る
-        - (ECO-014) 画像タブ右ペインは2つの文脈モード(タグ編集 = E-UI-TAGASSIGN-029 / 整理 = E-UI-SIMILARITY-035 + E-UI-MERGE-036 の整理トレイ)を**排他**で持つ。整理モードでは中央ペインが「検索結果」表示へ切替わり候補+一致率を提示する。整理中のグリッドクリックは選択(連番バッジ)でなく**マージ先/整理対象の割当**へ振る舞いを切替える(タグ編集モードの選択視覚とは別系統)
-        - (ECO-014 §8) モード中(タグ編集/整理)はツールバーが他モード入口・`作業`・`⋯` を非表示にし、表示軸/ソート/レイアウトと当該モードの「終了」のみ残す(集中・排他可視化・狭い中央列での被り回避)。中央列は ClipToBounds で隣ペインへの描画はみ出しを封じる
-        - (ECO-015) ツールバーの `⋯`(その他)= メンテナンスメニュー。**トラッシュ(E-TRASH-038)/ 修復(E-UI-REPAIR-039)を既存モーダルで開く**(`IWindowService.ShowTrashAsync`/`ShowRepairAsync`)。閉じ後に画像データを再読込し status/件数変化を反映。コレクション未選択時は無効・モード中は非表示。コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(E-UI-DETAIL-023)の新 surface 配置は別 ECO(=原典撤去は保留)
+        - since ECO-010/DC-GRID-001 改訂: グリッドセルは サムネイル+ファイル名 を提示する。ファイルサイズはグリッドセルから除去(リスト列でのみ提示)。閲覧時はタグ色ドット(最大3・左下)を重畳する
+        - since ECO-012/I13: 閲覧時グリッドのタグ色ドットは左下・最大3(超過は先頭3)
+        - since ECO-013: 画像タブのグリッド/リストは画像タブ surface が単独で描画する。選択ロジックの unit 検査点は画像タブの独立した状態/操作ロジックへ移る(母集合=選択コレクションの status=normal・REQ-053)
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022]
+
+    - id: E-UI-AXIS-NAV-040
+      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割
+      classification: surface
+      part_kind: screen-surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-053, REQ-060]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      supersedes: E-UI-GRID-022
+      split_by: ECO-016
+      depends_on: [E-EVAL-002, E-VIEWSVC-009, E-DOMAIN-001]
+      invariants:
+        - since ECO-010/I01: 画像タブのタグビュー軸ナビゲーションは左 NodeGraph ツリーでなく、チップ+パンくず+表示軸セレクタで行う(FS 軸と同一の「チップで潜る・パンくずで戻る」操作)。ビュー階層は E-VIEWSVC-009 を消費する
+        - since ECO-011/I04: 画像タブは選択コレクションのスコープ内(REQ-053・横断しない)で表示軸を切替える。FS フォルダ軸は relative_path から派生し、新スキーマ/スキャン不要・読み取り専用 INV-009。タグビュー軸は E-VIEWSVC-009 を消費する
+        - since ECO-011/I04: 「全画像」固定入口(選択コレクション内の全 normal 画像・フラット)は2軸ナビとは別に維持する
+        - since ECO-012/I06: タグビュー軸の選択は、表示軸セレクタがビュー管理のビュー一覧を展開して行う。単一ビューは直接入る
+        - since ECO-012/I10: FS 軸のタグチップは現フォルダ表示中の画像に実在するタグを集計する(現階層スコープ・再帰しない)
+      acceptance_refs: [CP-UI-G1, CP-DISPLAY-PARITY-022]
+
+    - id: E-UI-MODE-041
+      name: 画像タブ文脈モード統制(タグ編集・整理・メンテナンス入口・クリック意味論ディスパッチ)— 旧 E-UI-GRID-022 から ECO-016 で分割
+      classification: surface
+      part_kind: screen-surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-046, REQ-065, REQ-067, REQ-070, REQ-071, REQ-072]
+      external_source_ref: K-AVALONIA
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      supersedes: E-UI-GRID-022
+      split_by: ECO-016
+      depends_on: [E-UI-BROWSE-022, E-UI-TAGASSIGN-029, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-TRASH-038, E-UI-REPAIR-039]
+      interface_contracts:
+        - モードが画像クリックの意味論をディスパッチし、E-UI-BROWSE-022 は描画・母集合・既定選択計算を提供する
+      invariants:
+        - since ECO-014: 画像タブ右ペインはタグ編集(E-UI-TAGASSIGN-029)と整理(E-UI-SIMILARITY-035 + E-UI-MERGE-036 の整理トレイ)を排他の文脈モードとして持つ
+        - since ECO-014: 整理モードでは中央ペインが検索結果表示へ切替わり候補+一致率を提示する。整理中の画像クリックは既定選択でなくマージ先/整理対象の割当として解釈する
+        - since ECO-014 §8: モード中(タグ編集/整理)はツールバーが他モード入口・`作業`・`⋯` を非表示にし、表示軸/ソート/レイアウトと当該モードの「終了」のみ残す。中央列は隣ペインへの描画はみ出しを封じる
+        - since ECO-015: ツールバーの `⋯`(その他)= メンテナンスメニュー。トラッシュ(E-TRASH-038)/修復(E-UI-REPAIR-039)を既存モーダルで開き、閉じ後に画像データを再読込し status/件数変化を反映する。コレクション未選択時は無効・モード中は非表示
+        - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(E-UI-DETAIL-023)の新 surface 配置は別 ECO
+      acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10]
 
     - id: E-UI-DETAIL-023
       name: 画像詳細パネル(メタデータ・ノート編集・タグ一覧)
@@ -349,14 +388,14 @@ ebom:
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-SETTINGS-013]
       invariants:
-        - ナビゲーション(端で停止・現在位置)は ViewModel で unit 検査可能にする
+        - ナビゲーション(端で停止・現在位置)は描画から独立した決定論的ロジックとして unit 検査可能にする
         - ペアリング・送り・追跡・高さ統一・位置記憶の判断は E-VIEWER-CALC-030 のみ経由(UI 側で再実装しない)
         - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り — 仕様 §2.9)
         - スクロールは全件一括読み込みしない(REQ-055)
       acceptance_refs: [CP-UI-G4, CP-UI-G8]
 
     - id: E-UI-NODEGRAPH-025
-      name: タグタブ中央 — ビュー階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D 追加)— v1.2 改訂+v2.0 GF-03/04/05 是正+ECO-010(画像タブ左 NodeGraph ナビゲーションツリーを撤回 → 画像タブのビューナビは E-UI-GRID-022 のチップ+パンくずへ移管)
+      name: タグタブ中央 — ビュー階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D 追加)— v1.2 改訂+v2.0 GF-03/04/05 是正+ECO-010/016(画像タブ左 NodeGraph ナビゲーションツリーを撤回 → 画像タブのビューナビは E-UI-AXIS-NAV-040 へ移管)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-030, REQ-034, REQ-035, REQ-036, REQ-037, REQ-060]
@@ -367,7 +406,7 @@ ebom:
         - ホームタグのトグル/強調は家アイコン(★不可 — v2.0/GF-03)
         - (ECO-007/E3) ノード追加ボタンは汎用ラベル『タグを配置』を表示する(対象タグ名は出さない=v2.0/GF-04 の対象タグ名表示を撤回)。パレット未選択時は非活性(選択を促す活性ガードは維持 — M1 3ペインのパレット選択を前提)
         - 条件サマリは i18n テンプレートで整形表示。JSON・\uXXXX を露出しない(整形は核側ヘルパで unit 検査 — v2.0/GF-05)
-        - (ECO-010/I01 撤回) 旧 ECO-006/BL-001『画像タブ NodeGraph ナビはルートを常に表示し空状態プレースホルダと排他』は**撤回**(対象=画像タブ左ナビツリーが消滅。ナビは E-UI-GRID-022 のチップ+パンくずへ移管)。タグタブ中央エディタのルート表示挙動は本規律の対象外で不変。製造時に 20-spec:289 / 32-mbom:201,203(画像タブ左 NodeGraph ナビ・nav_empty)を同期
+        - (ECO-010/I01 撤回 / ECO-016 再帰属) 旧 ECO-006/BL-001『画像タブ NodeGraph ナビはルートを常に表示し空状態プレースホルダと排他』は撤回(対象=画像タブ左ナビツリーが消滅。ナビは E-UI-AXIS-NAV-040 のチップ+パンくずへ移管)。タグタブ中央エディタのルート表示挙動は本規律の対象外で不変
       acceptance_refs: [CP-UI-G6, CP-GF-015, CP-UI-G1]
 
     - id: E-UI-TAGS-026
@@ -396,10 +435,10 @@ ebom:
       requirement_refs: [REQ-046, REQ-026, REQ-027]
       external_source_ref: "原典 TaggingPanel/NumericTagDialog/ImageTagChip(仕様 §2.6 v1.2)。ECO-010 で固定値入力をインライン化(NumericTagDialog の固定値モードを置換)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-TAGSVC-008, E-UI-GRID-022]
+      depends_on: [E-TAGSVC-008, E-UI-BROWSE-022]
       invariants:
         - 適用は REQ-027 の原子バッチ(部分適用を残さない)
-        - 適用対象計算・連番計算は ViewModel で unit 検査可能にする
+        - 適用対象計算・連番計算は描画から独立した決定論的ロジックとして unit 検査可能にする
         - (ECO-010/I02) タグ値入力(テキスト候補値・数値固定値)は右パネル内インライン展開で行う(ポップアップ/モーダルダイアログを使わない=設計方針 I-04)。タグ追加は種別グループ(シンプル/テキスト/数値)で提示し、シンプル=即時付与・テキスト/数値=行展開でインライン値選択(候補値チップ/範囲セル)
         - (ECO-010/I02b) 連番付与(複数画像へ連番値を振る)はインライン固定値とは別の独立アクションとして保持する。**連番計算(開始値+選択順 i)・原子バッチ・FMEA-014 検査は維持**(変更は動線=統合ダイアログ→独立アクションのみ)。製造時に 32-mbom:215(NumericValueDialog)/ 33-cp:259-260(CP-TAGUI-013)/ 20-spec:273,332 を同期
         - (ECO-012/I15) 数値タグのインライン付与は、狭い範囲(目安 ≤10・★評価等)は範囲セル直接選択、広い範囲はステッパ/数値入力へフォールバックする(セル過密を避ける閾値分岐)
@@ -425,7 +464,7 @@ ebom:
       depends_on: []
       graph_edges:
         owner: E-DESIGN-028
-        consumers: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039]
+        consumers: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039]
       invariants:
         - (ECO-007/E7) タグ色プリセットは9色: #e5484d/#f2912b/#e8b931/#30a46c/#12a594/#2f6bed/#8b5cf6/#e93d82/#5b6473(Radix 系)。従来の Material-500 18色を置換。色は自由 hex 継続(プリセットは入力ショートカット)
       acceptance_refs: [CP-UI-G1]
@@ -438,10 +477,10 @@ ebom:
       requirement_refs: [REQ-065, REQ-064]
       external_source_ref: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-SIMSEARCH-032, E-CRITERIA-037, E-UI-GRID-022, E-THUMB-020]
+      depends_on: [E-SIMSEARCH-032, E-CRITERIA-037, E-UI-BROWSE-022, E-THUMB-020]
       invariants:
         - 照合は pHash のみ。simple/detailed(精度モード)の選択 UI を出さない(仕様 §2.10.4)
-        - 結果整列・選択・空状態のロジックは ViewModel に置き unit 検査可能にする
+        - 結果整列・選択・空状態のロジックは描画から独立した決定論的ロジックとして unit 検査可能にする
         - (ECO-014/UQ-I07・IMG-005) 類似検索は独立モーダル(原典 SimilarImageSearchModal)でなく、画像タブ右ペインの**整理トレイ**(整理モード)の find として提供する。整理は「整理」ボタンで開始しタグ編集モードと排他。find「似た画像を探す」は ①類似画像検索(E-SIMSEARCH-032・pHash 閾値スライダー)②条件検索(**E-CRITERIA-037 を消費**・hash/拡張子/サイズ/名前/mtime)の2方式。検索結果は中央ペイン全面に候補+**一致率**(見比べ重視)・候補ごとに「整理対象に追加」。Core(E-SIMSEARCH-032/E-CRITERIA-037)の意味論は不変(候補=normal・同一コレクション REQ-053・閾値以上を類似度降順安定)
       acceptance_refs: [CP-UI-G9]
 
@@ -474,12 +513,12 @@ ebom:
         - 完全削除は非破壊明示文言を必須(『画像ファイルは削除されません(DB から除去)』— §2.11.5/裁定 6)+実行前確認
         - 復元で物理不在→missing 化した結果が UI で分かる(『復元したのに消えた』の誤解防止)
         - relink でタグ付き候補は選べない/拒否されマージ案内(タグ損失防止 — INV-015)
-        - 候補選択・確認・結果表示のロジックは ViewModel に置き unit 検査可能にする
+        - 候補選択・確認・結果表示のロジックは描画から独立した決定論的ロジックとして unit 検査可能にする
         - 各操作は E-CRITERIA-037/E-RELINK-007/E-TRASH-038 の API のみ経由(UI 側で状態遷移を再実装しない)
-        - (ECO-003) **再リンク候補は サムネイル+ファイル名+相対パス+サイズ+更新日時 を提示**し再リンク可否を判断可能にする(原典 AdvancedRepairModal カード準拠/§2.11.5 表示パリティ契約)。サムネイルは E-THUMB-020 を用い、実体が存在する候補(pending/normal)の物理パスから生成する(collection root + relative)。表示フィールドは ViewModel が公開し unit 検査可能にする(視覚描画は golden)
-        - (ECO-004/DC-RELINK-001) **旧 RelinkWindow(フォルダ管理経由)の候補も同じ表示契約**(サムネイル+ファイル名+パス+サイズ+更新日時)を満たす。ECO-003 是正が RepairWindow の1経路に閉じ RelinkWindow へ波及していなかった(read-across で捕捉)。RelinkViewModel に ISyncFolderRepository 注入で AbsolutePath 供給
+        - (ECO-003) **再リンク候補は サムネイル+ファイル名+相対パス+サイズ+更新日時 を提示**し再リンク可否を判断可能にする(原典 AdvancedRepairModal カード準拠/§2.11.5 表示パリティ契約)。サムネイルは E-THUMB-020 を用い、実体が存在する候補(pending/normal)の物理パスから生成する(collection root + relative)。表示フィールドは描画から独立して unit 検査可能にする(視覚描画は golden)
+        - (ECO-004/DC-RELINK-001) **旧 RelinkWindow(フォルダ管理経由)の候補も同じ表示契約**(サムネイル+ファイル名+パス+サイズ+更新日時)を満たす。ECO-003 是正が RepairWindow の1経路に閉じ RelinkWindow へ波及していなかった(read-across で捕捉)
         - (ECO-004/DC-TRASH-001) トラッシュ項目は サムネイル+ファイル名+**サイズ** を提示する(原典 TrashModal 準拠。削除/完全削除の判断材料)
-        - (ECO-005) 修復 UI は **一括自動修復「すべて自動修復(M件)」+ 単一自動修復(行内)+ 除外(missing→deleted)** の動線を持つ(原典 RepairModal 準拠)。relink/除外は core API(E-RELINK-007.CommitRelinkAsync / E-TRASH-038.ExcludeAsync)経由のみ・一括/単一の判定反復は ViewModel
+        - (ECO-005) 修復 UI は **一括自動修復「すべて自動修復(M件)」+ 単一自動修復(行内)+ 除外(missing→deleted)** の動線を持つ(原典 RepairModal 準拠)。relink/除外は core API(E-RELINK-007.CommitRelinkAsync / E-TRASH-038.ExcludeAsync)経由のみ・一括/単一の判定反復は描画から独立して unit 検査可能にする
       acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-DISPLAY-PARITY-022, CP-REPAIR-AUTOALL-023]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)

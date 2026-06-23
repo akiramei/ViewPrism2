@@ -14,6 +14,12 @@ control_plan:
     L3: "実行時計測(NFR: Stopwatch による評価器レイテンシ)"
     G: "承認者 maintainer による golden チェックリスト(20-spec.md §2.6 G-1〜G-9)の目視承認"
 
+  part_kind_gates:
+    core: "論理契約を unit/L2/L3 の自動オラクルで持つ。surface golden だけで core 合格にしない"
+    screen-surface: "golden(G) + 描画から独立した表示/操作ロジック CP を持つ。UI-BOM disposition=screen_surface_part の昇格条件"
+    shared-component: "35-design-system-bom.yaml の coverage_matrix + golden で管理する。画面機能部品と同列の E-BOM item にしない"
+    design-material: "E-DESIGN-028/K-DESIGN の token/knowledge として管理し、coverage gate で消費漏れを検出する"
+
   characteristics:
     - id: CP-UTIL-005
       characteristic: 共通ユーティリティ(ID・日時・ハッシュ・パス正規化・サイズ整形)が正規形を厳守する
@@ -454,7 +460,7 @@ control_plan:
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
-    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+グリッド(レスポンシブ列・Ctrl/SHIFT 選択)の描画と操作+**画像タブ NodeGraph ナビ: 階層なしビュー選択時にビュー名(ルート)と空文言が重ならない(ECO-006/BL-001)**(G-1・v1.3)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+ナビ重なりなし", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+画像タブ surface(E-UI-BROWSE-022 のグリッド/リスト、E-UI-AXIS-NAV-040 のFS/タグビュー軸、E-UI-MODE-041 の文脈モード入口)の描画と操作(G-1・v1.3+ECO-016)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+surface 分割後の3部品が同時に破綻しないこと", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G3, characteristic: "詳細パネルの全項目表示・ノート保存(G-3)",              classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止・背景クリック閉じる(G-4・v1.3)", classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }

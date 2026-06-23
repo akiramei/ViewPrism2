@@ -31,11 +31,13 @@
 
 | UI-BOM | 接続先 E-BOM(候補) | 連携の質 |
 |---|---|---|
-| 画面 SCR-0002 | E-UI-GRID-022 / E-UI-TAGASSIGN-029 / E-UI-NODEGRAPH-025 の上位束ね | 上位構成 |
+| 画面 SCR-0002 | E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041 / E-UI-TAGASSIGN-029 の上位束ね | 上位構成 |
 | コレクションペイン REG-0005 | **E-UI-SHELL-021**(コレクション選択スコープ) | display 精緻化 |
-| ブラウズ領域 REG-0006・グリッド/リスト CMP-0027/0028 | **E-UI-GRID-022**(グリッド/リスト・選択・空状態)・E-SORT-004・E-THUMB-020 | 直接対応 |
+| ブラウズ領域 REG-0006・グリッド/リスト CMP-0027/0028 | **E-UI-BROWSE-022**(グリッド/リスト・選択・空状態)・E-SORT-004・E-THUMB-020 | 直接対応(ECO-016 再帰属) |
+| 表示軸ナビ CMP-0021/0025/0026 | **E-UI-AXIS-NAV-040**(FS/タグビュー軸・パンくず・チップ)・E-VIEWSVC-009・E-EVAL-002 | 直接対応(ECO-016 再帰属) |
+| 文脈モード CMP-0022/ACT-0050/0061/0062/0063 | **E-UI-MODE-041**(タグ編集/整理/メンテ・クリック意味論)・E-UI-TAGASSIGN-029・E-UI-SIMILARITY-035・E-UI-MERGE-036 | 直接対応(ECO-016 再帰属) |
 | タグ編集パネル REG-0007・付与 CMP-0033/0034/0035 | **E-UI-TAGASSIGN-029**(タグ付与パネル)・E-TAGSVC-008・REQ-046/026/027 | 直接対応(改訂候補) |
-| タグチップ(view ナビ)OCC-0014・軸セレクタ CMP-0021 | **E-UI-NODEGRAPH-025**(ビュー階層)・E-VIEWSVC-009 | 対応(構造乖離) |
+| タグチップ(view ナビ)OCC-0014・軸セレクタ CMP-0021 | **E-UI-AXIS-NAV-040**(ビュー階層の消費)・E-VIEWSVC-009 | 対応(E-UI-NODEGRAPH-025 はタグタブ中央エディタへ縮小) |
 | タグ種別/候補値消費(追加行・候補値ピッカー) | **E-UI-TAGS-026**・E-DOMAIN-001(read-across) | 消費 |
 | 種別チップ/カラードット/トークン | **E-DESIGN-028** / K-DESIGN | デザインシステム(共有) |
 
@@ -57,13 +59,13 @@
 ## 5. read-across ギャップ
 
 - **タグ付与表現の表示パリティ(DC-TAGPREVIEW-001)**: タグタブの作成ダイアログ「付与プレビュー(★/数値±/候補チップ)」と、画像タブ実付与 UI(本タブの現在タグピル/インライン値ピッカー)の表示一致が契約済(ECO-007)。本モックのインライン数値は `★ N` 表記・候補値チップで整合的だが、**プレビューの ± 操作 vs 実付与のセル選択** の表現差を golden で突合する必要(CP-DISPLAY-PARITY-022)。
-- **選択視覚(GF-02)**: グリッド=セル枠+チェック、リスト=行淡青、で E-UI-GRID-022 の v2.0/GF-02 是正に整合。退行させない。
+- **選択視覚(GF-02)**: グリッド=セル枠+チェック、リスト=行淡青、で E-UI-BROWSE-022 の v2.0/GF-02 由来契約に整合。退行させない。
 - **タグ定義の単一正本**: 画像タブのタグ追加候補・候補値・数値範囲は E-UI-TAGS-026/E-DOMAIN-001 が正本。画像タブで再定義しない(消費のみ)。
 - **base タグ vs 付与タグ**: モックは base タグ(画像が元から持つ)を付与/削除で emulate。実装での base/付与の区別とカスケードは UQ-I09。
 
 ## 6. 次段への申し送り
 
 1. **unresolved 全件決着(2026-06-17)**: 根幹4決定(I01 ナビ・I02 付与インライン・I05 グリッド・I04 表示軸)=ECO-010/011、残 UQ(I03/I06〜I15・DS1/DS2)=ECO-012 でクローズ。**画像タブ設計フェーズ完了**。詳細は [unresolved-questions.md](unresolved-questions.md)。
-2. **E-BOM 同期(ECO-010 起票済)**: 確定分につき E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / E-UI-GRID-022(+ DC-GRID-001)を `30-ebom.yaml` で同期済(`bomdd/60-change-order-eco-010.md`)。E-UI-SHELL-021(UQ-I03)・表示軸概念(UQ-I04)は未決のため未同期。
+2. **E-BOM 同期(ECO-010〜016)**: 確定分につき E-UI-NODEGRAPH-025 / E-UI-TAGASSIGN-029 / 旧 E-UI-GRID-022(+ DC-GRID-001)を `30-ebom.yaml` で同期し、ECO-016 で E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041 へ追跡付き再分割済。
 3. **Design System BOM ゲート**: [design-system-bom.md](design-system-bom.md) の `new` 6 部品を製造計画へ。Components.axaml 再利用が前提。
 4. **製造**: golden-in-the-loop(実機 ⇄ モック M 突合)。E1〜E7・GF 是正・固定オラクルを退行させない。

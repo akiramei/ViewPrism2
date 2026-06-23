@@ -193,11 +193,12 @@ mbom:
       fmea_refs: [FMEA-002, FMEA-003]
 
     - id: M-UI-013
-      ebom_refs: [E-UI-SHELL-021, E-UI-GRID-022, E-UI-DETAIL-023, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]
+      ebom_refs: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]
       artifact:
         path: src/ViewPrism2.App/(Views/, ViewModels/)
         type: avalonia-app
       interface_contract:
+        trace_status: "ECO-016 で ebom_refs のラベルのみ旧 E-UI-GRID-022 から BROWSE/AXIS/MODE へ再帰属。以下の v1.2/画像タブ旧設計 prose の全面同期は M4 で実施"
         shell: "v1.2(仕様 §2.6): 上部タブ『タグ』『画像』+『設定』。タグタブ=3 ペイン(ビュー管理/階層エディタ(バッチ保存)/タグパレット+作成ダイアログ)。画像タブ=左(フォルダ+ビュー+NodeGraph ツリー+全画像入口)/ツールバー(表示切替・列数・ソート・タグ編集モード)/中央グリッド・リスト/右パネル(詳細⇔タグ付与切替)"
         viewmodels: "選択(Ctrl トグル・選択順)・空状態・ノード選択→評価呼び出し・階層編集のダーティ追跡は ViewModel ロジックとして unit 検査可能に分離(OC 系を UI から呼ぶだけにする)"
         nav_empty: "(ECO-006/BL-001) 画像タブ左 NodeGraph ナビ: TreeRoots は選択ビューでルートを常に 1 件持つ(REQ-036)。AXAML はツリーと空状態プレースホルダを**排他**にし重ねない=子ノード無しビューはルートノードのみ表示し『階層が定義されていません』(nodeGraph.empty)を画像タブナビに出さない。MainWindowViewModel の遷移・評価は不変(表示層のみ是正)"
@@ -283,11 +284,12 @@ mbom:
       fmea_refs: [FMEA-015, FMEA-016, FMEA-020]
 
     - id: M-UI-019
-      ebom_refs: [E-UI-GRID-022, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
+      ebom_refs: [E-UI-BROWSE-022, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
       artifact:
         path: src/ViewPrism2.App/(Views/ 該当 axaml 改修)+ src/ViewPrism2.Core/Services/ConditionSummaryFormatter.cs
         type: avalonia-app + dotnet-classlib
       interface_contract:
+        trace_status: "ECO-016 で ebom_refs のラベルのみ旧 E-UI-GRID-022 から E-UI-BROWSE-022 へ再帰属。GF-02 の契約 prose は内容不変"
         gf01: "TagEditorWindow: 高さ固定(SizeToContent=Manual 相当)。候補値リストは内部 ScrollViewer のみ伸縮"
         gf02: "グリッドの行コンテナから行選択視覚を除去(セル強調枠+選択順バッジのみ)。リスト表示の行選択視覚は変更しない"
         gf03: "ホームタグのトグル/強調アイコンを家アイコンへ変更(K-DESIGN のアイコン規定)"

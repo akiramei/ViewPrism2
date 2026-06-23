@@ -2,7 +2,7 @@
 
 > **目的**: BomDD `method/ui-ir-ui-bom.md` §9.2 の **Design System BOM ゲート**。画像タブの surface 部品が要求する design parts を列挙し、各 item の `coverage_status` を判定する。`covered`(再利用) または 理由付き `out-of-scope` でない item は製造へ進めない。
 > **基盤**: ECO-009 で正典化した部品層 [`src/ViewPrism2.App/Styles/Components.axaml`](../../../src/ViewPrism2.App/Styles/Components.axaml) + `App.axaml` トークン(E-DESIGN-028 / K-DESIGN)。画像タブはこれを最大限再利用し、不足分のみ追加する。
-> **対応**: 本書は ViewPrism2 に未導入の `35-design-system-bom.yaml`(BomDD テンプレート `method/templates/35-design-system-bom.yaml`)の画像タブ分の代替台帳。E-BOM 改訂 ECO 起票時に正式な 35 へ昇格してよい。
+> **対応**: 本書は `35-design-system-bom.yaml` の画像タブ詳細 coverage 台帳。ECO-016 以後、35 は shared component sub-BOM candidate、本書はその画面別 coverage 明細として扱う。
 > **状態**: candidate / 未実証。`new` 部品はモック準拠で追加する設計負債(製造前にここで可視化)。
 
 ## 凡例
@@ -51,7 +51,7 @@
 
 ## 整理トレイ部品(ECO-014 追加・候補)
 
-> 整理モード(類似+マージ統合)の surface 部品。`image_tab.md`「整理モード」節 + `ViewPrism2 整理マージ (standalone).html` 準拠。E-UI-SIMILARITY-035 / E-UI-MERGE-036(ECO-014 で整理トレイへ作り直し)/ E-UI-GRID-022(整理コンテキスト)が要求する design parts。**製造前に Components.axaml へ追加**(DS1 同方針)。golden 基準 = モック。
+> 整理モード(類似+マージ統合)の surface 部品。`image_tab.md`「整理モード」節 + `ViewPrism2 整理マージ (standalone).html` 準拠。E-UI-SIMILARITY-035 / E-UI-MERGE-036(ECO-014 で整理トレイへ作り直し)/ E-UI-MODE-041(整理コンテキスト)/ E-UI-BROWSE-022(クリック意味論接点)が要求する design parts。**製造前に Components.axaml へ追加**(DS1 同方針)。golden 基準 = モック。
 
 | UI-BOM item(候補) | design part | coverage | 再利用/追加先 | 欠落時の visual gap |
 |---|---|---|---|---|
@@ -71,5 +71,5 @@
 ## E-DESIGN-028 / K-DESIGN への含意
 
 - **トークン追加は不要**(青・淡青・9色・IBM Plex・44px・角丸スケールは ECO-009 で確立済)。画像タブ固有の配色(FS=中立グレー軸 / view=琥珀軸)は既存トークンの組み合わせで表現可能。
-- **新規 surface 部品(new 6点)** は E-DESIGN-028 の consumers に画像タブ surface(E-UI-GRID-022 / E-UI-TAGASSIGN-029)を通じて接続される(既に graph_edges.consumers に両者は記載済)。
+- **新規 shared component(new 6点)** は E-DESIGN-028 の consumers に画像タブ surface(E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041 / E-UI-TAGASSIGN-029)を通じて接続される。
 - K-DESIGN 変更なし。本台帳は E-BOM 改訂 ECO のスコープ表として使う。

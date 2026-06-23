@@ -4,34 +4,36 @@ bomdd:
   layer: Design System BOM
 
 # ─────────────────────────────────────────────────────────────
-# [disposition: candidate / 未採用 — PLM は本ファイルを「完成すべき正式 BOM」として扱わない]
+# [disposition: shared-component-sub-bom / candidate — PLM は本ファイルを画面部品と同列の E-BOM として扱わない]
 #
 #   状態(2026-06-22 時点):
-#     - ebom_surface_parts / kbom_design_knowledge の部品カタログは ViewPrism2 用に実在内容で記入済。
+#     - shared_surface_components / kbom_design_knowledge の部品カタログは ViewPrism2 用に実在内容で記入済。
 #     - 一方 source_cad_refs.ui_mock_ref・K-DESIGN の version/source・coverage_matrix・gates は
 #       テンプレ既定(<...> プレースホルダ)のまま = まだ binding を張っていない。これは未記入欠陥ではなく
-#       「補助台帳として候補状態に置いている」ことの表明(全 lifecycle: candidate)。
+#       「共有 component sub-BOM として候補状態に置いている」ことの表明(全 lifecycle: candidate)。
 #
 #   正式採用する場合にやること(その時まで上記プレースホルダは意図的に未充足):
 #     1. coverage_matrix を実 UI-BOM(bomdd/ui/ui-bom.json・bomdd/ui/image-tab/ui-bom.json)と突合して埋める。
-#     2. E-DESIGN-* を 30-ebom.yaml の items へ、CP-DESIGN-* を 33-control-plan.yaml へ同期する。
-#     3. gates(G-DS-001/002)を現行 BomDD の子レコード規則に合わせて key 化する。
+#     2. E-DESIGN-028/K-DESIGN を材料(material)として維持し、SC-* を共有 component sub-BOM として screen surface から消費させる。
+#     3. CP-DESIGN-* / gates(G-DS-001/002)を現行 BomDD の子レコード規則に合わせて key 化する。
 #   ※ 現状のデザイン言語の実装来歴は ECO-009(タグタブ デザイン言語移植・Components.axaml/App.axaml)を参照。
 #   正本宣言は 00-manifest.yaml の auxiliary.design_system_bom を参照。
 # ─────────────────────────────────────────────────────────────
 
-# Design System BOM(candidate):
+# Design System BOM(shared-component-sub-bom candidate):
 # UI-CAD(HTML mock + UI-IR/UI-BOM) が要求している見た目・構造・操作言語を、
-# E-BOM surface 部品と K-BOM design knowledge の組として明示する。
+# design material(E-DESIGN-028/K-DESIGN)・shared surface component(SC-*)・screen surface(E-UI-*) の
+# 3 層関係として明示する。
 #
 # 目的:
 #   - 実機が素の Border/DockPanel/グリフ文字で薄く実装されるのを防ぐ
-#   - Card / CTA / Chip / Badge / IconButton などを「装飾」ではなく製造対象部品にする
+#   - Card / CTA / Chip / Badge / IconButton などを「装飾」ではなく共有 component 原器として扱う
 #   - visual-gap-analysis(43) で CAD と実機の差分を部品欠落として帰属できるようにする
 #
 # 位置づけ:
-#   独立した正式 BOM 層ではなく、E-BOM/K-BOM/Control Plan をまたぐ UI surface 部品の補助台帳。
-#   正式化する場合は E-DESIGN-* を 30-ebom.yaml items へ、K-DESIGN-* を 31-kbom.yaml items へ同期する。
+#   独立した正式 BOM 層ではなく、E-BOM/K-BOM/Control Plan をまたぐ共有 component sub-BOM。
+#   正式化する場合も Card/Chip/Button を画面機能部品と同列にせず、E-UI-* surface が消費する
+#   SC-* 原器として coverage gate で管理する。
 
 design_system_bom:
   root:
@@ -39,7 +41,12 @@ design_system_bom:
     kbom_pack_ref: K-DESIGN
     name: <UI design language / design system root>
     purpose: <Card/CTA/Chip/Badge/IconButton などを束ね、各 UI surface へ適用する設計言語の部品層>
+    part_kind: shared-component-sub-bom
     lifecycle: candidate
+    surface_layers:
+      material: [E-DESIGN-028, K-DESIGN]
+      shared_component: [SC-CARD-001, SC-CTA-BUTTON-001, SC-TYPE-CHIP-001, SC-CONDITION-CHIP-001, SC-VALUE-CHIP-001, SC-BADGE-001, SC-ICON-BUTTON-001, SC-SECTION-HEADER-001, SC-HELP-BOX-001, SC-DRAG-HANDLE-001]
+      screen_surface: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-SHELL-021, E-UI-TAGASSIGN-029, E-UI-TAGS-026, E-UI-NODEGRAPH-025, E-UI-REPAIR-039]
 
   source_cad_refs:
     ui_mock_ref: <HTML mock / screenshot / Figma ref>
@@ -48,8 +55,8 @@ design_system_bom:
     ui_trace_map_ref: bomdd/ui/ui-trace-map.json
     design_intent_ref: bomdd/ui/design-intent.md
 
-  ebom_surface_parts:
-    - id: E-DESIGN-CARD-001
+  shared_surface_components:
+    - id: SC-CARD-001
       name: Card
       purpose: <枠・余白・見出し・補助文を持つ UI のまとまり>
       design_language_role: container
@@ -60,7 +67,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-CTA-BUTTON-001
+    - id: SC-CTA-BUTTON-001
       name: CTAButton
       purpose: <主要操作を視覚的に強調するボタン>
       design_language_role: action
@@ -71,7 +78,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-TYPE-CHIP-001
+    - id: SC-TYPE-CHIP-001
       name: TypeChip
       purpose: <型・カテゴリ・条件種別を色とラベルで示すチップ>
       design_language_role: semantic-marker
@@ -82,7 +89,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-CONDITION-CHIP-001
+    - id: SC-CONDITION-CHIP-001
       name: ConditionChip
       purpose: <条件式・フィルタ・階層条件を視覚的に表すチップ>
       design_language_role: semantic-condition
@@ -93,7 +100,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-VALUE-CHIP-001
+    - id: SC-VALUE-CHIP-001
       name: CandidateValueChip
       purpose: <候補値や選択肢をインラインに表示するチップ>
       design_language_role: data-token
@@ -104,7 +111,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-BADGE-001
+    - id: SC-BADGE-001
       name: Badge
       purpose: <件数・状態・凡例を短いラベルで示す>
       design_language_role: metadata
@@ -115,7 +122,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-ICON-BUTTON-001
+    - id: SC-ICON-BUTTON-001
       name: IconButton
       purpose: <編集・設定・削除などを文字グリフではなくアイコンボタンとして提供する>
       design_language_role: secondary-action
@@ -126,7 +133,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-SECTION-HEADER-001
+    - id: SC-SECTION-HEADER-001
       name: SectionHeader
       purpose: <節見出し・件数・凡例・ヘルプを一体で持つ領域ヘッダー>
       design_language_role: navigation-and-context
@@ -137,7 +144,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-HELP-BOX-001
+    - id: SC-HELP-BOX-001
       name: HelpBox
       purpose: <操作ヒント・ドラッグヒント・空状態説明を表示する>
       design_language_role: guidance
@@ -148,7 +155,7 @@ design_system_bom:
       ui_bom_consumers: []
       lifecycle: candidate
 
-    - id: E-DESIGN-DRAG-HANDLE-001
+    - id: SC-DRAG-HANDLE-001
       name: DragHandle
       purpose: <ドラッグ可能性を示し、操作 affordance を与える>
       design_language_role: affordance
@@ -207,10 +214,10 @@ design_system_bom:
     - ui_bom_item_no: TMP-UI-CMP-0001
       ui_name: <例 パレット候補行>
       required_design_parts:
-        - E-DESIGN-CARD-001
-        - E-DESIGN-TYPE-CHIP-001
-        - E-DESIGN-VALUE-CHIP-001
-        - E-DESIGN-CTA-BUTTON-001
+        - SC-CARD-001
+        - SC-TYPE-CHIP-001
+        - SC-VALUE-CHIP-001
+        - SC-CTA-BUTTON-001
       implemented_design_parts: []
       coverage_status: missing          # covered | partial | missing | out-of-scope
       gap_if_missing: <候補値/範囲/CTA が消え、素テキスト行になる>
