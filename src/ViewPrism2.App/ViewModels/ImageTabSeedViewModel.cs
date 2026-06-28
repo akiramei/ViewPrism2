@@ -867,6 +867,19 @@ public sealed class CurrentTagVM
     public IBrush PillForeground { get; }
 }
 
+/// <summary>ゴミ箱ポップアップの 1 枚(ECO-019)。複数選択可・IsSelected はその場更新。</summary>
+public sealed partial class TrashPopupItemVM : ObservableObject
+{
+    public TrashPopupItemVM(string id, string name, string absolutePath, string sizeLabel)
+    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; }
+    public string Id { get; }
+    public string Name { get; }
+    public string AbsolutePath { get; }
+    public bool HasThumb => AbsolutePath is not null;
+    public string SizeLabel { get; }
+    [ObservableProperty] private bool _isSelected;
+}
+
 /// <summary>整理トレイのスロット(マージ先 / 整理対象)に表示する 1 枚(ECO-014)。</summary>
 public sealed class OrganizeSlotVM
 {

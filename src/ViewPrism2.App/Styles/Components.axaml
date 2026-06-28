@@ -1204,4 +1204,156 @@
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+
+  <!-- ============ ゴミ箱ポップアップ(ECO-019) ============ -->
+  <Style Selector="Border.trashPopup">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="BoxShadow" Value="0 30 70 -20 #73142040" />
+  </Style>
+  <Style Selector="Border.trashPopupHeader">
+    <Setter Property="Height" Value="60" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+  </Style>
+  <Style Selector="Border.trashPopupFooter">
+    <Setter Property="MinHeight" Value="62" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+  </Style>
+
+  <!-- ゴミ箱カード(クリックで選択トグル) -->
+  <Style Selector="Button.trashCard">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.trashCard /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.trashCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.trashThumb">
+    <Setter Property="Width" Value="138" />
+    <Setter Property="Height" Value="138" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="#ECEFF3" />
+  </Style>
+  <Style Selector="Border.trashThumb.selected">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BoxShadow" Value="0 0 0 3 #382F6BED" />
+  </Style>
+  <!-- カード左上のチェック -->
+  <Style Selector="Border.trashCheck">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Margin" Value="7" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Background" Value="#D9FFFFFF" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="BorderBrush" Value="#CBD1DA" />
+  </Style>
+  <Style Selector="Border.trashCheck.selected">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.trashCheck PathIcon">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- 復元ボタン(青): 既定=淡青 disabled / .ready=青塗り -->
+  <Style Selector="Button.trashRestoreBtn">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="13,0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="#CDD9F5" />
+    <Setter Property="Foreground" Value="#9FB3E0" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#EEF3FE" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn:disabled">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Foreground" Value="#9FB3E0" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#EEF3FE" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Foreground" Value="#9FB3E0" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn.ready">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn.ready /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn.ready:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#2459CF" />
+  </Style>
+  <Style Selector="Button.trashRestoreBtn.ready PathIcon">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Border.trashRestoreBadge">
+    <Setter Property="MinWidth" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="White" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.trashRestoreBadge TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ゴミ箱を空にする(赤テキストボタン・塗りなし) -->
+  <Style Selector="Button.trashEmptyBtn">
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#A0464A" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.trashEmptyBtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.trashEmptyBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#FBEDED" />
+  </Style>
+  <Style Selector="Button.trashEmptyBtn:pointerover">
+    <Setter Property="Foreground" Value="#C4282D" />
+  </Style>
+  <Style Selector="Button.trashEmptyBtn PathIcon">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+  </Style>
 </Styles>

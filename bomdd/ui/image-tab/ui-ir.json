@@ -443,6 +443,40 @@
         "deleted 件数(中立グレー丸バッジ)"
       ],
       "notes": "⋯メニュー『ゴミ箱』項目の右。選択コレクションの deleted 件数(0 なら出さない)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0040",
+      "uiId": "component.trash-popup",
+      "name": "ゴミ箱ポップアップ",
+      "region": "TMP-UI-REG-0006",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "elements": [
+        "中央オーバーレイ(780×560)",
+        "ヘッダ(ゴミ箱/削除済み画像/件数バッジ/すべて選択/閉じる)",
+        "グリッド or 空状態",
+        "フッター(選択件数+ゴミ箱を空 / 復元+完全削除)"
+      ],
+      "notes": "画像タブ内オーバーレイ(別ウィンドウモーダルを作り直し)。整理トレイと同じ in-app 方針。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0041",
+      "uiId": "component.trash-card",
+      "name": "ゴミ箱カード",
+      "region": "TMP-UI-REG-0006",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "elements": [
+        "チェックボックス(左上・青選択)",
+        "サムネ",
+        "名前",
+        "サイズ"
+      ],
+      "notes": "クリックで選択トグル。選択時=青枠+リング。"
     }
   ],
   "occurrences": [
@@ -820,7 +854,7 @@
         "M"
       ],
       "confidence": "high",
-      "notes": "修復=既存修復モーダル(ECO-015)・ゴミ箱=既存トラッシュモーダル(ECO-015・旧トラッシュ改名+deleted件数バッジ)・削除=削除モードへ(ECO-018)。修復/ゴミ箱はポップアップ(モードに入らない=モックのモード化は誤りとして不採用・maintainer 2026-06-29)。"
+      "notes": "修復=既存修復モーダル(ECO-015)・ゴミ箱=画像タブ内ポップアップ(ECO-019・別ウィンドウから作り直し+deleted件数バッジ)・削除=削除モードへ(ECO-018)。修復はモーダル/ゴミ箱はポップアップ(モードに入らない)。"
     },
     {
       "tempPartNo": "TMP-UI-ACT-0029",
@@ -888,6 +922,71 @@
         "M"
       ],
       "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0068",
+      "uiId": "action.trash.open",
+      "name": "ゴミ箱ポップアップを開く",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "⋯→ゴミ箱",
+      "effect": "deleted 一覧を読み込み中央オーバーレイを表示(TrashOpen=true)",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "deleted 一覧を読み込み中央オーバーレイを表示(TrashOpen=true)。別ウィンドウモーダルを置換(ECO-019)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0069",
+      "uiId": "action.trash.select",
+      "name": "ゴミ箱項目の選択/すべて選択",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "項目クリックで青選択トグル(複数可)・『すべて選択/選択を解除』で全件トグル",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "項目クリックで青選択トグル(複数可)・『すべて選択/選択を解除』で全件トグル。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0070",
+      "uiId": "action.trash.restore",
+      "name": "選択を復元",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "選択を RestoreAsync(deleted→normal/存在不在分岐 missing)",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "選択を RestoreAsync(deleted→normal/存在不在分岐 missing)。normal はグリッド母集合へ復帰。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0071",
+      "uiId": "action.trash.purge",
+      "name": "選択を完全削除",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "確認(INV-009 非破壊明示)→ PermanentDeleteAsync(DB 行のみ・CASCADE)",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "確認(INV-009 非破壊明示)→ PermanentDeleteAsync(DB 行のみ・CASCADE)。物理非破壊。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0072",
+      "uiId": "action.trash.empty",
+      "name": "ゴミ箱を空にする",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "確認 → 全 deleted を PermanentDeleteAsync",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "確認 → 全 deleted を PermanentDeleteAsync。物理非破壊。"
     }
   ],
   "inputs": [
@@ -1110,6 +1209,28 @@
       ],
       "confidence": "high",
       "notes": "削除/復元/完全削除/除外で増減。選択コレクションスコープ。"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0037",
+      "uiId": "state.trash.popup-open",
+      "name": "ゴミ箱ポップアップ表示",
+      "target": "TMP-UI-REG-0006",
+      "observe": "TrashOpen=true で中央オーバーレイ",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0038",
+      "uiId": "state.trash.selection",
+      "name": "ゴミ箱選択",
+      "target": "TMP-UI-REG-0006",
+      "observe": "選択>0 で復元/完全削除が活性(件数バッジ)・『N 枚選択中』",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
     }
   ],
   "domainConcepts": [
@@ -1181,6 +1302,13 @@
         "M"
       ],
       "notes": "削除モードの『ゴミ箱へ移動』で normal→deleted。物理ファイルは消さず(INV-009)復元可。完全削除はゴミ箱モーダル経由(別経路・deleted 限定)。"
+    },
+    {
+      "name": "ゴミ箱の複数操作(復元/完全削除/空)",
+      "source": [
+        "M"
+      ],
+      "notes": "ゴミ箱ポップアップで deleted を複数選択し復元(deleted→normal/missing)・完全削除(DB 行のみ・物理非破壊 INV-009)・空にする(全件完全削除)。完全削除/空は確認+非破壊明示。モックの『元のファイルも削除され』は INV-009 矛盾で不採用。"
     }
   ],
   "reusedFromTagTab": {

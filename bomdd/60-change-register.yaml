@@ -342,3 +342,28 @@ change_orders:
     pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) 全面同期+削除遷移の固定オラクル凍結は後続 M4"
     scope_out: "詳細/ノート(REQ-043・別ECO)・確認ダイアログ/一括Undo 等の追加UX"
     notes: "モック是正=修復/ゴミ箱は本来ポップアップ(既存モーダル)。削除モードのみ新機能。ExcludeAsync(missing→deleted)と対称の normal→deleted を追加"
+
+  - id: ECO-019
+    title: "ゴミ箱モーダルを画像タブ内ポップアップへ作り直す(複数選択/すべて選択/復元/完全削除/空にする)"
+    type: 設計決定(トラッシュUI作り直し・既存Core再利用・CADモック由来)
+    status: implemented
+    golden: pending
+    baseline: "ECO-018 適用後"
+    bom_rev: "v4.0(eco:ECO-019)"
+    impacted_bom:
+      ["E-UI-REPAIR-039(トラッシュUIを画像タブ内ポップアップへ・複数選択/すべて選択/ゴミ箱を空・INV-009文言是正)",
+       "E-UI-MODE-041(⋯ゴミ箱=in-tab popup・別ウィンドウモーダル置換)",
+       "E-DESIGN-028(ゴミ箱ポップアップ部品 shared_component)",
+       "E-TRASH-038(不変・Restore/PermanentDelete 再利用)",
+       "bomdd/ui/image-tab/ui-ir.json / ui-bom.json / ui-trace-map.json"]
+    oracle: "S-01〜S-31 不変。スキーマ不変。新規 Core なし(既存 Restore/PermanentDelete 再利用=INV-009 既証 S-26)"
+    decisions:
+      T1: "確認文言=INV-009 維持(画像ファイルは削除されません=DB行のみ)。モックの『元のファイルも削除され』は不採用(woven 安全制約 > CAD 文言)"
+      T2: "ゴミ箱を画像タブ内ポップアップへ作り直す(別ウィンドウモーダル置換)"
+      T3: "複数選択+すべて選択+ゴミ箱を空(一括完全削除)を追加"
+      T4: "Core 再利用(RestoreAsync/PermanentDeleteAsync ループ)"
+    cad_input: "ViewPrismUI:資料/画像タブ/ViewPrism2 画像タブゴミ箱ポップアップ.html"
+    body: 60-change-order-eco-019.md
+    pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) 全面同期は後続 M4"
+    scope_out: "詳細/ノート(REQ-043・別ECO)"
+    notes: "重要 lesson: モック文言が woven 安全制約(INV-009 物理非破壊)と矛盾する場合は安全制約が勝つ。confirmBody を是正して採用"

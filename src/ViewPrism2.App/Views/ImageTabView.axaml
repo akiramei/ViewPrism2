@@ -9,6 +9,7 @@
        部品は Styles/Components.axaml(M1)。シェル(titlebar/menu/navbar/⌘K)はシェル所有のため含めない。
        タグ色依存の塗りは ImageTabSeedViewModel が IBrush で供給(Background/BorderBrush/Foreground バインド)。 -->
 
+  <Panel>
   <DockPanel LastChildFill="True" Background="{StaticResource AppBackgroundBrush}">
 
     <!-- ===== 左: コレクション(折り畳み 64 / 展開 276) ===== -->
@@ -894,4 +895,115 @@
       </Panel>
     </DockPanel>
   </DockPanel>
+
+    <!-- ===== ゴミ箱ポップアップ(ECO-019): 画像タブ内 中央オーバーレイ ===== -->
+    <Border IsVisible="{Binding TrashOpen}" Background="#57142C2C">
+      <Border Classes="trashPopup" Width="780" MaxWidth="780" Height="560" MaxHeight="560"
+              HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30">
+        <DockPanel LastChildFill="True">
+
+          <!-- header -->
+          <Border DockPanel.Dock="Top" Classes="trashPopupHeader">
+            <DockPanel VerticalAlignment="Center">
+              <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding CloseTrashCommand}" ToolTip.Tip="閉じる">
+                <PathIcon Data="{StaticResource CloseIcon}" />
+              </Button>
+              <Button DockPanel.Dock="Right" Classes="toolbarBtn" Height="32" MinHeight="32" Padding="11,0" Margin="0,0,8,0"
+                      IsVisible="{Binding HasTrashItems}" Command="{Binding ToggleTrashSelectAllCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14" />
+                  <TextBlock Text="{Binding TrashSelectAllLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource TrashIcon}" Width="18" Height="18" Foreground="{StaticResource FaintTextBrush}" />
+                <TextBlock Text="ゴミ箱" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="削除済み画像" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                <Border Classes="trashCountBadge" IsVisible="{Binding HasTrashItems}">
+                  <TextBlock Text="{Binding TrashPopupCount}" />
+                </Border>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+
+          <!-- footer action bar(項目がある時のみ) -->
+          <Border DockPanel.Dock="Bottom" Classes="trashPopupFooter" IsVisible="{Binding HasTrashItems}">
+            <DockPanel VerticalAlignment="Center">
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                <Button Classes="trashRestoreBtn" Classes.ready="{Binding CanRestoreTrash}"
+                        IsEnabled="{Binding CanRestoreTrash}" Command="{Binding RestoreSelectedTrashCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource RestoreIcon}" Width="16" Height="16" />
+                    <TextBlock Text="復元" VerticalAlignment="Center" />
+                    <Border Classes="trashRestoreBadge" IsVisible="{Binding HasTrashSel}"><TextBlock Text="{Binding TrashSelCount}" /></Border>
+                  </StackPanel>
+                </Button>
+                <Button Classes="delMoveBtn" Classes.ready="{Binding CanPurgeTrash}"
+                        IsEnabled="{Binding CanPurgeTrash}" Command="{Binding PurgeSelectedTrashCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" />
+                    <TextBlock Text="完全削除" VerticalAlignment="Center" />
+                    <Border Classes="delMoveBadge" IsVisible="{Binding HasTrashSel}"><TextBlock Text="{Binding TrashSelCount}" /></Border>
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <TextBlock Text="{Binding TrashSelCountLabel}" FontSize="12.5" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                <Button Classes="trashEmptyBtn" Command="{Binding EmptyTrashCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource TrashIcon}" Width="15" Height="15" />
+                    <TextBlock Text="ゴミ箱を空にする" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+
+          <!-- body: グリッド or 空状態 -->
+          <Panel>
+            <ScrollViewer IsVisible="{Binding HasTrashItems}" Padding="18" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding TrashPopupItems}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TrashPopupItemVM">
+                    <Button Classes="trashCard"
+                            Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).ToggleTrashItemCommand}"
+                            CommandParameter="{Binding}">
+                      <StackPanel Width="150" Margin="6">
+                        <Border Classes="trashThumb" Classes.selected="{Binding IsSelected}">
+                          <Panel>
+                            <Border Background="{StaticResource ValueChipBg}" />
+                            <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" IsVisible="{Binding HasThumb}" />
+                            <Border Classes="trashCheck" Classes.selected="{Binding IsSelected}">
+                              <PathIcon Data="{StaticResource CheckIcon}" Width="13" Height="13" Foreground="White" IsVisible="{Binding IsSelected}" />
+                            </Border>
+                          </Panel>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" FontSize="12" Margin="2,7,2,0" TextTrimming="CharacterEllipsis"
+                                   Foreground="{StaticResource TextPrimaryBrush}" />
+                        <TextBlock Text="{Binding SizeLabel}" FontSize="11" Margin="2,1,2,0" Foreground="{StaticResource TextMutedBrush}" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <StackPanel IsVisible="{Binding TrashPopupEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="13">
+              <Border Width="58" Height="58" CornerRadius="15" Background="{StaticResource PanelBrush}" HorizontalAlignment="Center">
+                <PathIcon Data="{StaticResource TrashIcon}" Width="26" Height="26" Foreground="{StaticResource TextMutedBrush}"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Spacing="2">
+                <TextBlock Text="ゴミ箱は空です。" FontSize="13.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+                <TextBlock Text="削除した画像はここに移動します。" FontSize="13.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+          </Panel>
+
+        </DockPanel>
+      </Border>
+    </Border>
+
+  </Panel>
 </UserControl>

@@ -75,7 +75,7 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
     }
 
     [Fact]
-    public async Task コレクション選択時はその他メニューからトラッシュと修復を当該IDで開く()
+    public async Task コレクション選択時はゴミ箱を画像タブ内ポップアップで開き修復は既存モーダルで開く()
     {
         var col = await SeedCollectionAsync();
         var win = new CapturingWindowService();
@@ -86,9 +86,10 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
         await vm.OpenTrashCommand.ExecuteAsync(null);
         await vm.OpenRepairCommand.ExecuteAsync(null);
 
-        Assert.Equal([col.Id], win.TrashCalls);
-        Assert.Equal([col.Id], win.RepairCalls);
-        Assert.False(vm.MoreMenuOpen); // 起動でメニューは閉じる
+        Assert.True(vm.TrashOpen);               // ゴミ箱=画像タブ内ポップアップ(ECO-019・モーダルは呼ばない)
+        Assert.Empty(win.TrashCalls);            // 既存トラッシュモーダルは開かない
+        Assert.Equal([col.Id], win.RepairCalls); // 修復=既存モーダル(ECO-015・変更なし)
+        Assert.False(vm.MoreMenuOpen);           // 起動でメニューは閉じる
     }
 
     [Fact]
@@ -105,6 +106,7 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
         await vm.OpenTrashCommand.ExecuteAsync(null);
         await vm.OpenRepairCommand.ExecuteAsync(null);
 
+        Assert.False(vm.TrashOpen);     // ゴミ箱ポップアップも開かない
         Assert.Empty(win.TrashCalls);
         Assert.Empty(win.RepairCalls);
     }

@@ -112,6 +112,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private bool _deleteMode;
     private int _trashCount; // 選択コレクションの deleted 件数(⋯「ゴミ箱」バッジ)
 
+    // ---- ゴミ箱ポップアップ(ECO-019: トラッシュモーダルを画像タブ内ポップアップへ作り直す)----
+    // ⋯「ゴミ箱」で開く中央オーバーレイ。deleted 画像を複数選択し、復元 / 完全削除 / ゴミ箱を空 を行う。
+    // 完全削除は確認+INV-009 非破壊明示(画像ファイルは削除されない=DB 行のみ除去)。状態遷移は TrashService 経由。
+    private readonly List<string> _trashSel = new();
+
     public ImageTabViewModel(
         ISyncFolderRepository folders,
         IImageRepository images,
@@ -435,6 +440,20 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>⋯「ゴミ箱」のバッジ: 選択コレクションの deleted 件数(0 なら出さない)。</summary>
     public bool HasTrash => _trashCount > 0;
     public int TrashCount => _trashCount;
+
+    // ---- ゴミ箱ポップアップ(ECO-019)公開契約 ----
+    public bool TrashOpen { get; private set; }
+    public ObservableCollection<TrashPopupItemVM> TrashPopupItems { get; } = new();
+    public int TrashPopupCount => TrashPopupItems.Count;
+    public bool HasTrashItems => TrashPopupItems.Count > 0;
+    public bool TrashPopupEmpty => TrashPopupItems.Count == 0;
+    public bool HasTrashSel => _trashSel.Count > 0;
+    public int TrashSelCount => _trashSel.Count;
+    public string TrashSelCountLabel => HasTrashSel ? $"{_trashSel.Count} 枚選択中" : "画像を選択して操作";
+    public string TrashSelectAllLabel => (TrashPopupItems.Count > 0 && _trashSel.Count == TrashPopupItems.Count) ? "選択を解除" : "すべて選択";
+    /// <summary>復元・完全削除は選択がある時のみ活性。</summary>
+    public bool CanRestoreTrash => _trashSel.Count > 0;
+    public bool CanPurgeTrash => _trashSel.Count > 0;
     /// <summary>右ペインの文脈モード(タグ編集 / 整理)は排他。どちらかなら右ペインを出す。</summary>
     public bool ShowRightPane => _editMode || _organizeMode;
     public bool IsTagEditContext => _editMode;
@@ -836,15 +855,108 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private void ToggleMoreMenu() { MoreMenuOpen = !MoreMenuOpen; AxisMenuOpen = false; SortMenuOpen = false; OnPropertyChanged(string.Empty); }
 
-    /// <summary>⋯ メニュー「ゴミ箱」: トラッシュ(復元/完全削除)を既存モーダルで開く(ECO-015・ECO-018 で改名)。閉じ後にデータ再読込+件数更新。</summary>
+    /// <summary>⋯ メニュー「ゴミ箱」: トラッシュを画像タブ内ポップアップで開く(ECO-019)。deleted 一覧を読み込み overlay を表示。</summary>
     [RelayCommand]
     private async Task OpenTrash()
     {
         MoreMenuOpen = false;
         if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
-        await _windows.ShowTrashAsync(_collectionId).ConfigureAwait(true);
-        await ReloadImagesAsync().ConfigureAwait(true);
-        await RefreshTrashCountAsync().ConfigureAwait(true); // 復元/完全削除で deleted 件数が変わる
+        await LoadTrashItemsAsync().ConfigureAwait(true);
+        TrashOpen = true;
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>ゴミ箱ポップアップを閉じる。</summary>
+    [RelayCommand]
+    private void CloseTrash()
+    {
+        TrashOpen = false;
+        _trashSel.Clear();
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>選択コレクションの deleted 画像を読み込みポップアップ一覧を作る(ファイル名昇順)。</summary>
+    private async Task LoadTrashItemsAsync()
+    {
+        TrashPopupItems.Clear();
+        _trashSel.Clear();
+        if (_collectionId is null) return;
+        var all = await _images.GetByFolderAsync(_collectionId).ConfigureAwait(true);
+        var root = _collectionPath.GetValueOrDefault(_collectionId, "");
+        foreach (var r in all.Where(r => r.Status == ImageStatus.Deleted)
+                             .OrderBy(r => r.FileName, StringComparer.OrdinalIgnoreCase))
+        {
+            var abs = Path.Combine(root, r.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+            TrashPopupItems.Add(new TrashPopupItemVM(r.Id, r.FileName, abs, FmtSize(r.FileSize)));
+        }
+    }
+
+    /// <summary>ポップアップ項目の選択トグル(青選択・複数可)。</summary>
+    [RelayCommand]
+    private void ToggleTrashItem(TrashPopupItemVM item)
+    {
+        if (!_trashSel.Remove(item.Id)) _trashSel.Add(item.Id);
+        RefreshTrashSelection();
+    }
+
+    /// <summary>すべて選択 / 選択を解除。</summary>
+    [RelayCommand]
+    private void ToggleTrashSelectAll()
+    {
+        if (_trashSel.Count == TrashPopupItems.Count) _trashSel.Clear();
+        else { _trashSel.Clear(); _trashSel.AddRange(TrashPopupItems.Select(i => i.Id)); }
+        RefreshTrashSelection();
+    }
+
+    private void RefreshTrashSelection()
+    {
+        var sel = new HashSet<string>(_trashSel, StringComparer.Ordinal);
+        foreach (var it in TrashPopupItems) it.IsSelected = sel.Contains(it.Id); // その場更新
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>選択を復元(T6/T7・物理存在→normal/不在→missing)。復元分は一覧と母集合へ反映。</summary>
+    [RelayCommand]
+    private async Task RestoreSelectedTrash()
+    {
+        if (_trashSel.Count == 0) return;
+        foreach (var id in _trashSel.ToList())
+            await _trash.RestoreAsync(id).ConfigureAwait(true);
+        await ReloadImagesAsync().ConfigureAwait(true); // 復元 normal はグリッドへ戻る
+        await LoadTrashItemsAsync().ConfigureAwait(true);
+        await RefreshTrashCountAsync().ConfigureAwait(true);
+        Recompute();
+    }
+
+    /// <summary>選択を完全削除(T8・CASCADE)。確認+INV-009 非破壊明示(画像ファイルは削除されない=DB 行のみ除去)。</summary>
+    [RelayCommand]
+    private async Task PurgeSelectedTrash()
+    {
+        if (_trashSel.Count == 0) return;
+        int n = _trashSel.Count;
+        if (!await _windows.ConfirmAsync("完全削除",
+                $"{n} 枚を完全に削除します。画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。").ConfigureAwait(true))
+            return;
+        foreach (var id in _trashSel.ToList())
+            await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);
+        await LoadTrashItemsAsync().ConfigureAwait(true);
+        await RefreshTrashCountAsync().ConfigureAwait(true);
+        Recompute();
+    }
+
+    /// <summary>ゴミ箱を空にする(全 deleted を完全削除)。確認+INV-009 非破壊明示。</summary>
+    [RelayCommand]
+    private async Task EmptyTrash()
+    {
+        if (TrashPopupItems.Count == 0) return;
+        int n = TrashPopupItems.Count;
+        if (!await _windows.ConfirmAsync("ゴミ箱を空にする",
+                $"ゴミ箱内の {n} 枚を完全に削除します。画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。").ConfigureAwait(true))
+            return;
+        foreach (var id in TrashPopupItems.Select(i => i.Id).ToList())
+            await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);
+        await LoadTrashItemsAsync().ConfigureAwait(true);
+        await RefreshTrashCountAsync().ConfigureAwait(true);
         Recompute();
     }
 

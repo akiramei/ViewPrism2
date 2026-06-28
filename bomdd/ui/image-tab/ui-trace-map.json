@@ -496,6 +496,43 @@
       ],
       "handling": "bom",
       "note": "ゴミ箱=既存トラッシュモーダル(ECO-015)で開く(モックの trashOpen オーバーレイは誤りで不採用・maintainer)。deleted 件数バッジ併記。"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic: trashOpen/closeTrash/trashItems(ゴミ箱ポップアップ)",
+      "uiIr": "TMP-UI-ACT-0068 / TMP-UI-STA-0037 / TMP-UI-CMP-0040",
+      "uiBom": "TMP-UI-ACT-0068",
+      "ebomItemRef": [
+        "E-UI-REPAIR-039",
+        "E-UI-MODE-041",
+        "E-TRASH-038"
+      ],
+      "handling": "bom",
+      "note": "トラッシュ UI を画像タブ内ポップアップへ作り直す(ECO-019・別ウィンドウ置換)。Core 再利用。"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic: toggleSelectAll/restoreSelected/purgeSelected/emptyTrash",
+      "uiIr": "TMP-UI-ACT-0069/0070/0071/0072 / TMP-UI-STA-0038 / TMP-UI-CMP-0041",
+      "uiBom": "TMP-UI-ACT-0071",
+      "ebomItemRef": [
+        "E-UI-REPAIR-039",
+        "E-TRASH-038",
+        "E-DESIGN-028"
+      ],
+      "handling": "bom",
+      "note": "複数選択/すべて選択/復元/完全削除/空。状態遷移は E-TRASH-038 のみ。"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic: confirmBody(完全削除/空の確認文言)",
+      "uiIr": "TMP-UI-ACT-0071",
+      "uiBom": "TMP-UI-ACT-0071",
+      "ebomItemRef": [
+        "E-UI-REPAIR-039"
+      ],
+      "handling": "bom",
+      "note": "是正: モック『元のファイルも削除され』は INV-009 矛盾で不採用 →『画像ファイルは削除されません(DB から除去)・元に戻せません』へ(woven 安全制約 > CAD 文言)。"
     }
   ]
 }

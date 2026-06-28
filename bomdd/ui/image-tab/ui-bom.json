@@ -1574,6 +1574,94 @@
         "disposition": "acceptance_aspect",
         "ecoImpact": "ECO-018: 削除 ON で他モード解除・選択クリア。削除中はツールバーが他入口・⋯ を隠す。"
       }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0068",
+      "uiId": "action.trash.open",
+      "kind": "action",
+      "name": "ゴミ箱ポップアップ",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "トラッシュ UI を画像タブ内ポップアップへ作り直す(別ウィンドウ置換)。",
+      "ebomCandidate": {
+        "promoteAs": "仕様/要求への接続",
+        "items": [
+          "E-UI-REPAIR-039",
+          "E-UI-MODE-041"
+        ],
+        "coreRefs": [
+          "E-TRASH-038"
+        ],
+        "requirementRefs": [
+          "REQ-070",
+          "REQ-071"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "specification_link",
+        "ecoImpact": "ECO-019: ⋯ゴミ箱=in-tab popup。複数選択/すべて選択/復元/完全削除/ゴミ箱を空。Core 再利用(新規なし)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0071",
+      "uiId": "action.trash.purge",
+      "kind": "action",
+      "name": "ゴミ箱 完全削除/空",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "完全削除/空は確認+INV-009 非破壊明示。物理ファイルは削除しない。",
+      "ebomCandidate": {
+        "promoteAs": "仕様/要求への接続",
+        "items": [
+          "E-UI-REPAIR-039"
+        ],
+        "coreRefs": [
+          "E-TRASH-038"
+        ],
+        "requirementRefs": [
+          "REQ-071"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "specification_link",
+        "ecoImpact": "ECO-019: 文言は『画像ファイルは削除されません(DB から除去)』。モックの物理削除文言は INV-009 矛盾で不採用(安全制約>CAD)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0040",
+      "uiId": "component.trash-popup",
+      "kind": "component",
+      "name": "ゴミ箱ポップアップ",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "画像タブ内オーバーレイ部品一式(popup/header/footer・カード・各ボタン)。",
+      "ebomCandidate": {
+        "promoteAs": "デザインシステム部品",
+        "items": [
+          "E-DESIGN-028"
+        ],
+        "kbom": [
+          "K-DESIGN"
+        ],
+        "confidence": "high",
+        "disposition": "shared_component",
+        "ecoImpact": "ECO-019: Components.axaml に trashPopup/Header/Footer・trashCard/Thumb/Check・復元(青)/完全削除(赤)/空(赤テキスト)ボタン・件数バッジ。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0038",
+      "uiId": "state.trash.selection",
+      "kind": "state",
+      "name": "ゴミ箱選択",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "受入観点(複数選択・すべて選択・件数・活性)。",
+      "ebomCandidate": {
+        "promoteAs": "受入観点",
+        "items": [
+          "E-UI-REPAIR-039"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "acceptance_aspect",
+        "ecoImpact": "ECO-019: 選択>0 で復元/完全削除活性。すべて選択トグル。"
+      }
     }
   ],
   "reusedFromTagTab": {
