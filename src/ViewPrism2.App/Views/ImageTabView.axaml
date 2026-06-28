@@ -579,30 +579,50 @@
 
             <Border Width="1" Height="26" Background="{StaticResource CardBorderBrush}" />
 
-            <!-- モード中(タグ編集/整理)は他モード入口・作業・⋯ を隠し、当該モードの「終了」と
-                 表示軸/ソート/レイアウトのみ残す(集中・排他可視化・狭い中央列での被り解消)。ECO-014 §8 -->
+            <!-- モード中(タグ編集/整理/作業)は他モード入口・⋯ を隠し、当該モードの「終了」と
+                 表示軸/ソート/レイアウトのみ残す(集中・排他可視化・狭い中央列での被り解消)。ECO-014 §8 / ECO-017 -->
             <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
               <Button Classes="toolbarBtn" Classes.active="{Binding EditMode}" FontWeight="SemiBold"
-                      IsVisible="{Binding !OrganizeMode}" Command="{Binding ToggleEditCommand}">
+                      IsVisible="{Binding ShowEditEntry}" Command="{Binding ToggleEditCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource PencilIcon}" />
                   <TextBlock Text="{Binding EditButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <Button Classes="toolbarBtn" Classes.active="{Binding OrganizeMode}" FontWeight="SemiBold"
-                      IsVisible="{Binding !EditMode}" Command="{Binding ToggleOrganizeCommand}">
+                      IsVisible="{Binding ShowOrganizeEntry}" Command="{Binding ToggleOrganizeCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource TuneIcon}" />
                   <TextBlock Text="{Binding OrganizeButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <!-- 作業 / ⋯ は UQ-I07 残(未設計)。モード中は操作対象がないため隠す(maintainer 2026-06-18) -->
-              <Button Classes="toolbarBtn" IsVisible="{Binding !InAnyMode}">
+              <!-- 作業=3つ目の排他文脈モード(ECO-017)。active=緑塗り。作業中は「作業を終了」+「追加」+作業対象チップ。 -->
+              <Button Classes="toolbarBtn" Classes.workActive="{Binding WorkMode}" FontWeight="SemiBold"
+                      IsVisible="{Binding ShowWorkEntry}" Command="{Binding ToggleWorkCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource WorkIcon}" />
-                  <TextBlock Text="作業" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding WorkButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
+              <!-- 追加: 選択を作業対象セットへ蓄積(作業モード中のみ・選択あり時のみ活性・件数バッジ) -->
+              <Button Classes="workAddBtn" Classes.ready="{Binding CanAddToWork}" IsVisible="{Binding WorkMode}"
+                      IsEnabled="{Binding CanAddToWork}" Command="{Binding AddToWorkCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource PlusIcon}" Width="16" Height="16" />
+                  <TextBlock Text="追加" VerticalAlignment="Center" />
+                  <Border Classes="workAddBadge" IsVisible="{Binding HasWorkSelection}">
+                    <TextBlock Text="{Binding WorkSelCount}" />
+                  </Border>
+                </StackPanel>
+              </Button>
+              <!-- 作業対象 N 枚 チップ(蓄積件数の確認・セル個別バッジは出さない=描画モック準拠 W2) -->
+              <Border Classes="workTargetChip" IsVisible="{Binding HasWorkTargets}">
+                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14" />
+                  <TextBlock Text="{Binding WorkTargetLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Border>
+              <!-- ⋯ = メンテナンスメニュー(ECO-015)。モード中は隠す(InAnyMode に作業を含む=ECO-017) -->
               <Panel IsVisible="{Binding !InAnyMode}">
                 <Button x:Name="MoreTrigger" Classes="toolbarBtn square" Command="{Binding ToggleMoreMenuCommand}" ToolTip.Tip="その他">
                   <PathIcon Data="{StaticResource MoreIcon}" />

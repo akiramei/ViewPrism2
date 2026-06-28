@@ -291,3 +291,28 @@ change_orders:
     verification: "JSON/YAML 構文検査 + active E/M-BOM 参照整合性検査。表示/挙動変更なしのため golden 不要"
     body: 60-change-order-eco-016.md
     notes: "目的は surface churn の停止ではなく影響局所化。以後の画像タブ ECO は BROWSE/AXIS/MODE のどれに落ちたかを register で測定する"
+
+  - id: ECO-017
+    title: "画像タブ 機能完成③: 作業ボタン=3つ目の排他文脈モード(作業対象セット蓄積)"
+    type: 設計決定(新表面・CADモック由来・UQ-I07 最終決着)
+    status: implemented
+    golden: pending
+    baseline: "ECO-016 適用後(surface 部品体系化)"
+    bom_rev: "v4.0(eco:ECO-017)"
+    impacted_bom:
+      ["E-UI-MODE-041(作業=3つ目の排他文脈モード・追加/作業対象チップ・排他隠し拡張)",
+       "E-UI-BROWSE-022(選択許可フラグ inSelect の受領=既存選択機構の再利用・意味論不変)",
+       "E-DESIGN-028(緑系塗りボタン+作業対象チップ shared_component)",
+       "bomdd/ui/image-tab/ui-ir.json(TMP-UI-ACT-0062 解決+0064・CMP-0036/0037・STA-0033/0034・domainConcept)",
+       "bomdd/ui/image-tab/ui-bom.json(昇格6件)",
+       "bomdd/ui/image-tab/ui-trace-map.json(作業トレース3行)"]
+    oracle: "S-01〜S-31 不変。Core 意味論不変(新 Core サービスなし=E-UI-BROWSE-022 選択の再利用)。スキーマ不変"
+    decisions:
+      W1: "ツールバー=既存の排他隠し方式に統一(InAnyMode を作業へ拡張)"
+      W2: "個別セルバッジ無し(描画モック準拠。data 層の isWorkTarget/workBadgeStyle はテンプレ未描画)"
+      W3: "スコープ=作業モード+workTargets 蓄積のみ(永続化・作業タブ受け渡しは別ループ)"
+    cad_input: "ViewPrismUI:資料/画像タブ/ViewPrism2 画像タブ作業ボタン.html"
+    body: 60-change-order-eco-017.md
+    pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) の全面同期は後続 M4"
+    scope_out: "作業タブ本体(workTargets 消費先)・workTargets 永続化・詳細/ノート(REQ-043・別ECO)"
+    notes: "本 ECO で UQ-I07 全項目(整理=ECO-014/⋯=ECO-015/作業=ECO-017)決着。残る原典撤去ブロッカーは詳細/ノート(REQ-043)のみ"

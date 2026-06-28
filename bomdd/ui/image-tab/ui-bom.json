@@ -304,7 +304,7 @@
           "K-DESIGN"
         ],
         "confidence": "high",
-        "note": "整理/作業/⋯ は挙動未定(UQ-I07)で表示のみ。",
+        "note": "整理=ECO-014・作業=ECO-017・⋯=ECO-015 で決定済(全 UQ-I07 決着)。",
         "disposition": "shared_component"
       }
     },
@@ -1351,6 +1351,125 @@
         ],
         "confidence": "high",
         "disposition": "domain_ref"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0062",
+      "uiId": "action.toolbar.work",
+      "kind": "action",
+      "name": "作業モード",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "業務操作(閲覧⇄作業モード)。3つ目の排他文脈モードでグリッド選択を有効化し作業対象を蓄積する。",
+      "ebomCandidate": {
+        "promoteAs": "仕様/要求への接続",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "coreRefs": [
+          "E-UI-BROWSE-022"
+        ],
+        "requirementRefs": [],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "specification_link",
+        "ecoImpact": "ECO-017: 作業モードを E-UI-MODE-041 の3つ目の排他文脈モードとして追加。クリック意味論=作業中は既定選択(E-UI-BROWSE-022 の選択機構を再利用)。要求トレースは持たない(原典 view-prism に作業タブ機能はなく、CAD モック由来の新表面)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0064",
+      "uiId": "action.work.add",
+      "kind": "action",
+      "name": "選択を作業対象へ追加",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "作業モードの主アクション。選択集合を workTargets へ移送(和集合)し選択クリア。",
+      "ebomCandidate": {
+        "promoteAs": "仕様/要求への接続",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "coreRefs": [
+          "E-UI-BROWSE-022"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "specification_link",
+        "ecoImpact": "ECO-017: 追加判定(選択あり時のみ活性)・和集合・選択クリアは描画から独立した決定論ロジックとして unit 検査可能にする。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0036",
+      "uiId": "component.work-add-button",
+      "kind": "component",
+      "name": "作業対象へ追加ボタン",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "作業モード専用の主アクションボタン(緑塗り/淡緑 disabled+件数バッジ)。デザインシステムの緑系塗りボタン variant。",
+      "ebomCandidate": {
+        "promoteAs": "デザインシステム部品",
+        "items": [
+          "E-DESIGN-028"
+        ],
+        "kbom": [
+          "K-DESIGN"
+        ],
+        "confidence": "high",
+        "disposition": "shared_component",
+        "ecoImpact": "ECO-017: Components.axaml に緑系塗りボタン+件数バッジを追加(青の primaryAction とは別 variant)。作業=緑の designIntent を保つ。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0037",
+      "uiId": "component.work-target-chip",
+      "kind": "component",
+      "name": "作業対象チップ",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "累積件数表示の緑系チップ。整理トレイのチップ言語と同型。",
+      "ebomCandidate": {
+        "promoteAs": "デザインシステム部品",
+        "items": [
+          "E-DESIGN-028"
+        ],
+        "kbom": [
+          "K-DESIGN"
+        ],
+        "confidence": "high",
+        "disposition": "shared_component",
+        "ecoImpact": "ECO-017: Components.axaml に緑系チップ(チェック+ラベル)を追加。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0033",
+      "uiId": "state.work.mode",
+      "kind": "state",
+      "name": "作業モード",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "受入観点(閲覧⇄作業の遷移・排他・選択有効化・ツールバー出し分け)。",
+      "ebomCandidate": {
+        "promoteAs": "受入観点",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "acceptance_aspect",
+        "ecoImpact": "ECO-017: 作業 ON でタグ編集/整理解除・選択クリア。作業中はツールバーが他モード入口・⋯ を隠す(既存 InAnyMode 規律を作業へ拡張・排他隠し統一=maintainer 裁定 2026-06-29)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0034",
+      "uiId": "state.work.targets",
+      "kind": "state",
+      "name": "作業対象セット蓄積",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "受入観点(workTargets 和集合蓄積・件数チップ)。",
+      "ebomCandidate": {
+        "promoteAs": "受入観点",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "acceptance_aspect",
+        "ecoImpact": "ECO-017: workTargets はセッション内蓄積のみ(永続化・作業タブ受け渡しはスコープ外)。個別セルバッジは出さない(描画モック準拠)。"
       }
     }
   ],

@@ -96,6 +96,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private bool _organizeDone;
     private int _doneSourceCount;
 
+    // ---- 作業モード(ECO-017: 作業対象セットの蓄積)----
+    // タグ編集/整理に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能になり(inSelect=編集 or 作業・
+    // 既存の選択機構を再利用)、「追加」で選択を _workTargets へ和集合蓄積し選択をクリアする。
+    // 右ペインは開かない(追加ボタン+作業対象チップはツールバー内)。workTargets はセッション内蓄積のみ
+    // (消費先=作業タブ本体・永続化はスコープ外。モック明記)。
+    private bool _workMode;
+    private readonly List<string> _workTargets = new();
+
     public ImageTabViewModel(
         ISyncFolderRepository folders,
         IImageRepository images,
@@ -383,8 +391,28 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- 整理モード(ECO-014)公開契約 ----
     public bool OrganizeMode => _organizeMode;
     public string OrganizeButtonLabel => _organizeMode ? "整理を終了" : "整理";
-    /// <summary>いずれかの文脈モード中(タグ編集 or 整理)。モード中は他モード入口・作業・⋯ を隠す(集中・排他可視化・幅)。</summary>
-    public bool InAnyMode => _editMode || _organizeMode;
+    /// <summary>いずれかの文脈モード中(タグ編集 or 整理 or 作業)。モード中は他モード入口・⋯ を隠す(集中・排他可視化・幅)。ECO-017 で作業へ拡張。</summary>
+    public bool InAnyMode => _editMode || _organizeMode || _workMode;
+
+    // ---- 作業モード(ECO-017)公開契約 ----
+    /// <summary>選択を有効化するモード(タグ編集 or 作業)。グリッドの選択視覚=チェック/選択順バッジを出す。</summary>
+    public bool InSelectMode => _editMode || _workMode;
+    public bool WorkMode => _workMode;
+    public string WorkButtonLabel => _workMode ? "作業を終了" : "作業";
+    /// <summary>作業モード中に選択がある=「追加」が活性。</summary>
+    public bool HasWorkSelection => _workMode && _selected.Count > 0;
+    public int WorkSelCount => _selected.Count;
+    /// <summary>「追加」ボタンの活性(=選択あり)。</summary>
+    public bool CanAddToWork => HasWorkSelection;
+    /// <summary>作業対象が1件以上ある=「作業対象 N 枚」チップを出す。</summary>
+    public bool HasWorkTargets => _workMode && _workTargets.Count > 0;
+    public string WorkTargetLabel => $"作業対象 {_workTargets.Count} 枚";
+
+    // ---- ツールバー モード入口の出し分け(ECO-017: 3モード排他隠し統一) ----
+    // 各モード入口は他2モードの最中は隠れる(自モード中は「終了」として残る)。
+    public bool ShowEditEntry => !_organizeMode && !_workMode;
+    public bool ShowOrganizeEntry => !_editMode && !_workMode;
+    public bool ShowWorkEntry => !_editMode && !_organizeMode;
     /// <summary>右ペインの文脈モード(タグ編集 / 整理)は排他。どちらかなら右ペインを出す。</summary>
     public bool ShowRightPane => _editMode || _organizeMode;
     public bool IsTagEditContext => _editMode;
@@ -527,12 +555,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
             bool selected = selSet.Contains(e.Record.Id);
             int? order = selected ? _selected.IndexOf(e.Record.Id) + 1 : null; // 選択順バッジ(1 起点・REQ-041 CR-3)
             var tagsOf = ImgTagIds(e);
-            var dots = (!_editMode && tagsOf.Count > 0)
+            bool inSelect = _editMode || _workMode; // ECO-017: 作業モードでも選択可(選択機構の再利用)
+            var dots = (!inSelect && tagsOf.Count > 0)
                 ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
                 : new List<IBrush>();
             Items.Add(new ImageItemVM(e.Record.Id, e.Record.FileName, isFolder: false, isPlaceholder: false,
-                hasThumb: true, thumbBrush: null, selectable: _editMode, isSelected: selected,
-                hasTagDots: !_editMode && tagsOf.Count > 0, tagDots: dots,
+                hasThumb: true, thumbBrush: null, selectable: inSelect, isSelected: selected,
+                hasTagDots: !inSelect && tagsOf.Count > 0, tagDots: dots,
                 sizeLabel: FmtSize(e.Record.FileSize), dateLabel: FmtDate(e.Record.ModifiedDate),
                 target: null, absolutePath: e.AbsolutePath, selectionOrder: order,
                 isMergeTarget: _organizeMode && string.Equals(e.Record.Id, _mergeTargetId, StringComparison.Ordinal),
@@ -804,7 +833,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleEdit()
     {
         _editMode = !_editMode;
-        if (_editMode) { _organizeMode = false; ResetOrganizeState(); } // 整理と排他(ECO-014)
+        if (_editMode) { _organizeMode = false; ResetOrganizeState(); _workMode = false; } // 整理・作業と排他(ECO-014/017)
         _selected.Clear(); _expandTag = null; _panelTab = "current";
         Recompute();
     }
@@ -862,13 +891,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
             else if (item.Id != _mergeTargetId) ToggleOrganizeTarget(item.Id);
             return;
         }
-        if (!_editMode)
+        if (!_editMode && !_workMode)
         {
             // 閲覧モード(モック準拠): シングルクリックは無操作・ダブルクリックでビューアー起動(REQ-041)
             if (isDoubleClick) OpenViewer(item.Id);
             return;
         }
-        ToggleSelect(item.Id, ctrl, shift); // 編集モード: 選択(ダブルクリックでもビューアーは開かない)
+        ToggleSelect(item.Id, ctrl, shift); // 編集 or 作業モード: 選択(inSelect・選択機構を再利用)
     }
 
     /// <summary>閲覧モードのダブルクリック=ビューアー起動(REQ-041)。表示順(SortFiles)で開く。</summary>
@@ -995,8 +1024,32 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleOrganize()
     {
         _organizeMode = !_organizeMode;
-        if (_organizeMode) _editMode = false; // タグ編集と排他
+        if (_organizeMode) { _editMode = false; _workMode = false; } // タグ編集・作業と排他(ECO-014/017)
         ResetOrganizeState();
+        Recompute();
+    }
+
+    // =====================================================================
+    //  作業モード コマンド(ECO-017: 作業対象セットの蓄積)
+    // =====================================================================
+    /// <summary>作業モード開始/終了。タグ編集/整理と排他・選択クリア(モック toggleWork 準拠)。</summary>
+    [RelayCommand]
+    private void ToggleWork()
+    {
+        _workMode = !_workMode;
+        if (_workMode) { _editMode = false; _organizeMode = false; ResetOrganizeState(); } // 他文脈モードと排他
+        _selected.Clear(); _expandTag = null;
+        Recompute();
+    }
+
+    /// <summary>選択中の画像を作業対象セットへ和集合追加し、選択をクリア(モック addToWork 準拠)。選択なしは無操作。</summary>
+    [RelayCommand]
+    private void AddToWork()
+    {
+        if (_selected.Count == 0) return;
+        foreach (var id in _selected)
+            if (!_workTargets.Contains(id)) _workTargets.Add(id); // Set 意味論(重複なし)
+        _selected.Clear();
         Recompute();
     }
 

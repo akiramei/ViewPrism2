@@ -9,10 +9,26 @@
     "note": "UI-IR は HTML+JS モックから抽出した観測・追跡用の中間表現であり、設計を縛る原本ではない。仮品番 TMP-UI-* で候補を追跡する。タグタブ抽出(bomdd/ui/)と同一スキーマ。共有アトム(種別チップ TMP-UI-CMP-0004 / カラードット TMP-UI-CMP-0005)と共有ドメイン(タグ/種別/ビュー/候補値/数値範囲/カラー)は tag-tab の仮品番を再利用し、本書では新規 id を振らない。",
     "sourceRepo": "ViewPrismUI (C:/Demo/source/repos/ViewPrismUI) — UI/UX 設計の正典(CAD 源泉)。本成果物は ViewPrism2/bomdd/ui/image-tab/ に置き E-BOM へ接続する。",
     "sources": [
-      { "id": "M", "file": "ViewPrismUI:資料/画像タブ/ViewPrism2 画像タブ.dc.html", "role": "画像タブの動くモック(可変3ペイン+二軸ブラウズ+タグ編集モード)。inline DCLogic に状態・データ・遷移を保持。" },
-      { "id": "S", "file": "ViewPrismUI:docs/screens/image_tab.md", "role": "画面仕様(目的・スコープ・レイアウト・インタラクション・状態)。抽出の根拠テキスト。" },
-      { "id": "D", "file": "ViewPrismUI:docs/01_design_direction.md", "role": "ViewPrism2 共通 UI 方針(空間モデル・操作言語・視覚トークン)。designIntent の源泉。" },
-      { "id": "P", "file": "ViewPrismUI:docs/02_mock_fidelity_policy.md", "role": "精巧なモックを製造品質基準として扱う運用方針(密度・状態網羅・受入基準)。" }
+      {
+        "id": "M",
+        "file": "ViewPrismUI:資料/画像タブ/ViewPrism2 画像タブ.dc.html",
+        "role": "画像タブの動くモック(可変3ペイン+二軸ブラウズ+タグ編集モード)。inline DCLogic に状態・データ・遷移を保持。"
+      },
+      {
+        "id": "S",
+        "file": "ViewPrismUI:docs/screens/image_tab.md",
+        "role": "画面仕様(目的・スコープ・レイアウト・インタラクション・状態)。抽出の根拠テキスト。"
+      },
+      {
+        "id": "D",
+        "file": "ViewPrismUI:docs/01_design_direction.md",
+        "role": "ViewPrism2 共通 UI 方針(空間モデル・操作言語・視覚トークン)。designIntent の源泉。"
+      },
+      {
+        "id": "P",
+        "file": "ViewPrismUI:docs/02_mock_fidelity_policy.md",
+        "role": "精巧なモックを製造品質基準として扱う運用方針(密度・状態網羅・受入基準)。"
+      }
     ],
     "observations": [
       "画像タブは共通シェル(タイトル/メニュー/ナビ タグ・画像・作業)下の可変3ペイン。左=コレクション(常時・折り畳み可)/中央=ブラウズ領域(常時)/右=タグ編集(編集モード時のみ)。タグタブの常時3ペインに対し右ペインが文脈ペインである点が構造差。",
@@ -20,28 +36,31 @@
       "既存 E-BOM が画像タブ領域を厚く保持: E-UI-GRID-022(グリッド/リスト・選択)・E-UI-TAGASSIGN-029(タグ付与パネル)・E-UI-NODEGRAPH-025(『画像タブ左 NodeGraph ナビゲーションツリー』を含む)・E-UI-SHELL-021(コレクション選択スコープ)。本モックはこれらと複数の乖離を持つ(unresolved-questions.md UQ-I*)。",
       "重要乖離(設計判断): (1) view 軸ナビが E-UI-NODEGRAPH-025 想定の『左ツリー』ではなく中央の『チップ+パンくず』。(2) E-UI-TAGASSIGN-029 想定の『numeric 固定値/連番ダイアログ』を廃し右パネル内インライン値ピッカーへ。(3) DC-GRID-001 が要求するグリッドセルの『ファイルサイズ』をモックのグリッドは出さない(サイズはリスト列のみ)。",
       "既存 data-ui-id / data-ui-temp-part-no はモックに存在しない。stable id と仮品番は本抽出で新規付与した(共有部品は tag-tab id を継承)。",
-      "スコープ外(モック明示): 画像クリック時のビューアー起動(E-UI-VIEWER-024)・実ファイル操作・整理/作業ボタンの詳細・複数ビュー選択管理 UI。"
+      "スコープ外(モック明示): 画像クリック時のビューアー起動(E-UI-VIEWER-024)・実ファイル操作・複数ビュー選択管理 UI・**作業タブ本体(workTargets の消費先)**。注: 作業ボタン(作業モード)の挙動自体は本モックで定義され UQ-I07 で決定済(2026-06-29)。整理=ECO-014・⋯=ECO-015 で既決。"
     ]
   },
-
   "screens": [
     {
       "tempPartNo": "TMP-UI-SCR-0002",
       "uiId": "screen.image-management",
       "name": "画像タブ画面",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
       "notes": "共通シェル(タグ/画像/作業ナビ)の『画像』タブ。コンテンツは可変3ペイン(コレクション/ブラウズ/タグ編集)。タグタブ画面 TMP-UI-SCR-0001 と同一アプリ・別画面。"
     }
   ],
-
   "regions": [
     {
       "tempPartNo": "TMP-UI-REG-0001",
       "uiId": "region.shell-nav",
       "name": "シェルナビ(タブ切替+検索+設定)",
       "screen": "TMP-UI-SCR-0002",
-      "source": ["M"],
+      "source": [
+        "M"
+      ],
       "owner": "shell",
       "confidence": "high",
       "notes": "tag-tab と共有(同一 REG-0001)。タイトルバー/メニュー(File/Edit/View/Window/Help)/ナビ(タグ・画像・作業)+⌘K検索+設定。画像タブでは『画像』タブが active。⌘K は tag-tab UQ-E4 で不採用。trace のみ(E-UI-SHELL-021)。"
@@ -51,7 +70,10 @@
       "uiId": "region.collections",
       "name": "コレクションペイン(左・折り畳み可)",
       "screen": "TMP-UI-SCR-0002",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
       "notes": "物理フォルダと1対1のコレクション選択。展開時=見出し『コレクション』+追加+畳むボタン+行カード(アイコン+名前+パス+件数バッジ)。折り畳み時(64px)=rail アイコン列。E-UI-SHELL-021『コレクション選択スコープ(名前+画像数)』に対応。差分: モックは path 表示と 276/64 折り畳みを持つ。"
     },
@@ -60,7 +82,10 @@
       "uiId": "region.browse",
       "name": "ブラウズ領域(中央・主役)",
       "screen": "TMP-UI-SCR-0002",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
       "notes": "ツールバー(表示軸/タグ編集/整理/作業/⋯/ソート/グリッド・リスト)+パンくず+タグチップ行+画像一覧(グリッド or リスト)。二軸ブラウズの宿主。E-UI-GRID-022(一覧)に対応。"
     },
@@ -69,21 +94,32 @@
       "uiId": "region.tag-edit",
       "name": "タグ編集ペイン(右・モード時のみ)",
       "screen": "TMP-UI-SCR-0002",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
       "notes": "タグ編集モード時だけ出る文脈ペイン(344px)。ヘッダ(タグ編集+選択枚数pill+×)/未選択ガイド/現在のタグ・タグ追加タブ。E-UI-TAGASSIGN-029(タグ付与パネル)に対応。差分: 値入力はダイアログでなくインライン展開。"
     }
   ],
-
   "components": [
     {
       "tempPartNo": "TMP-UI-CMP-0020",
       "uiId": "component.collection-row",
       "name": "コレクション行カード",
       "region": "TMP-UI-REG-0005",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["フォルダアイコン(角丸面)", "コレクション名(省略表示)", "パス(省略表示・muted)", "件数バッジ", "選択視覚(青枠+淡青面+アイコン/バッジ着色)"],
+      "elements": [
+        "フォルダアイコン(角丸面)",
+        "コレクション名(省略表示)",
+        "パス(省略表示・muted)",
+        "件数バッジ",
+        "選択視覚(青枠+淡青面+アイコン/バッジ着色)"
+      ],
       "notes": "展開時の行カード。選択中=border #cfe0fc + bg #f3f8ff。tag-tab のビュー行 TMP-UI-CMP-0001 と同じ『行カード』部品言語。折り畳み時は rail 出現(TMP-UI-OCC-0010)。"
     },
     {
@@ -91,9 +127,16 @@
       "uiId": "component.axis-selector",
       "name": "表示軸セレクタ(ボタン+ドロップダウン)",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["『表示』ラベル(muted)", "現在軸ボタン(アイコン+ラベル+▼)", "ドロップダウン(ファイルシステム/サンプルアルバム・各 アイコン+ラベル+sub+選択チェック)"],
+      "elements": [
+        "『表示』ラベル(muted)",
+        "現在軸ボタン(アイコン+ラベル+▼)",
+        "ドロップダウン(ファイルシステム/サンプルアルバム・各 アイコン+ラベル+sub+選択チェック)"
+      ],
       "notes": "ファイルシステム ⇄ サンプルアルバム(タグビュー)を切替。選択で fsPath/viewPath/tagFilter をリセット。view 軸ナビが NodeGraph 左ツリーでなく本セレクタ+チップである点が E-UI-NODEGRAPH-025 との設計乖離(UQ-I01)。"
     },
     {
@@ -101,9 +144,16 @@
       "uiId": "component.toolbar-button",
       "name": "ツールバーボタン(整理/作業/⋯/タグ編集)",
       "region": "TMP-UI-REG-0006",
-      "source": ["M"],
+      "source": [
+        "M"
+      ],
       "confidence": "high",
-      "elements": ["アイコン", "ラベル(⋯は無し)", "枠+角丸10+hover 境界", "タグ編集 active=青枠+淡青面"],
+      "elements": [
+        "アイコン",
+        "ラベル(⋯は無し)",
+        "枠+角丸10+hover 境界",
+        "タグ編集 active=青枠+淡青面"
+      ],
       "notes": "セカンダリ操作ボタンのアトム。タグ編集=トグル(active 視覚)。整理/作業/⋯ は詳細未定(UQ-I07)。"
     },
     {
@@ -111,9 +161,16 @@
       "uiId": "component.sort-control",
       "name": "ソートコントロール(メニュー+方向トグル)",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["ソート列ボタン(アイコン+現在ラベル+▼)", "メニュー(クリア/名前/更新日/サイズ・選択チェック)", "昇順/降順トグル(矢印回転・列なし時 not-allowed)"],
+      "elements": [
+        "ソート列ボタン(アイコン+現在ラベル+▼)",
+        "メニュー(クリア/名前/更新日/サイズ・選択チェック)",
+        "昇順/降順トグル(矢印回転・列なし時 not-allowed)"
+      ],
       "notes": "E-SORT-004 に対応。フォルダはファイルより常に前。ソートなし(クリア)時は方向ボタン無効(TMP-UI-STA-0031)。"
     },
     {
@@ -121,9 +178,16 @@
       "uiId": "component.layout-toggle",
       "name": "グリッド/リスト切替セグメント",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["グリッドボタン", "リストボタン", "active=白面+影+青"],
+      "elements": [
+        "グリッドボタン",
+        "リストボタン",
+        "active=白面+影+青"
+      ],
       "notes": "tag-tab ナビ pill と同じセグメント部品言語。E-UI-GRID-022(グリッド/リスト)に対応。"
     },
     {
@@ -131,9 +195,17 @@
       "uiId": "component.breadcrumb",
       "name": "パンくず(ホーム+クラム+シェブロン)",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["ホームアイコン(ルート時 active 淡青)", "› セパレータ", "クラム(最後=濃/中間=muted)", "右端 件数ラベル『N 項目』"],
+      "elements": [
+        "ホームアイコン(ルート時 active 淡青)",
+        "› セパレータ",
+        "クラム(最後=濃/中間=muted)",
+        "右端 件数ラベル『N 項目』"
+      ],
       "notes": "FS 軸=フォルダ階層・view 軸=ビュー階層の両方で同じ『戻る』操作を統一(原則: 潜る/戻るの共通化)。クリックでその深さへ戻る。"
     },
     {
@@ -141,9 +213,19 @@
       "uiId": "component.filter-nav-chip",
       "name": "タグチップ(絞り込み/ナビ)",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["カラードット(TMP-UI-CMP-0005)", "ラベル(タグ名/別名)", "件数 pill", "ナビ時 › アイコン", "ヒントラベル(『タグで絞り込み』/『階層を掘る』)", "クリアチップ(neutral)"],
+      "elements": [
+        "カラードット(TMP-UI-CMP-0005)",
+        "ラベル(タグ名/別名)",
+        "件数 pill",
+        "ナビ時 › アイコン",
+        "ヒントラベル(『タグで絞り込み』/『階層を掘る』)",
+        "クリアチップ(neutral)"
+      ],
       "notes": "二軸で意味が変わる多機能チップ。FS 軸=記述的フィルタ(トグル・クリアあり)、view 軸=階層ナビ(潜る)。tag-tab の種別/条件チップと同系の chip 部品言語(色トークン依存・E-DESIGN-028)。出現で variant 化(TMP-UI-OCC-0012/0013)。"
     },
     {
@@ -151,9 +233,19 @@
       "uiId": "component.image-grid-card",
       "name": "画像グリッドカード",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["正方形サムネイル(グラデ or プレースホルダ)", "ファイル名(省略表示)", "タグ色ドット(閲覧時・左下・最大3)", "選択チェック(編集時・左上)", "選択リング(青枠+影)", "フォルダ/プレースホルダ アイコン variant"],
+      "elements": [
+        "正方形サムネイル(グラデ or プレースホルダ)",
+        "ファイル名(省略表示)",
+        "タグ色ドット(閲覧時・左下・最大3)",
+        "選択チェック(編集時・左上)",
+        "選択リング(青枠+影)",
+        "フォルダ/プレースホルダ アイコン variant"
+      ],
       "notes": "E-UI-GRID-022 グリッドセル。差分(DC-GRID-001): 原典契約はセルに『サムネ+ファイル名+ファイルサイズ』を要求するが、モックはサイズを出さない(サイズはリスト列のみ)→ UQ-I05。選択視覚はセル枠+チェック(GF-02『行背景の選択視覚を出さない』に整合)。"
     },
     {
@@ -161,9 +253,19 @@
       "uiId": "component.image-list-row",
       "name": "画像リスト行",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["列ヘッダ(名前/サイズ/更新日)", "ミニサムネ", "ファイル名", "サイズ(フォルダ=—)", "更新日(フォルダ=—)", "選択時=行 淡青背景"],
+      "elements": [
+        "列ヘッダ(名前/サイズ/更新日)",
+        "ミニサムネ",
+        "ファイル名",
+        "サイズ(フォルダ=—)",
+        "更新日(フォルダ=—)",
+        "選択時=行 淡青背景"
+      ],
       "notes": "E-UI-GRID-022 リスト表示。選択行は淡青(GF-02『リスト表示の行選択視覚は正』に整合)。"
     },
     {
@@ -171,9 +273,15 @@
       "uiId": "component.empty-tag-note",
       "name": "空タグ注記バー",
       "region": "TMP-UI-REG-0006",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["info アイコン", "『このフォルダにはタグ付き画像がありません』"],
+      "elements": [
+        "info アイコン",
+        "『このフォルダにはタグ付き画像がありません』"
+      ],
       "notes": "FS 軸でフォルダ内にタグ付き画像が無い時、チップ行の代わりに表示(TMP-UI-STA-0030)。"
     },
     {
@@ -181,9 +289,16 @@
       "uiId": "component.tag-edit-panel",
       "name": "タグ編集パネル(右)",
       "region": "TMP-UI-REG-0007",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["ヘッダ(編集アイコン+『タグ編集』+選択枚数pill+×)", "未選択ガイド(『画像を選択』+Ctrl/Shift 説明)", "タブ(現在のタグ/タグ追加)"],
+      "elements": [
+        "ヘッダ(編集アイコン+『タグ編集』+選択枚数pill+×)",
+        "未選択ガイド(『画像を選択』+Ctrl/Shift 説明)",
+        "タブ(現在のタグ/タグ追加)"
+      ],
       "notes": "E-UI-TAGASSIGN-029 のホスト。タグ編集モード×選択状態で empty/active(TMP-UI-STA-0025/0026)。差分: 付与は連番/固定値ダイアログでなくインライン(UQ-I02)。"
     },
     {
@@ -191,7 +306,9 @@
       "uiId": "component.panel-tabs",
       "name": "パネルタブ(現在のタグ/タグ追加)",
       "region": "TMP-UI-REG-0007",
-      "source": ["M"],
+      "source": [
+        "M"
+      ],
       "confidence": "high",
       "notes": "選択画像のタグ確認と追加を切替。tag-tab のセグメント系と同系。"
     },
@@ -200,9 +317,17 @@
       "uiId": "component.current-tag-pill",
       "name": "現在タグピル(削除付き)",
       "region": "TMP-UI-REG-0007",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["カラードット", "タグ名", "× 削除アクション", "種別色配色(面=色12%/枠=色28%)"],
+      "elements": [
+        "カラードット",
+        "タグ名",
+        "× 削除アクション",
+        "種別色配色(面=色12%/枠=色28%)"
+      ],
       "notes": "選択画像に付いているタグ(複数選択時は共通タグのみ)。削除で選択画像から外す。tag-tab の条件チップ/カラードットと同系。"
     },
     {
@@ -210,9 +335,19 @@
       "uiId": "component.add-tag-row",
       "name": "タグ追加行(種別グループ内)",
       "region": "TMP-UI-REG-0007",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["カラードット", "タグ名", "追加済✓(シンプル)", "展開キャレット(テキスト/数値)", "+ アイコン(未追加シンプル)", "展開時=色枠+淡色面"],
+      "elements": [
+        "カラードット",
+        "タグ名",
+        "追加済✓(シンプル)",
+        "展開キャレット(テキスト/数値)",
+        "+ アイコン(未追加シンプル)",
+        "展開時=色枠+淡色面"
+      ],
       "notes": "種別(シンプル/テキスト/数値)でグルーピング表示。シンプル=クリックで即時付与、テキスト/数値=展開してインライン値選択。グループ見出しは種別チップ TMP-UI-CMP-0004 を再利用。"
     },
     {
@@ -220,9 +355,15 @@
       "uiId": "component.inline-text-picker",
       "name": "インライン候補値ピッカー(テキスト)",
       "region": "TMP-UI-REG-0007",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["『候補値から選んで付与』", "候補値チップ列(選択中=塗り)"],
+      "elements": [
+        "『候補値から選んで付与』",
+        "候補値チップ列(選択中=塗り)"
+      ],
       "notes": "テキストタグ行の展開で出る。候補値は tag-tab で定義(E-UI-TAGS-026)を消費。ポップアップ廃止=右パネル内インライン(設計方針)。"
     },
     {
@@ -230,99 +371,805 @@
       "uiId": "component.inline-number-picker",
       "name": "インライン数値ピッカー(数値)",
       "region": "TMP-UI-REG-0007",
-      "source": ["M", "S"],
+      "source": [
+        "M",
+        "S"
+      ],
       "confidence": "high",
-      "elements": ["『値を選んで付与(min–max)』", "現在値(★ N / 未設定)", "値セル(min..max・選択中=塗り)"],
+      "elements": [
+        "『値を選んで付与(min–max)』",
+        "現在値(★ N / 未設定)",
+        "値セル(min..max・選択中=塗り)"
+      ],
       "notes": "数値タグ行の展開で出る。範囲 min..max のセルから付与。E-UI-TAGASSIGN-029 の『numeric 固定値/連番ダイアログ』をインラインセルへ置換(UQ-I02)。amber 系配色(琥珀)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0036",
+      "uiId": "component.work-add-button",
+      "name": "作業対象へ追加ボタン",
+      "region": "TMP-UI-REG-0006",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "elements": [
+        "+アイコン",
+        "ラベル『追加』",
+        "選択件数バッジ(白地・緑字・選択ありのみ)"
+      ],
+      "notes": "作業モード中のみ表示。選択あり=緑塗り(#16a34a・白字・件数バッジ)/選択なし=淡緑 disabled(border #cfe7d4・bg #eef8f1・文字 #9fc3ac)。押下で選択を workTargets へ移し選択クリア。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0037",
+      "uiId": "component.work-target-chip",
+      "name": "作業対象チップ",
+      "region": "TMP-UI-REG-0006",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "elements": [
+        "チェックアイコン",
+        "ラベル『作業対象 N 枚』"
+      ],
+      "notes": "workTargets>0 のとき作業モード中に表示。緑系チップ(bg #eafaf0・border #c2ecd2・文字 #0f8a4d)。累積件数の確認用。グリッドセルへの個別バッジは出さない(描画モック準拠=UQ-I07 裁定 2026-06-29)。"
     }
   ],
-
   "occurrences": [
-    { "tempPartNo": "TMP-UI-OCC-0010", "uiId": "component.collection-row.rail", "master": "TMP-UI-CMP-0020", "name": "コレクション/折り畳み rail", "source": ["M"], "confidence": "high", "notes": "サイドバー折り畳み時(64px)の縦アイコン rail。active=淡青面+青。展開トグル+追加ボタンを伴う。" },
-    { "tempPartNo": "TMP-UI-OCC-0011", "uiId": "component.image-grid-card.image", "master": "TMP-UI-CMP-0027", "name": "グリッドカード/画像", "source": ["M"], "confidence": "high", "notes": "サムネ表示。閲覧時タグ色ドット、編集時チェック。" },
-    { "tempPartNo": "TMP-UI-OCC-0012", "uiId": "component.image-grid-card.folder", "master": "TMP-UI-CMP-0027", "name": "グリッドカード/フォルダ", "source": ["M"], "confidence": "high", "notes": "フォルダアイコン。クリックで FS 階層へ潜る(編集対象外)。" },
-    { "tempPartNo": "TMP-UI-OCC-0013", "uiId": "component.filter-nav-chip.filter", "master": "TMP-UI-CMP-0026", "name": "タグチップ/FS 絞り込み", "source": ["M"], "confidence": "high", "notes": "FS 軸。フォルダ内画像に実在するタグを記述的に列挙。トグル絞り込み+クリアチップ。" },
-    { "tempPartNo": "TMP-UI-OCC-0014", "uiId": "component.filter-nav-chip.nav", "master": "TMP-UI-CMP-0026", "name": "タグチップ/ビュー ナビ", "source": ["M"], "confidence": "high", "notes": "view 軸。タグビューの下位階層へ潜るナビゲーション(› 付き)。" }
+    {
+      "tempPartNo": "TMP-UI-OCC-0010",
+      "uiId": "component.collection-row.rail",
+      "master": "TMP-UI-CMP-0020",
+      "name": "コレクション/折り畳み rail",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "サイドバー折り畳み時(64px)の縦アイコン rail。active=淡青面+青。展開トグル+追加ボタンを伴う。"
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0011",
+      "uiId": "component.image-grid-card.image",
+      "master": "TMP-UI-CMP-0027",
+      "name": "グリッドカード/画像",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "サムネ表示。閲覧時タグ色ドット、編集時チェック。"
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0012",
+      "uiId": "component.image-grid-card.folder",
+      "master": "TMP-UI-CMP-0027",
+      "name": "グリッドカード/フォルダ",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "フォルダアイコン。クリックで FS 階層へ潜る(編集対象外)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0013",
+      "uiId": "component.filter-nav-chip.filter",
+      "master": "TMP-UI-CMP-0026",
+      "name": "タグチップ/FS 絞り込み",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "FS 軸。フォルダ内画像に実在するタグを記述的に列挙。トグル絞り込み+クリアチップ。"
+    },
+    {
+      "tempPartNo": "TMP-UI-OCC-0014",
+      "uiId": "component.filter-nav-chip.nav",
+      "master": "TMP-UI-CMP-0026",
+      "name": "タグチップ/ビュー ナビ",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "view 軸。タグビューの下位階層へ潜るナビゲーション(› 付き)。"
+    }
   ],
-
   "actions": [
-    { "tempPartNo": "TMP-UI-ACT-0040", "uiId": "action.collection.select", "name": "コレクション選択", "region": "TMP-UI-REG-0005", "trigger": "click", "effect": "コレクション切替・fsPath/viewPath/tagFilter をリセット", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0041", "uiId": "action.sidebar.toggle", "name": "サイドバー開閉", "region": "TMP-UI-REG-0005", "trigger": "click", "effect": "左ペインを 276px ⇄ 64px 切替", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0042", "uiId": "action.axis.switch", "name": "表示軸切替(FS/タグビュー)", "region": "TMP-UI-REG-0006", "trigger": "click(メニュー)", "effect": "axis=fs/view 切替・階層/フィルタをリセット", "source": ["M", "S"], "confidence": "high", "notes": "現モックのビュー軸は『サンプルアルバム』固定例。複数ビューの切替 UI は未設計(スコープ外・UQ-I06)。" },
-    { "tempPartNo": "TMP-UI-ACT-0043", "uiId": "action.folder.drill", "name": "フォルダへ潜る(FS)", "region": "TMP-UI-REG-0006", "trigger": "click(フォルダカード)", "effect": "fsPath に追加し下位フォルダへ", "source": ["M", "S"], "confidence": "high", "notes": "FS 軸の OS フォルダ階層ブラウズ。コレクション内サブフォルダの potter は既存 E-BOM に明示が薄い(UQ-I04)。" },
-    { "tempPartNo": "TMP-UI-ACT-0044", "uiId": "action.breadcrumb.navigate", "name": "パンくず/ホームで戻る", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "該当深さ(またはルート)へ戻る", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0045", "uiId": "action.chip.filter", "name": "FS タグチップで絞り込み", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "tagFilter トグル(再クリックで解除)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0046", "uiId": "action.chip.nav-into", "name": "ビューチップで階層へ潜る", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "viewPath に追加(現モックは samplealbum のみ有効)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0047", "uiId": "action.sort.set", "name": "ソート列選択", "region": "TMP-UI-REG-0006", "trigger": "click(メニュー)", "effect": "sortCol=null/name/date/size", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0048", "uiId": "action.sort.toggle-dir", "name": "昇順/降順切替", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "sortDir 反転(sortCol あり時のみ)", "source": ["M", "S"], "confidence": "high", "guardedBy": "TMP-UI-STA-0031" },
-    { "tempPartNo": "TMP-UI-ACT-0049", "uiId": "action.layout.set", "name": "グリッド/リスト切替", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "layout=grid/list", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0050", "uiId": "action.edit.toggle", "name": "タグ編集モード開始/終了", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "editMode トグル・終了時に選択解除", "source": ["M", "S"], "confidence": "high", "opens": "TMP-UI-REG-0007" },
-    { "tempPartNo": "TMP-UI-ACT-0051", "uiId": "action.image.select", "name": "画像 単一選択(編集モード)", "region": "TMP-UI-REG-0006", "trigger": "click(編集モード)", "effect": "単一選択(同一画像のみ選択中なら解除)", "source": ["M", "S"], "confidence": "high", "notes": "閲覧モードのクリックはビューアー起動だが今回スコープ外=no-op。" },
-    { "tempPartNo": "TMP-UI-ACT-0052", "uiId": "action.image.multi-select", "name": "Ctrl/Cmd トグル選択", "region": "TMP-UI-REG-0006", "trigger": "Ctrl/Cmd+click", "effect": "選択トグル", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0053", "uiId": "action.image.range-select", "name": "Shift 連続選択", "region": "TMP-UI-REG-0006", "trigger": "Shift+click", "effect": "直前選択からの範囲を union 追加", "source": ["M", "S"], "confidence": "high", "notes": "E-UI-GRID-022 INV『SHIFT 範囲選択は union(置換しない)』に整合。" },
-    { "tempPartNo": "TMP-UI-ACT-0054", "uiId": "action.panel.switch-tab", "name": "現在のタグ/タグ追加 切替", "region": "TMP-UI-REG-0007", "trigger": "click", "effect": "panelTab=current/add", "source": ["M"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0055", "uiId": "action.assign.add-simple", "name": "シンプルタグ付与", "region": "TMP-UI-REG-0007", "trigger": "click(行)", "effect": "選択画像へタグ付与(即時)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0056", "uiId": "action.assign.expand-value", "name": "テキスト/数値行を展開", "region": "TMP-UI-REG-0007", "trigger": "click(行)", "effect": "expandTag トグル(インライン値ピッカー表示)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0057", "uiId": "action.assign.set-text-value", "name": "テキスト値を付与", "region": "TMP-UI-CMP-0034", "trigger": "click(候補値チップ)", "effect": "選択画像へタグ+値を付与", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0058", "uiId": "action.assign.set-number-value", "name": "数値を付与", "region": "TMP-UI-CMP-0035", "trigger": "click(値セル)", "effect": "選択画像へ数値タグを付与(rating 設定)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0059", "uiId": "action.assign.remove-tag", "name": "現在タグを削除", "region": "TMP-UI-CMP-0032", "trigger": "click(×)", "effect": "選択画像からタグを外す", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0060", "uiId": "action.assign.search", "name": "タグ追加検索", "region": "TMP-UI-REG-0007", "trigger": "input", "effect": "種別グループ内のタグ名で絞り込み", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-ACT-0061", "uiId": "action.toolbar.organize", "name": "整理", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "(詳細未定)", "source": ["M", "S"], "confidence": "low", "notes": "挙動未設計(UQ-I07)。" },
-    { "tempPartNo": "TMP-UI-ACT-0062", "uiId": "action.toolbar.work", "name": "作業", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "(詳細未定)", "source": ["M", "S"], "confidence": "low", "notes": "挙動未設計(UQ-I07)。作業タブ(V3 スコープ)との関係も未定。" },
-    { "tempPartNo": "TMP-UI-ACT-0063", "uiId": "action.toolbar.more", "name": "その他(⋯)", "region": "TMP-UI-REG-0006", "trigger": "click", "effect": "(詳細未定)", "source": ["M"], "confidence": "low", "notes": "三点リーダー。挙動未設計(UQ-I07)。" },
-    { "tempPartNo": "TMP-UI-ACT-0029", "uiId": "action.shell.switch-tab", "name": "タブ切替(タグ/画像/作業)", "region": "TMP-UI-REG-0001", "trigger": "click", "effect": "タブ切替", "source": ["M"], "owner": "shell", "confidence": "high", "notes": "tag-tab と共有(同一 ACT-0029)。E-UI-SHELL-021。" }
+    {
+      "tempPartNo": "TMP-UI-ACT-0040",
+      "uiId": "action.collection.select",
+      "name": "コレクション選択",
+      "region": "TMP-UI-REG-0005",
+      "trigger": "click",
+      "effect": "コレクション切替・fsPath/viewPath/tagFilter をリセット",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0041",
+      "uiId": "action.sidebar.toggle",
+      "name": "サイドバー開閉",
+      "region": "TMP-UI-REG-0005",
+      "trigger": "click",
+      "effect": "左ペインを 276px ⇄ 64px 切替",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0042",
+      "uiId": "action.axis.switch",
+      "name": "表示軸切替(FS/タグビュー)",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click(メニュー)",
+      "effect": "axis=fs/view 切替・階層/フィルタをリセット",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "notes": "現モックのビュー軸は『サンプルアルバム』固定例。複数ビューの切替 UI は未設計(スコープ外・UQ-I06)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0043",
+      "uiId": "action.folder.drill",
+      "name": "フォルダへ潜る(FS)",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click(フォルダカード)",
+      "effect": "fsPath に追加し下位フォルダへ",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "notes": "FS 軸の OS フォルダ階層ブラウズ。コレクション内サブフォルダの potter は既存 E-BOM に明示が薄い(UQ-I04)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0044",
+      "uiId": "action.breadcrumb.navigate",
+      "name": "パンくず/ホームで戻る",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "該当深さ(またはルート)へ戻る",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0045",
+      "uiId": "action.chip.filter",
+      "name": "FS タグチップで絞り込み",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "tagFilter トグル(再クリックで解除)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0046",
+      "uiId": "action.chip.nav-into",
+      "name": "ビューチップで階層へ潜る",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "viewPath に追加(現モックは samplealbum のみ有効)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0047",
+      "uiId": "action.sort.set",
+      "name": "ソート列選択",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click(メニュー)",
+      "effect": "sortCol=null/name/date/size",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0048",
+      "uiId": "action.sort.toggle-dir",
+      "name": "昇順/降順切替",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "sortDir 反転(sortCol あり時のみ)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "guardedBy": "TMP-UI-STA-0031"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0049",
+      "uiId": "action.layout.set",
+      "name": "グリッド/リスト切替",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "layout=grid/list",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0050",
+      "uiId": "action.edit.toggle",
+      "name": "タグ編集モード開始/終了",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "editMode トグル・終了時に選択解除",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "opens": "TMP-UI-REG-0007"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0051",
+      "uiId": "action.image.select",
+      "name": "画像 単一選択(編集モード)",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click(編集モード)",
+      "effect": "単一選択(同一画像のみ選択中なら解除)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "notes": "閲覧モードのクリックはビューアー起動だが今回スコープ外=no-op。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0052",
+      "uiId": "action.image.multi-select",
+      "name": "Ctrl/Cmd トグル選択",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "Ctrl/Cmd+click",
+      "effect": "選択トグル",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0053",
+      "uiId": "action.image.range-select",
+      "name": "Shift 連続選択",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "Shift+click",
+      "effect": "直前選択からの範囲を union 追加",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "notes": "E-UI-GRID-022 INV『SHIFT 範囲選択は union(置換しない)』に整合。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0054",
+      "uiId": "action.panel.switch-tab",
+      "name": "現在のタグ/タグ追加 切替",
+      "region": "TMP-UI-REG-0007",
+      "trigger": "click",
+      "effect": "panelTab=current/add",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0055",
+      "uiId": "action.assign.add-simple",
+      "name": "シンプルタグ付与",
+      "region": "TMP-UI-REG-0007",
+      "trigger": "click(行)",
+      "effect": "選択画像へタグ付与(即時)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0056",
+      "uiId": "action.assign.expand-value",
+      "name": "テキスト/数値行を展開",
+      "region": "TMP-UI-REG-0007",
+      "trigger": "click(行)",
+      "effect": "expandTag トグル(インライン値ピッカー表示)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0057",
+      "uiId": "action.assign.set-text-value",
+      "name": "テキスト値を付与",
+      "region": "TMP-UI-CMP-0034",
+      "trigger": "click(候補値チップ)",
+      "effect": "選択画像へタグ+値を付与",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0058",
+      "uiId": "action.assign.set-number-value",
+      "name": "数値を付与",
+      "region": "TMP-UI-CMP-0035",
+      "trigger": "click(値セル)",
+      "effect": "選択画像へ数値タグを付与(rating 設定)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0059",
+      "uiId": "action.assign.remove-tag",
+      "name": "現在タグを削除",
+      "region": "TMP-UI-CMP-0032",
+      "trigger": "click(×)",
+      "effect": "選択画像からタグを外す",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0060",
+      "uiId": "action.assign.search",
+      "name": "タグ追加検索",
+      "region": "TMP-UI-REG-0007",
+      "trigger": "input",
+      "effect": "種別グループ内のタグ名で絞り込み",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0061",
+      "uiId": "action.toolbar.organize",
+      "name": "整理",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "(詳細未定)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "low",
+      "notes": "挙動未設計(UQ-I07)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0062",
+      "uiId": "action.toolbar.work",
+      "name": "作業モード開始/終了",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "workMode トグル。ON でタグ編集を解除し選択クリア(他文脈モードと排他)。終了で workMode 解除",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "notes": "UQ-I07 作業=決定(2026-06-29 maintainer)。3つ目の排他文脈モード。作業モードはグリッドを選択可能にする(inSelect=編集 or 作業)。右ペインは開かない(追加ボタン+作業対象チップはツールバー内・中央フル幅維持)。作業タブ本体(上部ナビ)へ workTargets を渡す動線は今回スコープ外(モック明記)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0063",
+      "uiId": "action.toolbar.more",
+      "name": "その他(⋯)",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "(詳細未定)",
+      "source": [
+        "M"
+      ],
+      "confidence": "low",
+      "notes": "三点リーダー。挙動未設計(UQ-I07)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0029",
+      "uiId": "action.shell.switch-tab",
+      "name": "タブ切替(タグ/画像/作業)",
+      "region": "TMP-UI-REG-0001",
+      "trigger": "click",
+      "effect": "タブ切替",
+      "source": [
+        "M"
+      ],
+      "owner": "shell",
+      "confidence": "high",
+      "notes": "tag-tab と共有(同一 ACT-0029)。E-UI-SHELL-021。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0064",
+      "uiId": "action.work.add",
+      "name": "選択を作業対象へ追加",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "選択中の画像 id を workTargets セットへ和集合追加し、選択をクリア",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "guardedBy": "TMP-UI-STA-0033",
+      "notes": "作業モード中のみ出現。選択なし時は無効(淡緑・not-allowed)。選択あり時は緑塗り+件数バッジ。重複 id は Set で吸収。"
+    }
   ],
-
   "inputs": [
-    { "tempPartNo": "TMP-UI-INP-0020", "uiId": "input.assign.search", "name": "タグ追加検索欄", "type": "text", "region": "TMP-UI-REG-0007", "source": ["M", "S"], "confidence": "high", "dataConcept": "TMP-UI-DOM-0001" }
+    {
+      "tempPartNo": "TMP-UI-INP-0020",
+      "uiId": "input.assign.search",
+      "name": "タグ追加検索欄",
+      "type": "text",
+      "region": "TMP-UI-REG-0007",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "dataConcept": "TMP-UI-DOM-0001"
+    }
   ],
-
   "states": [
-    { "tempPartNo": "TMP-UI-STA-0020", "uiId": "state.sidebar.collapsed", "name": "サイドバー折り畳み", "target": "TMP-UI-REG-0005", "observe": "幅 64px・rail アイコン表示", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0021", "uiId": "state.axis.current", "name": "表示軸(fs/view)", "target": "TMP-UI-CMP-0021", "observe": "軸ボタンのアイコン/ラベル・チップの意味(絞り込み/ナビ)切替", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0022", "uiId": "state.collection.active", "name": "コレクション選択中", "target": "TMP-UI-CMP-0020", "observe": "青枠+淡青面+アイコン/バッジ着色", "source": ["M"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0023", "uiId": "state.image.selected", "name": "画像選択中", "target": "TMP-UI-CMP-0027", "observe": "グリッド=青枠+チェック+リング / リスト=行 淡青背景", "source": ["M", "S"], "confidence": "high", "notes": "E-UI-GRID-022/GF-02 に整合(グリッドは枠+バッジ・行背景は出さない/リスト行背景は正)。" },
-    { "tempPartNo": "TMP-UI-STA-0024", "uiId": "state.edit.mode", "name": "タグ編集モード", "target": "TMP-UI-REG-0006", "observe": "右ペイン出現・画像クリックが選択化・編集ボタン active", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0025", "uiId": "state.panel.empty", "name": "編集・未選択", "target": "TMP-UI-CMP-0030", "observe": "『画像を選択』ガイド(Ctrl/Shift 説明)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0026", "uiId": "state.panel.active", "name": "編集・選択中", "target": "TMP-UI-CMP-0030", "observe": "選択枚数pill+タブ(現在のタグ/タグ追加)", "source": ["M", "S"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0027", "uiId": "state.assign.added", "name": "追加済(シンプル)", "target": "TMP-UI-CMP-0033", "observe": "✓追加済・行 淡色・ドット薄め", "source": ["M"], "confidence": "high", "rule": "選択画像全てが当該シンプルタグを保持" },
-    { "tempPartNo": "TMP-UI-STA-0028", "uiId": "state.assign.row-expanded", "name": "テキスト/数値行 展開", "target": "TMP-UI-CMP-0033", "observe": "キャレット回転+インライン値ピッカー表示", "source": ["M"], "confidence": "high" },
-    { "tempPartNo": "TMP-UI-STA-0029", "uiId": "state.current.empty", "name": "現在タグなし(空状態)", "target": "TMP-UI-REG-0007", "observe": "『まだタグがありません』/複数=『共通のタグはありません』", "source": ["M", "S"], "confidence": "high", "rule": "単数=タグ0 / 複数=共通タグ0" },
-    { "tempPartNo": "TMP-UI-STA-0030", "uiId": "state.fs.no-tagged-images", "name": "フォルダにタグ付き画像なし", "target": "TMP-UI-CMP-0029", "observe": "チップ行の代わりに注記バー", "source": ["M", "S"], "confidence": "high", "rule": "axis=fs かつ fsPath>0 かつ anyTagged=false" },
-    { "tempPartNo": "TMP-UI-STA-0031", "uiId": "state.sort.none", "name": "ソートなし", "target": "TMP-UI-CMP-0023", "observe": "方向ボタン無効(not-allowed・淡色)", "source": ["M", "S"], "confidence": "high", "rule": "sortCol=null" },
-    { "tempPartNo": "TMP-UI-STA-0032", "uiId": "state.chip.filter-active", "name": "FS フィルタ有効", "target": "TMP-UI-OCC-0013", "observe": "対象チップ active(塗り)・クリアチップ非active", "source": ["M"], "confidence": "high" }
+    {
+      "tempPartNo": "TMP-UI-STA-0020",
+      "uiId": "state.sidebar.collapsed",
+      "name": "サイドバー折り畳み",
+      "target": "TMP-UI-REG-0005",
+      "observe": "幅 64px・rail アイコン表示",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0021",
+      "uiId": "state.axis.current",
+      "name": "表示軸(fs/view)",
+      "target": "TMP-UI-CMP-0021",
+      "observe": "軸ボタンのアイコン/ラベル・チップの意味(絞り込み/ナビ)切替",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0022",
+      "uiId": "state.collection.active",
+      "name": "コレクション選択中",
+      "target": "TMP-UI-CMP-0020",
+      "observe": "青枠+淡青面+アイコン/バッジ着色",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0023",
+      "uiId": "state.image.selected",
+      "name": "画像選択中",
+      "target": "TMP-UI-CMP-0027",
+      "observe": "グリッド=青枠+チェック+リング / リスト=行 淡青背景",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "notes": "E-UI-GRID-022/GF-02 に整合(グリッドは枠+バッジ・行背景は出さない/リスト行背景は正)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0024",
+      "uiId": "state.edit.mode",
+      "name": "タグ編集モード",
+      "target": "TMP-UI-REG-0006",
+      "observe": "右ペイン出現・画像クリックが選択化・編集ボタン active",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0025",
+      "uiId": "state.panel.empty",
+      "name": "編集・未選択",
+      "target": "TMP-UI-CMP-0030",
+      "observe": "『画像を選択』ガイド(Ctrl/Shift 説明)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0026",
+      "uiId": "state.panel.active",
+      "name": "編集・選択中",
+      "target": "TMP-UI-CMP-0030",
+      "observe": "選択枚数pill+タブ(現在のタグ/タグ追加)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0027",
+      "uiId": "state.assign.added",
+      "name": "追加済(シンプル)",
+      "target": "TMP-UI-CMP-0033",
+      "observe": "✓追加済・行 淡色・ドット薄め",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "rule": "選択画像全てが当該シンプルタグを保持"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0028",
+      "uiId": "state.assign.row-expanded",
+      "name": "テキスト/数値行 展開",
+      "target": "TMP-UI-CMP-0033",
+      "observe": "キャレット回転+インライン値ピッカー表示",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0029",
+      "uiId": "state.current.empty",
+      "name": "現在タグなし(空状態)",
+      "target": "TMP-UI-REG-0007",
+      "observe": "『まだタグがありません』/複数=『共通のタグはありません』",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "rule": "単数=タグ0 / 複数=共通タグ0"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0030",
+      "uiId": "state.fs.no-tagged-images",
+      "name": "フォルダにタグ付き画像なし",
+      "target": "TMP-UI-CMP-0029",
+      "observe": "チップ行の代わりに注記バー",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "rule": "axis=fs かつ fsPath>0 かつ anyTagged=false"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0031",
+      "uiId": "state.sort.none",
+      "name": "ソートなし",
+      "target": "TMP-UI-CMP-0023",
+      "observe": "方向ボタン無効(not-allowed・淡色)",
+      "source": [
+        "M",
+        "S"
+      ],
+      "confidence": "high",
+      "rule": "sortCol=null"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0032",
+      "uiId": "state.chip.filter-active",
+      "name": "FS フィルタ有効",
+      "target": "TMP-UI-OCC-0013",
+      "observe": "対象チップ active(塗り)・クリアチップ非active",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0033",
+      "uiId": "state.work.mode",
+      "name": "作業モード",
+      "target": "TMP-UI-REG-0006",
+      "observe": "作業ボタン緑塗り active・『作業を終了』表示・追加ボタン出現・グリッド選択可(inSelect)・他モード入口/⋯ 非表示",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "タグ編集/整理と排他。作業は右ペインを開かない点が編集/整理と構造差。"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0034",
+      "uiId": "state.work.targets",
+      "name": "作業対象セット蓄積",
+      "target": "TMP-UI-REG-0006",
+      "observe": "workTargets.length>0 で『作業対象 N 枚』チップ表示",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "セッション内蓄積のみ。作業タブへの受け渡し/永続化は今回スコープ外(モック明記・UQ-I07 裁定)。"
+    }
   ],
-
   "domainConcepts": [
-    { "tempPartNo": "TMP-UI-DOM-0020", "uiId": "domain.image", "name": "画像", "source": ["S", "M"], "confidence": "high", "notes": "コレクション/フォルダ/ビュー内に表示される項目。タグ付与の対象。ビューアー起動はスコープ外。" },
-    { "tempPartNo": "TMP-UI-DOM-0021", "uiId": "domain.collection", "name": "コレクション", "source": ["S", "M"], "confidence": "high", "notes": "物理フォルダと1対1の閲覧単位(画像/スクショ/ダウンロード/カメラ/デスクトップ等)。E-UI-SHELL-021 コレクション選択スコープに対応。" },
-    { "tempPartNo": "TMP-UI-DOM-0022", "uiId": "domain.folder", "name": "フォルダ(FS階層)", "source": ["S", "M"], "confidence": "medium", "notes": "FS 軸で潜る単位(SAMPLE_ALBUM/StudioShots 等)。コレクション内のサブフォルダ階層。既存 E-BOM での扱い要確認(UQ-I04)。" },
-    { "tempPartNo": "TMP-UI-DOM-0023", "uiId": "domain.display-axis", "name": "表示軸", "source": ["S", "M"], "confidence": "high", "notes": "同一画像群を見る2つの軸: ファイルシステム(OS フォルダ階層)/ タグビュー(タグタブで組んだビュー)。両軸で潜る/戻る操作を統一。" },
-    { "tempPartNo": "TMP-UI-DOM-0024", "uiId": "domain.image-tagging", "name": "画像へのタグ付与", "source": ["S", "M"], "confidence": "high", "notes": "単数/複数画像へのタグ付与・削除。複数選択時は共通タグ表示。E-UI-TAGASSIGN-029・REQ-046/026/027(原子バッチ)に対応。" }
+    {
+      "tempPartNo": "TMP-UI-DOM-0020",
+      "uiId": "domain.image",
+      "name": "画像",
+      "source": [
+        "S",
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "コレクション/フォルダ/ビュー内に表示される項目。タグ付与の対象。ビューアー起動はスコープ外。"
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0021",
+      "uiId": "domain.collection",
+      "name": "コレクション",
+      "source": [
+        "S",
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "物理フォルダと1対1の閲覧単位(画像/スクショ/ダウンロード/カメラ/デスクトップ等)。E-UI-SHELL-021 コレクション選択スコープに対応。"
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0022",
+      "uiId": "domain.folder",
+      "name": "フォルダ(FS階層)",
+      "source": [
+        "S",
+        "M"
+      ],
+      "confidence": "medium",
+      "notes": "FS 軸で潜る単位(SAMPLE_ALBUM/StudioShots 等)。コレクション内のサブフォルダ階層。既存 E-BOM での扱い要確認(UQ-I04)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0023",
+      "uiId": "domain.display-axis",
+      "name": "表示軸",
+      "source": [
+        "S",
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "同一画像群を見る2つの軸: ファイルシステム(OS フォルダ階層)/ タグビュー(タグタブで組んだビュー)。両軸で潜る/戻る操作を統一。"
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0024",
+      "uiId": "domain.image-tagging",
+      "name": "画像へのタグ付与",
+      "source": [
+        "S",
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "単数/複数画像へのタグ付与・削除。複数選択時は共通タグ表示。E-UI-TAGASSIGN-029・REQ-046/026/027(原子バッチ)に対応。"
+    },
+    {
+      "name": "作業対象セット(workTargets)",
+      "source": [
+        "M"
+      ],
+      "notes": "作業モードで選び『追加』した画像 id の集合。作業タブで一括処理する想定だが作業タブ自体は今回スコープ外。重複なし(Set)。"
+    }
   ],
-
   "reusedFromTagTab": {
     "note": "以下は tag-tab 抽出(bomdd/ui/ui-ir.json)の共有候補を再利用し、本書で新規 id を振らない。",
     "sharedAtoms": [
-      { "tempPartNo": "TMP-UI-CMP-0004", "uiId": "component.type-chip", "usedIn": ["タグ追加グループ見出し(シンプル灰/テキスト青/数値緑)"] },
-      { "tempPartNo": "TMP-UI-CMP-0005", "uiId": "component.color-dot", "usedIn": ["コレクション/チップ/グリッドタグドット/現在タグ/追加行"] }
+      {
+        "tempPartNo": "TMP-UI-CMP-0004",
+        "uiId": "component.type-chip",
+        "usedIn": [
+          "タグ追加グループ見出し(シンプル灰/テキスト青/数値緑)"
+        ]
+      },
+      {
+        "tempPartNo": "TMP-UI-CMP-0005",
+        "uiId": "component.color-dot",
+        "usedIn": [
+          "コレクション/チップ/グリッドタグドット/現在タグ/追加行"
+        ]
+      }
     ],
     "sharedDomains": [
-      { "tempPartNo": "TMP-UI-DOM-0001", "name": "タグ" },
-      { "tempPartNo": "TMP-UI-DOM-0002", "name": "タグ種別(シンプル/テキスト/数値)" },
-      { "tempPartNo": "TMP-UI-DOM-0003", "name": "ビュー(視点)— 画像タブが消費" },
-      { "tempPartNo": "TMP-UI-DOM-0009", "name": "カラー" },
-      { "tempPartNo": "TMP-UI-DOM-0010", "name": "候補値" },
-      { "tempPartNo": "TMP-UI-DOM-0011", "name": "数値範囲" }
+      {
+        "tempPartNo": "TMP-UI-DOM-0001",
+        "name": "タグ"
+      },
+      {
+        "tempPartNo": "TMP-UI-DOM-0002",
+        "name": "タグ種別(シンプル/テキスト/数値)"
+      },
+      {
+        "tempPartNo": "TMP-UI-DOM-0003",
+        "name": "ビュー(視点)— 画像タブが消費"
+      },
+      {
+        "tempPartNo": "TMP-UI-DOM-0009",
+        "name": "カラー"
+      },
+      {
+        "tempPartNo": "TMP-UI-DOM-0010",
+        "name": "候補値"
+      },
+      {
+        "tempPartNo": "TMP-UI-DOM-0011",
+        "name": "数値範囲"
+      }
     ]
   },
-
   "unmodeledElements": [
-    { "selector": "M direction band(『同じ画像を、フォルダでもタグでも掘る。ひとつの操作で、ふたつの視点。』+ interaction hints)", "reason": "アプリ画面外のヘッダ帯だが CAD の設計意図。装飾ではなく『二軸ブラウズを同じ手触りで』という設計憲章。", "handling": "designIntent", "ref": "design-intent.md", "note": "BomDD ui-ir-ui-bom.md 原則3。nonBom にしない。" },
-    { "selector": "M titlebar(ロゴ三角+ViewPrism 2+window controls)", "reason": "OS ウィンドウ装飾・シェル所有", "handling": "trace", "ebomItemRef": ["E-UI-SHELL-021"] },
-    { "selector": "M menu strip(File/Edit/View/Window/Help)", "reason": "シェルメニュー(非機能プレースホルダ)", "handling": "trace", "ebomItemRef": ["E-UI-SHELL-021"] },
-    { "selector": "M nav 検索(画像・ファイルを検索 ⌘K)", "reason": "シェルのグローバル検索。tag-tab UQ-E4 で不採用方針", "handling": "nonBom", "ebomItemRef": ["E-UI-SHELL-021"], "note": "決定の一貫性: ⌘K は採用しない(要確認: 画像タブで再検討するか — UQ-I08)。" },
-    { "selector": "M 末尾 注記(※プレビュー用ダミー画像/ビューアー無効化)", "reason": "プロトタイプのドキュメント注記", "handling": "nonBom" },
-    { "selector": "余白調整 wrapper / 罫線・影・角丸のみの div", "reason": "レイアウト/装飾", "handling": "nonBom" }
+    {
+      "selector": "M direction band(『同じ画像を、フォルダでもタグでも掘る。ひとつの操作で、ふたつの視点。』+ interaction hints)",
+      "reason": "アプリ画面外のヘッダ帯だが CAD の設計意図。装飾ではなく『二軸ブラウズを同じ手触りで』という設計憲章。",
+      "handling": "designIntent",
+      "ref": "design-intent.md",
+      "note": "BomDD ui-ir-ui-bom.md 原則3。nonBom にしない。"
+    },
+    {
+      "selector": "M titlebar(ロゴ三角+ViewPrism 2+window controls)",
+      "reason": "OS ウィンドウ装飾・シェル所有",
+      "handling": "trace",
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ]
+    },
+    {
+      "selector": "M menu strip(File/Edit/View/Window/Help)",
+      "reason": "シェルメニュー(非機能プレースホルダ)",
+      "handling": "trace",
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ]
+    },
+    {
+      "selector": "M nav 検索(画像・ファイルを検索 ⌘K)",
+      "reason": "シェルのグローバル検索。tag-tab UQ-E4 で不採用方針",
+      "handling": "nonBom",
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "note": "決定の一貫性: ⌘K は採用しない(要確認: 画像タブで再検討するか — UQ-I08)。"
+    },
+    {
+      "selector": "M 末尾 注記(※プレビュー用ダミー画像/ビューアー無効化)",
+      "reason": "プロトタイプのドキュメント注記",
+      "handling": "nonBom"
+    },
+    {
+      "selector": "余白調整 wrapper / 罫線・影・角丸のみの div",
+      "reason": "レイアウト/装飾",
+      "handling": "nonBom"
+    }
   ]
 }

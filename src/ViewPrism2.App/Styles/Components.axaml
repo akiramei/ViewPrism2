@@ -1034,4 +1034,97 @@
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="White" />
   </Style>
+
+  <!-- ============ 作業モード(ECO-017): 緑系部品 ============ -->
+  <!-- 作業ボタン active = 緑塗り(#16a34a・白字)。青の toolbarBtn.active とは別の designIntent(作業=緑) -->
+  <Style Selector="Button.toolbarBtn.workActive">
+    <Setter Property="BorderBrush" Value="#16A34A" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.toolbarBtn.workActive /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#16A34A" />
+  </Style>
+  <Style Selector="Button.toolbarBtn.workActive PathIcon">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- 「追加」ボタン: 既定=淡緑 disabled(選択なし)/ .ready=緑塗り(選択あり) -->
+  <Style Selector="Button.workAddBtn">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="13,0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="#CFE7D4" />
+    <Setter Property="Foreground" Value="#9FC3AC" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.workAddBtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#EEF8F1" />
+  </Style>
+  <!-- disabled(選択なし)= モック準拠の淡緑を不透明で保つ(既定の減光を打ち消す) -->
+  <Style Selector="Button.workAddBtn:disabled">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Foreground" Value="#9FC3AC" />
+  </Style>
+  <Style Selector="Button.workAddBtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#EEF8F1" />
+    <Setter Property="TextElement.Foreground" Value="#9FC3AC" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.workAddBtn PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Foreground" Value="#9FC3AC" />
+  </Style>
+  <Style Selector="Button.workAddBtn.ready">
+    <Setter Property="BorderBrush" Value="#16A34A" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.workAddBtn.ready /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#16A34A" />
+  </Style>
+  <Style Selector="Button.workAddBtn.ready:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#15924A" />
+  </Style>
+  <Style Selector="Button.workAddBtn.ready PathIcon">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <!-- 選択件数バッジ(白地・緑字) -->
+  <Style Selector="Border.workAddBadge">
+    <Setter Property="MinWidth" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="White" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.workAddBadge TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="#16A34A" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- 作業対象チップ(bg #eafaf0 / border #c2ecd2 / 字 #0f8a4d) -->
+  <Style Selector="Border.workTargetChip">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="#C2ECD2" />
+    <Setter Property="Background" Value="#EAFAF0" />
+  </Style>
+  <Style Selector="Border.workTargetChip TextBlock">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="#0F8A4D" />
+  </Style>
+  <Style Selector="Border.workTargetChip PathIcon">
+    <Setter Property="Foreground" Value="#0F8A4D" />
+  </Style>
 </Styles>
