@@ -459,6 +459,43 @@
       ],
       "handling": "bom",
       "note": "累積件数チップ。グリッド個別バッジ(data 層の isWorkTarget/workBadgeStyle)はテンプレ未描画=採用せず(描画モック準拠・UQ-I07)。"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic: enterDelete / deleteMode(⋯→削除→削除モード)",
+      "uiIr": "TMP-UI-ACT-0065 / TMP-UI-STA-0035",
+      "uiBom": "TMP-UI-ACT-0065",
+      "ebomItemRef": [
+        "E-UI-MODE-041",
+        "E-UI-BROWSE-022"
+      ],
+      "handling": "bom",
+      "note": "削除=4つ目の排他文脈モード(ECO-018)。クリック意味論は E-UI-BROWSE-022 の選択を再利用。"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic: deleteSelected(『ゴミ箱へ移動』=ソフト削除)",
+      "uiIr": "TMP-UI-ACT-0066 / TMP-UI-CMP-0038",
+      "uiBom": "TMP-UI-ACT-0066",
+      "ebomItemRef": [
+        "E-UI-MODE-041",
+        "E-TRASH-038",
+        "E-DESIGN-028"
+      ],
+      "handling": "bom",
+      "note": "normal→deleted ソフト削除(E-TRASH-038.DeleteToTrashAsync・物理非破壊 INV-009・復元可)。モックの trash 配列擬似処理は実 Core へ是正。"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic: openTrash/trashCount(⋯→ゴミ箱・件数バッジ)",
+      "uiIr": "TMP-UI-ACT-0063 / TMP-UI-STA-0036 / TMP-UI-CMP-0039",
+      "uiBom": "TMP-UI-CMP-0039",
+      "ebomItemRef": [
+        "E-UI-MODE-041",
+        "E-TRASH-038"
+      ],
+      "handling": "bom",
+      "note": "ゴミ箱=既存トラッシュモーダル(ECO-015)で開く(モックの trashOpen オーバーレイは誤りで不採用・maintainer)。deleted 件数バッジ併記。"
     }
   ]
 }

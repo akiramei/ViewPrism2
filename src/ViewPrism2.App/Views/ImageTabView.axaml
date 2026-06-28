@@ -622,7 +622,24 @@
                   <TextBlock Text="{Binding WorkTargetLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Border>
-              <!-- ⋯ = メンテナンスメニュー(ECO-015)。モード中は隠す(InAnyMode に作業を含む=ECO-017) -->
+              <!-- 削除モード(ECO-018): ⋯メニュー「削除」で入る排他モード。削除を終了 + ゴミ箱へ移動(赤・件数バッジ) -->
+              <Button Classes="toolbarBtn" IsVisible="{Binding DeleteMode}" Command="{Binding ExitDeleteCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CloseIcon}" />
+                  <TextBlock Text="削除を終了" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="delMoveBtn" Classes.ready="{Binding CanDeleteToTrash}" IsVisible="{Binding DeleteMode}"
+                      IsEnabled="{Binding CanDeleteToTrash}" Command="{Binding DeleteToTrashCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" />
+                  <TextBlock Text="ゴミ箱へ移動" VerticalAlignment="Center" />
+                  <Border Classes="delMoveBadge" IsVisible="{Binding HasDeleteSelection}">
+                    <TextBlock Text="{Binding DeleteSelCount}" />
+                  </Border>
+                </StackPanel>
+              </Button>
+              <!-- ⋯ = メンテナンスメニュー(修復/削除/ゴミ箱・ECO-015/018)。モード中は隠す(InAnyMode に作業・削除を含む) -->
               <Panel IsVisible="{Binding !InAnyMode}">
                 <Button x:Name="MoreTrigger" Classes="toolbarBtn square" Command="{Binding ToggleMoreMenuCommand}" ToolTip.Tip="その他">
                   <PathIcon Data="{StaticResource MoreIcon}" />
@@ -631,17 +648,29 @@
                        VerticalOffset="6" IsOpen="{Binding MoreMenuOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
                   <Border Classes="popupMenu" Width="200">
                     <StackPanel>
-                      <Button Classes="menuRow" Command="{Binding OpenTrashCommand}" IsEnabled="{Binding CanOpenMaintenance}">
-                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                          <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
-                          <TextBlock Text="トラッシュ" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </StackPanel>
-                      </Button>
+                      <!-- 修復: 既存モーダル(ECO-015・変更なし) -->
                       <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                           <PathIcon Data="{StaticResource RepairIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
                           <TextBlock Text="修復" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
                         </StackPanel>
+                      </Button>
+                      <!-- 削除: 削除モードに入る(ECO-018・赤) -->
+                      <Button Classes="menuRow" Command="{Binding EnterDeleteCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" Foreground="#C4282D" />
+                          <TextBlock Text="削除" FontSize="13.5" FontWeight="SemiBold" Foreground="#C4282D" />
+                        </StackPanel>
+                      </Button>
+                      <!-- ゴミ箱: 既存トラッシュモーダル(ECO-015・改名)+ deleted 件数バッジ -->
+                      <Button Classes="menuRow" Command="{Binding OpenTrashCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <DockPanel VerticalAlignment="Center">
+                          <PathIcon DockPanel.Dock="Left" Data="{StaticResource TrashIcon}" Width="16" Height="16" Margin="0,0,10,0" Foreground="{StaticResource FaintTextBrush}" />
+                          <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding HasTrash}">
+                            <TextBlock Text="{Binding TrashCount}" />
+                          </Border>
+                          <TextBlock Text="ゴミ箱" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </DockPanel>
                       </Button>
                     </StackPanel>
                   </Border>

@@ -316,3 +316,29 @@ change_orders:
     pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) の全面同期は後続 M4"
     scope_out: "作業タブ本体(workTargets 消費先)・workTargets 永続化・詳細/ノート(REQ-043・別ECO)"
     notes: "本 ECO で UQ-I07 全項目(整理=ECO-014/⋯=ECO-015/作業=ECO-017)決着。残る原典撤去ブロッカーは詳細/ノート(REQ-043)のみ"
+
+  - id: ECO-018
+    title: "画像タブ ⋯メニュー再構成(修復/削除/ゴミ箱)+ 削除モード=ゴミ箱へ移動(ソフト削除)"
+    type: 設計決定(新表面 + Core ソフト削除遷移・CADモック由来)
+    status: implemented
+    golden: pending
+    baseline: "ECO-017 適用後"
+    bom_rev: "v4.0(eco:ECO-018)"
+    impacted_bom:
+      ["E-TRASH-038(DeleteToTrashAsync=normal→deleted ユーザーソフト削除・物理非破壊・復元可)",
+       "E-UI-MODE-041(⋯=修復/削除/ゴミ箱・削除=4つ目の排他文脈モード・排他隠し拡張・ゴミ箱件数バッジ)",
+       "E-UI-BROWSE-022(inSelect に削除を追加・意味論不変)",
+       "E-DESIGN-028(赤系塗りボタン+件数バッジ shared_component)",
+       "bomdd/ui/image-tab/ui-ir.json / ui-bom.json / ui-trace-map.json"]
+    oracle: "S-01〜S-31 不変。スキーマ不変。新 Core 操作 DeleteToTrashAsync は CP-TRASH-022 unit で検証(固定オラクル S-32 候補=M4)"
+    decisions:
+      D1: "削除=ソフト削除(normal→deleted・物理非破壊 INV-009・復元可)"
+      D2: "修復/ゴミ箱=既存モーダル維持(モックのモード化 repairMode/trashOpen は誤りで不採用)"
+      D3: "削除=4つ目の排他文脈モード(⋯から入る・排他隠し統一)"
+      D4: "確認なし即実行(モック準拠・ソフト削除は可逆)"
+      D5: "⋯「ゴミ箱」に deleted 件数バッジ"
+    cad_input: "ViewPrismUI:資料/画像タブ/ViewPrism2 画像タブ削除ボタン.html"
+    body: 60-change-order-eco-018.md
+    pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) 全面同期+削除遷移の固定オラクル凍結は後続 M4"
+    scope_out: "詳細/ノート(REQ-043・別ECO)・確認ダイアログ/一括Undo 等の追加UX"
+    notes: "モック是正=修復/ゴミ箱は本来ポップアップ(既存モーダル)。削除モードのみ新機能。ExcludeAsync(missing→deleted)と対称の normal→deleted を追加"

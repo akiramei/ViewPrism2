@@ -63,6 +63,33 @@ public sealed class TrashService
     }
 
     /// <summary>
+    /// ゴミ箱へ移動(削除モード・ECO-018): normal 限定。ユーザーが選んだ画像をトラッシュへ移す(status=deleted)。
+    /// 物理ファイルには一切触れず(INV-009)、タグ/ID/特徴量も不変(status 更新のみ)。復元(T6/T7)で戻せる。
+    /// normal 以外は <see cref="ErrorCode.ValidationError"/>。マージ(T5)・除外(T9・missing→deleted)と並ぶ
+    /// 3 つ目の deleted 入口で、唯一のユーザー起点ソフト削除。
+    /// </summary>
+    public async Task<Result> DeleteToTrashAsync(string imageId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(imageId);
+
+        var image = await _images.GetByIdAsync(imageId).ConfigureAwait(false);
+        if (image is null)
+        {
+            return Result.Fail(ErrorCode.NotFound, "画像が存在しません。");
+        }
+
+        if (image.Status != ImageStatus.Normal)
+        {
+            return Result.Fail(
+                ErrorCode.ValidationError, "ゴミ箱へ移動できるのは通常(normal)画像のみです。");
+        }
+
+        // status=deleted のみ(物理非破壊・INV-009)。タグ/ID/特徴量は触れない。復元で戻せる。
+        await _images.UpdateStatusAsync(imageId, ImageStatus.Deleted).ConfigureAwait(false);
+        return Result.Ok();
+    }
+
+    /// <summary>
     /// 除外(OC-19 / T9): missing 限定。リンク切れ画像をトラッシュへ移す(status=deleted)。物理ファイルには
     /// 一切触れず(INV-009)、タグ/ID/特徴量も不変(status 更新のみ)。復元(T6/T7)で戻せる。
     /// missing 以外は <see cref="ErrorCode.ValidationError"/>。T5(normal→deleted=マージ)と対称。

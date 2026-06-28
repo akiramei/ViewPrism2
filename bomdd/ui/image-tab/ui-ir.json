@@ -413,6 +413,36 @@
         "ラベル『作業対象 N 枚』"
       ],
       "notes": "workTargets>0 のとき作業モード中に表示。緑系チップ(bg #eafaf0・border #c2ecd2・文字 #0f8a4d)。累積件数の確認用。グリッドセルへの個別バッジは出さない(描画モック準拠=UQ-I07 裁定 2026-06-29)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0038",
+      "uiId": "component.delete-move-button",
+      "name": "ゴミ箱へ移動ボタン",
+      "region": "TMP-UI-REG-0006",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "elements": [
+        "ゴミ箱アイコン",
+        "ラベル『ゴミ箱へ移動』",
+        "選択件数バッジ(白地・赤字・選択ありのみ)"
+      ],
+      "notes": "削除モード中のみ表示。選択あり=赤塗り(#c4282d・白字+件数バッジ)/選択なし=淡赤 disabled(border #f0cbcd・bg #fbeded・文字 #d69a9d)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0039",
+      "uiId": "component.trash-count-badge",
+      "name": "ゴミ箱件数バッジ(⋯メニュー)",
+      "region": "TMP-UI-REG-0006",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "elements": [
+        "deleted 件数(中立グレー丸バッジ)"
+      ],
+      "notes": "⋯メニュー『ゴミ箱』項目の右。選択コレクションの deleted 件数(0 なら出さない)。"
     }
   ],
   "occurrences": [
@@ -782,15 +812,15 @@
     {
       "tempPartNo": "TMP-UI-ACT-0063",
       "uiId": "action.toolbar.more",
-      "name": "その他(⋯)",
+      "name": "その他(⋯)メニュー",
       "region": "TMP-UI-REG-0006",
       "trigger": "click",
-      "effect": "(詳細未定)",
+      "effect": "メニュー開閉。項目=修復/削除/ゴミ箱(ECO-018)",
       "source": [
         "M"
       ],
-      "confidence": "low",
-      "notes": "三点リーダー。挙動未設計(UQ-I07)。"
+      "confidence": "high",
+      "notes": "修復=既存修復モーダル(ECO-015)・ゴミ箱=既存トラッシュモーダル(ECO-015・旧トラッシュ改名+deleted件数バッジ)・削除=削除モードへ(ECO-018)。修復/ゴミ箱はポップアップ(モードに入らない=モックのモード化は誤りとして不採用・maintainer 2026-06-29)。"
     },
     {
       "tempPartNo": "TMP-UI-ACT-0029",
@@ -819,6 +849,45 @@
       "confidence": "high",
       "guardedBy": "TMP-UI-STA-0033",
       "notes": "作業モード中のみ出現。選択なし時は無効(淡緑・not-allowed)。選択あり時は緑塗り+件数バッジ。重複 id は Set で吸収。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0065",
+      "uiId": "action.delete.enter",
+      "name": "削除モードへ入る(⋯→削除)",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click(メニュー)",
+      "effect": "deleteMode=true・他文脈モード解除・選択クリア・メニューを閉じる",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "4つ目の排他文脈モード。ツールバー入口は持たず ⋯ メニューから入る。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0066",
+      "uiId": "action.delete.to-trash",
+      "name": "ゴミ箱へ移動(ソフト削除)",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "選択中の normal 画像を normal→deleted へ(Core TrashService.DeleteToTrashAsync)・選択クリア・normal 母集合から除外・ゴミ箱件数更新",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "guardedBy": "TMP-UI-STA-0035",
+      "notes": "削除モード中のみ。選択あり時のみ活性(赤塗り+件数バッジ)。物理非破壊 INV-009・復元可。確認ダイアログなし(可逆・モック準拠)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0067",
+      "uiId": "action.delete.exit",
+      "name": "削除を終了",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "deleteMode=false・選択クリア",
+      "source": [
+        "M"
+      ],
+      "confidence": "high"
     }
   ],
   "inputs": [
@@ -1017,6 +1086,30 @@
       ],
       "confidence": "high",
       "notes": "セッション内蓄積のみ。作業タブへの受け渡し/永続化は今回スコープ外(モック明記・UQ-I07 裁定)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0035",
+      "uiId": "state.delete.mode",
+      "name": "削除モード",
+      "target": "TMP-UI-REG-0006",
+      "observe": "⋯メニューから入る・グリッド選択可(inSelect)・ツールバー=削除を終了+ゴミ箱へ移動(赤)・他モード入口/⋯ 非表示",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "タグ編集/整理/作業と排他。作業同様 right ペインを開かない。"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0036",
+      "uiId": "state.trash.count",
+      "name": "ゴミ箱件数",
+      "target": "TMP-UI-REG-0006",
+      "observe": "deleted>0 で ⋯『ゴミ箱』にバッジ",
+      "source": [
+        "M"
+      ],
+      "confidence": "high",
+      "notes": "削除/復元/完全削除/除外で増減。選択コレクションスコープ。"
     }
   ],
   "domainConcepts": [
@@ -1081,6 +1174,13 @@
         "M"
       ],
       "notes": "作業モードで選び『追加』した画像 id の集合。作業タブで一括処理する想定だが作業タブ自体は今回スコープ外。重複なし(Set)。"
+    },
+    {
+      "name": "ソフト削除 / ゴミ箱(deleted)",
+      "source": [
+        "M"
+      ],
+      "notes": "削除モードの『ゴミ箱へ移動』で normal→deleted。物理ファイルは消さず(INV-009)復元可。完全削除はゴミ箱モーダル経由(別経路・deleted 限定)。"
     }
   ],
   "reusedFromTagTab": {

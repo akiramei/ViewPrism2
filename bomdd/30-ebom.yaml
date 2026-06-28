@@ -263,7 +263,7 @@ ebom:
       acceptance_refs: [CP-CRITERIA-019]
 
     - id: E-TRASH-038
-      name: トラッシュ復元(存在分岐 T6/T7)+完全削除(T8・CASCADE・物理非破壊)+除外(T9・missing→deleted)— v4.0 新設(ECO-005 で T9 追加)
+      name: トラッシュ復元(存在分岐 T6/T7)+完全削除(T8・CASCADE・物理非破壊)+除外(T9・missing→deleted)+ゴミ箱へ移動(normal→deleted ユーザーソフト削除)— v4.0 新設(ECO-005 で T9・ECO-018 で normal→deleted 追加)
       classification: core
       rationale_type: requirement
       requirement_refs: [REQ-070, REQ-071, REQ-073]
@@ -275,7 +275,8 @@ ebom:
         - INV-009 物理画像ファイルへ触れない(復元の存在確認は読み取りのみ・L3 物理差分 S-26/CP-TRASH-020 で実証)
         - 層規律: 物理存在確認(File.Exists 相当)は Infrastructure。状態遷移判断は Core(bool 存在を受けて分岐)
         - (ECO-005/T9) 除外は **missing→deleted のみ**(missing 以外は ValidationError)。status 更新のみ・物理非破壊(INV-009)。タグ/ID/特徴量不変。復元(T6/T7)で戻せる可逆操作
-      acceptance_refs: [CP-TRASH-020, CP-TRASH-001, CP-TRASH-021]
+        - (ECO-018) ゴミ箱へ移動(DeleteToTrashAsync)は **normal→deleted のみ**(normal 以外は ValidationError)。唯一のユーザー起点ソフト削除で、マージ(source normal→deleted)・除外(missing→deleted)と並ぶ 3 つ目の deleted 入口。status 更新のみ・物理非破壊(INV-009・UpdateStatusAsync のみでファイル不触)。タグ/ID/特徴量不変。復元(T6/T7)で戻せる可逆操作。固定オラクル候補(M4 で凍結検討)・現状 CP-TRASH-022 unit で検証
+      acceptance_refs: [CP-TRASH-020, CP-TRASH-001, CP-TRASH-021, CP-TRASH-022]
 
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
@@ -367,6 +368,8 @@ ebom:
         - since ECO-014: 整理モードでは中央ペインが検索結果表示へ切替わり候補+一致率を提示する。整理中の画像クリックは既定選択でなくマージ先/整理対象の割当として解釈する
         - since ECO-014 §8: モード中(タグ編集/整理)はツールバーが他モード入口・`作業`・`⋯` を非表示にし、表示軸/ソート/レイアウトと当該モードの「終了」のみ残す。中央列は隣ペインへの描画はみ出しを封じる
         - since ECO-015: ツールバーの `⋯`(その他)= メンテナンスメニュー。トラッシュ(E-TRASH-038)/修復(E-UI-REPAIR-039)を既存モーダルで開き、閉じ後に画像データを再読込し status/件数変化を反映する。コレクション未選択時は無効・モード中は非表示
+        - since ECO-018: その他メニュー(`⋯`)は **修復 / 削除 / ゴミ箱** の 3 項目。**修復**=既存修復モーダル(ECO-015・変更なし)、**ゴミ箱**=既存トラッシュモーダル(ECO-015・旧「トラッシュ」を改名)で deleted 件数バッジを併記、**削除**=削除モードに入る(下記)。修復/ゴミ箱はモーダル(ポップアップ)で開きモードに入らない。コレクション未選択時は無効
+        - since ECO-018: 「削除」= タグ編集/整理/作業に並ぶ 4 つ目の排他文脈モード(`⋯` メニューから入りツールバー入口は持たない)。削除中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、「ゴミ箱へ移動」で選択を E-TRASH-038.DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009・復元可)へ送る(選択あり時のみ活性・実行後に選択クリア+normal 母集合から除外+ゴミ箱件数更新)。状態遷移は Core のみ経由(UI で再実装しない)。判定・反復は描画から独立して unit 検査可能にする。排他隠し規律(ECO-014 §8)を削除へ拡張し、削除中はツールバーが他モード入口・`⋯` を隠し「削除を終了」+「ゴミ箱へ移動」+表示軸/ソート/レイアウトのみ残す
         - since ECO-017: 「作業」= タグ編集(E-UI-TAGASSIGN-029)/整理(E-UI-SIMILARITY-035 + E-UI-MERGE-036)に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、選択を `workTargets` 集合へ和集合追加する「追加」アクション(選択あり時のみ活性・追加後に選択クリア)と「作業対象 N 枚」チップを持つ。追加判定・和集合・選択クリア・件数は描画から独立した決定論ロジックとして unit 検査可能にする
         - since ECO-017: 作業モードは右ペインを開かない(中央フル幅)が、ECO-014 §8 の排他隠し規律を作業へ拡張する(作業中はツールバーが他モード入口・`⋯` を隠し、「作業を終了」+「追加」+「作業対象」チップ+表示軸/ソート/レイアウトのみ残す)。作業対象セル個別の視覚マーク(バッジ)は出さない(描画モック準拠)。`workTargets` はセッション内蓄積のみで、消費先の作業タブ本体・永続化はスコープ外
         - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(E-UI-DETAIL-023)の新 surface 配置は別 ECO

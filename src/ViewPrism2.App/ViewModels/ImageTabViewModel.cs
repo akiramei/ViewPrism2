@@ -40,6 +40,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly ConditionEvaluator _evaluator;
     private readonly SimilaritySearchService _similar;
     private readonly MergeService _merge;
+    private readonly TrashService _trash;
     private readonly CriteriaSearchService _criteriaSearch;
     private readonly IWindowService _windows;
     private readonly AppSettings _settings;
@@ -104,6 +105,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private bool _workMode;
     private readonly List<string> _workTargets = new();
 
+    // ---- 削除モード(ECO-018: ⋯メニュー「削除」=ゴミ箱へ移動)----
+    // タグ編集/整理/作業に並ぶ排他文脈モード。⋯メニューの「削除」で入る(トグル入口は持たない)。
+    // 削除中はグリッドが選択可能になり(inSelect)、「ゴミ箱へ移動」で選択を normal→deleted の
+    // ソフト削除(物理非破壊 INV-009・復元可)へ。修復/ゴミ箱は既存モーダル(ECO-015)のまま。
+    private bool _deleteMode;
+    private int _trashCount; // 選択コレクションの deleted 件数(⋯「ゴミ箱」バッジ)
+
     public ImageTabViewModel(
         ISyncFolderRepository folders,
         IImageRepository images,
@@ -115,6 +123,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         ConditionEvaluator evaluator,
         SimilaritySearchService similar,
         MergeService merge,
+        TrashService trash,
         IWindowService windows,
         AppSettings settings)
     {
@@ -129,6 +138,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _evaluator = evaluator;
         _similar = similar;
         _merge = merge;
+        _trash = trash;
         _criteriaSearch = new CriteriaSearchService(images); // 整理トレイの条件検索(E-CRITERIA-037)。images のみ依存
         _windows = windows;
         _settings = settings;
@@ -187,6 +197,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         }
 
         BuildEntries();
+        await RefreshTrashCountAsync().ConfigureAwait(true); // ⋯「ゴミ箱」バッジ(ECO-018)
         _loaded = true;
         Recompute();
     }
@@ -391,12 +402,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- 整理モード(ECO-014)公開契約 ----
     public bool OrganizeMode => _organizeMode;
     public string OrganizeButtonLabel => _organizeMode ? "整理を終了" : "整理";
-    /// <summary>いずれかの文脈モード中(タグ編集 or 整理 or 作業)。モード中は他モード入口・⋯ を隠す(集中・排他可視化・幅)。ECO-017 で作業へ拡張。</summary>
-    public bool InAnyMode => _editMode || _organizeMode || _workMode;
+    /// <summary>いずれかの文脈モード中(タグ編集 or 整理 or 作業 or 削除)。モード中は他モード入口・⋯ を隠す(集中・排他可視化・幅)。ECO-017/018 で作業・削除へ拡張。</summary>
+    public bool InAnyMode => _editMode || _organizeMode || _workMode || _deleteMode;
 
     // ---- 作業モード(ECO-017)公開契約 ----
-    /// <summary>選択を有効化するモード(タグ編集 or 作業)。グリッドの選択視覚=チェック/選択順バッジを出す。</summary>
-    public bool InSelectMode => _editMode || _workMode;
+    /// <summary>選択を有効化するモード(タグ編集 or 作業 or 削除)。グリッドの選択視覚=チェック/選択順バッジを出す。</summary>
+    public bool InSelectMode => _editMode || _workMode || _deleteMode;
     public bool WorkMode => _workMode;
     public string WorkButtonLabel => _workMode ? "作業を終了" : "作業";
     /// <summary>作業モード中に選択がある=「追加」が活性。</summary>
@@ -408,11 +419,22 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool HasWorkTargets => _workMode && _workTargets.Count > 0;
     public string WorkTargetLabel => $"作業対象 {_workTargets.Count} 枚";
 
-    // ---- ツールバー モード入口の出し分け(ECO-017: 3モード排他隠し統一) ----
-    // 各モード入口は他2モードの最中は隠れる(自モード中は「終了」として残る)。
-    public bool ShowEditEntry => !_organizeMode && !_workMode;
-    public bool ShowOrganizeEntry => !_editMode && !_workMode;
-    public bool ShowWorkEntry => !_editMode && !_organizeMode;
+    // ---- ツールバー モード入口の出し分け(ECO-017/018: 排他隠し統一) ----
+    // 各モード入口は他モードの最中は隠れる(自モード中は「終了」として残る)。削除は ⋯ メニューから入る
+    // ためツールバー入口を持たず、削除中は全入口・⋯ が隠れて「削除を終了」+「ゴミ箱へ移動」のみ残る。
+    public bool ShowEditEntry => !_organizeMode && !_workMode && !_deleteMode;
+    public bool ShowOrganizeEntry => !_editMode && !_workMode && !_deleteMode;
+    public bool ShowWorkEntry => !_editMode && !_organizeMode && !_deleteMode;
+
+    // ---- 削除モード(ECO-018)公開契約 ----
+    public bool DeleteMode => _deleteMode;
+    /// <summary>削除モード中に選択がある=「ゴミ箱へ移動」が活性。</summary>
+    public bool HasDeleteSelection => _deleteMode && _selected.Count > 0;
+    public int DeleteSelCount => _selected.Count;
+    public bool CanDeleteToTrash => HasDeleteSelection;
+    /// <summary>⋯「ゴミ箱」のバッジ: 選択コレクションの deleted 件数(0 なら出さない)。</summary>
+    public bool HasTrash => _trashCount > 0;
+    public int TrashCount => _trashCount;
     /// <summary>右ペインの文脈モード(タグ編集 / 整理)は排他。どちらかなら右ペインを出す。</summary>
     public bool ShowRightPane => _editMode || _organizeMode;
     public bool IsTagEditContext => _editMode;
@@ -555,7 +577,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
             bool selected = selSet.Contains(e.Record.Id);
             int? order = selected ? _selected.IndexOf(e.Record.Id) + 1 : null; // 選択順バッジ(1 起点・REQ-041 CR-3)
             var tagsOf = ImgTagIds(e);
-            bool inSelect = _editMode || _workMode; // ECO-017: 作業モードでも選択可(選択機構の再利用)
+            bool inSelect = _editMode || _workMode || _deleteMode; // ECO-017/018: 作業・削除モードでも選択可(選択機構の再利用)
             var dots = (!inSelect && tagsOf.Count > 0)
                 ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
                 : new List<IBrush>();
@@ -814,7 +836,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private void ToggleMoreMenu() { MoreMenuOpen = !MoreMenuOpen; AxisMenuOpen = false; SortMenuOpen = false; OnPropertyChanged(string.Empty); }
 
-    /// <summary>⋯ メニュー: トラッシュ(復元/完全削除)を既存モーダルで開く(ECO-015)。閉じ後にデータ再読込。</summary>
+    /// <summary>⋯ メニュー「ゴミ箱」: トラッシュ(復元/完全削除)を既存モーダルで開く(ECO-015・ECO-018 で改名)。閉じ後にデータ再読込+件数更新。</summary>
     [RelayCommand]
     private async Task OpenTrash()
     {
@@ -822,6 +844,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
         await _windows.ShowTrashAsync(_collectionId).ConfigureAwait(true);
         await ReloadImagesAsync().ConfigureAwait(true);
+        await RefreshTrashCountAsync().ConfigureAwait(true); // 復元/完全削除で deleted 件数が変わる
         Recompute();
     }
 
@@ -833,6 +856,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
         await _windows.ShowRepairAsync(_collectionId).ConfigureAwait(true);
         await ReloadImagesAsync().ConfigureAwait(true);
+        await RefreshTrashCountAsync().ConfigureAwait(true); // 修復の除外(missing→deleted)で件数が変わる
         Recompute();
     }
 
@@ -863,7 +887,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleEdit()
     {
         _editMode = !_editMode;
-        if (_editMode) { _organizeMode = false; ResetOrganizeState(); _workMode = false; } // 整理・作業と排他(ECO-014/017)
+        if (_editMode) { _organizeMode = false; ResetOrganizeState(); _workMode = false; _deleteMode = false; } // 整理・作業・削除と排他(ECO-014/017/018)
         _selected.Clear(); _expandTag = null; _panelTab = "current";
         Recompute();
     }
@@ -921,13 +945,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
             else if (item.Id != _mergeTargetId) ToggleOrganizeTarget(item.Id);
             return;
         }
-        if (!_editMode && !_workMode)
+        if (!_editMode && !_workMode && !_deleteMode)
         {
             // 閲覧モード(モック準拠): シングルクリックは無操作・ダブルクリックでビューアー起動(REQ-041)
             if (isDoubleClick) OpenViewer(item.Id);
             return;
         }
-        ToggleSelect(item.Id, ctrl, shift); // 編集 or 作業モード: 選択(inSelect・選択機構を再利用)
+        ToggleSelect(item.Id, ctrl, shift); // 編集 or 作業 or 削除モード: 選択(inSelect・選択機構を再利用)
     }
 
     /// <summary>閲覧モードのダブルクリック=ビューアー起動(REQ-041)。表示順(SortFiles)で開く。</summary>
@@ -1054,7 +1078,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleOrganize()
     {
         _organizeMode = !_organizeMode;
-        if (_organizeMode) { _editMode = false; _workMode = false; } // タグ編集・作業と排他(ECO-014/017)
+        if (_organizeMode) { _editMode = false; _workMode = false; _deleteMode = false; } // タグ編集・作業・削除と排他(ECO-014/017/018)
         ResetOrganizeState();
         Recompute();
     }
@@ -1067,7 +1091,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleWork()
     {
         _workMode = !_workMode;
-        if (_workMode) { _editMode = false; _organizeMode = false; ResetOrganizeState(); } // 他文脈モードと排他
+        if (_workMode) { _editMode = false; _organizeMode = false; ResetOrganizeState(); _deleteMode = false; } // 他文脈モードと排他(ECO-018)
         _selected.Clear(); _expandTag = null;
         Recompute();
     }
@@ -1081,6 +1105,51 @@ public sealed partial class ImageTabViewModel : ObservableObject
             if (!_workTargets.Contains(id)) _workTargets.Add(id); // Set 意味論(重複なし)
         _selected.Clear();
         RefreshSelectionMarkers(); // 選択クリア+チップ更新のみ=Items を作り直さない
+    }
+
+    // =====================================================================
+    //  削除モード コマンド(ECO-018: ⋯メニュー「削除」=ゴミ箱へ移動)
+    // =====================================================================
+    /// <summary>⋯メニュー「削除」: 削除モードに入る。他文脈モードと排他・選択クリア・メニューを閉じる。</summary>
+    [RelayCommand]
+    private void EnterDelete()
+    {
+        MoreMenuOpen = false;
+        _deleteMode = true;
+        _editMode = false; _organizeMode = false; ResetOrganizeState(); _workMode = false; // 排他
+        _selected.Clear(); _expandTag = null;
+        Recompute();
+    }
+
+    /// <summary>削除モードを終了(選択クリア)。</summary>
+    [RelayCommand]
+    private void ExitDelete()
+    {
+        _deleteMode = false;
+        _selected.Clear();
+        Recompute();
+    }
+
+    /// <summary>選択中の normal 画像をゴミ箱へ移動(normal→deleted のソフト削除・物理非破壊 INV-009・復元可)。選択なしは無操作。</summary>
+    [RelayCommand]
+    private async Task DeleteToTrash()
+    {
+        if (_selected.Count == 0) return;
+        var ids = _selected.ToList();
+        foreach (var id in ids)
+            await _trash.DeleteToTrashAsync(id).ConfigureAwait(true); // Core 経由(状態遷移は TrashService が担う)
+        _selected.Clear();
+        await ReloadImagesAsync().ConfigureAwait(true); // deleted は normal 母集合から外れる(REQ-053)
+        await RefreshTrashCountAsync().ConfigureAwait(true);
+        Recompute();
+    }
+
+    /// <summary>⋯「ゴミ箱」バッジ用に選択コレクションの deleted 件数を取り直す。</summary>
+    private async Task RefreshTrashCountAsync()
+    {
+        if (_collectionId is null) { _trashCount = 0; return; }
+        var all = await _images.GetByFolderAsync(_collectionId).ConfigureAwait(true);
+        _trashCount = all.Count(r => r.Status == ImageStatus.Deleted);
     }
 
     private void ResetOrganizeState()

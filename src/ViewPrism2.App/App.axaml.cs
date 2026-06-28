@@ -210,6 +210,7 @@ public partial class App : Application
             sp.GetRequiredService<ConditionEvaluator>(),
             sp.GetRequiredService<SimilaritySearchService>(),
             sp.GetRequiredService<MergeService>(),
+            sp.GetRequiredService<TrashService>(),
             sp.GetRequiredService<ImageSorter>(),
             sp.GetRequiredService<ThumbnailService>(),
             sp.GetRequiredService<LocalizationService>(),

@@ -1471,6 +1471,109 @@
         "disposition": "acceptance_aspect",
         "ecoImpact": "ECO-017: workTargets はセッション内蓄積のみ(永続化・作業タブ受け渡しはスコープ外)。個別セルバッジは出さない(描画モック準拠)。"
       }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0065",
+      "uiId": "action.delete.enter",
+      "kind": "action",
+      "name": "削除モード",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "⋯メニューから入る4つ目の排他文脈モード。グリッド選択を有効化しソフト削除へ。",
+      "ebomCandidate": {
+        "promoteAs": "仕様/要求への接続",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "coreRefs": [
+          "E-UI-BROWSE-022"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "specification_link",
+        "ecoImpact": "ECO-018: 削除=4つ目の排他文脈モード。排他隠し統一を削除へ拡張。修復/ゴミ箱は既存モーダル(モックのモード化は不採用)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0066",
+      "uiId": "action.delete.to-trash",
+      "kind": "action",
+      "name": "ゴミ箱へ移動(ソフト削除)",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "削除モードの主アクション。選択を normal→deleted のソフト削除(Core 経由)。",
+      "ebomCandidate": {
+        "promoteAs": "仕様/要求への接続",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "coreRefs": [
+          "E-TRASH-038"
+        ],
+        "requirementRefs": [
+          "REQ-070"
+        ],
+        "controlPlan": "CP-TRASH-022",
+        "confidence": "high",
+        "disposition": "specification_link",
+        "ecoImpact": "ECO-018: E-TRASH-038.DeleteToTrashAsync(normal→deleted・物理非破壊 INV-009・復元可)を新設。ExcludeAsync(missing→deleted)と対称。固定オラクル S-32 候補(M4)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0038",
+      "uiId": "component.delete-move-button",
+      "kind": "component",
+      "name": "ゴミ箱へ移動ボタン",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "削除モード専用の主アクション(赤塗り/淡赤 disabled+件数バッジ)。",
+      "ebomCandidate": {
+        "promoteAs": "デザインシステム部品",
+        "items": [
+          "E-DESIGN-028"
+        ],
+        "kbom": [
+          "K-DESIGN"
+        ],
+        "confidence": "high",
+        "disposition": "shared_component",
+        "ecoImpact": "ECO-018: Components.axaml に赤系塗りボタン+件数バッジ(緑の作業系・青の primaryAction と別 variant)。削除=赤の designIntent。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0039",
+      "uiId": "component.trash-count-badge",
+      "kind": "component",
+      "name": "ゴミ箱件数バッジ",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "⋯メニュー『ゴミ箱』の deleted 件数バッジ(中立グレー)。",
+      "ebomCandidate": {
+        "promoteAs": "デザインシステム部品",
+        "items": [
+          "E-DESIGN-028"
+        ],
+        "kbom": [
+          "K-DESIGN"
+        ],
+        "confidence": "high",
+        "disposition": "shared_component",
+        "ecoImpact": "ECO-018: Components.axaml に件数バッジ追加。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0035",
+      "uiId": "state.delete.mode",
+      "kind": "state",
+      "name": "削除モード",
+      "parent": "TMP-UI-REG-0006C",
+      "bomRationale": "受入観点(閲覧⇄削除の遷移・排他・選択有効化・ツールバー出し分け)。",
+      "ebomCandidate": {
+        "promoteAs": "受入観点",
+        "items": [
+          "E-UI-MODE-041"
+        ],
+        "controlPlan": "CP-UI-G1",
+        "confidence": "high",
+        "disposition": "acceptance_aspect",
+        "ecoImpact": "ECO-018: 削除 ON で他モード解除・選択クリア。削除中はツールバーが他入口・⋯ を隠す。"
+      }
     }
   ],
   "reusedFromTagTab": {

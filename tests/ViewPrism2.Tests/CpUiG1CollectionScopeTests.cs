@@ -4,6 +4,7 @@ using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Infrastructure.Imaging;
 using ViewPrism2.Infrastructure.Scanning;
@@ -91,6 +92,7 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
             new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
+            new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
             new StubWindowService(), settings);
     }
 
