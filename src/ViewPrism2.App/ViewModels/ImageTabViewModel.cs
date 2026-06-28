@@ -568,6 +568,38 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 isOrganizeTarget: _organizeMode && _organizeTargets.Contains(e.Record.Id)));
         }
 
+        // ---- 編集パネル / 整理トレイ(選択依存・小コレクション)----
+        BuildContextPanels(selSet);
+
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>
+    /// 選択/マーカーのみが変化したときの軽量更新。Items(グリッド)を作り直さず、
+    /// 既存の各 ImageItemVM をその場更新する(大量画像でのクリック応答性=Items 全再構築と
+    /// CollectionChanged Reset・スクロールリセットを避ける)。membership が変わる遷移(フォルダ移動・
+    /// チップ・軸/ソート・モード切替=selectable/タグドットが変わる)は従来どおり Recompute を使う。
+    /// </summary>
+    private void RefreshSelectionMarkers()
+    {
+        if (!_loaded) return;
+        var selSet = new HashSet<string>(_selected);
+        foreach (var item in Items)
+        {
+            if (item.IsFolder) continue;
+            bool selected = selSet.Contains(item.Id);
+            int? order = selected ? _selected.IndexOf(item.Id) + 1 : null;
+            bool merge = _organizeMode && string.Equals(item.Id, _mergeTargetId, StringComparison.Ordinal);
+            bool org = _organizeMode && _organizeTargets.Contains(item.Id);
+            item.SetSelectionMarkers(selected, order, merge, org);
+        }
+        BuildContextPanels(selSet);
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>選択依存パネル(タグ編集パネル+整理トレイ)の再構築。Items とは独立した小コレクション。</summary>
+    private void BuildContextPanels(HashSet<string> selSet)
+    {
         // ---- edit panel ----
         var selectedEntries = AllLoadedImagesInContext().Where(e => selSet.Contains(e.Record.Id)).ToList();
         CurrentTags.Clear();
@@ -606,8 +638,6 @@ public sealed partial class ImageTabViewModel : ObservableObject
             SearchResults.Add(new OrganizeResultVM(id, e.Record.FileName, e.AbsolutePath,
                 FmtSize(e.Record.FileSize), score, isCrit, added));
         }
-
-        OnPropertyChanged(string.Empty);
     }
 
     private ImageEntry? EntryById(string id)
@@ -921,14 +951,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 int lo = Math.Min(a, b), hi = Math.Max(a, b);
                 foreach (var rid in list.GetRange(lo, hi - lo + 1))
                     if (!_selected.Contains(rid)) _selected.Add(rid);
-                Recompute();
+                RefreshSelectionMarkers(); // 選択のみ変化=Items を作り直さない
                 return;
             }
         }
-        if (ctrl) { if (!_selected.Remove(id)) _selected.Add(id); Recompute(); return; }
+        if (ctrl) { if (!_selected.Remove(id)) _selected.Add(id); RefreshSelectionMarkers(); return; }
         if (_selected.Count == 1 && _selected[0] == id) _selected.Clear();
         else { _selected.Clear(); _selected.Add(id); }
-        Recompute();
+        RefreshSelectionMarkers();
     }
 
     [RelayCommand]
@@ -1050,7 +1080,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         foreach (var id in _selected)
             if (!_workTargets.Contains(id)) _workTargets.Add(id); // Set 意味論(重複なし)
         _selected.Clear();
-        Recompute();
+        RefreshSelectionMarkers(); // 選択クリア+チップ更新のみ=Items を作り直さない
     }
 
     private void ResetOrganizeState()
@@ -1073,20 +1103,20 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (!_organizeMode) return;
         _organizeTargets.Remove(imageId);
         _mergeTargetId = imageId;
-        Recompute();
+        RefreshSelectionMarkers(); // マージ先マーカー+トレイのみ=Items を作り直さない
     }
 
     private void ToggleOrganizeTarget(string imageId)
     {
         if (!_organizeMode || _mergeTargetId is null || imageId == _mergeTargetId) return;
         if (!_organizeTargets.Remove(imageId)) _organizeTargets.Add(imageId);
-        Recompute();
+        RefreshSelectionMarkers(); // 整理対象マーカー+トレイのみ=Items を作り直さない
     }
 
     [RelayCommand]
     private void RemoveOrganizeTarget(string imageId)
     {
-        if (_organizeTargets.Remove(imageId)) Recompute();
+        if (_organizeTargets.Remove(imageId)) RefreshSelectionMarkers();
     }
 
     /// <summary>整理対象をマージ先へ昇格し、元のマージ先を整理対象へ戻す(モック「マージ先にする」)。</summary>
@@ -1096,7 +1126,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (!_organizeTargets.Remove(imageId)) return;
         if (_mergeTargetId is not null) _organizeTargets.Add(_mergeTargetId);
         _mergeTargetId = imageId;
-        Recompute();
+        RefreshSelectionMarkers();
     }
 
     [RelayCommand]

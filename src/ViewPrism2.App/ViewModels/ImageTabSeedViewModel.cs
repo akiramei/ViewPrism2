@@ -741,7 +741,7 @@ public sealed class ChipVM
     };
 }
 
-public sealed class ImageItemVM
+public sealed partial class ImageItemVM : ObservableObject
 {
     public ImageItemVM(string id, string name, bool isFolder, bool isPlaceholder, bool hasThumb,
         IBrush? thumbBrush, bool selectable, bool isSelected, bool hasTagDots, List<IBrush> tagDots,
@@ -749,10 +749,10 @@ public sealed class ImageItemVM
         int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
-        ThumbBrush = thumbBrush; Selectable = selectable; IsSelected = isSelected;
+        ThumbBrush = thumbBrush; Selectable = selectable; _isSelected = isSelected;
         HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
-        Target = target; AbsolutePath = absolutePath; SelectionOrder = selectionOrder;
-        IsMergeTarget = isMergeTarget; IsOrganizeTarget = isOrganizeTarget;
+        Target = target; AbsolutePath = absolutePath; _selectionOrder = selectionOrder;
+        _isMergeTarget = isMergeTarget; _isOrganizeTarget = isOrganizeTarget;
     }
     public string Id { get; }
     public string Name { get; }
@@ -761,7 +761,6 @@ public sealed class ImageItemVM
     public bool HasThumb { get; }
     public IBrush? ThumbBrush { get; }
     public bool Selectable { get; }
-    public bool IsSelected { get; }
     public bool HasTagDots { get; }
     public List<IBrush> TagDots { get; }
     public string SizeLabel { get; }
@@ -770,13 +769,27 @@ public sealed class ImageItemVM
     /// <summary>実画像の絶対パス(M3: ThumbnailImage 用)。シードハーネスでは null(ThumbBrush 使用)。</summary>
     public string? AbsolutePath { get; }
     public bool HasRealThumb => AbsolutePath is not null;
-    /// <summary>タグ編集モードの選択順(1 起点・REQ-041 CR-3)。未選択は null。連番付与の順序を可視化する。</summary>
-    public int? SelectionOrder { get; }
+
+    // ---- 選択マーカー(可変・その場更新): Items 全再構築を避けクリック応答性を保つ ----
+    [ObservableProperty] private bool _isSelected;
+    /// <summary>タグ編集/作業モードの選択順(1 起点・REQ-041 CR-3)。未選択は null。連番付与の順序を可視化する。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectionOrderText))]
+    private int? _selectionOrder;
     public string SelectionOrderText => SelectionOrder?.ToString() ?? "";
     /// <summary>整理モード(ECO-014): このセルがマージ先(残す1枚)か。</summary>
-    public bool IsMergeTarget { get; }
+    [ObservableProperty] private bool _isMergeTarget;
     /// <summary>整理モード(ECO-014): このセルが整理対象(統合し削除対象)か。</summary>
-    public bool IsOrganizeTarget { get; }
+    [ObservableProperty] private bool _isOrganizeTarget;
+
+    /// <summary>選択/整理マーカーをその場更新(Items を作り直さない)。</summary>
+    public void SetSelectionMarkers(bool isSelected, int? selectionOrder, bool isMergeTarget, bool isOrganizeTarget)
+    {
+        IsSelected = isSelected;
+        SelectionOrder = selectionOrder;
+        IsMergeTarget = isMergeTarget;
+        IsOrganizeTarget = isOrganizeTarget;
+    }
 }
 
 public sealed class AddGroupVM
