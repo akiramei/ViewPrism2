@@ -367,3 +367,65 @@ change_orders:
     pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) 全面同期は後続 M4"
     scope_out: "詳細/ノート(REQ-043・別ECO)"
     notes: "重要 lesson: モック文言が woven 安全制約(INV-009 物理非破壊)と矛盾する場合は安全制約が勝つ。confirmBody を是正して採用"
+
+  - id: ECO-020
+    title: "作業スペースドメイン + 永続化(DB) + 作業タブ shell/サイドバー + 受け渡し結線(ECO-α)"
+    type: 新規ドメイン + 永続化(DB) + 新タブ surface + 既存意味論更新(CADモック由来)
+    status: implemented
+    golden: pending
+    baseline: "ECO-019 適用後"
+    bom_rev: "v4.0(eco:ECO-020)"
+    impacted_bom:
+      ["E-WORKSPACE-042(新規core: 作業スペースサービス・デフォルト回転INV-W1・add/move・件数・物理非破壊INV-W4)",
+       "E-UI-WORKSPACE-043(新規surface: 作業タブ shell+サイドバー・グリッド/リスト閲覧・空状態)",
+       "E-DB-010(マイグレーション004: workspaces + workspace_images・部分UNIQUEでデフォルト1件担保)",
+       "E-UI-SHELL-021(第3タブ『作業』ナビ追加)",
+       "E-UI-MODE-041(ECO-017 受け渡し解消: AddToWork→AddImagesToDefault でデフォルトスペースへ永続追加)",
+       "E-DOMAIN-001(Workspace/WorkspaceWithCount エンティティ)",
+       "REQ-074/075(新規)",
+       "bomdd/ui/work-tab/ui-ir.json / ui-bom.json / ui-trace-map.json / extraction-report.md / unresolved-questions.md"]
+    oracle: "S-01〜S-31 不変。スキーマは追加のみ(後方互換・CP-DB-006 スキーマ同値維持)。新Core=CP-WORKSPACE-028 unit 6件(固定オラクル S-33 候補=M4)"
+    verification: "App build 0警告 / Tests 446(+6 CP-WORKSPACE-028 / golden GF-W1:+1)/ Oracle 74+2skip(退行ゼロ)"
+    decisions:
+      W-a1: "永続化=DBテーブル(workspaces + workspace_images)。settings.json 不採用(UQ-W01 maintainer)"
+      W-a2: "ECO 段階分割 α/β(UQ-W05 maintainer)。本書=α=Core+shell+サイドバー+受け渡し"
+      W-a3: "デフォルト回転=新規空デフォルト+旧を時刻名で降格。常にデフォルト1つ(INV-W1)"
+      W-a4: "受け渡し=画像タブ AddToWork をデフォルトスペース書き込みへ(ECO-017 繰延の解消)"
+      W-a5: "ソフト削除では所属を残し status 除外(復元で戻る)・完全削除のみ CASCADE で所属除去"
+      W-a6: "(β予約)整理を作業タブに出す(UQ-W03 maintainer)"
+    cad_input: "ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html"
+    body: 60-change-order-eco-020.md
+    pending_sync: "spec(20)/M-BOM(32)/Control Plan(33) 全面同期+削除遷移の固定オラクル凍結は後続 M4"
+    scope_out: "右ペイン文脈モード一式(タグ編集/作業=別スペース移動/整理/⋯=修復・削除・ゴミ箱)=ECO-β。タグドット/絞り込みチップ=ECO-β。スペース削除/並べ替え/手動D&D追加・詳細ノート(REQ-043)"
+    notes: "charter v4『作業スペースは後続』の番。実機 golden=maintainer ゲート。golden GF-W1(2026-06-29 maintainer): スペース一覧を seq 降順(新しいほど上=スタックのトップ・デフォルト最上段)へ是正。回転で新デフォルトが先頭に積み上がる(モック addWorkspace prepend 準拠)"
+
+  - id: ECO-021
+    title: "作業タブ 右ペイン文脈モードの再利用配線(ECO-β・段階 β-1〜β-4)"
+    type: 既存surface再利用配線(新Core意味論なし・CADモック由来)
+    status: implemented
+    golden: pending
+    baseline: "ECO-020(ECO-α)適用後"
+    bom_rev: "v4.0(eco:ECO-021)"
+    stages:
+      b1: "選択機構+タグドット/絞り込みチップ+作業モード=別スペースへ移動(MoveImages)= 製造済"
+      b2: "タグ編集モード(E-UI-TAGASSIGN-029 パネル再利用・作業と排他=ECO-014§8 排他隠し拡張)= 製造済"
+      b3: "整理モード(E-UI-SIMILARITY-035+E-UI-MERGE-036 整理トレイ=類似+マージ・検索は現スペース内限定・Core意味論不変)= 製造済"
+      b4: "⋯メニュー(削除/ゴミ箱 popup)・削除モード=ゴミ箱へ移動・ゴミ箱 in-tab popup(復元/完全削除/空)・E-TRASH-038/E-UI-REPAIR-039 再利用。修復はコレクションスコープのため作業タブ非搭載= 製造済(ECO-β 完了)"
+    impacted_bom:
+      ["E-UI-WORKSPACE-043(β-1: 作業=別スペース移動・タグドット/絞り込みチップ・選択機構を配線)",
+       "E-WORKSPACE-042(再利用: MoveImages 意味論不変)",
+       "E-UI-TAGASSIGN-029(β-2: タグ編集パネルを作業タブへ再利用配線・Core意味論不変)",
+       "E-UI-SIMILARITY-035/E-UI-MERGE-036(β-3: 整理トレイを作業タブへ再利用配線・MergeService/CriteriaMatcher 再利用・Core意味論不変)",
+       "E-TRASH-038/E-UI-REPAIR-039(β-4: 削除モード+ゴミ箱 popup を作業タブへ再利用配線・修復は非搭載)",
+       "E-WORKSPACE-042(β-4: GetDeletedImagesAsync 読み取りクエリ追加=workspace スコープのゴミ箱供給・新状態遷移なし)",
+       "bomdd/ui/work-tab/*"]
+    oracle: "S-01〜S-31 不変。スキーマ不変。新Core意味論なし(MoveImages 既証 CP-WORKSPACE-028)。VM glue=CpUiG1WorkTabTests 2件"
+    verification: "App build 0警告 / Tests 454(β:+6 / レビュー是正:+3)/ Oracle 74+2skip(退行ゼロ)"
+    decisions:
+      UQ-W06: "再利用方式=B(作業タブ側でオーケストレート・隔離方式)。画像タブ(golden済み・原典撤去本線)に触れず Coreサービス+末端VM+DSを再利用。A(画像タブscope多態化)は退行リスクで不採用(maintainer 2026-06-29)"
+      staged: "ECO-β をモード単位で段階(β-1..4)(maintainer 2026-06-29)"
+    cad_input: "ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html"
+    body: 60-change-order-eco-021.md
+    pending_sync: "β-2〜4 の製造。spec(20)/M-BOM(32)/Control Plan(33) 同期は後続 M4"
+    scope_out: "β-1 では タグ編集/整理/⋯。排他モード隠しは β-2 以降でモードが増えてから ECO-014§8 を作業タブへ拡張"
+    notes: "isolate now, DRY later: 両surfaceがgolden済み・原典撤去後に共通部品へDRYリファクタ可能。実機golden=maintainerゲート。レビュー是正3件(golden前): ①フィルタ変更時に非表示選択を落とす(交差・画像タブ整合は別途裁定)②RefreshAsyncでfolderPath再読込③CloseMenusFromDismissでMoreMenuOpenも閉じる"

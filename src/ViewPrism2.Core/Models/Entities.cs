@@ -50,6 +50,31 @@ public sealed record ImageRecord
     public string? Notes { get; init; }
 }
 
+/// <summary>
+/// 作業スペース(ECO-020 / REQ-074)。名前付き・永続のユーザー管理画像集合。
+/// デフォルト(<see cref="IsDefault"/>)は画像タブ作業モード「追加」の自動追加先で、同時に厳密に 1 つ(INV-W1)。
+/// 所属画像は workspace_images(多対多・集合)。物理ファイル・画像 ID には触れない(INV-W4 / INV-009)。
+/// </summary>
+public sealed record Workspace
+{
+    /// <summary>UUIDv4 小文字。生成後不変(INV-001)。</summary>
+    public required string Id { get; init; }
+
+    public required string Name { get; init; }
+
+    /// <summary>自動追加先。同時に true は 1 つだけ(INV-W1・DB 部分 UNIQUE で担保)。</summary>
+    public bool IsDefault { get; init; }
+
+    /// <summary>作成順の連番(一覧の安定順・新規ほど大)。</summary>
+    public int Seq { get; init; }
+
+    /// <summary>ISO 8601 UTC 文字列(INV-002)。</summary>
+    public required string CreatedAt { get; init; }
+}
+
+/// <summary>作業スペースと所属 normal 画像数(サイドバー一覧・ECO-020)。件数は status=normal のみ(INV-W2)。</summary>
+public sealed record WorkspaceWithCount(Workspace Workspace, int NormalImageCount);
+
 /// <summary>タグ(仕様 §2.2)。名前はシステム全体で一意・case-sensitive(REQ-021)。</summary>
 public sealed record Tag
 {

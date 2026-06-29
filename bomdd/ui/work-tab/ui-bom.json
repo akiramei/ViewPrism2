@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "schema": "ui-bom/candidate",
+    "product": "ViewPrism2",
+    "scope": "作業タブ (work tab)",
+    "status": "candidate / 未実証",
+    "promotedAt": "2026-06-29",
+    "method": "BomDD ui-ir-ui-bom.md。UI-IR(bomdd/ui/work-tab/ui-ir.json)の net-new 要素を E-BOM 候補へ昇格。画像タブ右ペイン surface は image-tab UI-BOM を再利用し本書で再昇格しない。",
+    "note": "本タブの net-new は『作業スペース』ドメインのみ。Core(WorkspaceService/Repository/schema)と surface(作業タブ shell+サイドバー)へ昇格する。右ペイン surface(タグ編集/作業=別スペース移動/整理/⋯)は image-tab の既存 E-BOM 部品を文脈再利用し、結線は ECO-β で行う。永続化=DB テーブル(UQ-W01 決定)・ECO 分割=α/β(UQ-W05 決定)・整理=出す(UQ-W03 決定)。",
+    "decisions": {
+      "UQ-W01": "DB テーブル(workspaces + workspace_images)",
+      "UQ-W03": "整理ボタンを出す(整理トレイを作業タブへ配線=ECO-β)",
+      "UQ-W05": "段階分割。ECO-α=Core+shell+サイドバー+受け渡し / ECO-β=右ペイン surface"
+    }
+  },
+  "items": [
+    {
+      "tempPartNo": "TMP-UI-SCR-0003",
+      "uiId": "screen.work-management",
+      "kind": "screen",
+      "name": "作業タブ画面",
+      "parent": null,
+      "bomRationale": "タブ単位の上位構成。作業スペース管理+(再利用)画像ブラウズ/タグ編集/整理/メンテの束ね。",
+      "ebomCandidate": {
+        "promoteAs": "上位構成(複数 E-BOM item の束ね)",
+        "items": ["E-UI-SHELL-021", "E-UI-WORKSPACE-043", "E-WORKSPACE-042", "E-UI-BROWSE-022", "E-UI-MODE-041", "E-UI-TAGASSIGN-029", "E-UI-SIMILARITY-035", "E-UI-MERGE-036"],
+        "confidence": "high",
+        "disposition": "aggregate"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0025",
+      "uiId": "domain.workspace",
+      "kind": "domain",
+      "name": "作業スペース",
+      "parent": null,
+      "bomRationale": "net-new ドメイン。名前付き・永続・ユーザー管理の画像集合。Core サービス+永続化(DB)へ昇格。charter v4『作業スペースは後続』の番。",
+      "ebomCandidate": {
+        "promoteAs": "新規 Core 部品 + 永続化拡張",
+        "items": ["E-WORKSPACE-042", "E-DB-010"],
+        "confidence": "high",
+        "disposition": "new-core",
+        "newCore": {
+          "id": "E-WORKSPACE-042",
+          "name": "作業スペースサービス(CRUD・デフォルト回転・画像 add/move・件数・物理非破壊)",
+          "classification": "core",
+          "requirement_refs_proposed": ["REQ-074", "REQ-075"],
+          "depends_on": ["E-DOMAIN-001", "E-DB-010"],
+          "invariants_proposed": [
+            "INV-W1 同時にデフォルト作業スペースは厳密に1つ(『＋』は新規空デフォルト作成+旧デフォルトを時刻名で is_default=false へ降格=原子的に1つを保つ)",
+            "INV-W2 作業スペースの所属画像は集合(重複なし)。件数/一覧は status=normal のみ(deleted/missing を除外・INV-010 整合)",
+            "INV-W3 デフォルト作業スペースはリネーム不可・削除不可(画像タブ作業『追加』の自動追加先)",
+            "INV-W4 add/move は workspace_images の論理操作のみ。画像行・物理ファイルに触れない(INV-009 物理非破壊)。image_id 不変(タグ参照を保つ INV-001)",
+            "INV-W5 移動(MoveImages)は元スペースから除去+移動先へ和集合追加の原子操作(失敗時ロールバック INV-006)"
+          ],
+          "operations": [
+            "ListWorkspaces() → 件数付き(normal のみ)・seq 順",
+            "EnsureDefaultExists(clock) → 初回シードでデフォルト1件",
+            "CreateWorkspaceRotatingDefault(clock) → 新規空デフォルト+旧デフォルトを時刻名で降格(ACT-0074)",
+            "RenameWorkspace(id, name) → 非デフォルトのみ・空は『スペース』へフォールバック(ACT-0076)",
+            "AddImagesToDefault(imageIds) → 受け渡し(DOM-0026・画像タブ AddToWork の行き先)",
+            "MoveImages(fromId, toId, imageIds) → 別スペースへ移動(ACT-0077・surface 結線は ECO-β)",
+            "GetWorkspaceImages(id) → 所属画像(normal・安定順)"
+          ]
+        }
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0026",
+      "uiId": "domain.work-handoff",
+      "kind": "domain",
+      "name": "作業対象の受け渡し(画像タブ→作業タブ)",
+      "parent": "TMP-UI-DOM-0025",
+      "bomRationale": "画像タブ作業モード『追加』(ECO-017 AddToWork)の消費先=デフォルト作業スペースへの書き込み。ECO-017 が『別ループ・永続化スコープ外』とした繰延の解消。",
+      "ebomCandidate": {
+        "promoteAs": "既存部品の意味論更新 + 新規 Core 結線",
+        "items": ["E-WORKSPACE-042", "E-UI-MODE-041"],
+        "confidence": "high",
+        "disposition": "rewire",
+        "note": "E-UI-MODE-041 の ECO-017 invariant『workTargets はセッション内蓄積のみ・永続化はスコープ外』を、E-WORKSPACE-042.AddImagesToDefault への書き込みへ更新(ECO-α)。"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0008",
+      "uiId": "region.workspaces",
+      "kind": "region",
+      "name": "作業スペースペイン(左)",
+      "parent": "TMP-UI-SCR-0003",
+      "bomRationale": "net-new surface。作業スペース一覧・選択・追加(回転)・リネーム・件数・折り畳み。コレクションペイン E-UI-SHELL-021 と同骨格・別ドメイン。",
+      "ebomCandidate": {
+        "promoteAs": "新規 surface 部品",
+        "items": ["E-UI-WORKSPACE-043"],
+        "confidence": "high",
+        "disposition": "new-surface",
+        "newSurface": {
+          "id": "E-UI-WORKSPACE-043",
+          "name": "作業タブ shell + 作業スペースサイドバー(一覧/選択/追加/リネーム/件数/折り畳み・ワークスペースヘッダ・空状態)",
+          "classification": "surface",
+          "part_kind": "screen-surface",
+          "external_source_ref": "ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html",
+          "depends_on": ["E-WORKSPACE-042", "E-UI-SHELL-021", "E-UI-BROWSE-022"],
+          "covers_temp_parts": ["TMP-UI-REG-0008", "TMP-UI-CMP-0042", "TMP-UI-CMP-0043", "TMP-UI-CMP-0044", "TMP-UI-CMP-0046", "TMP-UI-OCC-0015", "TMP-UI-INP-0021"]
+        }
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0042",
+      "uiId": "component.workspace-row",
+      "kind": "component",
+      "name": "作業スペース行カード",
+      "parent": "TMP-UI-REG-0008",
+      "bomRationale": "アイコン+名前+既定バッジ+sub+件数+リネーム鉛筆。選択/リネーム/既定 state を表現。",
+      "ebomCandidate": { "promoteAs": "E-UI-WORKSPACE-043 の構成部品", "items": ["E-UI-WORKSPACE-043"], "confidence": "high", "disposition": "absorb" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0043",
+      "uiId": "component.workspace-sidebar-header",
+      "kind": "component",
+      "name": "作業スペースペイン見出し(＋追加/畳む)",
+      "parent": "TMP-UI-REG-0008",
+      "bomRationale": "＋=デフォルト回転(ACT-0074)。コレクションの＋(フォルダ管理)とは別意味。",
+      "ebomCandidate": { "promoteAs": "E-UI-WORKSPACE-043 の構成部品", "items": ["E-UI-WORKSPACE-043"], "confidence": "high", "disposition": "absorb" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0044",
+      "uiId": "component.workspace-header",
+      "kind": "component",
+      "name": "ワークスペースヘッダ(中央上・パンくず代替)",
+      "parent": "TMP-UI-SCR-0003",
+      "bomRationale": "フラットなスペースのためパンくずを持たず現スペースの素性(名前+既定（自動追加先）+件数)を示す。E-UI-AXIS-NAV-040 のパンくずを置換(作業タブでは軸/パンくず非採用)。",
+      "ebomCandidate": { "promoteAs": "E-UI-WORKSPACE-043 の構成部品", "items": ["E-UI-WORKSPACE-043"], "confidence": "high", "disposition": "absorb" }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0045",
+      "uiId": "component.move-to-workspace-menu",
+      "kind": "component",
+      "name": "別スペースへ移動メニュー(作業モード随伴)",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "作業モード中のみ出現。選択画像を他スペースへ移動(ACT-0077 / E-WORKSPACE-042.MoveImages)。画像タブ作業の『追加』ボタン位置を踏襲し効果が move。surface 結線は ECO-β。",
+      "ebomCandidate": {
+        "promoteAs": "ECO-β surface(E-UI-MODE-041 作業モード文脈)+ Core 操作(E-WORKSPACE-042)",
+        "items": ["E-UI-MODE-041", "E-WORKSPACE-042"],
+        "confidence": "high",
+        "disposition": "phase-beta"
+      }
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0046",
+      "uiId": "component.workspace-empty-state",
+      "kind": "component",
+      "name": "空スペース empty state",
+      "parent": "TMP-UI-REG-0006",
+      "bomRationale": "所属画像 0 のとき中央に誘導文(画像タブ作業→追加)。",
+      "ebomCandidate": { "promoteAs": "E-UI-WORKSPACE-043 の構成部品", "items": ["E-UI-WORKSPACE-043"], "confidence": "high", "disposition": "absorb" }
+    },
+    {
+      "tempPartNo": "TMP-UI-INP-0021",
+      "uiId": "input.workspace.rename",
+      "kind": "input",
+      "name": "作業スペース名インライン入力",
+      "parent": "TMP-UI-CMP-0042",
+      "bomRationale": "Enter=確定/Escape=取消/blur=確定。空は『スペース』へ。デフォルト不可(INV-W3)。",
+      "ebomCandidate": { "promoteAs": "E-UI-WORKSPACE-043 + E-WORKSPACE-042.RenameWorkspace", "items": ["E-UI-WORKSPACE-043", "E-WORKSPACE-042"], "confidence": "high", "disposition": "absorb" }
+    }
+  ],
+  "reusedFromImageTab": {
+    "note": "作業タブ右ペイン surface は image-tab 既存 E-BOM 部品を文脈再利用し本書で再昇格しない。結線は ECO-β。",
+    "items": [
+      { "ebomItem": "E-UI-BROWSE-022", "usedAs": "中央グリッド/リスト・選択機構・タグ絞り込みチップ・ソート(母集合=作業スペースの画像)" },
+      { "ebomItem": "E-UI-MODE-041", "usedAs": "文脈モード統制(タグ編集/作業=別スペース移動/整理/⋯=修復・削除・ゴミ箱)。作業タブでは作業の随伴が add→move" },
+      { "ebomItem": "E-UI-TAGASSIGN-029", "usedAs": "タグ編集パネル(現在のタグ/タグ追加/インライン値/数値)" },
+      { "ebomItem": "E-UI-SIMILARITY-035 / E-UI-MERGE-036", "usedAs": "整理トレイ(類似+マージ ECO-014)。UQ-W03 決定で作業タブに配線" },
+      { "ebomItem": "E-TRASH-038", "usedAs": "削除モード(ゴミ箱へ移動 normal→deleted)+ゴミ箱 popup の復元/完全削除" },
+      { "ebomItem": "E-UI-REPAIR-039", "usedAs": "ゴミ箱 in-tab popup(ECO-019・INV-009 文言)+修復モーダル" },
+      { "ebomItem": "E-DESIGN-028", "usedAs": "shared_component(行カード/チップ/塗りボタン/件数バッジ等)" }
+    ]
+  },
+  "notModeledFromIr": [
+    { "tempPart": "direction band / header copy", "handling": "designIntent(design-intent 相当・extraction-report 記載)" },
+    { "tempPart": "titlebar / menu strip", "handling": "trace(E-UI-SHELL-021)" },
+    { "tempPart": "axis/breadcrumb DCLogic 残骸", "handling": "nonBom(作業タブは軸/パンくず非採用)" },
+    { "tempPart": "workPool/workspaces seed", "handling": "nonBom(ダミーデータ)" },
+    { "tempPart": "ゴミ箱確認文言(INV-009 違反)", "handling": "correct-per-safety(ECO-019 T1 適用・E-UI-REPAIR-039 既是正)" }
+  ]
+}

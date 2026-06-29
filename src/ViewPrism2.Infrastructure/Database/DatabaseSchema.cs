@@ -125,6 +125,23 @@ public static class DatabaseSchema
         );
         CREATE INDEX idx_image_similarity_image_id1 ON image_similarity(image_id1);
         CREATE INDEX idx_image_similarity_image_id2 ON image_similarity(image_id2);
+
+        CREATE TABLE workspaces (
+            id         TEXT    NOT NULL PRIMARY KEY,
+            name       TEXT    NOT NULL,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            seq        INTEGER NOT NULL,
+            created_at TEXT    NOT NULL
+        );
+        CREATE UNIQUE INDEX idx_workspaces_default ON workspaces(is_default) WHERE is_default = 1;
+
+        CREATE TABLE workspace_images (
+            workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+            image_id     TEXT NOT NULL REFERENCES images(id)     ON DELETE CASCADE,
+            added_at     TEXT NOT NULL,
+            PRIMARY KEY (workspace_id, image_id)
+        );
+        CREATE INDEX idx_workspace_images_image ON workspace_images(image_id);
         """;
 
     /// <summary>
@@ -169,5 +186,28 @@ public static class DatabaseSchema
         // ALTER ADD COLUMN は末尾に列を足す。LatestDdl も image_features 末尾へ同じ列を定義しスキーマ同値を保つ。
         new("003-image-features-hash-adapter",
             "ALTER TABLE image_features ADD COLUMN hash_adapter TEXT NULL;"),
+
+        // ECO-020(REQ-074/075): 作業スペース(workspaces)+所属(workspace_images)。
+        // is_default の部分 UNIQUE 索引でデフォルト高々 1 件を DB 担保(INV-W1)。両 FK→CASCADE
+        // (workspace 削除で所属消滅・画像の完全削除で所属消滅。ソフト削除では所属は残し件数/一覧から status 除外)。
+        // LatestDdl 末尾と列順・索引名を揃えスキーマ同値を保つ(CP-DB-006)。
+        new("004-workspaces", """
+            CREATE TABLE workspaces (
+                id         TEXT    NOT NULL PRIMARY KEY,
+                name       TEXT    NOT NULL,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                seq        INTEGER NOT NULL,
+                created_at TEXT    NOT NULL
+            );
+            CREATE UNIQUE INDEX idx_workspaces_default ON workspaces(is_default) WHERE is_default = 1;
+
+            CREATE TABLE workspace_images (
+                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                image_id     TEXT NOT NULL REFERENCES images(id)     ON DELETE CASCADE,
+                added_at     TEXT NOT NULL,
+                PRIMARY KEY (workspace_id, image_id)
+            );
+            CREATE INDEX idx_workspace_images_image ON workspace_images(image_id);
+            """),
     ];
 }

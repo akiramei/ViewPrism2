@@ -136,11 +136,12 @@ ebom:
       depends_on: [E-DOMAIN-001]
       graph_edges:                    # woven: 全サービスの土台
         owner: E-DB-010
-        consumers: [E-SCAN-005, E-RELINK-007, E-TAGSVC-008, E-VIEWSVC-009]
+        consumers: [E-SCAN-005, E-RELINK-007, E-TAGSVC-008, E-VIEWSVC-009, E-WORKSPACE-042]
       invariants:
         - FK 規則は仕様 §2.0 のとおり(CASCADE/SET NULL)
         - 新規 DB = 最新スキーマ+全マイグレーション既適用マーク
         - 接続ごとに PRAGMA journal_mode=WAL・foreign_keys=ON を明示発行
+        - (ECO-020) マイグレーション 004-workspaces で workspaces / workspace_images を追加。is_default の部分 UNIQUE 索引でデフォルト高々 1 件を担保(INV-W1)。両 FK→CASCADE(workspace 削除・画像の完全削除で所属消滅)。LatestDdl 末尾と列順・索引名を揃えスキーマ同値(CP-DB-006)を保つ
       acceptance_refs: [CP-DB-006]
 
     - id: E-CACHE-011
@@ -278,6 +279,26 @@ ebom:
         - (ECO-018) ゴミ箱へ移動(DeleteToTrashAsync)は **normal→deleted のみ**(normal 以外は ValidationError)。唯一のユーザー起点ソフト削除で、マージ(source normal→deleted)・除外(missing→deleted)と並ぶ 3 つ目の deleted 入口。status 更新のみ・物理非破壊(INV-009・UpdateStatusAsync のみでファイル不触)。タグ/ID/特徴量不変。復元(T6/T7)で戻せる可逆操作。固定オラクル候補(M4 で凍結検討)・現状 CP-TRASH-022 unit で検証
       acceptance_refs: [CP-TRASH-020, CP-TRASH-001, CP-TRASH-021, CP-TRASH-022]
 
+    # ---------- ECO-020 核(作業スペース) ----------
+    - id: E-WORKSPACE-042
+      name: 作業スペースサービス(CRUD・デフォルト回転・画像 add/move・件数・物理非破壊)— ECO-020/ECO-α 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-074, REQ-075]
+      kbom_refs: [K-SQLITE]
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      invariants:
+        - INV-W1 同時にデフォルト作業スペースは厳密に 1 つ(DB 部分 UNIQUE 索引 idx_workspaces_default + 回転で担保)。「＋」は新規空デフォルト作成+旧デフォルトを時刻名で is_default=0 へ降格する原子操作
+        - INV-W2 所属は集合(重複なし・INSERT OR IGNORE)。件数/一覧は status=normal のみ(deleted/missing を除外・INV-010 整合)
+        - (ECO-020 golden GF-W1) サイドバー一覧は **seq 降順(新しいほど上=スタックのトップ)**。デフォルトは常に最大 seq=必ず最上段(カレント)。『＋』で積み上がる新デフォルトが先頭に来る(モック addWorkspace の prepend 挙動準拠)
+        - INV-W3 デフォルト作業スペースはリネーム不可・削除不可(画像タブ作業「追加」の自動追加先)。リネーム空白は「スペース」へフォールバック
+        - INV-W4 add/move は workspace_images の論理操作のみ。画像行・物理ファイルに触れない(INV-009 物理非破壊)。image_id 不変(タグ参照を保つ INV-001)
+        - INV-W5 移動(MoveImages)は元スペースから除去+移動先へ和集合追加の原子操作(失敗時ロールバック INV-006)。同一スペースへの移動は ValidationError
+        - 受け渡し(AddImagesToDefault)= 画像タブ作業モード「追加」(E-UI-MODE-041/ECO-017)の消費先。デフォルト未シードなら EnsureDefaultExists でシード
+        - 状態遷移の原子性はリポジトリ(WorkspaceRepository)が単一トランザクションで担保し、サービスは検証・採番・時刻整形(決定論)を行う。描画から独立して unit 検査可能(CP-WORKSPACE-028)
+        - (ECO-021/β-4) GetDeletedImagesAsync(workspace_images × images status=deleted・file_name 昇順)= 作業タブゴミ箱 popup/件数バッジの workspace スコープ供給。読み取りクエリのみで新状態遷移なし(削除/復元/完全削除の遷移は E-TRASH-038 が所有)
+      acceptance_refs: [CP-WORKSPACE-028]
+
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
       name: サムネイル生成サービス
@@ -293,7 +314,7 @@ ebom:
       acceptance_refs: [CP-THUMB-007]
 
     - id: E-UI-SHELL-021
-      name: シェル UI(メインウィンドウ・タブナビゲーション(タグ/画像+設定)・コレクション選択スコープ(一覧=名前+画像数+スキャン中)・スキャン実行/結果表示)— v1.3 コレクションファースト(ECO-002 CR-2/5/8)
+      name: シェル UI(メインウィンドウ・タブナビゲーション(タグ/画像/作業+設定)・コレクション選択スコープ(一覧=名前+画像数+スキャン中)・スキャン実行/結果表示)— v1.3 コレクションファースト(ECO-002 CR-2/5/8)+ ECO-020 作業タブ(第3タブ)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-010, REQ-015, REQ-052, REQ-053]
@@ -302,6 +323,7 @@ ebom:
       depends_on: [E-SCAN-005, E-SETTINGS-013, E-I18N-014]
       invariants:
         - 多重起動禁止(2 つ目は既存をアクティブ化)
+        - (ECO-020) タブナビゲーションは タグ(0)/画像(1)/**作業(2)** の 3 タブ。作業タブ(IsWorkTabSelected・ShowWorkTabCommand・navigation.work)は E-UI-WORKSPACE-043 surface を表示し、選択時に WorkTab を再読込して画像タブからの受け渡し(追加)を反映する
         - (ECO-012/I03) 画像タブのコレクションペインは折り畳み可(展開 276px / rail 64px)。コレクション行はパスを tooltip 表示し、行は名前+件数に簡潔化(CR-8 踏襲・タグタブ UQ-E1 の行簡潔方針と整合)
         - (ECO-013/IMG-009) コレクションペインの「追加(+)」(展開ヘッダ「コレクション」見出し右 + 折り畳みレール)は**コレクション管理(追加・スキャン・削除)ビューを開く単一入口**。原典 view-prism の行別スキャン(⟳)・独立「管理」導線は本入口へ集約する(モック準拠・VP-UI-006)。コレクション行は閲覧(選択)に専念しクロムを静かに保つ。削除は同期フォルダ登録の解除のみで実ファイル非破壊(INV-009)
         - (ECO-013) 画像タブ surface を新 ImageTabView 一本へ統合し、原典 MainWindow の画像タブ Grid・harness トグル・legacy 画像タブ実装を撤去する。これに伴い**コレクション選択スコープ(REQ-053・コレクションファースト/横断なし)・選択コレクションと表示モードの永続化と復元(REQ-052 CR-5/CR-6)・未選択プロンプト・保存コレクション消失時の未選択フォールバック**は画像タブの独立した状態/操作ロジックが担う(原典と等価維持・golden 承認済 REQ-053 を退行させない)。CP-UI-G1(REQ-053 カバレッジ)は新契約へ移行
@@ -372,9 +394,31 @@ ebom:
         - since ECO-019: その他メニューの「ゴミ箱」は **画像タブ内ポップアップ**(中央オーバーレイ)を開く(ECO-018 の別ウィンドウモーダルを置換・E-UI-REPAIR-039 のトラッシュ UI 作り直し)。修復は引き続き既存モーダル
         - since ECO-018: 「削除」= タグ編集/整理/作業に並ぶ 4 つ目の排他文脈モード(`⋯` メニューから入りツールバー入口は持たない)。削除中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、「ゴミ箱へ移動」で選択を E-TRASH-038.DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009・復元可)へ送る(選択あり時のみ活性・実行後に選択クリア+normal 母集合から除外+ゴミ箱件数更新)。状態遷移は Core のみ経由(UI で再実装しない)。判定・反復は描画から独立して unit 検査可能にする。排他隠し規律(ECO-014 §8)を削除へ拡張し、削除中はツールバーが他モード入口・`⋯` を隠し「削除を終了」+「ゴミ箱へ移動」+表示軸/ソート/レイアウトのみ残す
         - since ECO-017: 「作業」= タグ編集(E-UI-TAGASSIGN-029)/整理(E-UI-SIMILARITY-035 + E-UI-MERGE-036)に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、選択を `workTargets` 集合へ和集合追加する「追加」アクション(選択あり時のみ活性・追加後に選択クリア)と「作業対象 N 枚」チップを持つ。追加判定・和集合・選択クリア・件数は描画から独立した決定論ロジックとして unit 検査可能にする
-        - since ECO-017: 作業モードは右ペインを開かない(中央フル幅)が、ECO-014 §8 の排他隠し規律を作業へ拡張する(作業中はツールバーが他モード入口・`⋯` を隠し、「作業を終了」+「追加」+「作業対象」チップ+表示軸/ソート/レイアウトのみ残す)。作業対象セル個別の視覚マーク(バッジ)は出さない(描画モック準拠)。`workTargets` はセッション内蓄積のみで、消費先の作業タブ本体・永続化はスコープ外
+        - since ECO-017: 作業モードは右ペインを開かない(中央フル幅)が、ECO-014 §8 の排他隠し規律を作業へ拡張する(作業中はツールバーが他モード入口・`⋯` を隠し、「作業を終了」+「追加」+「作業対象」チップ+表示軸/ソート/レイアウトのみ残す)。作業対象セル個別の視覚マーク(バッジ)は出さない(描画モック準拠)。`workTargets` はチップ表示用の session 蓄積を継続する
+        - (ECO-020 更新) 「追加」(AddToWork)は session 蓄積に加え、選択画像を **E-WORKSPACE-042.AddImagesToDefault でデフォルト作業スペースへ永続追加**する(ECO-017 が「別ループ・永続化スコープ外」とした受け渡しの解消)。受け渡し先は作業タブ(E-UI-WORKSPACE-043)で閲覧できる
         - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(E-UI-DETAIL-023)の新 surface 配置は別 ECO
       acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10]
+
+    - id: E-UI-WORKSPACE-043
+      name: 作業タブ shell + 作業スペースサイドバー(一覧/選択/追加=デフォルト回転/リネーム/件数/折り畳み・ワークスペースヘッダ・グリッド/リスト・ソート・空状態)— ECO-020/ECO-α 新設
+      classification: surface
+      part_kind: screen-surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-074]
+      external_source_ref: "ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-WORKSPACE-042, E-UI-SHELL-021, E-UI-BROWSE-022]
+      interface_contracts:
+        - 左サイドバーは作業スペース(コレクションでない)。中央は現スペースの画像をグリッド/リストで閲覧。ドメイン操作は E-WORKSPACE-042 経由(状態遷移を UI で再実装しない)
+      invariants:
+        - 表示軸セレクタ(FS/サンプルアルバム)・パンくずを持たない(フラットなスペース表示)。パンくずの代わりにワークスペースヘッダ(名前+既定（自動追加先）バッジ+件数)
+        - サイドバー: 行カード(アイコン+名前+既定バッジ+sub+件数+リネーム鉛筆)・選択・「＋」=デフォルト回転(E-WORKSPACE-042・INV-W1)・インラインリネーム(デフォルト不可 INV-W3)・276/64 折り畳み(E-UI-SHELL-021 のコレクションペインと同骨格)
+        - 件数/一覧は status=normal のみ(INV-W2)。空スペースは empty state(画像タブ作業モードへの誘導)
+        - (ECO-021/β-1) 作業モード=選択して別スペースへ移動(E-WORKSPACE-042.MoveImages・INV-W5)を配線。タグドット/絞り込みチップ・選択機構(Shift/Ctrl・選択順バッジ・その場マーカー更新)を再利用。画像タブ(golden 済み)に触れず作業タブ側でオーケストレート(UQ-W06=B 隔離方式)。Core サービス・末端 VM・DS を再利用し新 Core 意味論なし
+        - (ECO-021/β-2) タグ編集モードを E-UI-TAGASSIGN-029 から再利用配線(現在のタグ/タグ追加=シンプル/テキスト/数値・インライン値・数値セル)。付与/削除は TagService(TagImagesAsync/UntagImagesAsync)経由で Core 意味論不変。作業と排他(`inSelect=editMode||workMode` で選択機構共有)。ECO-014§8 排他隠し規律を作業タブへ拡張(モード中は他モード入口を隠す `ShowEditEntry`/`ShowWorkEntry`)。連番別アクション(UQ-I02b)はモック作業タブに無いため非搭載
+        - (ECO-021/β-3) 整理モード(類似+マージ整理トレイ)を E-UI-SIMILARITY-035 + E-UI-MERGE-036 から再利用配線。マージ先/整理対象の割当(グリッドクリック分岐・マージ先リング/整理対象チェック)・似た画像を探す(条件=CriteriaMatcher 純粋関数で現スペース内絞り込み / 類似=FindSimilarAsync 結果を workspace に限定)・マージ=MergeService(E-MERGE-034・原子・タグ union・source=deleted・物理非破壊 INV-009)。タグ編集・作業・整理の3モード排他(ECO-014§8 排他隠し)。Core 意味論不変・新 Core/DS なし。タグ統合 OFF/取り消しは IMG-011(別 ECO)
+        - (ECO-021/β-4) ⋯メニュー(削除/ゴミ箱)を E-TRASH-038 / E-UI-REPAIR-039 から再利用配線。削除モード=4つ目の排他文脈モード(⋯から入る)→「ゴミ箱へ移動」=DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009)。ゴミ箱 in-tab popup(ECO-019 再利用・複数選択/すべて選択/復元 RestoreAsync/完全削除 PermanentDeleteAsync/空・確認文言は INV-009 忠実)。**修復はコレクションスコープで作業スペースに対応しないため作業タブ ⋯ から非搭載**(設計判断)。ゴミ箱は workspace スコープ(workspace_images × images status=deleted・E-WORKSPACE-042.GetDeletedImagesAsync 読み取りクエリ追加=新状態遷移なし)。完全削除は FK CASCADE で workspace_images も消滅。**ECO-β 完了**(β-1〜β-4)
+      acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-UI-G1]
 
     - id: E-UI-DETAIL-023
       name: 画像詳細パネル(メタデータ・ノート編集・タグ一覧)

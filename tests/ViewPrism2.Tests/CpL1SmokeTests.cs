@@ -123,7 +123,8 @@ public sealed class CpL1SmokeTests : IDisposable
             new ImageSorter(), thumbnails, localization, new AppSettings(), windows,
             new FolderManagementViewModel(_db.Folders, scan, localization, windows),
             new TagsTabViewModel(viewService, tagService, _db.Tags, localization, windows),
-            new TaggingPanelViewModel(tagService, _db.Tags, localization, windows));
+            new TaggingPanelViewModel(tagService, _db.Tags, localization, windows),
+            new WorkspaceService(_db.Workspaces, _db.Clock));
 
         // --- 起動初期化: コレクション未選択 → 選択を促す空状態(REQ-053 v1.3/CR-2) ---
         await vm.InitializeAsync();

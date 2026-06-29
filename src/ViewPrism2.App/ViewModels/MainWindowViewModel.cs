@@ -58,6 +58,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         FolderManagementViewModel folderPane,
         TagsTabViewModel tagsTab,
         TaggingPanelViewModel tagging,
+        WorkspaceService workspaces,
         ILogger<MainWindowViewModel>? logger = null)
     {
         _folders = folders;
@@ -84,7 +85,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Tagging = tagging;
 
         // M3: 画像タブ実 VM(モック準拠 surface)。注入済みリポジトリ/サービスを共有(ctor 不変)。
-        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings);
+        // ECO-020: 作業「追加」の行き先=デフォルト作業スペース(受け渡し)のため WorkspaceService を渡す。
+        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings, workspaces);
+
+        // ECO-020(ECO-α)+ ECO-021(ECO-β): 作業タブ surface(第3タブ)。
+        WorkTab = new WorkTabViewModel(workspaces, folders, tags, similar, merge, trash, windows, sorter, settings);
 
         AllImagesItem = new ViewListItemViewModel(null, localization.T("view.allImages"));
         Browser.SelectionChanged += async (_, _) => await OnSelectionChangedAsync();
@@ -168,6 +173,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // MainWindow.axaml の重畳+トグル+原典 Grid)を撤去し、画像タブを ImageTabView 一本化する。
     public ImageTabViewModel ImageTab { get; }
 
+    /// <summary>作業タブ surface(ECO-020 / ECO-α・第3タブ)。</summary>
+    public WorkTabViewModel WorkTab { get; }
+
     [ObservableProperty]
     private bool _showImageTabPreview = true;
 
@@ -180,6 +188,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsTagsTabSelected => SelectedTabIndex == 0;
 
     public bool IsImagesTabSelected => SelectedTabIndex == 1;
+
+    /// <summary>作業タブ(第3タブ・ECO-020)を選択中か。</summary>
+    public bool IsWorkTabSelected => SelectedTabIndex == 2;
 
     /// <summary>画像タブ harness(M2 scaffold)を表示中か。</summary>
     public bool ShowImageTabHarness => IsImagesTabSelected && ShowImageTabPreview;
@@ -306,6 +317,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ShowImagesTab() => SelectedTabIndex = 1;
 
     [RelayCommand]
+    private void ShowWorkTab() => SelectedTabIndex = 2;
+
+    [RelayCommand]
     private async Task SelectViewListItem(ViewListItemViewModel item) => await SelectViewItemAsync(item);
 
     [RelayCommand]
@@ -339,11 +353,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsTagsTabSelected));
         OnPropertyChanged(nameof(IsImagesTabSelected));
+        OnPropertyChanged(nameof(IsWorkTabSelected));
         OnPropertyChanged(nameof(ShowImageTabHarness));
         OnPropertyChanged(nameof(ShowImageTabLegacy));
         if (value == 0)
         {
             _ = TagsTab.EnsureLoadedAsync();
+        }
+        else if (value == 2)
+        {
+            // 作業タブ(ECO-020): 画像タブでの受け渡し(追加)を反映するため毎回再読込(現スペース維持)
+            _ = WorkTab.RefreshAsync();
         }
         else if (_imagesTabStale)
         {

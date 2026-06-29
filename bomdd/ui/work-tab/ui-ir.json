@@ -1,0 +1,403 @@
+{
+  "meta": {
+    "schema": "ui-ir/candidate",
+    "product": "ViewPrism2",
+    "scope": "作業タブ (work tab)",
+    "status": "candidate / 未実証",
+    "extractedAt": "2026-06-29",
+    "method": "BomDD ui-ir-ui-bom.md (candidate extension, テーマ/思想を上位部品=designIntent として認識する拡張版)",
+    "note": "UI-IR は HTML+JS モックから抽出した観測・追跡用の中間表現であり、設計を縛る原本ではない。仮品番 TMP-UI-* で候補を追跡する。tag-tab(bomdd/ui/)・image-tab(bomdd/ui/image-tab/)抽出と同一スキーマ。共有アトム(種別チップ/カラードット)・共有ドメイン(タグ/種別/候補値/数値範囲/カラー/画像)と、画像タブ右ペイン surface(タグ編集・⋯メニュー・削除モード・修復・ゴミ箱 popup・ソート・レイアウト・グリッド/リスト)は image-tab/tag-tab の仮品番を再利用し、本書では新規 id を振らない。本書が新規採番するのは『作業スペース』(net-new ドメイン)に固有の部品・状態・操作のみ。",
+    "sourceRepo": "ViewPrismUI (C:/Demo/source/repos/ViewPrismUI) — UI/UX 設計の正典(CAD 源泉)。本成果物は ViewPrism2/bomdd/ui/work-tab/ に置き E-BOM へ接続する。",
+    "sources": [
+      {
+        "id": "M",
+        "file": "ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html",
+        "role": "作業タブの動くモック(左=作業スペース/中央=ブラウズ/右=タグ編集の可変3ペイン+⋯メニュー+ゴミ箱 popup)。inline DCLogic に状態・データ・遷移を保持。現物は maintainer の Downloads — ViewPrismUI への取込が前提。",
+        "ingestStatus": "pending (maintainer が ViewPrismUI:資料/画像タブ/ へ取込)"
+      },
+      {
+        "id": "S",
+        "file": "ViewPrismUI:docs/screens/work_tab.md",
+        "role": "画面仕様(目的・スコープ・レイアウト・インタラクション・状態)。未作成 — maintainer が CAD 化後に正規化予定。",
+        "status": "未作成"
+      },
+      {
+        "id": "I",
+        "file": "ViewPrism2:bomdd/ui/image-tab/ui-ir.json",
+        "role": "画像タブ UI-IR。本タブが右ペイン surface を丸ごと再利用する基底。reused 参照の出典。"
+      },
+      {
+        "id": "D",
+        "file": "ViewPrismUI:docs/01_design_direction.md",
+        "role": "ViewPrism2 共通 UI 方針(空間モデル・操作言語・視覚トークン)。designIntent の源泉。"
+      }
+    ],
+    "observations": [
+      "作業タブ = 共通シェルの第3タブ。ナビは『タグ・画像・作業』で、本モックは『作業』が active。MainWindow 実装では SelectedTabIndex 0=タグ / 1=画像 に対し 2=作業 の新規追加に対応(現状コードに作業タブは存在しない)。",
+      "構造は画像タブの可変3ペインを踏襲(左サイドバー/中央ブラウズ/右=タグ編集モード時のみ)が、左サイドバーが『コレクション』から『作業スペース(workspaces)』へ差し替わる点が唯一の本質的構造差。中央ブラウズ・右タグ編集・⋯メニュー・削除モード・修復・ゴミ箱 popup・ソート・グリッド/リストは画像タブと同一部品言語・同一意味論。",
+      "net-new ドメイン=『作業スペース』: 名前付き・永続・ユーザー管理の画像コンテナ。先頭の『デフォルト』(isDefault)が唯一の自動追加先。『＋』で新しい空デフォルトを作ると、いまのデフォルトは時刻名にリネームされ『保存済みスペース』へ降格(常にデフォルトは1つ=不変条件)。デフォルト以外はリネーム可。これは画像タブ作業モード『追加』(ECO-017)が繰延していた workTargets の消費先=受け渡しの確定。",
+      "作業タブ内の『作業』モードは画像タブと意味が異なる: 画像タブの作業=選択を workTargets(=デフォルトスペース)へ『追加』だが、作業タブの作業=選択を『別スペースへ移動』(現スペース→他スペースへ membership 移動)。同じ作業ボタン+選択機構の再利用だが、随伴アクションが add→move に替わる。",
+      "作業タブは表示軸セレクタ(FS/サンプルアルバム)とパンくずを持たない(フラットなスペース表示)。DCLogic には軸/パンくずの残骸があるが context() は常に現スペースの画像を返し fsPath/viewPath を無視する。中央上部はパンくずの代わりに『ワークスペースヘッダ』(アイコン+名前+既定（自動追加先）バッジ+件数)。",
+      "タグ絞り込みチップは現スペース内の画像に付くタグから算出(画像タブ FS 軸と同一の descriptive filter)。空スペースは専用 empty state(『このスペースは空です』+ 画像タブ作業モードへの誘導文)。",
+      "重大なモック是正(woven 安全制約 > CAD): ゴミ箱の破壊的操作の確認文言が『…元のファイルも削除され、この操作は元に戻せません。』。これは INV-009(物理非破壊)違反で、image-tab ECO-019 T1 が既に同文言を是正済。作業タブのゴミ箱は同一 surface の再利用ゆえ同じ是正(『画像ファイルは削除されません(DB から除去)』)を適用する。",
+      "ツールバーの『整理』ボタンはモックでは描画のみ・onclick 未配線だが、maintainer 決定(2026-06-29 UQ-W03)で本タブに整理は必要=本配線する。作業タブ=雑多な作業のスクラッチ空間で『似た画像を集めて吟味してマージ』が代表シナリオ。整理トレイ(E-UI-SIMILARITY-035/E-UI-MERGE-036, ECO-014)を文脈モードとして再利用配線する。",
+      "永続化モデルは UI-IR の範囲外(E-BOM/Core 層の決定)。作業スペースは config ではなく第一級ドメインデータ(名前付き画像集合)であり、DB テーブル化(collections/sync_folders と同型)が自然=UQ-W01(maintainer 裁定)。"
+    ]
+  },
+  "screens": [
+    {
+      "tempPartNo": "TMP-UI-SCR-0003",
+      "uiId": "screen.work-management",
+      "name": "作業タブ画面",
+      "source": ["M"],
+      "confidence": "high",
+      "notes": "共通シェル(タグ/画像/作業ナビ)の『作業』タブ。コンテンツは可変3ペイン(作業スペース/ブラウズ/タグ編集)。画像タブ画面 TMP-UI-SCR-0002 と同一アプリ・別画面で右ペイン surface を再利用。"
+    }
+  ],
+  "regions": [
+    {
+      "tempPartNo": "TMP-UI-REG-0001",
+      "uiId": "region.shell-nav",
+      "name": "シェルナビ(タブ切替+検索+設定)",
+      "screen": "TMP-UI-SCR-0003",
+      "source": ["M"],
+      "owner": "shell",
+      "confidence": "high",
+      "reuse": "tag-tab/image-tab と共有(同一 REG-0001)。本画面では『作業』タブが active。trace のみ(E-UI-SHELL-021)。⌘K は UQ-E4 で不採用。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0008",
+      "uiId": "region.workspaces",
+      "name": "作業スペースペイン(左・折り畳み可)",
+      "screen": "TMP-UI-SCR-0003",
+      "source": ["M"],
+      "confidence": "high",
+      "notes": "画像タブのコレクションペイン TMP-UI-REG-0005 と同じ『左サイドバー』骨格(276/64 折り畳み・見出し+追加+畳む・行カード・rail)だが、内容物が物理フォルダ=コレクションでなく『作業スペース』。展開時=見出し『作業スペース』+＋追加+畳む+行カード(アイコン+名前+既定バッジ+sub+件数+リネーム鉛筆)。折り畳み時=rail(＋ + スペースアイコン列)。net-new ドメイン領域。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0006",
+      "uiId": "region.browse",
+      "name": "ブラウズ領域(中央・常時)",
+      "screen": "TMP-UI-SCR-0003",
+      "source": ["M", "I"],
+      "confidence": "high",
+      "reuse": "image-tab REG-0006 を再利用。ツールバー(タグ編集/整理/作業/⋯・ソート・グリッド/リスト)+グリッド/リスト本体+タグ絞り込みチップ行は同一。差分: (1)表示軸セレクタを持たない、(2)パンくずの代わりにワークスペースヘッダ(TMP-UI-CMP-0044)、(3)作業モードの随伴ボタンが『追加』でなく『別スペースへ移動』(TMP-UI-CMP-0045)、(4)空スペース empty state(TMP-UI-CMP-0046)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0007",
+      "uiId": "region.tag-edit",
+      "name": "タグ編集ペイン(右・編集モード時のみ)",
+      "screen": "TMP-UI-SCR-0003",
+      "source": ["M", "I"],
+      "confidence": "high",
+      "reuse": "image-tab REG-0007 を丸ごと再利用(タブ=現在のタグ/タグ追加・インライン値ピッカー・数値セル)。意味論・部品とも不変。対象画像が現スペースの選択画像である点のみ文脈差。"
+    }
+  ],
+  "components": [
+    {
+      "tempPartNo": "TMP-UI-CMP-0042",
+      "uiId": "component.workspace-row",
+      "name": "作業スペース行カード",
+      "region": "TMP-UI-REG-0008",
+      "source": ["M"],
+      "confidence": "high",
+      "elements": [
+        "スペースアイコン(角丸面・active 着色)",
+        "スペース名(省略表示)",
+        "既定バッジ(isDefault のとき『既定』)",
+        "sub ラベル(既定=『自動追加先』/ 他=『保存済みスペース』)",
+        "件数バッジ(deleted を除く所属画像数)",
+        "リネーム鉛筆(デフォルト以外・非編集時のみ)",
+        "選択視覚(青枠+淡青面+アイコン/バッジ着色)"
+      ],
+      "notes": "画像タブのコレクション行 TMP-UI-CMP-0020 と同じ『行カード』部品言語(選択中=border #cfe0fc + bg #f3f8ff)だが、コレクション固有のパス表示に替えて 既定バッジ・sub・リネーム鉛筆を持つ。リネーム中は名前部がインライン入力欄(TMP-UI-INP-0021)へ差し替わる。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0043",
+      "uiId": "component.workspace-sidebar-header",
+      "name": "作業スペースペイン見出し(追加+畳む)",
+      "region": "TMP-UI-REG-0008",
+      "source": ["M"],
+      "confidence": "high",
+      "elements": [
+        "見出し『作業スペース』",
+        "＋ 追加ボタン(作業スペースを追加)",
+        "畳むトグル"
+      ],
+      "notes": "画像タブのコレクション見出しと同型。＋ は『新規デフォルト作成+既存デフォルトを時刻名へ降格』(TMP-UI-ACT-0074)。コレクションの＋(フォルダ管理 ECO-013)とは意味が異なる net-new アクション。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0044",
+      "uiId": "component.workspace-header",
+      "name": "ワークスペースヘッダ(中央上・パンくず代替)",
+      "region": "TMP-UI-REG-0006",
+      "source": ["M"],
+      "confidence": "high",
+      "elements": [
+        "スペースアイコン",
+        "スペース名(省略表示)",
+        "既定（自動追加先）バッジ(isDefault のとき)",
+        "件数ラベル(右寄せ・『N 項目』)"
+      ],
+      "notes": "画像タブのパンくず TMP-UI-CMP-0026 を置換。作業スペースはフラット(階層なし)のためパンくずを持たず、現スペースの素性を示すヘッダのみ。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0045",
+      "uiId": "component.move-to-workspace-menu",
+      "name": "別スペースへ移動メニュー(ボタン+ドロップダウン)",
+      "region": "TMP-UI-REG-0006",
+      "source": ["M"],
+      "confidence": "high",
+      "elements": [
+        "『別スペースへ移動』ボタン(緑・選択時のみ活性+選択数バッジ)",
+        "ドロップダウン(移動先スペース一覧・各 アイコン+名前+件数)",
+        "移動先なし時の空メッセージ(『＋』で追加を促す)"
+      ],
+      "notes": "作業モード中のみツールバーに出現。画像タブの作業モード随伴ボタン『追加』(TMP-UI-CMP の workAddBtn)と同じ位置・同じ緑トーン・同じ選択数バッジだが、効果が workTargets への add でなく『選択画像を他スペースへ移動』。net-new。"
+    },
+    {
+      "tempPartNo": "TMP-UI-CMP-0046",
+      "uiId": "component.workspace-empty-state",
+      "name": "空スペース empty state",
+      "region": "TMP-UI-REG-0006",
+      "source": ["M"],
+      "confidence": "high",
+      "elements": [
+        "スペースアイコン(大・淡色)",
+        "見出し『このスペースは空です』",
+        "誘導文(画像タブ作業モード→『追加』でデフォルトへ集まる旨)"
+      ],
+      "notes": "現スペースの所属画像が 0 のとき中央に表示。グリッド/リストの代わりに描画。"
+    }
+  ],
+  "occurrences": [
+    {
+      "tempPartNo": "TMP-UI-OCC-0015",
+      "uiId": "component.workspace-row.rail",
+      "master": "TMP-UI-CMP-0042",
+      "name": "作業スペース/折り畳み rail",
+      "source": ["M"],
+      "confidence": "high",
+      "notes": "サイドバー折り畳み時(64px)の縦アイコン rail。active=淡青面+青。展開トグル+＋追加を伴う。画像タブ TMP-UI-OCC-0010 と同型。"
+    }
+  ],
+  "inputs": [
+    {
+      "tempPartNo": "TMP-UI-INP-0021",
+      "uiId": "input.workspace.rename",
+      "name": "作業スペース名インライン入力",
+      "type": "text",
+      "region": "TMP-UI-REG-0008",
+      "source": ["M"],
+      "confidence": "high",
+      "dataConcept": "TMP-UI-DOM-0025",
+      "notes": "リネーム鉛筆クリックで行カードの名前部に出現。Enter=確定 / Escape=取消 / blur=確定。空文字は『スペース』へフォールバック。デフォルトはリネーム不可。"
+    }
+  ],
+  "states": [
+    {
+      "tempPartNo": "TMP-UI-STA-0039",
+      "uiId": "state.workspace.current",
+      "name": "現在の作業スペース",
+      "target": "TMP-UI-REG-0008",
+      "observe": "選択行カードの青着色・中央ブラウズが当該スペースの画像を表示・ワークスペースヘッダの名前/件数",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0040",
+      "uiId": "state.workspace.renaming",
+      "name": "スペース名リネーム中",
+      "target": "TMP-UI-CMP-0042",
+      "observe": "対象行の名前部がインライン入力欄に差し替わる(autofocus)",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0041",
+      "uiId": "state.workspace.is-default",
+      "name": "既定スペース",
+      "target": "TMP-UI-CMP-0042",
+      "observe": "『既定』バッジ・sub=『自動追加先』・リネーム鉛筆なし。中央ヘッダは『既定（自動追加先）』。常に1つだけ true(不変条件)",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0042",
+      "uiId": "state.move-menu.open",
+      "name": "別スペースへ移動メニュー開",
+      "target": "TMP-UI-CMP-0045",
+      "observe": "移動先スペース一覧のドロップダウン表示。選択 0 件のときは開かない",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-STA-0043",
+      "uiId": "state.workspace.empty",
+      "name": "空スペース",
+      "target": "TMP-UI-REG-0006",
+      "observe": "所属画像 0 のとき empty state を表示・ソート/レイアウトは無効(wsTotal>0 ガード)",
+      "source": ["M"],
+      "confidence": "high"
+    }
+  ],
+  "actions": [
+    {
+      "tempPartNo": "TMP-UI-ACT-0073",
+      "uiId": "action.workspace.select",
+      "name": "作業スペース選択",
+      "region": "TMP-UI-REG-0008",
+      "trigger": "click",
+      "effect": "現スペース切替・tagFilter/selected/moveMenu/renameId をリセット。中央ブラウズが当該スペースの画像へ",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0074",
+      "uiId": "action.workspace.add",
+      "name": "作業スペース追加(＋)",
+      "region": "TMP-UI-REG-0008",
+      "trigger": "click",
+      "effect": "新しい空デフォルトを先頭に作成し現スペースへ。いまのデフォルトは時刻名(例 2026/06/29 10:27)にリネームし isDefault=false へ降格。常にデフォルトは1つ=不変条件を保つ",
+      "source": ["M"],
+      "confidence": "high",
+      "notes": "モックは new Date() でタイムスタンプ生成。実装は注入クロックを使用(決定論テストのため)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0075",
+      "uiId": "action.workspace.rename.start",
+      "name": "スペース名リネーム開始",
+      "region": "TMP-UI-REG-0008",
+      "trigger": "click",
+      "effect": "対象行を編集状態へ(renameId/renameValue 設定)。デフォルトは不可",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0076",
+      "uiId": "action.workspace.rename.commit",
+      "name": "スペース名リネーム確定",
+      "region": "TMP-UI-REG-0008",
+      "trigger": "Enter / blur",
+      "effect": "trim 後の名前で更新(空は『スペース』へフォールバック)。Escape は取消",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0077",
+      "uiId": "action.workspace.move-selected-to",
+      "name": "選択画像を別スペースへ移動",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click (移動先選択)",
+      "effect": "作業モードで選択した画像を現スペースから除去し移動先スペースへ追加(重複なし)。選択クリア・メニューを閉じる",
+      "source": ["M"],
+      "confidence": "high"
+    },
+    {
+      "tempPartNo": "TMP-UI-ACT-0078",
+      "uiId": "action.move-menu.toggle",
+      "name": "別スペースへ移動メニュー開閉",
+      "region": "TMP-UI-REG-0006",
+      "trigger": "click",
+      "effect": "ドロップダウン開閉。選択 0 件のときは無反応",
+      "source": ["M"],
+      "confidence": "high"
+    }
+  ],
+  "domainConcepts": [
+    {
+      "tempPartNo": "TMP-UI-DOM-0025",
+      "uiId": "domain.workspace",
+      "name": "作業スペース",
+      "source": ["M"],
+      "confidence": "high",
+      "kind": "net-new",
+      "notes": "名前付き・永続・ユーザー管理の画像コンテナ。属性: id / name / isDefault / 所属画像[]。不変条件: 同時にデフォルトは厳密に1つ。デフォルト=画像タブ作業モード『追加』の自動追加先(自動追加先)。『＋』はデフォルトを回転(新規空デフォルト作成+旧デフォルトを時刻名で保存済みへ降格)。デフォルト以外はリネーム可・スペース間で画像を移動可。削除画像(INV-009 ソフト削除)は件数・一覧から除外。これは ECO-017 が『別ループ』と繰延した workTargets の消費先=受け渡しの確定。永続化の実体(DB テーブル vs settings)は UQ-W01。"
+    },
+    {
+      "tempPartNo": "TMP-UI-DOM-0026",
+      "uiId": "domain.work-handoff",
+      "name": "作業対象の受け渡し(画像タブ→作業タブ)",
+      "source": ["M", "I"],
+      "confidence": "medium",
+      "kind": "net-new (cross-tab)",
+      "notes": "画像タブ作業モードの『追加』(ECO-017 AddToWork)が、本タブのデフォルト作業スペースへ選択画像を流し込む橋渡し。現状コードの AddToWork は session List への蓄積で行き止まり(ECO-017 が永続化/受け渡しを別ループへ繰延)。本タブの成立により AddToWork はデフォルトスペースへの書き込みへ変わる(WorkspaceService 結合)。"
+    }
+  ],
+  "reusedFromImageTab": {
+    "note": "以下は image-tab 抽出(bomdd/ui/image-tab/ui-ir.json)を再利用し、本書で新規 id を振らない。意味論・部品とも不変。作業タブは右ペイン surface をこれらで構成する。",
+    "components": [
+      { "tempPartNo": "TMP-UI-CMP-0024", "uiId": "component.toolbar-action", "usedAs": "タグ編集/作業/⋯ ボタン群(整理は描画のみ=UQ-W03)" },
+      { "tempPartNo": "TMP-UI-CMP-0025", "uiId": "component.sort-control", "usedAs": "ソート(名前/更新日/サイズ)+昇降" },
+      { "tempPartNo": "TMP-UI-CMP-0027", "uiId": "component.layout-segmented", "usedAs": "グリッド/リスト切替" },
+      { "tempPartNo": "TMP-UI-CMP-0028", "uiId": "component.image-grid-card", "usedAs": "グリッドセル(サムネ+選択チェック+タグドット)" },
+      { "tempPartNo": "TMP-UI-CMP-0029", "uiId": "component.image-list-row", "usedAs": "リスト行(ミニサムネ+名前+サイズ+更新日)" },
+      { "tempPartNo": "TMP-UI-CMP-0030", "uiId": "component.tag-filter-chip", "usedAs": "現スペース内タグ絞り込みチップ" },
+      { "tempPartNo": "TMP-UI-CMP-0031..0035", "uiId": "component.tag-edit-panel.*", "usedAs": "タグ編集パネル(タブ/現在タグ/追加/インライン値/数値)" },
+      { "tempPartNo": "TMP-UI-CMP-0036/0037", "uiId": "component.more-menu / component.work-*", "usedAs": "⋯メニュー(修復/削除/ゴミ箱)・作業モード選択機構(ECO-017/018)" },
+      { "tempPartNo": "TMP-UI-CMP-0038/0039", "uiId": "component.delete-mode-toolbar / component.delete-marker", "usedAs": "削除モード(ゴミ箱へ移動・赤・件数バッジ ECO-018)" },
+      { "tempPartNo": "TMP-UI-CMP-0040/0041", "uiId": "component.trash-popup.*", "usedAs": "ゴミ箱 in-tab popup(複数選択/すべて選択/復元/完全削除/空・確認 ECO-019)" }
+    ],
+    "actions": [
+      { "ref": "image-tab ACT (toggleEdit/toggleWork/enterDelete/enterRepair/openTrash/sort/layout/toggleSelect/addTag/addTextValue/setRating 等)", "note": "右ペイン surface の操作は画像タブと同一意味論で再利用。" }
+    ],
+    "states": [
+      { "ref": "image-tab STA (editMode/workMode/deleteMode/repairMode の排他・moreMenuOpen・trashOpen・sort/layout・selection)", "note": "文脈モードの排他・選択機構を再利用。" }
+    ]
+  },
+  "reusedFromTagTab": {
+    "note": "tag-tab 抽出の共有候補を再利用(image-tab 経由)。",
+    "sharedAtoms": [
+      { "tempPartNo": "TMP-UI-CMP-0004", "uiId": "component.type-chip" },
+      { "tempPartNo": "TMP-UI-CMP-0005", "uiId": "component.color-dot" }
+    ],
+    "sharedDomains": [
+      { "tempPartNo": "TMP-UI-DOM-0001", "name": "タグ" },
+      { "tempPartNo": "TMP-UI-DOM-0002", "name": "タグ種別(シンプル/テキスト/数値)" },
+      { "tempPartNo": "TMP-UI-DOM-0009", "name": "カラー" },
+      { "tempPartNo": "TMP-UI-DOM-0010", "name": "候補値" },
+      { "tempPartNo": "TMP-UI-DOM-0011", "name": "数値範囲" },
+      { "tempPartNo": "TMP-UI-DOM-0020", "name": "画像(image-tab DOM)" }
+    ]
+  },
+  "unmodeledElements": [
+    {
+      "selector": "M direction band(『集めた画像を、スペースで束ねる。作業はここに集約。』+ 説明文 + interaction hints)",
+      "reason": "アプリ画面外のヘッダ帯だが CAD の設計意図。装飾でなく『画像タブで集めた作業対象をスペースで束ねる/デフォルトが受け皿/＋で時刻名保存』という本タブの設計憲章。",
+      "handling": "designIntent",
+      "ref": "design-intent.md",
+      "note": "BomDD ui-ir-ui-bom.md 原則3。nonBom にしない。"
+    },
+    {
+      "selector": "M titlebar(ロゴ三角+ViewPrism 2+window controls)・menu strip(File/Edit/View/Window/Help)",
+      "reason": "OS ウィンドウ装飾・シェル所有",
+      "handling": "trace",
+      "ebomItemRef": ["E-UI-SHELL-021"]
+    },
+    {
+      "selector": "M ツールバー『整理』ボタン",
+      "reason": "モックでは描画のみ・onclick 未配線=プレースホルダだが、maintainer 決定(2026-06-29)で『作業タブに整理ボタンは必要』=本配線する。",
+      "handling": "wire-in",
+      "ref": "unresolved-questions.md UQ-W03(決定)",
+      "note": "作業タブ=雑多な作業のスクラッチ空間。『似た画像を集めて吟味してマージ』が代表シナリオ。整理トレイ(E-UI-SIMILARITY-035/E-UI-MERGE-036, ECO-014)を文脈モードとして作業タブへ配線。プレースホルダを実機能化。"
+    },
+    {
+      "selector": "M ゴミ箱確認文言『…元のファイルも削除され、この操作は元に戻せません。』",
+      "reason": "INV-009(物理非破壊)違反。image-tab ECO-019 T1 が同文言を既に是正済(『画像ファイルは削除されません(DB から除去)』)。",
+      "handling": "correct-per-safety",
+      "ref": "unresolved-questions.md UQ-W04 / ECO-019 T1",
+      "note": "woven 安全制約は CAD より上位。同一 surface 再利用ゆえ同じ是正を適用(設計時に破壊的文言 vs 実挙動を突合)。"
+    },
+    {
+      "selector": "M workPool(16枚)/ workspaces seed(デフォルト12枚)/ collections / efImages",
+      "reason": "プレビュー用ダミーデータ。実装は Core/DB から供給。",
+      "handling": "nonBom"
+    },
+    {
+      "selector": "M axis/breadcrumb DCLogic 残骸(axisMenuOpen/fsPath/viewPath/goHome/crumbs)",
+      "reason": "画像タブからコピーされたが本タブ template で描画されず context() も無視。フラットなスペース表示が確定挙動。",
+      "handling": "nonBom",
+      "note": "実装は作業タブに軸/パンくずを持ち込まない。"
+    }
+  ]
+}

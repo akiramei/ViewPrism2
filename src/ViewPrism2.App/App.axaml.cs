@@ -132,6 +132,9 @@ public partial class App : Application
         services.AddSingleton<IImageSimilarityRepository>(sp => new ImageSimilarityRepository(sp.GetRequiredService<DatabaseManager>()));
         services.AddSingleton<IMergeRepository>(sp => new MergeRepository(sp.GetRequiredService<DatabaseManager>()));
 
+        // ECO-020: 作業スペース永続化(M-WORKSPACE-027)
+        services.AddSingleton<IWorkspaceRepository>(sp => new WorkspaceRepository(sp.GetRequiredService<DatabaseManager>()));
+
         // Core サービス(K-MVVM: シングルトン)
         services.AddSingleton<ConditionEvaluator>();
         services.AddSingleton<NodeGraphBuilder>();
@@ -140,6 +143,7 @@ public partial class App : Application
         services.AddSingleton(sp => new ImageMemoryCache(sp.GetRequiredService<IClock>()));
         services.AddSingleton(sp => new TagService(sp.GetRequiredService<ITagRepository>()));
         services.AddSingleton(sp => new ViewService(sp.GetRequiredService<IViewRepository>(), sp.GetRequiredService<IClock>()));
+        services.AddSingleton(sp => new WorkspaceService(sp.GetRequiredService<IWorkspaceRepository>(), sp.GetRequiredService<IClock>())); // ECO-020
 
         // v3.0 類似検索・マージ(M-PHASH-020 / M-SIMSEARCH-021 / M-MERGE-022)。
         // P-09: production pHash adapter は scaled-decode(早期縮小)= AdapterId "skia-scaled-decode-v1"。
@@ -219,6 +223,7 @@ public partial class App : Application
             sp.GetRequiredService<FolderManagementViewModel>(),
             sp.GetRequiredService<TagsTabViewModel>(),
             sp.GetRequiredService<TaggingPanelViewModel>(),
+            sp.GetRequiredService<WorkspaceService>(),
             sp.GetRequiredService<ILogger<MainWindowViewModel>>()));
 
         return services.BuildServiceProvider();

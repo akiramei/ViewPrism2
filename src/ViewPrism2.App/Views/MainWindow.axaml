@@ -136,6 +136,9 @@
                   Content="{Binding Loc[navigation.tags]}" Command="{Binding ShowTagsTabCommand}" />
           <Button Classes="tab" Classes.selected="{Binding IsImagesTabSelected}"
                   Content="{Binding Loc[navigation.images]}" Command="{Binding ShowImagesTabCommand}" />
+          <!-- 作業タブ(第3タブ・ECO-020) -->
+          <Button Classes="tab" Classes.selected="{Binding IsWorkTabSelected}"
+                  Content="{Binding Loc[navigation.work]}" Command="{Binding ShowWorkTabCommand}" />
         </StackPanel>
       </DockPanel>
     </Border>
@@ -155,6 +158,10 @@
       <!-- ===== 画像タブ(M2 golden ハーネス: モック準拠の作り直し。dev トグル ON で表示) ===== -->
       <v:ImageTabView DataContext="{Binding ImageTab}"
                       IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ShowImageTabHarness}" />
+
+      <!-- ===== 作業タブ(ECO-020 / ECO-α: 作業スペース) ===== -->
+      <v:WorkTabView DataContext="{Binding WorkTab}"
+                     IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsWorkTabSelected}" />
 
       <!-- ===== 画像タブ(原典 surface: 配線済み。harness OFF 時のみ表示。M3 で作り直し統合) ===== -->
       <Grid ColumnDefinitions="240,1,*,1,280" IsVisible="{Binding ShowImageTabLegacy}">

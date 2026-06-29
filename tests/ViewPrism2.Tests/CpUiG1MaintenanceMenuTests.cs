@@ -53,7 +53,7 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            win, new AppSettings());
+            win, new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock));
 
     private async Task<SyncFolder> SeedCollectionAsync()
     {

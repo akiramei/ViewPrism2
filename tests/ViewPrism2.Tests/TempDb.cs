@@ -22,6 +22,7 @@ internal sealed class TempDb : IDisposable
         Features = new ImageFeatureRepository(Manager);
         Similarities = new ImageSimilarityRepository(Manager);
         Merges = new MergeRepository(Manager);
+        Workspaces = new WorkspaceRepository(Manager);
     }
 
     public IClock Clock { get; }
@@ -45,6 +46,8 @@ internal sealed class TempDb : IDisposable
     public ImageSimilarityRepository Similarities { get; }
 
     public MergeRepository Merges { get; }
+
+    public WorkspaceRepository Workspaces { get; }
 
     public void Dispose()
     {
