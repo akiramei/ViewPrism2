@@ -123,3 +123,33 @@ public enum PageTurnMode
     /// <summary>1 ページ送り(step=1)。</summary>
     SinglePage,
 }
+
+/// <summary>単一(normal)モードの画像フィット方式(モック準拠の改善)。既定 Fit(画面に合わせる=縮小のみ)。</summary>
+public enum FitMode
+{
+    /// <summary>画面に合わせる(Uniform・縮小のみ・現行挙動)。</summary>
+    Fit,
+    /// <summary>幅に合わせる(横幅基準で拡縮・縦はスクロール)。</summary>
+    Width,
+    /// <summary>原寸 1:1(拡縮なし・はみ出しはスクロール)。</summary>
+    One,
+}
+
+/// <summary>キャンバス下地色(モック準拠の改善)。既定 Dark。全モード共通。</summary>
+public enum BackgroundMode
+{
+    /// <summary>ダーク(#15171c)。</summary>
+    Dark,
+    /// <summary>ライト(淡色)。</summary>
+    Light,
+    /// <summary>市松(チェッカー。透過確認向け)。</summary>
+    Checker,
+}
+
+/// <summary>縦スクロールモードの横揃え(モック準拠の改善)。幅が異なる画像の寄せ方。既定 Center。</summary>
+public enum ScrollHAlign
+{
+    Left,
+    Center,
+    Right,
+}

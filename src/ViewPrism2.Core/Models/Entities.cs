@@ -293,6 +293,18 @@ public sealed record AppSettings
     [System.Text.Json.Serialization.JsonConverter(typeof(TolerantBoolConverter))]
     public bool ViewerStartWithEmptyPage { get; set; }
 
+    /// <summary>単一フィット方式(モック改善): "fit"|"width"|"one"。既定 fit。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerFitMode { get; set; } = "fit";
+
+    /// <summary>キャンバス下地色(モック改善): "dark"|"light"|"checker"。既定 dark。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerBackground { get; set; } = "dark";
+
+    /// <summary>縦スクロール横揃え(モック改善): "left"|"center"|"right"。既定 center。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
+    public string ViewerScrollHAlign { get; set; } = "center";
+
     /// <summary>
     /// ビューア設定の列挙系文字列を正規化する(CP-SET-009 v2.0)。読み込み後に呼び、
     /// 列挙外文字列・null を項目単位で既定値へ落とす(ViewerSettingsModel が唯一の真実)。
@@ -311,6 +323,12 @@ public sealed record AppSettings
         ViewerPageTurnMode = Services.Viewer.ViewerSettingsModel.ToString(
             Services.Viewer.ViewerSettingsModel.ParseTurn(ViewerPageTurnMode));
         ViewerCustomGapPx = Services.Viewer.ViewerSettingsModel.NormalizeGapPx(ViewerCustomGapPx);
+        ViewerFitMode = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseFit(ViewerFitMode));
+        ViewerBackground = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseBackground(ViewerBackground));
+        ViewerScrollHAlign = Services.Viewer.ViewerSettingsModel.ToString(
+            Services.Viewer.ViewerSettingsModel.ParseScrollHAlign(ViewerScrollHAlign));
     }
 }
 

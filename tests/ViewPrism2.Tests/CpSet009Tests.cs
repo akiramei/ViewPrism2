@@ -248,4 +248,75 @@ public sealed class CpSet009Tests : IDisposable
         Assert.Equal("doublePage", defaults.ViewerPageTurnMode);
         Assert.False(defaults.ViewerStartWithEmptyPage);
     }
+
+    // ============ モック改善追加(フィット・背景・スクロール横揃え)============
+
+    [Fact]
+    public void V3_ビューア改善3項目のラウンドトリップ()
+    {
+        var store = new SettingsStore(_directory);
+        var settings = new AppSettings
+        {
+            ViewerFitMode = "width",
+            ViewerBackground = "checker",
+            ViewerScrollHAlign = "right",
+        };
+
+        store.Save(settings);
+        var loaded = new SettingsStore(_directory).Load();
+
+        Assert.Equal("width", loaded.ViewerFitMode);
+        Assert.Equal("checker", loaded.ViewerBackground);
+        Assert.Equal("right", loaded.ViewerScrollHAlign);
+        Assert.Equal(settings, loaded);
+    }
+
+    [Fact]
+    public void V3_改善3項目の既定値スキーマ()
+    {
+        var defaults = new AppSettings();
+        Assert.Equal("fit", defaults.ViewerFitMode);
+        Assert.Equal("dark", defaults.ViewerBackground);
+        Assert.Equal("center", defaults.ViewerScrollHAlign);
+    }
+
+    [Fact]
+    public void V3_改善3項目の列挙外と型不正は項目単位で既定()
+    {
+        Directory.CreateDirectory(_directory);
+        var store = new SettingsStore(_directory);
+        // fit=列挙外文字列 / background=数値(型不正) / scrollHAlign=正常値
+        File.WriteAllText(store.SettingsFilePath, """
+            {
+              "locale": "ja",
+              "viewerFitMode": "zoom",
+              "viewerBackground": 7,
+              "viewerScrollHAlign": "left"
+            }
+            """);
+
+        var loaded = store.Load();
+
+        Assert.Equal("fit", loaded.ViewerFitMode);          // 列挙外 → 既定 fit
+        Assert.Equal("dark", loaded.ViewerBackground);      // 型不正 → 既定 dark
+        Assert.Equal("left", loaded.ViewerScrollHAlign);    // 正常値は維持
+        Assert.False(File.Exists(store.BackupFilePath));    // 項目単位の既定化(全体破損扱いにしない)
+    }
+
+    [Fact]
+    public void V3_旧形式_改善キーなしは既定値で読める_前方互換()
+    {
+        Directory.CreateDirectory(_directory);
+        var store = new SettingsStore(_directory);
+        File.WriteAllText(store.SettingsFilePath, """
+            { "locale": "en", "viewerMode": "scroll" }
+            """);
+
+        var loaded = store.Load();
+
+        Assert.Equal("scroll", loaded.ViewerMode);
+        Assert.Equal("fit", loaded.ViewerFitMode);
+        Assert.Equal("dark", loaded.ViewerBackground);
+        Assert.Equal("center", loaded.ViewerScrollHAlign);
+    }
 }

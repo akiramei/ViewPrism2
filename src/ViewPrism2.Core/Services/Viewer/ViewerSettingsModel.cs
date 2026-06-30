@@ -21,6 +21,11 @@ public sealed record ViewerSettingsModel
     public PageTurnMode PageTurnMode { get; init; } = PageTurnMode.DoublePage;
     public bool StartWithEmptyPage { get; init; }
 
+    // ---- モック改善で追加(単一フィット・背景・スクロール横揃え)----
+    public FitMode FitMode { get; init; } = FitMode.Fit;
+    public BackgroundMode BackgroundMode { get; init; } = BackgroundMode.Dark;
+    public ScrollHAlign ScrollHAlign { get; init; } = ScrollHAlign.Center;
+
     // ---- 文字列表現(JSON 格納値。仕様 §2.9 の表記そのまま)----
     public const string ModeNormal = "normal";
     public const string ModeScroll = "scroll";
@@ -41,6 +46,18 @@ public sealed record ViewerSettingsModel
     public const string TurnDouble = "doublePage";
     public const string TurnSingle = "singlePage";
 
+    public const string FitFit = "fit";
+    public const string FitWidth = "width";
+    public const string FitOne = "one";
+
+    public const string BgDark = "dark";
+    public const string BgLight = "light";
+    public const string BgChecker = "checker";
+
+    public const string HAlignLeft = "left";
+    public const string HAlignCenter = "center";
+    public const string HAlignRight = "right";
+
     public const int MinGapPx = 0;
     public const int MaxGapPx = 100;
 
@@ -57,6 +74,9 @@ public sealed record ViewerSettingsModel
             CustomGapPx = NormalizeGapPx(settings.ViewerCustomGapPx),
             PageTurnMode = ParseTurn(settings.ViewerPageTurnMode),
             StartWithEmptyPage = settings.ViewerStartWithEmptyPage,
+            FitMode = ParseFit(settings.ViewerFitMode),
+            BackgroundMode = ParseBackground(settings.ViewerBackground),
+            ScrollHAlign = ParseScrollHAlign(settings.ViewerScrollHAlign),
         };
     }
 
@@ -71,6 +91,9 @@ public sealed record ViewerSettingsModel
         settings.ViewerCustomGapPx = NormalizeGapPx(CustomGapPx);
         settings.ViewerPageTurnMode = ToString(PageTurnMode);
         settings.ViewerStartWithEmptyPage = StartWithEmptyPage;
+        settings.ViewerFitMode = ToString(FitMode);
+        settings.ViewerBackground = ToString(BackgroundMode);
+        settings.ViewerScrollHAlign = ToString(ScrollHAlign);
     }
 
     public static ViewerMode ParseMode(string? value) => value switch
@@ -112,6 +135,30 @@ public sealed record ViewerSettingsModel
         _ => PageTurnMode.DoublePage,
     };
 
+    public static FitMode ParseFit(string? value) => value switch
+    {
+        FitWidth => FitMode.Width,
+        FitOne => FitMode.One,
+        FitFit => FitMode.Fit,
+        _ => FitMode.Fit,
+    };
+
+    public static BackgroundMode ParseBackground(string? value) => value switch
+    {
+        BgLight => BackgroundMode.Light,
+        BgChecker => BackgroundMode.Checker,
+        BgDark => BackgroundMode.Dark,
+        _ => BackgroundMode.Dark,
+    };
+
+    public static ScrollHAlign ParseScrollHAlign(string? value) => value switch
+    {
+        HAlignLeft => ScrollHAlign.Left,
+        HAlignRight => ScrollHAlign.Right,
+        HAlignCenter => ScrollHAlign.Center,
+        _ => ScrollHAlign.Center,
+    };
+
     /// <summary>customGapPx の正規化: 0〜100 範囲外は既定 0(仕様 §2.9 REQ-059)。</summary>
     public static int NormalizeGapPx(int value) => value is >= MinGapPx and <= MaxGapPx ? value : 0;
 
@@ -140,4 +187,25 @@ public sealed record ViewerSettingsModel
     public static string ToString(GapMode mode) => mode == GapMode.Loose ? GapLoose : GapTight;
 
     public static string ToString(PageTurnMode mode) => mode == PageTurnMode.SinglePage ? TurnSingle : TurnDouble;
+
+    public static string ToString(FitMode mode) => mode switch
+    {
+        FitMode.Width => FitWidth,
+        FitMode.One => FitOne,
+        _ => FitFit,
+    };
+
+    public static string ToString(BackgroundMode mode) => mode switch
+    {
+        BackgroundMode.Light => BgLight,
+        BackgroundMode.Checker => BgChecker,
+        _ => BgDark,
+    };
+
+    public static string ToString(ScrollHAlign mode) => mode switch
+    {
+        ScrollHAlign.Left => HAlignLeft,
+        ScrollHAlign.Right => HAlignRight,
+        _ => HAlignCenter,
+    };
 }

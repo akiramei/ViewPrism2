@@ -62,6 +62,7 @@ public partial class ViewerWindow : Window
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             _viewModel.CloseRequested += OnCloseRequested;
             _viewModel.CurrentIndexChanged += OnCurrentIndexChanged;
+            ApplyFitMode();
             _ = LoadNormalAsync();
             UpdateSpread();
             Dispatcher.UIThread.Post(ScrollToCurrent, DispatcherPriority.Background);
@@ -146,6 +147,39 @@ public partial class ViewerWindow : Window
             case nameof(ViewerViewModel.Mode):
                 UpdateSpread();
                 break;
+            case nameof(ViewerViewModel.FitMode):
+                ApplyFitMode();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 単一(normal)のスクロール host のフィット方式を反映する(モック改善)。
+    /// Fit はフィット Panel 側(常に Uniform 縮小のみ)。Width=横幅基準(縦スクロール)・One=原寸(両スクロール)。
+    /// </summary>
+    private void ApplyFitMode()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        switch (_viewModel.FitMode)
+        {
+            case FitMode.Width:
+                NormalScrollImage.Stretch = Avalonia.Media.Stretch.Uniform;
+                NormalScrollImage.StretchDirection = Avalonia.Media.StretchDirection.Both;
+                NormalScrollImage.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+                NormalScroll.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
+                NormalScroll.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+                break;
+            case FitMode.One:
+                NormalScrollImage.Stretch = Avalonia.Media.Stretch.None;
+                NormalScrollImage.StretchDirection = Avalonia.Media.StretchDirection.Both;
+                NormalScrollImage.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+                NormalScroll.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+                NormalScroll.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+                break;
         }
     }
 
@@ -166,6 +200,7 @@ public partial class ViewerWindow : Window
         if (path is null)
         {
             NormalImage.Source = null;
+            NormalScrollImage.Source = null;
             return;
         }
 
@@ -175,12 +210,15 @@ public partial class ViewerWindow : Window
             var bitmap = await _cache.GetOrAddAsync(path, () => Task.Run(() => new Bitmap(path)));
             if (string.Equals(_viewModel?.CurrentImagePath, path, StringComparison.Ordinal))
             {
+                // Fit 用とスクロール(Width/One)用の両 host に同じ Bitmap を割り当てる(切替で再ロードしない)
                 NormalImage.Source = bitmap;
+                NormalScrollImage.Source = bitmap;
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
             NormalImage.Source = null; // 壊れた画像・消失でもクラッシュしない
+            NormalScrollImage.Source = null;
         }
     }
 

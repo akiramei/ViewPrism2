@@ -5,180 +5,407 @@
         x:Class="ViewPrism2.App.Views.ViewerWindow"
         x:DataType="vm:ViewerViewModel"
         Title="{Binding Title}"
-        Width="1000" Height="700"
-        MinWidth="400" MinHeight="300"
+        Width="1000" Height="760"
+        MinWidth="480" MinHeight="360"
         FontSize="14"
+        Foreground="{StaticResource TextPrimaryBrush}"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- ビューア(M-UI-014 / M-UI-018、REQ-044・§2.9、G-4/G-8):
-       normal=ウィンドウフィット(縮小のみ) / scroll=縦連続 / spread=見開き(右/左)。
-       キー: PageDown/PageUp は論理キー(常に次へ/前へ)。矢印は空間キー(spread-right で反転)。
-       Escape=閉じる。計算は M-VIEWERCORE-017(Core)経由(コードビハインドで判定しない)。 -->
+  <!-- ビューア(M-UI-014 / M-UI-018、REQ-044・§2.9、G-4/G-8): モック準拠の刷新。
+       白ツールバー(segmented モードピル+表示設定+閉じる) / ダーク(または ライト/市松)キャンバス /
+       右ドロワー設定(モード別・説明つき) / ダーク下部バー(単一・見開きのみ。シークは単一)。
+       キー: PageDown/PageUp は論理キー。矢印は空間キー(spread-right で反転)。Escape=閉じる。
+       計算は M-VIEWERCORE-017(Core)経由(コードビハインドで判定しない)。 -->
   <Window.KeyBindings>
-    <!-- PageDown/PageUp は論理キー(方向反転しない — §2.9) -->
     <KeyBinding Gesture="PageDown" Command="{Binding NextCommand}" />
     <KeyBinding Gesture="PageUp" Command="{Binding PrevCommand}" />
-    <!-- 矢印は空間キー(spread-right では ViewModel 内で反転) -->
     <KeyBinding Gesture="Right" Command="{Binding ArrowRightCommand}" />
     <KeyBinding Gesture="Left" Command="{Binding ArrowLeftCommand}" />
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </Window.KeyBindings>
 
+  <Window.Resources>
+    <!-- 市松(チェッカー)下地: 透過確認向け。20px タイル・淡灰/白。 -->
+    <DrawingBrush x:Key="CheckerBrush" TileMode="Tile" SourceRect="0,0,40,40"
+                  DestinationRect="0,0,40,40" Stretch="None">
+      <DrawingBrush.Drawing>
+        <DrawingGroup>
+          <GeometryDrawing Brush="#FFFFFF" Geometry="M0,0 H40 V40 H0 Z" />
+          <GeometryDrawing Brush="#E6E9EF" Geometry="M0,0 H20 V20 H0 Z M20,20 H40 V40 H20 Z" />
+        </DrawingGroup>
+      </DrawingBrush.Drawing>
+    </DrawingBrush>
+  </Window.Resources>
+
   <Window.Styles>
-    <Style Selector="ToggleButton.modeToggle">
-      <Setter Property="Padding" Value="8,4" />
+    <!-- ツールバーのモードピル群は app の segmented/segBtnText を再利用(Components.axaml)。 -->
+
+    <!-- ツールバーボタン(表示設定・閉じる) -->
+    <Style Selector="Button.vToolBtn">
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="13,0" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="#DFE3EA" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
-    <!-- GF-V2-01: アクティブなモード/開き方向を view-prism と同じく塗りつぶし(アクセント背景+白文字)で
-         一目瞭然にする。:checked の前景も明示し、ContentPresenter にも適用して文字色を確実に白へ。 -->
-    <Style Selector="ToggleButton.modeToggle:checked">
-      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Style Selector="Button.vToolBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#FAFBFC" />
+      <Setter Property="BorderBrush" Value="#CFD6E1" />
+    </Style>
+    <Style Selector="Button.vToolBtn.active">
+      <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
       <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
     </Style>
-    <Style Selector="ToggleButton.modeToggle:checked /template/ ContentPresenter">
-      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-      <Setter Property="Foreground" Value="White" />
+    <Style Selector="Button.vToolBtn.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
     </Style>
-    <Style Selector="ToggleButton.modeToggle:checked:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-      <Setter Property="Foreground" Value="White" />
+    <Style Selector="Button.vToolBtn PathIcon">
+      <Setter Property="Width" Value="15" />
+      <Setter Property="Height" Value="15" />
+    </Style>
+    <Style Selector="Button.vClose:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#F4D6D8" />
+      <Setter Property="BorderBrush" Value="#E7B6BA" />
+    </Style>
+    <Style Selector="Button.vClose:pointerover">
+      <Setter Property="Foreground" Value="#C4282D" />
+    </Style>
+
+    <!-- 下部バーのナビ(ダーク) -->
+    <Style Selector="Button.vNav">
+      <Setter Property="Height" Value="38" />
+      <Setter Property="Padding" Value="16,0" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background" Value="#2A2E37" />
+      <Setter Property="BorderBrush" Value="#363B46" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="#DFE4EC" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.vNav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#333845" />
+    </Style>
+
+    <!-- 設定ドロワー: セクション見出し / 設定ラベル / 説明 / 情報ボックス -->
+    <Style Selector="TextBlock.vHead">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+      <Setter Property="Margin" Value="0,6,0,2" />
+    </Style>
+    <Style Selector="TextBlock.vLabel">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.vDesc">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+      <Setter Property="Margin" Value="0,1,0,7" />
+    </Style>
+    <Style Selector="Border.vInfo">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="12,10" />
+    </Style>
+    <Style Selector="Border.vInfo TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
     </Style>
   </Window.Styles>
 
   <DockPanel>
-    <!-- 上部コントロールバー(K-DESIGN v2.0): モード切替・開き方向・表示設定・位置表示・閉じる -->
-    <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
-            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
-      <DockPanel Margin="12,6">
-        <!-- 右端: 位置表示+閉じる -->
-        <Button DockPanel.Dock="Right" Command="{Binding CloseCommand}"
-                Content="{Binding Loc[viewer.close]}" Padding="10,4" Margin="8,0,0,0" />
+    <!-- ===================== TOOLBAR(白) ===================== -->
+    <Border DockPanel.Dock="Top" Background="{StaticResource AppBackgroundBrush}"
+            BorderBrush="#E6E9EF" BorderThickness="0,0,0,1">
+      <DockPanel Margin="14,9" VerticalAlignment="Center">
+        <!-- 右: カウンタ+閉じる -->
+        <Button DockPanel.Dock="Right" Classes="vToolBtn vClose" Command="{Binding CloseCommand}"
+                Content="{Binding Loc[viewer.close]}" Margin="11,0,0,0" />
         <TextBlock DockPanel.Dock="Right" Text="{Binding CurrentPositionText}" VerticalAlignment="Center"
-                   Foreground="{StaticResource TextMutedBrush}" Margin="8,0" />
+                   FontFamily="Cascadia Mono,Consolas,monospace" FontSize="12.5" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextMutedBrush}" />
 
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <!-- モード切替(GF-V2-01・view-prism 準拠): 単一/縦スクロール/右開き/左開き の上位 4 トグル。
-               仕様 ViewerMode 4 値(normal/scroll/spread-right/spread-left)と直接対応。active な 1 つだけが
-               filled(modeToggle :checked = アクセント背景+白文字)で、現在モード=開き方向が一目瞭然。 -->
-          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsNormal, Mode=OneWay}"
-                        Command="{Binding SetNormalModeCommand}" Content="{Binding Loc[viewer.mode.normal]}" />
-          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsScroll, Mode=OneWay}"
-                        Command="{Binding SetScrollModeCommand}" Content="{Binding Loc[viewer.mode.scroll]}" />
-          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsSpreadRight, Mode=OneWay}"
-                        Command="{Binding SetSpreadRightModeCommand}" Content="{Binding Loc[viewer.openDirection.right]}" />
-          <ToggleButton Classes="modeToggle" IsChecked="{Binding IsSpreadLeft, Mode=OneWay}"
-                        Command="{Binding SetSpreadLeftModeCommand}" Content="{Binding Loc[viewer.openDirection.left]}" />
+        <!-- 左: モードピル + 表示設定 -->
+        <StackPanel Orientation="Horizontal" Spacing="13" VerticalAlignment="Center">
+          <Border Classes="segmented">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <Button Classes="segBtnText" Classes.active="{Binding IsNormal}"
+                      Command="{Binding SetNormalModeCommand}" Content="{Binding Loc[viewer.mode.normal]}" />
+              <Button Classes="segBtnText" Classes.active="{Binding IsScroll}"
+                      Command="{Binding SetScrollModeCommand}" Content="{Binding Loc[viewer.mode.scroll]}" />
+              <Button Classes="segBtnText" Classes.active="{Binding IsSpreadRight}"
+                      Command="{Binding SetSpreadRightModeCommand}" Content="{Binding Loc[viewer.openDirection.right]}" />
+              <Button Classes="segBtnText" Classes.active="{Binding IsSpreadLeft}"
+                      Command="{Binding SetSpreadLeftModeCommand}" Content="{Binding Loc[viewer.openDirection.left]}" />
+            </StackPanel>
+          </Border>
 
-          <!-- 表示設定=歯車ボタン→Flyout(縦並び: リサイズ/揃え/ギャップ/ページ送り/空白開始) -->
-          <Button Content="{Binding Loc[viewer.displaySettings]}" Padding="8,4">
-            <Button.Flyout>
-              <Flyout>
-                <StackPanel Spacing="8" Width="240">
-                  <TextBlock Text="{Binding Loc[viewer.resize]}" FontSize="12"
-                             Foreground="{StaticResource TextMutedBrush}" />
-                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding ResizeMode}"
-                            ItemsSource="{Binding ResizeOptions}" />
-                  <TextBlock Text="{Binding Loc[viewer.align]}" FontSize="12"
-                             Foreground="{StaticResource TextMutedBrush}" />
-                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding AlignMode}"
-                            ItemsSource="{Binding AlignOptions}" />
-                  <TextBlock Text="{Binding Loc[viewer.gap]}" FontSize="12"
-                             Foreground="{StaticResource TextMutedBrush}" />
-                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding GapMode}"
-                            ItemsSource="{Binding GapOptions}" />
-                  <TextBlock Text="{Binding Loc[viewer.gapPx]}" FontSize="12"
-                             Foreground="{StaticResource TextMutedBrush}" />
-                  <DockPanel>
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding CustomGapPx}" Width="36"
-                               TextAlignment="Right" VerticalAlignment="Center" />
-                    <Slider Minimum="0" Maximum="100" Value="{Binding CustomGapPx}" />
-                  </DockPanel>
-                  <TextBlock Text="{Binding Loc[viewer.pageTurn]}" FontSize="12"
-                             Foreground="{StaticResource TextMutedBrush}" />
-                  <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding PageTurnMode}"
-                            ItemsSource="{Binding PageTurnOptions}" />
-                  <CheckBox IsChecked="{Binding StartWithEmptyPage}"
-                            Content="{Binding Loc[viewer.startWithEmptyPage]}" />
-                </StackPanel>
-              </Flyout>
-            </Button.Flyout>
+          <Border Width="1" Height="26" Background="#EEF0F4" />
+
+          <Button Classes="vToolBtn" Classes.active="{Binding SettingsOpen}" Command="{Binding ToggleSettingsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+              <PathIcon Data="{StaticResource TuneIcon}" />
+              <TextBlock Text="{Binding Loc[viewer.displaySettings]}" VerticalAlignment="Center" />
+            </StackPanel>
           </Button>
         </StackPanel>
       </DockPanel>
     </Border>
 
-    <!-- 下部ナビゲーション(前へ/次へ) -->
-    <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
-            BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,1,0,0">
-      <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,4" HorizontalAlignment="Center">
-        <Button Command="{Binding PrevCommand}" Content="{Binding Loc[viewer.prev]}" Padding="10,2" />
-        <Button Command="{Binding NextCommand}" Content="{Binding Loc[viewer.next]}" Padding="10,2" />
-      </StackPanel>
+    <!-- ===================== 下部バー(ダーク。単一・見開きのみ) ===================== -->
+    <Border DockPanel.Dock="Bottom" Background="#1B1E24" BorderBrush="#000000" BorderThickness="0,1,0,0"
+            IsVisible="{Binding ShowBottomBar}">
+      <!-- カウンタ(左)とナビ(中央)を同一セルに重ね、ナビは「バー全幅」基準で中央化する。
+           カウンタの桁数(1/32→10/32)が増えても中央のボタン位置がずれない(maintainer golden GF-V1)。 -->
+      <Grid Margin="16,9" VerticalAlignment="Center">
+        <TextBlock Text="{Binding CurrentPositionText}" HorizontalAlignment="Left" VerticalAlignment="Center"
+                   FontFamily="Cascadia Mono,Consolas,monospace" FontSize="12.5" FontWeight="SemiBold"
+                   Foreground="#9AA3B0" />
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Button Classes="vNav" Command="{Binding PrevCommand}" Content="{Binding Loc[viewer.prev]}" />
+          <Slider Width="160" Minimum="0" Maximum="{Binding SeekMax}" Value="{Binding SeekValue, Mode=TwoWay}"
+                  IsVisible="{Binding ShowSeek}" VerticalAlignment="Center" />
+          <Button Classes="vNav" Command="{Binding NextCommand}" Content="{Binding Loc[viewer.next]}" />
+        </StackPanel>
+      </Grid>
     </Border>
 
-    <!-- 本体: モードごとの描画(IsVisible で切替。非表示モードのツリーは生成されない) -->
-    <Panel x:Name="ViewerBody" Focusable="True">
-      <!-- normal: ウィンドウフィット(縮小のみ)+画像外余白クリックで閉じる(REQ-044) -->
-      <Panel x:Name="NormalHost" IsVisible="{Binding IsNormal}"
-             Background="{StaticResource AppBackgroundBrush}" PointerPressed="OnNormalBackgroundPressed">
-        <Image x:Name="NormalImage" Stretch="Uniform" StretchDirection="DownOnly" Margin="8" />
+    <!-- ===================== BODY(キャンバス + 右ドロワー) ===================== -->
+    <Panel>
+      <!-- 背景レイヤ(下地色。モード host は透明で上に重なる) -->
+      <Border Background="#15171C" IsVisible="{Binding IsBgDark}" />
+      <Border Background="#EDEFF3" IsVisible="{Binding IsBgLight}" />
+      <Border Background="{StaticResource CheckerBrush}" IsVisible="{Binding IsBgChecker}" />
+
+      <!-- モード描画(IsVisible で切替) -->
+      <Panel x:Name="ViewerBody" Focusable="True">
+        <!-- normal/Fit: ウィンドウフィット(縮小のみ)+画像外余白クリックで閉じる(REQ-044) -->
+        <Panel x:Name="NormalHost" Background="Transparent"
+               IsVisible="{Binding ShowNormalFit}" PointerPressed="OnNormalBackgroundPressed">
+          <Image x:Name="NormalImage" Stretch="Uniform" StretchDirection="DownOnly" Margin="26" />
+        </Panel>
+
+        <!-- normal/Width・One: スクロール表示(幅合わせ=縦スクロール / 原寸=両スクロール) -->
+        <ScrollViewer x:Name="NormalScroll" Background="Transparent"
+                      IsVisible="{Binding ShowNormalScroll}"
+                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <Image x:Name="NormalScrollImage" Margin="26" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </ScrollViewer>
+
+        <!-- scroll: 縦連続(仮想化必須)。横揃え=ScrollHAlign。クリック無操作。 -->
+        <ListBox x:Name="ScrollList" IsVisible="{Binding IsScroll}"
+                 ItemsSource="{Binding Items}"
+                 Background="Transparent" BorderThickness="0" Focusable="False"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel Orientation="Vertical" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding" Value="0" />
+              <Setter Property="Margin" Value="0" />
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
+            <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+              <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="Transparent" />
+            </Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ImageEntry">
+              <c:ViewerImage SourcePath="{Binding AbsolutePath}"
+                             ErrorTemplate="{Binding $parent[Window].((vm:ViewerViewModel)DataContext).LoadErrorTemplate}"
+                             HorizontalAlignment="{Binding $parent[Window].((vm:ViewerViewModel)DataContext).ScrollItemAlignment}"
+                             MinHeight="64" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- spread: 2 列。クリックは各半面全体で送り。空白ページは無地 -->
+        <Grid x:Name="SpreadHost" IsVisible="{Binding IsSpread}" ColumnDefinitions="*,*" Background="Transparent">
+          <Panel Grid.Column="0" x:Name="SpreadLeftHalf" Background="Transparent" PointerPressed="OnSpreadLeftPressed">
+            <c:ViewerImage x:Name="SpreadLeftImage" Margin="14" ErrorTemplate="{Binding LoadErrorTemplate}" />
+          </Panel>
+          <Panel Grid.Column="1" x:Name="SpreadRightHalf" Background="Transparent" PointerPressed="OnSpreadRightPressed">
+            <c:ViewerImage x:Name="SpreadRightImage" Margin="14" ErrorTemplate="{Binding LoadErrorTemplate}" />
+          </Panel>
+        </Grid>
       </Panel>
 
-      <!-- scroll: 縦連続。仮想化必須(K-AVALONIA v2.0/Run2・M-UI-018 — ItemsControl 直置き禁止):
-           VirtualizingStackPanel を備えた ListBox(行リスト)を使い画面外アイテムを実体化しない。
-           選択視覚は無効(SelectionMode=AlwaysSelected を使わず・行選択枠/ハイライトをスタイルで除去)。
-           クリックは無操作(誤操作防止 — REQ-055)。標準スクロール(ホイール=OS 既定)。
-           各 ViewerImage の SourcePath は可視の間のみバインドで設定され、コンテナリサイクル時に
-           code-behind(ContainerClearing)が Release() で Bitmap を破棄しロードをキャンセルする。 -->
-      <ListBox x:Name="ScrollList" IsVisible="{Binding IsScroll}"
-               ItemsSource="{Binding Items}"
-               Background="Transparent"
-               BorderThickness="0"
-               Focusable="False"
-               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-               ScrollViewer.VerticalScrollBarVisibility="Auto">
-        <ListBox.ItemsPanel>
-          <ItemsPanelTemplate>
-            <VirtualizingStackPanel Orientation="Vertical" />
-          </ItemsPanelTemplate>
-        </ListBox.ItemsPanel>
-        <ListBox.Styles>
-          <!-- 行選択視覚なし(行リストとしてのみ使用 — M-UI-018 scroll「選択視覚なし」) -->
-          <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-          </Style>
-          <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-          </Style>
-          <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-          </Style>
-        </ListBox.Styles>
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:ImageEntry">
-            <c:ViewerImage SourcePath="{Binding AbsolutePath}"
-                           ErrorTemplate="{Binding $parent[Window].((vm:ViewerViewModel)DataContext).LoadErrorTemplate}"
-                           HorizontalAlignment="Center" MinHeight="64" />
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+      <!-- ===================== 設定ドロワー(右・モード別) ===================== -->
+      <Border HorizontalAlignment="Right" Width="312" IsVisible="{Binding SettingsOpen}"
+              Background="{StaticResource AppBackgroundBrush}" BorderBrush="#E6E9EF" BorderThickness="1,0,0,0">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="16,14">
+          <StackPanel Spacing="4">
 
-      <!-- spread: 2 列 Grid(1fr/1fr)。クリックは各半面全体(余白含む)で送り。空白ページは無地 -->
-      <Grid x:Name="SpreadHost" IsVisible="{Binding IsSpread}" ColumnDefinitions="*,*"
-            Background="{StaticResource AppBackgroundBrush}">
-        <Panel Grid.Column="0" x:Name="SpreadLeftHalf" Background="Transparent"
-               PointerPressed="OnSpreadLeftPressed">
-          <c:ViewerImage x:Name="SpreadLeftImage" Margin="8"
-                         ErrorTemplate="{Binding LoadErrorTemplate}" />
-        </Panel>
-        <Panel Grid.Column="1" x:Name="SpreadRightHalf" Background="Transparent"
-               PointerPressed="OnSpreadRightPressed">
-          <c:ViewerImage x:Name="SpreadRightImage" Margin="8"
-                         ErrorTemplate="{Binding LoadErrorTemplate}" />
-        </Panel>
-      </Grid>
+            <!-- ===== 単一: フィット / 背景 / info ===== -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsNormal}">
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.fit]}" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.fit.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsFitFit}"
+                          Command="{Binding SetFitCommand}" CommandParameter="fit" Content="{Binding Loc[viewer.fit.fit]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsFitWidth}"
+                          Command="{Binding SetFitCommand}" CommandParameter="width" Content="{Binding Loc[viewer.fit.width]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsFitOne}"
+                          Command="{Binding SetFitCommand}" CommandParameter="one" Content="{Binding Loc[viewer.fit.one]}" />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.background]}" Margin="0,14,0,0" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.background.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsBgDark}"
+                          Command="{Binding SetBackgroundCommand}" CommandParameter="dark" Content="{Binding Loc[viewer.bg.dark]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsBgLight}"
+                          Command="{Binding SetBackgroundCommand}" CommandParameter="light" Content="{Binding Loc[viewer.bg.light]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsBgChecker}"
+                          Command="{Binding SetBackgroundCommand}" CommandParameter="checker" Content="{Binding Loc[viewer.bg.checker]}" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="vInfo" Margin="0,14,0,0">
+                <TextBlock Text="{Binding Loc[viewer.info.single]}" TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+
+            <!-- ===== 縦スクロール: 共通(リサイズ/横揃え/ギャップ) + info ===== -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsScroll}">
+              <TextBlock Classes="vHead" Text="{Binding Loc[viewer.commonSettings]}" />
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.resize]}" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.resize.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsResizeLarger}"
+                          Command="{Binding SetResizeCommand}" CommandParameter="larger" Content="{Binding Loc[viewer.resize.matchLargerHeight]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsResizeSmaller}"
+                          Command="{Binding SetResizeCommand}" CommandParameter="smaller" Content="{Binding Loc[viewer.resize.matchSmallerHeight]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsResizeNone}"
+                          Command="{Binding SetResizeCommand}" CommandParameter="none" Content="{Binding Loc[viewer.resize.noResize]}" />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.hAlign]}" Margin="0,12,0,0" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.hAlign.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsHAlignLeft}"
+                          Command="{Binding SetHAlignCommand}" CommandParameter="left" Content="{Binding Loc[viewer.hAlign.left]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsHAlignCenter}"
+                          Command="{Binding SetHAlignCommand}" CommandParameter="center" Content="{Binding Loc[viewer.hAlign.center]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsHAlignRight}"
+                          Command="{Binding SetHAlignCommand}" CommandParameter="right" Content="{Binding Loc[viewer.hAlign.right]}" />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.gap]}" Margin="0,12,0,0" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.gap.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsGapTight}"
+                          Command="{Binding SetGapCommand}" CommandParameter="tight" Content="{Binding Loc[viewer.gap.tight]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsGapLoose}"
+                          Command="{Binding SetGapCommand}" CommandParameter="loose" Content="{Binding Loc[viewer.gap.loose]}" />
+                </StackPanel>
+              </Border>
+              <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0" IsEnabled="{Binding IsGapLoose}">
+                <TextBlock Grid.Column="0" Classes="vDesc" Margin="0" VerticalAlignment="Center"
+                           Text="{Binding Loc[viewer.gapWidth]}" />
+                <TextBlock Grid.Column="1" Text="{Binding CustomGapPx}" Foreground="{StaticResource AccentBrush}"
+                           FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" />
+              </Grid>
+              <Slider Minimum="0" Maximum="100" Value="{Binding CustomGapPx}" IsEnabled="{Binding IsGapLoose}" />
+
+              <Border Classes="vInfo" Margin="0,12,0,0">
+                <TextBlock Text="{Binding Loc[viewer.info.scroll]}" TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+
+            <!-- ===== 見開き: 共通(リサイズ/垂直揃え/ギャップ) + 見開き設定(ページ送り) ===== -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsSpread}">
+              <TextBlock Classes="vHead" Text="{Binding Loc[viewer.commonSettings]}" />
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.resize]}" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.resize.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsResizeLarger}"
+                          Command="{Binding SetResizeCommand}" CommandParameter="larger" Content="{Binding Loc[viewer.resize.matchLargerHeight]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsResizeSmaller}"
+                          Command="{Binding SetResizeCommand}" CommandParameter="smaller" Content="{Binding Loc[viewer.resize.matchSmallerHeight]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsResizeNone}"
+                          Command="{Binding SetResizeCommand}" CommandParameter="none" Content="{Binding Loc[viewer.resize.noResize]}" />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.align]}" Margin="0,12,0,0" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.align.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsAlignTop}"
+                          Command="{Binding SetAlignCommand}" CommandParameter="top" Content="{Binding Loc[viewer.align.top]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsAlignMiddle}"
+                          Command="{Binding SetAlignCommand}" CommandParameter="middle" Content="{Binding Loc[viewer.align.middle]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsAlignBottom}"
+                          Command="{Binding SetAlignCommand}" CommandParameter="bottom" Content="{Binding Loc[viewer.align.bottom]}" />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.gap]}" Margin="0,12,0,0" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.gap.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsGapTight}"
+                          Command="{Binding SetGapCommand}" CommandParameter="tight" Content="{Binding Loc[viewer.gap.tight]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsGapLoose}"
+                          Command="{Binding SetGapCommand}" CommandParameter="loose" Content="{Binding Loc[viewer.gap.loose]}" />
+                </StackPanel>
+              </Border>
+              <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0" IsEnabled="{Binding IsGapLoose}">
+                <TextBlock Grid.Column="0" Classes="vDesc" Margin="0" VerticalAlignment="Center"
+                           Text="{Binding Loc[viewer.gapWidth]}" />
+                <TextBlock Grid.Column="1" Text="{Binding CustomGapPx}" Foreground="{StaticResource AccentBrush}"
+                           FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" />
+              </Grid>
+              <Slider Minimum="0" Maximum="100" Value="{Binding CustomGapPx}" IsEnabled="{Binding IsGapLoose}" />
+
+              <TextBlock Classes="vHead" Text="{Binding Loc[viewer.spreadSettings]}" Margin="0,14,0,2" />
+              <TextBlock Classes="vLabel" Text="{Binding Loc[viewer.pageTurn]}" />
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.pageTurn.desc]}" />
+              <Border Classes="segmented" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <Button Classes="segBtnText" Classes.active="{Binding IsTurnDouble}"
+                          Command="{Binding SetTurnCommand}" CommandParameter="double" Content="{Binding Loc[viewer.pageTurn.doublePage]}" />
+                  <Button Classes="segBtnText" Classes.active="{Binding IsTurnSingle}"
+                          Command="{Binding SetTurnCommand}" CommandParameter="single" Content="{Binding Loc[viewer.pageTurn.singlePage]}" />
+                </StackPanel>
+              </Border>
+              <CheckBox IsChecked="{Binding StartWithEmptyPage}" Margin="0,8,0,0"
+                        Content="{Binding Loc[viewer.startWithEmptyPage]}" />
+            </StackPanel>
+
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
     </Panel>
   </DockPanel>
 </Window>

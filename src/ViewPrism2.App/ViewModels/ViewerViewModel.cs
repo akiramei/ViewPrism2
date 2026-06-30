@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ViewPrism2.Core.Models;
@@ -145,6 +146,11 @@ public sealed partial class ViewerViewModel : ObservableObject
             OnPropertyChanged(nameof(IsSpreadRight));
             OnPropertyChanged(nameof(IsSpreadLeft));
             OnPropertyChanged(nameof(Direction));
+            OnPropertyChanged(nameof(ShowBottomBar));
+            OnPropertyChanged(nameof(ShowSeek));
+            OnPropertyChanged(nameof(SeekMax));
+            OnPropertyChanged(nameof(ShowNormalFit));
+            OnPropertyChanged(nameof(ShowNormalScroll));
             RaisePositionChanged();
             CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -220,6 +226,131 @@ public sealed partial class ViewerViewModel : ObservableObject
     {
         get => _settings.StartWithEmptyPage;
         set => UpdateSettings(_settings with { StartWithEmptyPage = value });
+    }
+
+    // ---- モック改善: 単一フィット / 背景 / スクロール横揃え ----
+
+    public FitMode FitMode
+    {
+        get => _settings.FitMode;
+        set => UpdateSettings(_settings with { FitMode = value });
+    }
+
+    public BackgroundMode BackgroundMode
+    {
+        get => _settings.BackgroundMode;
+        set => UpdateSettings(_settings with { BackgroundMode = value });
+    }
+
+    public ScrollHAlign ScrollHAlign
+    {
+        get => _settings.ScrollHAlign;
+        set => UpdateSettings(_settings with { ScrollHAlign = value });
+    }
+
+    // seg(ピル)UI 用の選択状態(IsChecked バインド)。値変更は Set*Command 経由で行う。
+    public bool IsResizeLarger => ResizeMode == ResizeMode.MatchLargerHeight;
+    public bool IsResizeSmaller => ResizeMode == ResizeMode.MatchSmallerHeight;
+    public bool IsResizeNone => ResizeMode == ResizeMode.NoResize;
+    public bool IsAlignTop => AlignMode == AlignMode.Top;
+    public bool IsAlignMiddle => AlignMode == AlignMode.Middle;
+    public bool IsAlignBottom => AlignMode == AlignMode.Bottom;
+    public bool IsGapTight => GapMode == GapMode.Tight;
+    public bool IsGapLoose => GapMode == GapMode.Loose;
+    public bool IsTurnDouble => PageTurnMode == PageTurnMode.DoublePage;
+    public bool IsTurnSingle => PageTurnMode == PageTurnMode.SinglePage;
+    public bool IsFitFit => FitMode == FitMode.Fit;
+    public bool IsFitWidth => FitMode == FitMode.Width;
+    public bool IsFitOne => FitMode == FitMode.One;
+    public bool IsHAlignLeft => ScrollHAlign == ScrollHAlign.Left;
+    public bool IsHAlignCenter => ScrollHAlign == ScrollHAlign.Center;
+    public bool IsHAlignRight => ScrollHAlign == ScrollHAlign.Right;
+    public bool IsBgDark => BackgroundMode == BackgroundMode.Dark;
+    public bool IsBgLight => BackgroundMode == BackgroundMode.Light;
+    public bool IsBgChecker => BackgroundMode == BackgroundMode.Checker;
+
+    [RelayCommand]
+    private void SetResize(string value) => ResizeMode = value switch
+    {
+        "larger" => ResizeMode.MatchLargerHeight,
+        "smaller" => ResizeMode.MatchSmallerHeight,
+        _ => ResizeMode.NoResize,
+    };
+
+    [RelayCommand]
+    private void SetAlign(string value) => AlignMode = value switch
+    {
+        "top" => AlignMode.Top,
+        "bottom" => AlignMode.Bottom,
+        _ => AlignMode.Middle,
+    };
+
+    [RelayCommand]
+    private void SetGap(string value) => GapMode = value == "loose" ? GapMode.Loose : GapMode.Tight;
+
+    [RelayCommand]
+    private void SetTurn(string value) => PageTurnMode = value == "single" ? PageTurnMode.SinglePage : PageTurnMode.DoublePage;
+
+    [RelayCommand]
+    private void SetFit(string value) => FitMode = value switch
+    {
+        "width" => FitMode.Width,
+        "one" => FitMode.One,
+        _ => FitMode.Fit,
+    };
+
+    [RelayCommand]
+    private void SetHAlign(string value) => ScrollHAlign = value switch
+    {
+        "left" => ScrollHAlign.Left,
+        "right" => ScrollHAlign.Right,
+        _ => ScrollHAlign.Center,
+    };
+
+    [RelayCommand]
+    private void SetBackground(string value) => BackgroundMode = value switch
+    {
+        "light" => BackgroundMode.Light,
+        "checker" => BackgroundMode.Checker,
+        _ => BackgroundMode.Dark,
+    };
+
+    // ---- 表示設定ドロワー(モック: 表示設定ボタンで開閉する右パネル)----
+    [ObservableProperty] private bool _settingsOpen;
+
+    [RelayCommand]
+    private void ToggleSettings() => SettingsOpen = !SettingsOpen;
+
+    // 単一の描画 host 切替: Fit=フィット Panel / Width・One=スクロール ScrollViewer。
+    public bool ShowNormalFit => IsNormal && FitMode == FitMode.Fit;
+    public bool ShowNormalScroll => IsNormal && FitMode != FitMode.Fit;
+
+    /// <summary>縦スクロール各画像の横揃え(ScrollHAlign → Avalonia.Layout)。</summary>
+    public HorizontalAlignment ScrollItemAlignment => ScrollHAlign switch
+    {
+        ScrollHAlign.Left => HorizontalAlignment.Left,
+        ScrollHAlign.Right => HorizontalAlignment.Right,
+        _ => HorizontalAlignment.Center,
+    };
+
+    // ---- 下部バー(モック: 単一/見開きのみ表示。縦スクロールは非表示)----
+    public bool ShowBottomBar => IsNormal || IsSpread;
+
+    /// <summary>下部シークスライダー(単一のみ。2枚以上で有効)。値=現在 index・設定で移動。</summary>
+    public bool ShowSeek => IsNormal && _ordered.Count > 1;
+
+    public int SeekMax => _ordered.Count > 0 ? _ordered.Count - 1 : 0;
+
+    public int SeekValue
+    {
+        get => CurrentIndex < 0 ? 0 : CurrentIndex;
+        set
+        {
+            if (IsNormal)
+            {
+                SetIndex(value);
+            }
+        }
     }
 
     /// <summary>見開きの左右間/スクロールの画像間ギャップ(px)。tight=0、loose=customGapPx。</summary>
@@ -414,8 +545,39 @@ public sealed partial class ViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(PageTurnMode));
         OnPropertyChanged(nameof(StartWithEmptyPage));
         OnPropertyChanged(nameof(EffectiveGapPx));
+        OnPropertyChanged(nameof(FitMode));
+        OnPropertyChanged(nameof(BackgroundMode));
+        OnPropertyChanged(nameof(ScrollHAlign));
+        OnPropertyChanged(nameof(ShowNormalFit));
+        OnPropertyChanged(nameof(ShowNormalScroll));
+        OnPropertyChanged(nameof(ScrollItemAlignment));
+        RaiseSettingOptionFlags();
         // ペアリング・高さ統一に影響するため再描画を促す
         RaisePositionChanged();
+    }
+
+    /// <summary>seg(ピル)選択状態の派生プロパティをまとめて通知する。</summary>
+    private void RaiseSettingOptionFlags()
+    {
+        OnPropertyChanged(nameof(IsResizeLarger));
+        OnPropertyChanged(nameof(IsResizeSmaller));
+        OnPropertyChanged(nameof(IsResizeNone));
+        OnPropertyChanged(nameof(IsAlignTop));
+        OnPropertyChanged(nameof(IsAlignMiddle));
+        OnPropertyChanged(nameof(IsAlignBottom));
+        OnPropertyChanged(nameof(IsGapTight));
+        OnPropertyChanged(nameof(IsGapLoose));
+        OnPropertyChanged(nameof(IsTurnDouble));
+        OnPropertyChanged(nameof(IsTurnSingle));
+        OnPropertyChanged(nameof(IsFitFit));
+        OnPropertyChanged(nameof(IsFitWidth));
+        OnPropertyChanged(nameof(IsFitOne));
+        OnPropertyChanged(nameof(IsHAlignLeft));
+        OnPropertyChanged(nameof(IsHAlignCenter));
+        OnPropertyChanged(nameof(IsHAlignRight));
+        OnPropertyChanged(nameof(IsBgDark));
+        OnPropertyChanged(nameof(IsBgLight));
+        OnPropertyChanged(nameof(IsBgChecker));
     }
 
     private void Persist() => _persist?.Invoke(_settings);
@@ -428,6 +590,7 @@ public sealed partial class ViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentPositionText));
         OnPropertyChanged(nameof(CurrentSpreadPair));
         OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(SeekValue));
     }
 
     /// <summary>
