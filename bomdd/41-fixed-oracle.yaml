@@ -277,3 +277,54 @@ fixed_oracle:
       spec_ref: §2.11.6(REQ-073・状態機械 T9)
       equivalence_ref: EQ-001
       depth: unit
+
+    # ---- ECO-022(タグ制御モード・仕様 §2.12)— tag loop-eco022-r1 付与で凍結予定。全 cross-factory(配置エンジンの決定的論理) ----
+    # 期待値はいずれも仕様 §2.12 から逐条導出(値依存・this-build なし=純粋論理)。治具は製造後に tests/ViewPrism2.Oracle へ実装(工場非開示)。
+    - id: S-32
+      scope: cross-factory
+      added_by: ECO-022
+      scenario: "アクション解決(OC-23): 1 画像のタグ ID 集合とマッピング(action→tag_id)を与え支配アクションを解決。(1){skip,spread}両方マップ (2){spread,forceLeftPage} (3){forceRightPage,leftPageEmpty} (4)マッピングに無いタグのみ (5)map にあるが画像が持たない tag_id (6)タグ無し画像"
+      contract_expectation: "全順序 skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty で支配 1 つ: (1)skip (2)spread (3)forceRightPage (4)無し (5)無し(画像のタグ基準=自然無視) (6)無し。Resolve はタグ存在台帳を入力に取らない(現存性濾過は UI 責務)"
+      spec_ref: §2.12.1(OC-23・REQ-076・TC-3)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-33
+      scope: cross-factory
+      added_by: ECO-022
+      scenario: "ページプラン構築 worked example(OC-24・右開き): 仕様 §2.12.3 の代表ケース。(1)idx[0:A,1:広告,2:B,3:C]・広告=skip・B=forceRightPage (2)同 idx・広告=skip・A=leftPageEmpty (3)先頭広告 idx[0:広告,1:A,2:B,3:C]・広告=skip・A=forceLeftPage (4)漫画 idx[0:表紙,1:右半,2:左半,3:p]・空白開始 ON・無アクション (5)idx[0:X,1:Y]・Y=spread・空白開始 OFF"
+      contract_expectation: "(1)スロット[A,空,B,C]→見開き[(右:A,左:空),(右:B,左:C)] (2)同上 (3)スロット[空,A,B,C]→[(右:空,左:A),(右:B,左:C)] (4)スロット[空,表紙,右半,左半,p]→[(右:空,左:表紙),(右:右半,左:左半),(右:p,左:空)] (5)スロット[X,空,(Y span)]→[(右:X,左:空),(Y 見開き占有)]。skip は事前除去・padToParity・seed 抑止・span は左右両スロットを 1 枚占有"
+      spec_ref: §2.12.2-3(OC-24・REQ-076)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-34
+      scope: cross-factory
+      added_by: ECO-022
+      scenario: "OFF-identity(回帰アンカー): 全画像アクション無しの列(例 4〜5 枚)で、右開き/左開き × 空白ページ開始 ON/OFF の各現在位置のプラン見開きを、E-VIEWER-CALC-030 の SpreadPairCalculator.Calculate と照合"
+      contract_expectation: "全 4 組(方向×空白開始)・全位置でプラン見開きの (左ページ,右ページ) が SpreadPairCalculator と完全一致。タグ制御 ON でもアクション無し列はフェーズ1(§2.9 OC-9)と同一配置=enableTagControl OFF 経路の回帰保証点"
+      spec_ref: §2.12.2(OC-24 OFF-identity・OC-9)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-35
+      scope: cross-factory
+      added_by: ECO-022
+      scenario: "seed 抑止・両面空白不在・canonical/対応: 空白開始 ON × 先頭の非 skip 画像が各配置アクション(forceRightPage/forceLeftPage/leftPageEmpty/rightPageEmpty/spread)を持つ列を右開き・左開き両方で構築。さらに各見開きの canonical 現在画像と画像→見開き index 対応を確認"
+      contract_expectation: "先頭が配置アクションのとき空白開始 seed を予約しない=両面空白の見開き(両スロット空白)を一切生成しない(例: 右開き・空白開始 ON・[A=forceRightPage,B]→スロット[A,B]→[(右:A,左:B)])。各見開きの canonical 現在画像は常に一意(先読み面 S[2k] が画像ならそれ・空白なら S[2k+1]・spread は占有画像)。画像→見開き index は各非 skip 画像でちょうど 1 つ"
+      spec_ref: §2.12.2 不変条件・§2.12.4(canonical)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-36
+      scope: cross-factory
+      added_by: ECO-022
+      scenario: "タグ制御ナビゲーション(OC-25): S-33(1) のプラン[P0=(右:A,左:空),P1=(右:B,左:C)]上で 次へ/前へ・端クランプ・モード復元(画像 index→見開き)・位置/総数を確認"
+      contract_expectation: "cur=0 次へ→1 / cur=1 次へ→1(クランプ・変化なし)/ cur=1 前へ→0 / cur=0 前へ→0。SHIFT/pageTurnMode 非適用(常にプラン見開き 1 つ送り)。モード復元: 画像 B(idx2)→P1。総数=非 skip 3。位置: P0=単独『1 / 3』(A=1・相方空白)/ P1=『2-3 / 3』(読み順=先読み面 B 先)"
+      spec_ref: §2.12.4(OC-25・REQ-076)
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-37
+      scope: cross-factory
+      added_by: ECO-022
+      scenario: "タグ制御設定の永続化(REQ-077): enableTagControl(bool)+action→tag_id 6 個を settings.json へ保存→読込。さらに enableTagControl の未知値・マッピング欄の欠損/型不正・現存しない tag_id を指すマッピングの読込"
+      contract_expectation: "ラウンドトリップ: 保存値=読込値(トグル+6 マッピング)。enableTagControl 未知値→既定 OFF / マッピング欄の欠損・型不正→当該 action は未割り当て・例外なし(前方互換)。現存しない tag_id を指すマッピングは永続値を保持(読込で消さない)が解決時は未割り当て扱い(S-32(5) と整合)"
+      spec_ref: §2.12.5(REQ-077・CP-SET-009 拡張)
+      equivalence_ref: EQ-001
+      depth: unit

@@ -271,8 +271,18 @@ mbom:
           REQ-055 の要求であり Run2 収束の合格条件(P-05 再測定で確認)。
         spread: "2 列 Grid(1fr/1fr)。クリックは各半面全体(余白含む)。キーは §2.9 規則(spread-right は矢印反転・Page キーは論理)。画像 2 枚は並行ロード+次ペア 2 枚を先読み(実装定数)"
         keys: "KeyBindings は ViewerViewModel の ICommand へ。モード別の解釈は ViewModel 内で M-VIEWERCORE-017 を呼ぶ(コードビハインドでの判定禁止)"
-        persistence: "設定変更は即時 SettingsStore.Save。起動時に AppSettings の Viewer* から復元(REQ-059)"
+        persistence: "設定変更は即時 SettingsStore.Save。起動時に AppSettings の Viewer* から復元(REQ-059)。タグ制御(enableTagControl+action→tag_id 6個)も同経路で即時保存/復元(REQ-077)"
         errors: "個別画像のロード失敗は当該位置にエラー表示(ファイル名+失敗の旨)し、閲覧継続(仕様 §2.9)"
+        tagctrl_ui: >-
+          (ECO-022・仕様 §2.12.6)設定ドロワーに『タグ制御モード』トグル(enableTagControl)+『タグ制御マッピング』モーダル導線。
+          モーダル=ビューア内中央オーバーレイ(ECO-019 in-tab popup 同型・ルートを Panel ラップ)。6 つの予約アクション各行に
+          [グリフ / アクション名+英名(monospace)+説明 / 割り当てるタグ picker]。picker=割当タグ(色ドット+ラベル)or『未割り当て』+
+          chevron、メニュー=作成済みタグ一覧(色ドット)+『未割り当て(クリア)』。選択で当該 action のマッピング更新→即時保存→
+          ViewerViewModel が E-VIEWER-TAGCTRL-044 で plan 再計算。作成済みタグ一覧/色は TagService(E-TAGSVC-008)を WindowService 経由で供給。
+          タグ制御 ON の見開き配置・送り・現在画像・位置/総数は E-VIEWER-TAGCTRL-044(OC-23/24/25)のみ経由(コードビハインド判定禁止)。
+          **plan→描画結線(G3 ドライラン major-2 補正)**: ON 時は `CurrentSpreadPair`/`CurrentPositionText`/Next/Prev を SpreadPairCalculator 直呼びから plan(OC-24/25)由来へ切替える(現在=プラン見開き index・表示ペアは plan[cur]・位置は canonical/非 skip 総数)。`spread` 占有・片側空白は plan の見開き要素フラグ(span/spread/空白)で描画分岐。OFF 時は従来経路のまま(回帰ゼロ)。
+          **マッピング先タグの現存性濾過(major-1 補正)**: picker は TagService.GetAllAsync の**現存タグのみ**を提示(削除済みタグは出さない)。Resolve(E-VIEWER-TAGCTRL-044)は画像のタグ ID 基準の自然無視で足り、タグ存在台帳を入力に取らない。
+          DS は ECO-019/整理トレイの in-tab popup 部品系を再利用(新規 DS 最小化・視覚は golden G-11)
         excluded: "実装しない(事前ずる列挙で慣習混入が予想される次元の明示): 仕様列挙外のキー(Home/End・数字キーのモード切替・ホイールでのページ送り — normal/spread のホイールは何もしない)/ 横長画像の自動単独配置 / Ctrl+ホイールズーム / クロスフェード等のアニメーション。必要と判断した場合はずる報告"
         resize_anchor: "ウィンドウリサイズ時: 見開き=同一ペアを保ったまま再レイアウト(仕様 §4)/ scroll=現在位置の画像を維持(画像単位アンカー)"
         memory: "scroll の Bitmap 保持は読み込みウィンドウ範囲のみ(範囲外は K-AVALONIA の手順で破棄)。normal/spread は ImageMemoryCache(REQ-045)の範囲"
@@ -280,7 +290,8 @@ mbom:
         - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り)
         - 全件一括読み込み禁止(REQ-055)
         - Esc/閉じるボタン/現在位置表示/端停止は全モード共通(REQ-044 継承)
-      acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-L1-SMOKE]
+        - (ECO-022)タグ制御 ON の見開き配置/送り/現在画像は E-VIEWER-TAGCTRL-044 のみ経由。マッピングモーダルは表示パリティ契約(6行×提示フィールド)を満たす
+      acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-UI-G11, CP-L1-SMOKE]
       fmea_refs: [FMEA-015, FMEA-016, FMEA-020]
 
     - id: M-UI-019
@@ -448,6 +459,27 @@ mbom:
       acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-REPAIR-AUTOALL-023, CP-L1-SMOKE]
       fmea_refs: [FMEA-026, FMEA-028, FMEA-031, FMEA-034]
 
+    - id: M-TAGCTRL-028        # ECO-022 タグ制御配置核(純粋計算 Core)
+      ebom_refs: [E-VIEWER-TAGCTRL-044]
+      artifact:
+        path: src/ViewPrism2.Core/Services/Viewer/(TagActionResolver.cs, TagControlLayoutCalculator.cs, TagControlNavigator.cs, ViewerTagAction.cs)
+        type: dotnet-classlib
+      interface_contract:
+        action_enum: "enum ViewerTagAction { ForceLeftPage, ForceRightPage, Spread, Skip, LeftPageEmpty, RightPageEmpty }(仕様 §2.12.1)"
+        resolve: "ViewerTagAction? TagActionResolver.Resolve(IReadOnlyCollection<string> tagIds, IReadOnlyDictionary<ViewerTagAction, string?> map)  // OC-23。全順序 skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty で支配 1 つ。未マッピング/map に無い/現存しない tag_id は無視。null=アクション無し"
+        plan: "TagControlPlan TagControlLayoutCalculator.Build(IReadOnlyList<(int imageIndex, ViewerTagAction? action)> items, SpreadDirection direction, bool startWithEmptyPage)  // OC-24。スロット列→2チャンク→見開き列(SpreadPair{int? LeftIndex,RightIndex} に span/spread フラグ拡張可)。skip 事前除去・padToParity・seed 抑止(先頭が配置アクション時)。出力=見開き列+各見開きの canonical 現在画像 index+画像→見開き index 対応"
+        navigate: "int TagControlNavigator.Next(int curSpread, int spreadCount) / int Prev(int curSpread, int spreadCount) / int SpreadOfImage(plan, int imageIndex) / int CanonicalImage(plan, int curSpread)  // OC-25。プラン見開き単位の ±1 クランプ・モード復元の画像↔見開き解決"
+        purity: "全クラス純粋計算(I/O・Avalonia 型・DB 依存なし)。Core プロジェクト配置。M-VIEWERCORE-017 と同層"
+      invariants:
+        - "OFF-identity: アクション無し列の Build 結果は SpreadPairCalculator(M-VIEWERCORE-017)と全位置一致(回帰保証)"
+        - 両面空白の見開きを生成しない(seed 抑止+相方 emit の不変条件 — 仕様 §2.12.2)。canonical は常に一意
+        - 競合解決は全順序で支配 1 つ。決定的(原典の非決定的『次の適切な画像探索』ループは採らない — ECO-022 §0.1)
+        - "Resolve は画像のタグ ID 集合とマッピングのみを入力に取り、タグ存在台帳は取らない(major-1 補正)。削除済みタグを指すマッピングは『画像が当該 tag_id を持たない=自然に無視』で結果整合。現存タグでマッピングを濾す責務は UI 層(picker=GetAllAsync 現存のみ)"
+        - OC-23/24/25 の入出力契約を公開 API とする(治具・固定オラクルが直接呼ぶ)
+      acceptance_refs: [CP-TAGCTRL-024]
+      fmea_refs: [FMEA-035, FMEA-036]
+      excluded: "実装しない(事前ずる列挙=慣習混入が予想される次元の明示): 原典 applyTagActions のリアクティブ補正/getImage 前方探索ループ(決定的 plan で代替)/ skip を最後に side 単位 null する原典順(skip 最上位へ反転)/ force を『常に空白を伴う単独配置』にする近道(force は相方を流入させる・empty のみ空白固定)/ scroll・normal で skip 以外のアクションを効かせる(§5.5 違反)/ 両面空白見開きの黙認。必要と判断したらずる報告"
+
     - id: M-HARNESS-015        # 治具は製品と同格に管理
       ebom_refs: []
       artifact:
@@ -514,6 +546,8 @@ fmea:
   - { id: FMEA-031, unit: M-UI-REPAIR-027, failure_mode: "(ECO-003)再リンク候補が相対パス+サイズのみで提示され、サムネイル/ファイル名/更新時刻が無い", effect: "ユーザーが正しい置換先を判断できず誤再リンク=タグ/関連を誤った画像へ付け替え。固定オラクル(論理)では捕捉不能=表示パリティの脱漏", targeted_by: "CP-REPAIR-CARD-021(VM が表示フィールドを公開=unit)+CP-UI-G10(候補カードの視覚パリティ=golden 突合)" }
   - { id: FMEA-033, unit: M-TRASH-026,   failure_mode: "(ECO-005)除外が missing 以外(normal/pending/deleted)を deleted 化する/物理ファイルを削除・移動する", effect: "正常画像をトラッシュ送り=データ消失感・INV-009 違反(物理破壊)", targeted_by: "CP-TRASH-021(missing 限定・他 status 拒否・status 更新のみ=unit)+ S-31(cross-factory)" }
   - { id: FMEA-034, unit: M-UI-REPAIR-027, failure_mode: "(ECO-005)一括自動修復が候補2件以上(曖昧)の missing まで自動 relink する/1件の失敗で一括処理が止まる", effect: "曖昧な画像を誤った候補へ自動付け替え/大量 missing の一括修復が途中で停止", targeted_by: "CP-REPAIR-AUTOALL-023(auto-repairable=ちょうど1件のみ修復・失敗スキップ=unit)" }
+  - { id: FMEA-035, unit: M-TAGCTRL-028, failure_mode: "(ECO-022)タグ制御 ON で配置プランが SpreadPairCalculator と OFF-identity で乖離する/両面空白の見開きを生成し canonical 現在画像が未定義になる/競合解決順を誤る", effect: "アクション無し/OFF でも見開き配置が崩れる(回帰)・空白だけの見開きで送り/位置/モード復元が止まる・複数制御タグで意図と違うアクションが効く", targeted_by: "CP-TAGCTRL-024(OFF-identity 全位置一致・seed 抑止で両面空白ゼロ・全順序解決を unit exact)+ 固定オラクル S-32〜(cross-factory)" }
+  - { id: FMEA-036, unit: M-TAGCTRL-028, failure_mode: "(ECO-022)scroll/normal で skip 以外のアクションを効かせる/現存しない・未マッピングのタグを誤って適用する/原典の非決定的『次の適切な画像探索』ループを移植して順序非決定になる", effect: "§5.5 違反(限定対応モードで誤配置)・削除タグや無関係タグで配置が乱れる・同入力で出力が揺れオラクル化不能", targeted_by: "CP-TAGCTRL-024(scroll/normal=skip のみ・未マッピング/不在 tag_id 無視・決定的 plan を unit exact)" }
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:
@@ -559,3 +593,11 @@ silence_sweep:
   - { dimension: 完全削除・復元の対象 status,       decision: specified, where: "M-TRASH-026 / 仕様 §2.11.3-4", note: "deleted のみ(normal/pending/missing は ValidationError)" }
   - { dimension: V4 のスキーマ変更要否,            decision: specified, where: "M-DB-007(変更なし)", note: "**migration 不要**。criteria=既存列照会・relink=candidate_link_id 既存・復元=status 更新・完全削除=行削除+既存 FK CASCADE。新規 DDL/列なし" }
   - { dimension: 物理存在確認の層配置,             decision: specified, where: "M-TRASH-026(IFilePresenceProbe)", note: "File.Exists は Infrastructure(FilePresenceProbe)。状態遷移判断は Core(bool を受けて分岐)— IPHashImageReader と同型の層分離(ADR-0002)" }
+  # ---- ECO-022 追加(タグ制御モード・仕様 §2.12) ----
+  - { dimension: タグ制御の競合解決順,             decision: specified, where: "M-TAGCTRL-028 / 仕様 §2.12.1", note: "全順序 skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty で支配 1 つ。原典の spread>force>empty>skip リアクティブ順は採らない(ECO-022 §0.1)" }
+  - { dimension: タグ制御の配置エンジン方式,        decision: specified, where: "M-TAGCTRL-028 / 仕様 §2.12.2", note: "(画像列,アクション列)→スロット列→2チャンク見開き列の決定的純粋計算。原典の getImage 前方探索ループは採らない(非決定回避)" }
+  - { dimension: 空白開始 seed と先頭配置アクションの競合, decision: specified, where: "M-TAGCTRL-028 / 仕様 §2.12.2 不変条件", note: "先頭が配置アクションのとき seed 抑止=両面空白の見開きを生まない。canonical 現在画像が常に一意(G2' 反例封じ込め)" }
+  - { dimension: タグ制御のページ送り単位,          decision: specified, where: "M-TAGCTRL-028 / 仕様 §2.12.4", note: "プラン見開き単位 cur±1 クランプ(OC-25)。SHIFT/pageTurnMode は固定プランに非適用。0→1 はプラン構造に吸収" }
+  - { dimension: タグ制御の有効モード,             decision: specified, where: "M-UI-018 / 仕様 §2.12.0(§5.5)", note: "見開きフル(6アクション)・scroll/normal は skip のみ・他5は無視・その他モード無効" }
+  - { dimension: マッピング先タグの削除/未割り当て, decision: specified, where: "M-TAGCTRL-028 / E-SETTINGS-013 / 仕様 §2.12.5", note: "現存しない tag_id・未マッピングは解決時に無視。永続値は保持してよい(誤消去回避)" }
+  - { dimension: タグ制御マッピングモーダルの提示フィールド, decision: specified, where: "M-UI-018 tagctrl_ui / 仕様 §2.12.6", note: "6行×グリフ/名前+英名/説明/タグ picker(色ドット+ラベル/未割り当て)。表示パリティは golden G-11(ECO-003/004 教訓)" }

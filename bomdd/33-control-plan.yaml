@@ -210,6 +210,8 @@ control_plan:
         - "ファイル欠落 → 既定値"
         - "(v2.0) ビューア設定 7 項目のラウンドトリップ(mode/resizeMode/alignMode/gapMode/customGapPx/pageTurnMode/startWithEmptyPage)"
         - "(v2.0) customGapPx=9999 や負値・型不正の保存値 → 既定 0 として読む(FMEA-018)。列挙系の不正文字列(mode='xyz')→ 項目単位で既定値"
+        - "(ECO-022) タグ制御設定のラウンドトリップ: enableTagControl(bool・既定 OFF)+ action→tag_id 6個(既定 未割り当て)。割当/クリア後の保存→読込一致"
+        - "(ECO-022) 破損耐性: enableTagControl の未知値 → 既定 OFF / マッピング欄の欠損・型不正 → 当該 action は未割り当て・例外なし(前方互換)"
         - "(v2.0) v1.3 形式の settings.json(Viewer* キーなし)→ ビューア設定は全て既定値で読める(前方互換)"
 
     - id: CP-I18N-010
@@ -294,6 +296,27 @@ control_plan:
         - "OC-12 片側空白: (800, null) → 800(単独高さ・90% 上限適用) / noResize → null(統一なし — match 系のみの規則)"
         - "OC-13 操作列: 起動 index=5 → 全モード初期値 5 / scroll で 20 へ → spread-right 切替 → 5(spread の記憶)/ scroll へ戻す → 20(FMEA-020)"
         - "境界網羅: 全 OC で total=0/1・index=0・index=total-1 のケースを含める"
+
+    - id: CP-TAGCTRL-024
+      characteristic: タグ制御配置核(アクション解決・ページプラン構築・ナビゲーション)が仕様 §2.12・OC-23/24/25 と一致する
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TAGCTRL-024)
+      oracle: OC-23/24/25 の入出力ベクタの完全一致
+      approver: automated
+      test_vectors:
+        - "OC-23 競合順: 1画像に {skip,spread} → skip / {spread,forceLeftPage} → spread / {forceRightPage,leftPageEmpty} → forceRightPage(全順序の支配 1 つ)"
+        - "OC-23 無視: 未マッピングのタグ・map に無い tag_id・現存しないタグ → アクション無し。タグ無し画像 → 無し"
+        - "OC-24 worked example(右開き): [A,広告=skip,B=forceRightPage,C] → [右:A|左:空][右:B|左:C] / [A,広告=skip,C](A=leftPageEmpty)→ [右:A|左:空]…"
+        - "OC-24 開始アンカー(右開き): [広告=skip,A=forceLeftPage,B,C] → [右:空|左:A][右:B|左:C](以後無タグで流れる)"
+        - "OC-24 spread×padToParity: [X, Y=spread](空白開始OFF)→ [右:X|左:空][Y 見開き占有]"
+        - "OC-24 漫画見開き(右開き・空白開始ON): [表紙,右半,左半,p] → [右:空|左:表紙][右:右半|左:左半][右:p|左:空]"
+        - "OC-24 OFF-identity: 全アクション無し列 → 各見開きが SpreadPairCalculator(OC-9)と全位置一致(右開き/左開き×空白開始ON/OFF)"
+        - "OC-24 seed 抑止(両面空白封じ込め): 空白開始ON・[A=forceRightPage,B] → [右:A|左:B](両面空白の見開きを生成しない)。canonical=A"
+        - "OC-24 canonical/対応: 各見開きの canonical 現在画像(先読み面優先・片側空白/spread は単独)+ 画像→見開き index 対応が一意"
+        - "OC-25 送り: cur=0 → 次へ=1 / 末尾 → 変化なし / cur=0 前へ=0(クランプ)。モード復元: 画像 index → それを含む見開き"
+        - "境界網羅: total=0/1・全 skip(プラン空)・先頭 skip 連続・左開きミラー"
 
     - id: CP-GF-015
       characteristic: 条件サマリ整形(GF-05・REQ-060(e))が仕様 §2.6 の i18n テンプレートと一致する
@@ -468,6 +491,7 @@ control_plan:
     - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G11, characteristic: "タグ制御モード(設定トグル・マッピングモーダル表示パリティ・見開きでの skip/force/spread/empty 配置・ON とマッピングの復元)(G-11・ECO-022)", classification: surface, depth: G, tolerance: "G-11 チェックリスト全項目(20-spec.md §2.6・§2.12.6 提示フィールド)", fixture: "実アプリ+作成済みタグ+フィクスチャ画像(広告ページを含む見開き用コレクション)", oracle: 承認者の目視チェック(モーダル6行の提示フィールド+見開き配置+広告除外+物理側保持), approver: maintainer }
     - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: "TrashServiceTests(TempDb)", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)" }
     - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: "CpUiRepairViewModelTests(TempDb)", oracle: "xunit.v3 exact" }

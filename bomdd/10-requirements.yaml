@@ -898,3 +898,62 @@ requirements:
       - "スペースへの追加が画像をコピー・移動する物理操作になる(INV-009 違反。所属の論理操作のはず)"
       - "移動が非原子で、失敗時に元スペースから消えたまま移動先にも入らない"
       - "ソフト削除で所属レコードまで消し、復元しても元のスペースに戻らない"
+
+  # ============================================================
+  # 画像ビューアー タグ制御モード(ECO-022 / フェーズ2)要件 — REQ-076〜078
+  #   出典: view-prism/docs/view-prism-viewer-spec.md §5(タグ制御モード)/
+  #   Downloads/ViewPrism2 ビューア (standalone).html(タグ制御マッピングモーダル CAD)/
+  #   設計者側リバース: view-prism tagControlUtils.ts(applyTagActions)。
+  #   maintainer 裁定(2026-06-30・ECO-022 §0): TC-1 スコープ=見開きフル+scroll/normal は skip のみ /
+  #   TC-2 紐付け=タグ ID / TC-3 競合順=skip>spread>forceLeft>forceRight>leftEmpty>rightEmpty。
+  # ============================================================
+  - id: REQ-076
+    statement: "タグ制御モード(enableTagControl)が有効なとき、各画像に付いたタグを action↔tag_id マッピングで予約アクションへ解決し、ビューアの配置を自動制御する。予約アクションは6種: forceLeftPage(見開きで左ページにのみ配置)/ forceRightPage(右ページにのみ配置)/ spread(1枚で見開き全体=左右2ページ分を占有)/ skip(表示対象から除外)/ leftPageEmpty(左に空白ページ追加)/ rightPageEmpty(右に空白ページ追加)。1画像に複数の制御タグが付く場合は全順序 skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty で支配アクション1つを選ぶ。マッピングされていないタグ・現存しない tag_id は無視する。有効モードは仕様§5.5: 見開き(右開き/左開き)はフル対応(6アクション全適用・配置は純粋計算で決定的)、スクロール/ノーマルは skip のみ(列から除外)・他5アクションは無視、その他モードは無効。enableTagControl=OFF(既定)のときは全モードがフェーズ1 と完全に同一挙動(回帰ゼロ)"
+    rationale: |
+      仕様§5(タグ制御モード)。原典 tagControlUtils.ts の applyTagActions/getTagActionsForImage を、ViewPrism2 では
+      (画像列, 解決アクション列)→ 仮想ページ列構築 → 見開き解決 の純粋計算核(TagActionResolver + TagControlLayoutCalculator・
+      Core 非依存)へ作り替える。原典のリアクティブ補正+呼び出し側ループは非決定的でオラクル化しづらいため、skip を最上位に
+      置き列から事前除去する決定的版とする(ECO-022 §0.1 divergence・maintainer 裁定 TC-3)。OFF で完全同一はフェーズ1 既存核
+      (SpreadPairCalculator/PageTurnCalculator/位置記憶)を OFF 経路で不変に保つ回帰保証点。
+      受入: 解決(競合順・未マッピング無視・削除タグ無視)と配置(6アクション各/複合/端/空白開始合成/右開き左開き読み順)を
+      固定フィクスチャで exact 検査(unit + 固定オラクル S-32〜・全 cross-factory=純粋論理)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "view-prism-viewer-spec.md §5.2/§5.3/§5.5 / tagControlUtils.ts applyTagActions / ECO-022 §0・§2"
+    counterexamples:
+      - "1画像に skip と spread が付くのに spread が勝つ(全順序 skip>spread の逸脱)"
+      - "enableTagControl=OFF でも配置が変わる(OFF=フェーズ1 完全同一の回帰保証違反)"
+      - "scroll/normal で forceLeftPage/spread 等が効いてしまう(§5.5=skip のみ有効の逸脱)"
+      - "マッピング先 tag_id が削除済みなのにアクションが適用される(現存しない tag_id は無視のはず)"
+
+  - id: REQ-077
+    statement: "タグ制御の設定(enableTagControl=bool・既定 OFF / action→tag_id マッピング6個・既定すべて未割り当て)はビューア表示設定として settings.json へ永続化し、ビューアを開くと復元する。変更(トグル切替・マッピング割当/クリア)は即時保存する(REQ-059 と同方式)。設定値は破損・欠損・未知値に耐性を持ち(CP-SET-009 同型)、不正・欠損は安全な既定(OFF / 未割り当て)へ正規化する。マッピングは tag_id 文字列で保持し、現存しないタグを指す場合は解決時に未割り当てとして扱う(永続値自体は保持してよい)"
+    rationale: |
+      フェーズ1 で ViewerSettingsModel(FitMode/Background/ScrollHAlign)を AppSettings へ破損耐性つきで永続化した同じパターンの拡張。
+      タグ制御 ON/OFF とマッピングはセッションを跨いで保たれるべきユーザー設定(原典 enableTagControl + tagActionMapping)。
+      削除タグを指すマッピングを即座に捨てず保持するのは、タグ再作成・一時的不整合での誤消去を避けるため(解決時のみ無視)。
+      受入: 3項目(トグル+6マッピング)の round-trip・既定・破損耐性・前方互換を固定フィクスチャで exact 検査(unit・CP-SET-009 拡張)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "ECO-022 §4 / フェーズ1 ViewerSettingsModel+AppSettings / CP-SET-009 / 原典 useViewerSettings"
+    counterexamples:
+      - "ビューアを開き直すとタグ制御 ON/マッピングが失われる(永続化/復元の欠落)"
+      - "settings.json のマッピング欄が壊れているとビューア起動が例外/クラッシュ(破損耐性 CP-SET-009 違反)"
+      - "未知の enableTagControl 値で既定 OFF に正規化されない(前方互換違反)"
+
+  - id: REQ-078
+    statement: "ビューア設定ドロワーに『タグ制御モード』トグル(enableTagControl の ON/OFF)と、タグ↔アクションのマッピングを編集する『タグ制御マッピング』モーダルへの導線を置く。モーダルはビューア内中央オーバーレイで、6つの予約アクション各行に [グリフ / アクション名+英名+説明 / 割り当てるタグ picker] を表示する(表示契約=提示フィールド)。picker は割当タグを色ドット+ラベルで示し、未割り当ては『未割り当て』と表示する。picker メニューは作成済みタグ一覧(色ドット付き)と『未割り当て(クリア)』を提示し、選択で当該アクションのマッピングを更新・即時保存(REQ-077)する。割当の変更は次のページ構成計算(REQ-076)に反映される"
+    rationale: |
+      CAD モック(ViewPrism2 ビューア (standalone).html・タグ制御マッピングモーダル)。設定の入口(トグル)と編集面(モーダル)を
+      ビューア内に置くことで、閲覧体験を離れずにマッピングを調整できる(原典 ViewerControls + タグ制御設定 UI)。表示契約(6行×
+      提示フィールド・色ドット・未割り当て表示)を要件に含めるのは ECO-003/004/GF-V4-04 の表示パリティ脱漏の教訓(論理契約だけ
+      でなく提示フィールドを明記し原典スクリーンとフィールド単位で golden 突合する)。in-tab popup は ECO-019 と同型。
+      受入: トグルが enableTagControl を切替・モーダルが6行で作成済みタグを picker 提示・選択でマッピング更新+即保存・表示要素5点
+      (グリフ/名前/英名/説明/picker)を golden(CP-UI-G11)で原典モック突合。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "Downloads/ViewPrism2 ビューア (standalone).html(タグ制御マッピング)/ ECO-022 §5 / ECO-019 in-tab popup"
+    counterexamples:
+      - "マッピングモーダルがアクション名だけで説明/英名/色ドットを欠く(表示契約=提示フィールドの脱漏。GF-V4-04 同型)"
+      - "picker が作成済みタグを出さず手入力を要求する(割当 UI の不成立)"
+      - "マッピング変更がトグル ON のページ構成に反映されない(REQ-076 との結線欠落)"

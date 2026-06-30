@@ -429,3 +429,33 @@ change_orders:
     pending_sync: "β-2〜4 の製造。spec(20)/M-BOM(32)/Control Plan(33) 同期は後続 M4"
     scope_out: "β-1 では タグ編集/整理/⋯。排他モード隠しは β-2 以降でモードが増えてから ECO-014§8 を作業タブへ拡張"
     notes: "isolate now, DRY later: 両surfaceがgolden済み・原典撤去後に共通部品へDRYリファクタ可能。実機golden=maintainerゲート。レビュー是正3件(golden前): ①フィルタ変更時に非表示選択を落とす(交差・画像タブ整合は別途裁定)②RefreshAsyncでfolderPath再読込③CloseMenusFromDismissでMoreMenuOpenも閉じる"
+
+  - id: ECO-022
+    title: "画像ビューアー タグ制御モード(フェーズ2・仕様§5・予約アクション6種+マッピング永続化+設定モーダル)"
+    type: 新規Core計算核(配置エンジン) + 永続化拡張 + 新surface(設定ドロワートグル+マッピングモーダル)
+    status: staged
+    golden: pending
+    baseline: "570fdef(ビューアーフェーズ1適用後・main)"
+    bom_rev: "v4.0(eco:ECO-022)"
+    impacted_bom:
+      ["REQ-076/077/078(新設・G1)",
+       "20-spec §2.12(配置エンジン逐条+worked example・OC-23/24/25・G2 完了)",
+       "E-VIEWER-TAGCTRL-044(新規core: TagActionResolver + TagControlLayoutCalculator・G3 完了)",
+       "E-UI-VIEWER-024(設定ドロワートグル+マッピングモーダル surface・G3 完了)",
+       "E-SETTINGS(enableTagControl+action→tag_id 永続化・CP-SET-009 拡張・G3 完了)",
+       "固定オラクル S-32〜S-37(配置エンジン決定的ベクタ・全 cross-factory・凍結対象)",
+       "golden G-11(マッピングモーダル表示パリティ)"]
+    oracle: "S-01〜S-31 不変(タグ制御は新核・OFF 経路でフェーズ1完全同一)。スキーマ不変(永続化は settings.json)"
+    verification: "G0 起票 + G1 REQ 分解 + G2 spec §2.12(OC-23/24/25・golden G-11)+ G2' 独立監査通過(3巡: blocker0/major3/minor4 → ナビ補正 → 新blocker1[両面空白] → seed 抑止補正 → 通過 blocker0/major0/minor0)+ G3 設計BOM(E-VIEWER-TAGCTRL-044/M-TAGCTRL-028/CP-TAGCTRL-024/routing・FMEA-035/036)+ G3 ドライラン PASS(隔離工場・着手可/質問ゼロ/blocker0/実コード前提(a)〜(e)実在・凍結前補正2件適用)+ 固定オラクル S-32〜S-37 作成(spec §2.12 から逐条導出・一意確認)。validate_bom 0 error。**次=maintainer レビュー→一括コミット→loop-eco022-r1 タグ付与で S-32〜S-37 凍結→隔離工場製造**"
+    decisions:
+      TC-1: "スコープ=見開き(右/左)フル6アクション+scroll/normal は skip のみ(仕様§5.5・maintainer 2026-06-30)"
+      TC-2: "紐付けキー=タグID(action→tag_id・nullable)"
+      TC-3: "競合順=skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty(全順序・支配1つ)"
+      TC-4: "フル BomDD 連鎖(charter→REQ→spec→BOM→固定オラクル凍結→隔離工場→受入→golden)"
+    divergence: "原典 applyTagActions は spread>force>empty>skip のリアクティブ補正。ECO-022 は skip 最上位+(画像列,アクション列)→ページ列構築の決定的純粋計算核(§0.1)"
+    cad_input: "Downloads/ViewPrism2 ビューア (standalone).html(タグ制御マッピングモーダル・ViewPrismUI 未取込)"
+    spec_input: "view-prism/docs/view-prism-viewer-spec.md §5"
+    body: 60-change-order-eco-022.md
+    pending_sync: "固定オラクル S-32〜S-37 凍結(maintainer レビュー→一括コミット→loop-eco022-r1 タグ)→ 隔離工場製造(routing_eco022)→ 設計者受入(S-32〜S-37 を Oracle 実装・全 PASS+回帰ゼロ)→ golden(G-11・maintainer 実機)"
+    scope_out: "scroll/normal の skip 以外アクション(TC-1)・原典の非決定的『次の適切な画像探索』ループ・タグ作成/編集(タグタブ責務)"
+    notes: "データ配管の発見: ImageEntry が既に IReadOnlyList<EvalTagValue>(TagId 付き)Tags を保持=ビューアはタグIDを追加配管なしで取得済み。必要な新規入力はマッピング(action→tag_id)+enableTagControl のみ"

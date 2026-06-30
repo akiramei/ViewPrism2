@@ -155,14 +155,15 @@ ebom:
       acceptance_refs: [CP-CACHE-008]
 
     - id: E-SETTINGS-013
-      name: 設定ストア(settings.json・破損耐性)— v2.0 でビューア設定 7 項目を追加(REQ-059)
+      name: 設定ストア(settings.json・破損耐性)— v2.0 でビューア設定 7 項目を追加(REQ-059)+ ECO-022 でタグ制御設定(enableTagControl+action→tag_id 6個)を追加(REQ-077)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-052, REQ-059]
+      requirement_refs: [REQ-052, REQ-059, REQ-077]
       depends_on: []
       invariants:
         - 破損ファイルで例外を外に漏らさない(既定値+再生成)
         - ビューア設定の範囲外値(customGapPx 等)は既定値として読む(REQ-059)
+        - "タグ制御: enableTagControl 既定 OFF・action→tag_id 既定すべて未割り当て。不正/欠損/未知値は安全な既定へ正規化(REQ-077)。現存しない tag_id を指すマッピングは永続値を保持してよいが解決時は未割り当て扱い"
       acceptance_refs: [CP-SET-009]
 
     - id: E-VIEWER-CALC-030
@@ -177,6 +178,21 @@ ebom:
         - 送り・ペアリングは仕様 §2.9 の規則のみ(端で停止・ループしない)
         - 高さ統一はアスペクト比を常に維持(仕様 §2.9 REQ-058)
       acceptance_refs: [CP-VIEWER-014]
+
+    - id: E-VIEWER-TAGCTRL-044
+      name: タグ制御配置核(アクション解決・タグ制御ページプラン構築・タグ制御ナビゲーション)— ECO-022 新設・仕様 §2.12
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-076]
+      kbom_refs: [K-DESIGN]
+      depends_on: [E-DOMAIN-001, E-VIEWER-CALC-030]
+      invariants:
+        - 純粋計算(I/O・UI・DB 依存なし)。OC-23/24/25 として UI 側から呼ぶだけにする(コードビハインド判定禁止 — K-AVALONIA)
+        - 競合解決は全順序 skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty で支配 1 つ(仕様 §2.12.1)
+        - "OFF-identity: アクション無しのページプランは E-VIEWER-CALC-030 の SpreadPairCalculator と全位置一致(回帰保証・固定オラクル S-32 基底)"
+        - 両面空白の見開きは構築上生じない(空白開始 seed 抑止+空白は実画像の相方 emit — 仕様 §2.12.2 不変条件)。canonical 現在画像は常に一意
+        - "ナビゲーションはプラン見開き単位(cur±1 クランプ)。SHIFT/pageTurnMode は固定プランに非適用(仕様 §2.12.4)"
+      acceptance_refs: [CP-TAGCTRL-024]
 
     - id: E-I18N-014
       name: i18n 解決器(フォールバック・補間・動的切替通知)
@@ -431,19 +447,21 @@ ebom:
       acceptance_refs: [CP-UI-G3]
 
     - id: E-UI-VIEWER-024
-      name: "画像ビューア(normal フィット表示+v2.0 拡張: scroll/spread-right/spread-left・コントロールバー(モード切替+表示設定)・設定永続化結線・モード別位置記憶)"
+      name: "画像ビューア(normal フィット表示+v2.0 拡張: scroll/spread-right/spread-left・コントロールバー(モード切替+表示設定)・設定永続化結線・モード別位置記憶)+ ECO-022 タグ制御(設定トグル+マッピングモーダル+プラン描画結線)"
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059]
+      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-078]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-SETTINGS-013]
+      depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-VIEWER-TAGCTRL-044, E-SETTINGS-013, E-TAGSVC-008]
       invariants:
         - ナビゲーション(端で停止・現在位置)は描画から独立した決定論的ロジックとして unit 検査可能にする
         - ペアリング・送り・追跡・高さ統一・位置記憶の判断は E-VIEWER-CALC-030 のみ経由(UI 側で再実装しない)
+        - タグ制御 ON の見開き配置・送り・現在画像は E-VIEWER-TAGCTRL-044(OC-23/24/25)のみ経由(UI 側で再実装しない)
         - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り — 仕様 §2.9)
         - スクロールは全件一括読み込みしない(REQ-055)
-      acceptance_refs: [CP-UI-G4, CP-UI-G8]
+        - "タグ制御マッピングモーダルは提示フィールド契約(6行×グリフ/名前+英名/説明/タグ picker・色ドット+ラベル/未割り当て)を満たす(REQ-078・ECO-003/004 表示パリティ教訓)"
+      acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-UI-G11]
 
     - id: E-UI-NODEGRAPH-025
       name: タグタブ中央 — ビュー階層エディタ(バッチ保存・別名・条件・ホームタグ・D&D 追加)— v1.2 改訂+v2.0 GF-03/04/05 是正+ECO-010/016(画像タブ左 NodeGraph ナビゲーションツリーを撤回 → 画像タブのビューナビは E-UI-AXIS-NAV-040 へ移管)
