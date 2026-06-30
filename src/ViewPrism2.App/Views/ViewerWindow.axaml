@@ -203,11 +203,14 @@
         </ScrollViewer>
 
         <!-- scroll: 縦連続(仮想化必須)。横揃え=ScrollHAlign。クリック無操作。 -->
+        <!-- 縦スクロールバーは常時表示(Visible)にして幅を固定する。Auto だとバー出入りで
+             利用可能幅が ±スクロールバー幅 だけ振動し、Uniform/DownOnly 画像(幅依存の高さ)の
+             高さが再計算→extent 変化→ScrollChanged 再発火 という自己励起ループになる(GF-V2)。 -->
         <ListBox x:Name="ScrollList" IsVisible="{Binding IsScroll}"
                  ItemsSource="{Binding Items}"
                  Background="Transparent" BorderThickness="0" Focusable="False"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                 ScrollViewer.VerticalScrollBarVisibility="Visible">
           <ListBox.ItemsPanel>
             <ItemsPanelTemplate>
               <VirtualizingStackPanel Orientation="Vertical" />

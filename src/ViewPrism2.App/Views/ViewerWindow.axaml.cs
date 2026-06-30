@@ -23,6 +23,23 @@ public partial class ViewerWindow : Window
     private readonly ImageMemoryCache _cache;
     private ViewerViewModel? _viewModel;
 
+    private const double ScrollTrackingEpsilon = 0.5;
+
+    /// <summary>
+    /// scroll 位置追跡の合流キュー(OC-11/GF-V2)。画像ロードで item 高さ/extent だけが変わるイベントを
+    /// ScrollChanged の同期経路で処理すると、TranslatePoint によるレイアウト確定と仮想化再測定が連鎖しうる。
+    /// そのため offset/viewport 変化だけを後段 Dispatcher へ合流し、dirty layout の最中に位置追跡しない。
+    /// </summary>
+    private bool _scrollTrackingQueued;
+    private bool _scrollTrackingRunning;
+    private bool _scrollTrackingRequested;
+    private double? _lastTrackedOffsetY;
+    private double? _lastTrackedViewportHeight;
+
+    /// <summary>ウィンドウ生存期間。閉じると寸法先読み(GF-V2)をキャンセルする。</summary>
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private bool _dimsPrewarmStarted;
+
     // XAML プレビュー/ランタイムローダ用(未使用経路)
     public ViewerWindow()
         : this(new ImageMemoryCache(new Core.Common.SystemClock()))
@@ -65,6 +82,7 @@ public partial class ViewerWindow : Window
             ApplyFitMode();
             _ = LoadNormalAsync();
             UpdateSpread();
+            MaybePrewarmDimensions();
             Dispatcher.UIThread.Post(ScrollToCurrent, DispatcherPriority.Background);
         }
     }
@@ -81,6 +99,50 @@ public partial class ViewerWindow : Window
         {
             image.Release();
         }
+    }
+
+    /// <summary>
+    /// 縦スクロール時のみ・現在 index 近傍順に・Window lifetime のキャンセル付きで 画像寸法を背景先読みする
+    /// (GF-V2/①-lite)。scroll item が実体化する前にキャッシュを温め、最初から正しい高さを予約させて
+    /// extent の揺れ(=スクロール暴走)を防ぐ。1 度だけ起動し、normal/spread で開いた時は走らせない(P2)。
+    /// </summary>
+    private void MaybePrewarmDimensions()
+    {
+        if (_dimsPrewarmStarted || _viewModel is null || !_viewModel.IsScroll)
+        {
+            return;
+        }
+
+        if (ViewerImage.DimensionCache is not { } cache)
+        {
+            return;
+        }
+
+        var items = _viewModel.Items;
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        _dimsPrewarmStarted = true;
+
+        // 現在 index に近い順(閉じても近傍=見られやすい分から温まる)
+        var current = _viewModel.CurrentIndex < 0 ? 0 : _viewModel.CurrentIndex;
+        var ordered = Enumerable.Range(0, items.Count)
+            .OrderBy(i => Math.Abs(i - current))
+            .Select(i => items[i].AbsolutePath)
+            .Where(p => !string.IsNullOrEmpty(p))
+            .ToList();
+
+        _ = cache.PrewarmAsync(ordered, cancellationToken: _lifetimeCts.Token);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        // 寸法先読みを止める(閉じた後に I/O を残さない — P2)
+        _lifetimeCts.Cancel();
+        _lifetimeCts.Dispose();
+        base.OnClosed(e);
     }
 
     private void OnCloseRequested(object? sender, EventArgs e) => Close();
@@ -144,8 +206,11 @@ public partial class ViewerWindow : Window
                 _ = LoadNormalAsync();
                 break;
             case nameof(ViewerViewModel.CurrentSpreadPair):
+                UpdateSpread();
+                break;
             case nameof(ViewerViewModel.Mode):
                 UpdateSpread();
+                MaybePrewarmDimensions(); // scroll へ切り替えた時に温める(開いた時が scroll でなければここで)
                 break;
             case nameof(ViewerViewModel.FitMode):
                 ApplyFitMode();
@@ -252,23 +317,93 @@ public partial class ViewerWindow : Window
 
     private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
+        if (_viewModel is null || !_viewModel.IsScroll || ScrollList.Scroll is null)
+        {
+            return;
+        }
+
+        // 画像ロードや仮想化の実体化/解放で extent だけが動く ScrollChanged は、現在位置追跡の入力にしない。
+        // ユーザー操作/ScrollIntoView/リサイズによる offset・viewport 変化だけを後段でまとめて処理する。
+        if (!HasMeaningfulScrollTrackingDelta(e))
+        {
+            return;
+        }
+
+        RequestScrollTracking();
+    }
+
+    private void RequestScrollTracking()
+    {
+        _scrollTrackingRequested = true;
+        if (_scrollTrackingQueued || _scrollTrackingRunning)
+        {
+            return;
+        }
+
+        _scrollTrackingQueued = true;
+        Dispatcher.UIThread.Post(ProcessQueuedScrollTracking, DispatcherPriority.Background);
+    }
+
+    private void ProcessQueuedScrollTracking()
+    {
+        _scrollTrackingQueued = false;
+        if (!_scrollTrackingRequested)
+        {
+            return;
+        }
+
+        _scrollTrackingRequested = false;
+        _scrollTrackingRunning = true;
+        try
+        {
+            TrackCurrentScrollPosition();
+        }
+        finally
+        {
+            _scrollTrackingRunning = false;
+        }
+
+        if (_scrollTrackingRequested)
+        {
+            RequestScrollTracking();
+        }
+    }
+
+    private void TrackCurrentScrollPosition()
+    {
         if (_viewModel is null || !_viewModel.IsScroll || ScrollList.Scroll is not { } scroll)
         {
             return;
         }
 
         var scrollOffsetY = scroll.Offset.Y;
+        var viewportHeight = scroll.Viewport.Height;
+        if (_lastTrackedOffsetY is { } lastOffset &&
+            _lastTrackedViewportHeight is { } lastViewport &&
+            Math.Abs(scrollOffsetY - lastOffset) < ScrollTrackingEpsilon &&
+            Math.Abs(viewportHeight - lastViewport) < ScrollTrackingEpsilon)
+        {
+            return;
+        }
+
         var (indices, rects) = CollectRealizedItemRects(scrollOffsetY);
         if (rects.Count == 0)
         {
             return;
         }
 
+        _lastTrackedOffsetY = scrollOffsetY;
+        _lastTrackedViewportHeight = viewportHeight;
+
         // FindCurrent は渡した rects 内の位置を返す。実 item index は indices で写し戻す。
-        var posInSubset = ScrollPositionTracker.FindCurrent(rects, scroll.Viewport.Height, scrollOffsetY);
+        var posInSubset = ScrollPositionTracker.FindCurrent(rects, viewportHeight, scrollOffsetY);
         var itemIndex = indices[posInSubset];
         _viewModel.UpdateScrollPositionByIndex(itemIndex);
     }
+
+    private static bool HasMeaningfulScrollTrackingDelta(ScrollChangedEventArgs e) =>
+        Math.Abs(e.OffsetDelta.Y) >= ScrollTrackingEpsilon ||
+        Math.Abs(e.ViewportDelta.Y) >= ScrollTrackingEpsilon;
 
     /// <summary>
     /// 実体化済みコンテナの (item index 昇順) と、それぞれの content 座標での (Top, Height) を集める。

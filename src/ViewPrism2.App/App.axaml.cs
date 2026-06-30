@@ -84,7 +84,11 @@ public partial class App : Application
     }
 
     private static void ThumbnailImageServiceInit(ServiceProvider provider)
-        => Controls.ThumbnailImage.Service = provider.GetRequiredService<ThumbnailService>();
+    {
+        Controls.ThumbnailImage.Service = provider.GetRequiredService<ThumbnailService>();
+        // ビューア縦スクロールの高さ予約用 寸法キャッシュ(GF-V2/①-lite)。
+        Controls.ViewerImage.DimensionCache = provider.GetRequiredService<Controls.ImageDimensionCache>();
+    }
 
     private static ServiceProvider ConfigureServices(string appDataDir)
     {
@@ -184,6 +188,10 @@ public partial class App : Application
         services.AddSingleton(sp => new ThumbnailService(
             Path.Combine(appDataDir, "thumbnails"),
             sp.GetRequiredService<ILogger<ThumbnailService>>()));
+        // ビューア縦スクロールの高さ予約用 セッション寸法キャッシュ(GF-V2/①-lite)。
+        // 裏は ThumbnailService の SKCodec ヘッダ読み(フルデコードなし)。将来 DB 永続化へ昇格可能。
+        services.AddSingleton(sp => new Controls.ImageDimensionCache(
+            sp.GetRequiredService<ThumbnailService>().GetDimensionsAsync));
 
         // View 層サービスと ViewModel(K-MVVM: ViewModel はトランジェント)
         services.AddSingleton<WindowService>();

@@ -96,11 +96,20 @@ kbom:
       - "(v2.0) モード切替の View 構造: ContentControl+DataTemplate(モードごとに UserControl 分割)。非表示モードの視覚ツリーは保持しない(切替時に破棄)"
       - "(v2.0/Run3 — GF-02) グリッドの行リスト ListBox の行 ListBoxItem は『仮想化のための内部投影』であり表示専用。行選択視覚を一切持たせない: (1)セルの PointerPressed ハンドラで e.Handled=true にし行選択のバブリングを止める (2):pointerover/:selected の行背景は Fluent テーマがテンプレート部品(PART_ContentPresenter)に適用する(テンプレート定義値より Style が高優先)ため、アプリスコープの 'ListBox.plain ListBoxItem:pointerover/:selected /template/ ContentPresenter#PART_ContentPresenter' スタイルで Background=Transparent を上書きする。結果、ホバー・選択はセル(cellFrame の枠+バッジ)のみ反応(エクスプローラー特大アイコン表示と同じ)。リスト表示モードの行選択視覚は子 Border.listRow.selected が担うため不変"
       - "(注意・2026-06-13 maintainer 確認) Avalonia.Controls.ItemsRepeater は Avalonia 12 ではコア非同梱の別 NuGet パッケージ(最新 12.0.0)で『retired / archived after 12.0 release』。本プロジェクトの 12.0.4 本体 XML にも公開型として出ない。よって本ループでは採用しない(グリッド/スクロールとも行リスト ListBox+VirtualizingStackPanel が既定)。真のアイコンビュー(UniformGridLayout・行概念なし)が必要なら『ItemsRepeater 採用可否スパイク』(12.0.4/net10.0 でビルド・実行・1 万件仮想化・golden 通過を先に実証)を経てから BOM 昇格すること — V3 申し送り。出典: NuGet Avalonia.Controls.ItemsRepeater / GitHub README"
+      # ---- GF-V2 追補(ビューア縦スクロール暴走の根治・2026-06-30 maintainer golden 済) ----
+      - "(GF-V2 中核罠) 仮想化スクロール内で『高さがデコードで確定する可変高さ item』(画像)は、未ロード時 ~MinHeight → デコード完了で実寸へ高さがジャンプし、VirtualizingStackPanel の extent 推定が揺れて offset/スクロールバーが振動 → ScrollChanged 連鎖で暴走する(速いスクロールほど多数のデコードが同時進行し収束しない)。**対策=デコード前に寸法を確定して枠高を予約する**: セッション内 寸法キャッシュ(SKCodec ヘッダ読み=フルデコードより軽量。ThumbnailService.GetDimensionsAsync)で W/H を先に取り、ViewerImage.MeasureOverride で Uniform/DownOnly 表示寸法を返す。ロード完了で desired が変わらず extent が安定する。ビューア起動時(scroll 時のみ)に現在 index 近傍順で背景先読みして温め、Window lifetime の CancellationToken で閉じたら止める"
+      - "(GF-V2) scroll 位置追跡(OC-11)は **offset/viewport の変化のみを入力**にする。画像ロードや仮想化の実体化/解放で **extent だけが動く ScrollChanged を追跡入力にしない**(ScrollChangedEventArgs.OffsetDelta/ViewportDelta で判定)。追跡は **Dispatcher 後段へ合流**(coalesce)し、dirty layout の最中に TranslatePoint で測定しない(同期再入ループの燃料になる)"
+      - "(GF-V2) 幅依存の高さを持つスクロール内容(Uniform 画像)は **縦スクロールバーを常時表示(Visible)** にして幅を固定する。Auto はバー出入りで利用可能幅が ±スクロールバー幅 振動し、幅依存の高さが再計算され extent → ScrollChanged の自己励起ループになる"
+      - "(GF-V2) 仮想化リサイクルで **同一値が同じコンテナに戻ると binding は PropertyChanged を再発火しない** → 画面が空白のまま残る。OnAttachedToVisualTree で『解放済みかつ SourcePath 有り』なら再ロードする経路を用意する。Release() は binding された入力(SourcePath)をローカル値で潰さない(Bitmap/ロードだけ解放)。寸法予約はロードより先に行う(意図順)"
+      - "(GF-V2) 非同期の寸法/デコード読みは **single-flight で重複 I/O を集約**する。罠: `ConcurrentDictionary.GetOrAdd(key, asyncFactory)` + `finally { TryRemove }` は、reader が同期完了(Task.FromResult 等)すると除去が GetOrAdd の挿入より先に走り、失敗エントリが残留して再試行されなくなる。**先に TaskCompletionSource を登録 → 所有者だけ reader 実行 → 完了後に除去 → SetResult** の順にする(同時要求テストで回帰固定)"
     risk_if_implicit: |
       仮想化の実現方式は Avalonia では自明でなく、工場ごとに ItemsControl 直置き(仮想化なし)を選んで
       1 万件で UI が固まる事故が典型(REQ-041 の中核リスク)。
       v2.0: ScrollViewer のキー消費・Bitmap の描画中 Dispose・原寸デコードによるメモリ膨張は
       ビューア拡張の典型事故(事前ずる列挙 #4/#56/#6 で慣習分散を確認)。
+      GF-V2: 可変高さ item の高さがデコードで確定すると extent 推定が揺れ、速いスクロールで
+      ScrollChanged 暴走に陥る。デコード前の寸法予約・追跡の offset/viewport ゲート+後段合流・
+      常時スクロールバー・リサイクル復帰の再ロード・single-flight が併せて必要(単独では不足)。
     source_reference: "https://docs.avaloniaui.net/(Avalonia 12)/ ADR-0001"
 
   - id: K-MVVM
