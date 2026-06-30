@@ -104,18 +104,67 @@
     <Style Selector="TreeView#NodeTree TreeViewItem">
       <Setter Property="IsExpanded" Value="True" />
     </Style>
-    <!-- タブナビゲーション(v1.2): 選択タブはアクセント下線+主文字色 -->
+    <!-- タブナビゲーション(v1.3): モック CAD 準拠の丸角セグメント+アイコン。
+         旧アクセント下線(Button.tab)を撤去し、整理トレイの segmented/segBtnText と同型の
+         ピル群へ統一(BadgeBg コンテナ・選択ピル=白地+アクセント文字/アイコン)。 -->
+    <Style Selector="Border.tabBar">
+      <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
     <Style Selector="Button.tab">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0,0,0,2" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Padding" Value="16,8" />
+      <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tab /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.tab.selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
     </Style>
     <Style Selector="Button.tab.selected">
-      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.tab PathIcon">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tab.selected PathIcon">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <!-- 設定(右端): ピル群とは別の従ボタン。アイコン+ラベルの ghost。ホバーで淡背景。 -->
+    <Style Selector="Button.tabAction">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tabAction /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.tabAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource IconBtnHoverBg}" />
+    </Style>
+    <Style Selector="Button.tabAction PathIcon">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
   </Window.Styles>
 
@@ -123,23 +172,46 @@
     <!-- 上部タブナビゲーション: 「タグ」「画像」+右端「設定」(仕様 §2.6 v1.2) -->
     <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
             BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
-      <DockPanel>
-        <Button DockPanel.Dock="Right" Classes="tab" Content="{Binding Loc[navigation.settings]}"
-                Command="{Binding OpenSettingsCommand}" Margin="0,0,8,0" />
+      <DockPanel Margin="8,8">
+        <Button DockPanel.Dock="Right" Classes="tabAction"
+                Command="{Binding OpenSettingsCommand}" Margin="0,0,4,0">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <PathIcon Data="{StaticResource TuneIcon}" />
+            <TextBlock Text="{Binding Loc[navigation.settings]}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
         <!-- M2 scaffold: 画像タブ harness ⇄ 原典 surface トグル(画像タブ表示時のみ。M3 で撤去)。 -->
         <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowImageTabPreview}" Content="harness"
                   VerticalAlignment="Center" Margin="0,0,12,0"
                   IsVisible="{Binding IsImagesTabSelected}" />
 
-        <StackPanel Orientation="Horizontal">
-          <Button Classes="tab" Classes.selected="{Binding IsTagsTabSelected}"
-                  Content="{Binding Loc[navigation.tags]}" Command="{Binding ShowTagsTabCommand}" />
-          <Button Classes="tab" Classes.selected="{Binding IsImagesTabSelected}"
-                  Content="{Binding Loc[navigation.images]}" Command="{Binding ShowImagesTabCommand}" />
-          <!-- 作業タブ(第3タブ・ECO-020) -->
-          <Button Classes="tab" Classes.selected="{Binding IsWorkTabSelected}"
-                  Content="{Binding Loc[navigation.work]}" Command="{Binding ShowWorkTabCommand}" />
-        </StackPanel>
+        <!-- タブナビ(v1.3): 丸角コンテナに乗ったピル群(アイコン+ラベル)。モック CAD 準拠。 -->
+        <Border Classes="tabBar" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="2">
+            <Button Classes="tab" Classes.selected="{Binding IsTagsTabSelected}"
+                    Command="{Binding ShowTagsTabCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <PathIcon Data="{StaticResource TagIcon}" />
+                <TextBlock Text="{Binding Loc[navigation.tags]}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Classes="tab" Classes.selected="{Binding IsImagesTabSelected}"
+                    Command="{Binding ShowImagesTabCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <PathIcon Data="{StaticResource ImageTabIcon}" />
+                <TextBlock Text="{Binding Loc[navigation.images]}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <!-- 作業タブ(第3タブ・ECO-020) -->
+            <Button Classes="tab" Classes.selected="{Binding IsWorkTabSelected}"
+                    Command="{Binding ShowWorkTabCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <PathIcon Data="{StaticResource WorkIcon}" />
+                <TextBlock Text="{Binding Loc[navigation.work]}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Border>
       </DockPanel>
     </Border>
 

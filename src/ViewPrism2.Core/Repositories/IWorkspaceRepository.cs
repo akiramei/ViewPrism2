@@ -26,6 +26,13 @@ public interface IWorkspaceRepository
     Task RenameAsync(string id, string name);
 
     /// <summary>
+    /// 作業スペースを削除する: 単一トランザクションで所属(workspace_images)を除去し
+    /// workspaces 行を削除する。画像自体は物理非破壊(INV-W4)。
+    /// サービス層で非デフォルト・存在を検証済みの前提。
+    /// </summary>
+    Task DeleteAsync(string id);
+
+    /// <summary>
     /// デフォルト回転(ACT-0074・INV-W1): 単一トランザクションで、旧デフォルトを
     /// <paramref name="oldDefaultNewName"/> へ改名し is_default=0 へ降格し、新デフォルト
     /// <paramref name="newDefault"/>(is_default=1)を追加する。常にデフォルトが厳密に 1 つを保つ。

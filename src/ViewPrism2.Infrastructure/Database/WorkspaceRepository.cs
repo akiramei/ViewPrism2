@@ -96,6 +96,19 @@ public sealed class WorkspaceRepository : IWorkspaceRepository
             "UPDATE workspaces SET name = @Name WHERE id = @Id", new { Id = id, Name = name }));
     }
 
+    public Task DeleteAsync(string id)
+    {
+        return _db.RunAsync(conn =>
+        {
+            using var tx = conn.BeginTransaction();
+            // 先に所属を除去 → スペース行を削除(画像は物理非破壊・INV-W4)
+            conn.Execute("DELETE FROM workspace_images WHERE workspace_id = @Id", new { Id = id }, tx);
+            conn.Execute("DELETE FROM workspaces WHERE id = @Id", new { Id = id }, tx);
+            tx.Commit();
+            return Task.CompletedTask;
+        });
+    }
+
     public Task CreateRotatingDefaultAsync(Workspace newDefault, string oldDefaultId, string oldDefaultNewName)
     {
         ArgumentNullException.ThrowIfNull(newDefault);

@@ -46,6 +46,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
 
     private string? _currentWorkspaceId;
     private string? _renameId;
+    private string? _wsDeleteId;   // 削除確認モーダルの対象スペース
     private SortField _sortField = SortField.Name;
     private SortDirection _sortDir = SortDirection.Asc;
     private string _layout = "grid";
@@ -117,6 +118,10 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public double SidebarWidth => Collapsed ? 64 : 276;
 
     [ObservableProperty] private string _renameValue = string.Empty;
+
+    // ---- 作業スペース削除 確認モーダル(タブ内中央オーバーレイ) ----
+    [ObservableProperty] private bool _wsDeleteOpen;
+    [ObservableProperty] private string _wsDeleteMessage = string.Empty;
 
     // ---- ワークスペースヘッダ ----
     [ObservableProperty] private string _wsName = string.Empty;
@@ -605,6 +610,49 @@ public sealed partial class WorkTabViewModel : ObservableObject
     {
         _renameId = null;
         foreach (var w in Workspaces) w.IsEditing = false;
+    }
+
+    /// <summary>削除要求(デフォルト不可)。件数つきの確認文言を作りモーダルを開く(モック requestDelete 準拠)。</summary>
+    [RelayCommand]
+    private void RequestDeleteWorkspace(string id)
+    {
+        var row = Workspaces.FirstOrDefault(w => w.Id == id);
+        if (row is null || row.IsDefault) return;
+        _wsDeleteId = id;
+        var n = int.TryParse(row.CountText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var c) ? c : 0;
+        WsDeleteMessage = n > 0
+            ? $"この作業スペースを削除します。中の {n} 枚はスペースから外れますが、画像自体は削除されません。この操作は元に戻せません。"
+            : "この作業スペースを削除します。この操作は元に戻せません。";
+        WsDeleteOpen = true;
+    }
+
+    /// <summary>削除確認のキャンセル。</summary>
+    [RelayCommand]
+    private void CancelDeleteWorkspace()
+    {
+        _wsDeleteId = null;
+        WsDeleteOpen = false;
+    }
+
+    /// <summary>削除確定。現スペースを消した場合はデフォルトへフォールバックして再読込する。</summary>
+    [RelayCommand]
+    private async Task ConfirmDeleteWorkspace()
+    {
+        var id = _wsDeleteId;
+        _wsDeleteId = null;
+        WsDeleteOpen = false;
+        if (string.IsNullOrEmpty(id)) return;
+
+        var result = await _workspaces.DeleteAsync(id).ConfigureAwait(true);
+        if (!result.IsSuccess) return; // デフォルト/不存在(UI 上は起こらない想定の防御)
+
+        var deletingCurrent = id == _currentWorkspaceId;
+        if (deletingCurrent)
+        {
+            _currentWorkspaceId = null;
+            _renameId = null; _tagFilter = null; _selected.Clear(); MoveMenuOpen = false;
+        }
+        await ReloadWorkspacesAsync(preferDefault: deletingCurrent).ConfigureAwait(true);
     }
 
     // ---------------- 作業モード(β-1) ----------------

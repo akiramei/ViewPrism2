@@ -113,6 +113,29 @@ public sealed class WorkspaceService
     }
 
     /// <summary>
+    /// 削除(INV-W3 同型): デフォルトは不可・存在を検証する。所属(workspace_images)は外すが
+    /// 画像自体は物理非破壊(INV-W4)。存在しない/デフォルトは <see cref="ErrorCode"/> を返す。
+    /// </summary>
+    public async Task<Result> DeleteAsync(string id)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(id);
+
+        var ws = await _repo.GetByIdAsync(id).ConfigureAwait(false);
+        if (ws is null)
+        {
+            return Result.Fail(ErrorCode.NotFound, "作業スペースが存在しません。");
+        }
+
+        if (ws.IsDefault)
+        {
+            return Result.Fail(ErrorCode.ValidationError, "デフォルトの作業スペースは削除できません。");
+        }
+
+        await _repo.DeleteAsync(id).ConfigureAwait(false);
+        return Result.Ok();
+    }
+
+    /// <summary>
     /// 受け渡し(DOM-0026): 画像タブ作業モード「追加」の行き先=デフォルトへ和集合追加する。
     /// デフォルト未シードなら先にシードする。書き込み先デフォルトを返す。物理非破壊(INV-W4)。
     /// </summary>

@@ -118,6 +118,55 @@ public sealed class CpWorkspace028Tests
     }
 
     [Fact]
+    public async Task 削除_非デフォルトは可_所属は外れるが画像は物理非破壊()
+    {
+        using var db = new TempDb(Clock());
+        await SeedAsync(db, ("a", ImageStatus.Normal), ("b", ImageStatus.Normal));
+        var service = new WorkspaceService(db.Workspaces, db.Clock);
+        var def = await service.AddImagesToDefaultAsync(new[] { "a", "b" });
+        var other = await service.CreateRotatingDefaultAsync();    // 新デフォルト・def は降格
+        await service.MoveImagesAsync(def.Id, other.Id, new[] { "a" });  // a を other へ(b は def 残留)
+
+        // 非デフォルト(降格した旧 def)は削除可
+        var ok = await service.DeleteAsync(def.Id);
+        Assert.True(ok.IsSuccess);
+
+        var all = await service.ListAsync();
+        Assert.DoesNotContain(all, w => w.Workspace.Id == def.Id);  // スペースは消える
+        Assert.Null(await db.Workspaces.GetByIdAsync(def.Id));
+        // 画像自体は物理非破壊(INV-W4): other の a は残る・b も images には残存
+        Assert.Equal(new[] { "a" }, (await service.GetImagesAsync(other.Id)).Select(i => i.Id).ToArray());
+        Assert.NotNull(await db.Images.GetByIdAsync("b"));
+    }
+
+    [Fact]
+    public async Task 削除_デフォルトは不可_ValidationError()
+    {
+        using var db = new TempDb(Clock());
+        var service = new WorkspaceService(db.Workspaces, db.Clock);
+        var def = await service.EnsureDefaultExistsAsync();
+
+        var denied = await service.DeleteAsync(def.Id);
+
+        Assert.False(denied.IsSuccess);
+        Assert.Equal(ErrorCode.ValidationError, denied.Error);
+        Assert.Single(await service.ListAsync());   // デフォルトは残る(INV-W1)
+    }
+
+    [Fact]
+    public async Task 削除_存在しないスペースはNotFound()
+    {
+        using var db = new TempDb(Clock());
+        var service = new WorkspaceService(db.Workspaces, db.Clock);
+        await service.EnsureDefaultExistsAsync();
+
+        var result = await service.DeleteAsync("no-such-ws");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorCode.NotFound, result.Error);
+    }
+
+    [Fact]
     public async Task 受け渡し_デフォルトへ和集合_重複なし_件数とリストはnormalのみ()
     {
         using var db = new TempDb(Clock());

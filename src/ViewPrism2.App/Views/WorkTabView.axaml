@@ -62,6 +62,13 @@
                       <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center">
                         <TextBlock Text="{Binding CountText}" />
                       </Border>
+                      <!-- 削除(デフォルト以外)。確認モーダルを開く。 -->
+                      <Button DockPanel.Dock="Right" Classes="crumbHome" VerticalAlignment="Center"
+                              IsVisible="{Binding CanRename}" ToolTip.Tip="作業スペースを削除"
+                              Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).RequestDeleteWorkspaceCommand}"
+                              CommandParameter="{Binding Id}">
+                        <PathIcon Data="{StaticResource TrashIcon}" Width="14" Height="14" />
+                      </Button>
                       <Button DockPanel.Dock="Right" Classes="crumbHome" VerticalAlignment="Center"
                               IsVisible="{Binding CanRename}" ToolTip.Tip="名前を変更"
                               Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).StartRenameCommand}"
@@ -882,6 +889,37 @@
           </StackPanel>
         </Panel>
       </DockPanel>
+    </Border>
+  </Border>
+
+  <!-- ===== 作業スペース削除 確認モーダル(タブ内中央オーバーレイ) ===== -->
+  <Border IsVisible="{Binding WsDeleteOpen}" Background="#57142C2C">
+    <Border Classes="trashPopup" Width="400" MaxWidth="400"
+            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30">
+      <StackPanel Margin="22" Spacing="16">
+        <StackPanel Orientation="Horizontal" Spacing="11">
+          <Border Width="40" Height="40" CornerRadius="11" Background="#FBEDED" VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource TrashIcon}" Width="19" Height="19" Foreground="#C4282D"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="作業スペースを削除" FontSize="15.5" FontWeight="SemiBold"
+                     VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+        </StackPanel>
+        <TextBlock Text="{Binding WsDeleteMessage}" FontSize="13" TextWrapping="Wrap" LineHeight="20"
+                   Foreground="{StaticResource TextMutedBrush}" />
+        <StackPanel Orientation="Horizontal" Spacing="9" HorizontalAlignment="Right">
+          <Button Classes="toolbarBtn" Height="40" MinHeight="40" Padding="16,0"
+                  Command="{Binding CancelDeleteWorkspaceCommand}">
+            <TextBlock Text="キャンセル" VerticalAlignment="Center" />
+          </Button>
+          <Button Classes="delMoveBtn ready" Command="{Binding ConfirmDeleteWorkspaceCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+              <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" />
+              <TextBlock Text="削除する" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </StackPanel>
     </Border>
   </Border>
 
