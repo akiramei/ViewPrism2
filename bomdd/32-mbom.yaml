@@ -198,23 +198,22 @@ mbom:
         path: src/ViewPrism2.App/(Views/, ViewModels/)
         type: avalonia-app
       interface_contract:
-        trace_status: "ECO-016 で ebom_refs のラベルのみ旧 E-UI-GRID-022 から BROWSE/AXIS/MODE へ再帰属。以下の v1.2/画像タブ旧設計 prose の全面同期は M4 で実施"
-        shell: "v1.2(仕様 §2.6): 上部タブ『タグ』『画像』+『設定』。タグタブ=3 ペイン(ビュー管理/階層エディタ(バッチ保存)/タグパレット+作成ダイアログ)。画像タブ=左(フォルダ+ビュー+NodeGraph ツリー+全画像入口)/ツールバー(表示切替・列数・ソート・タグ編集モード)/中央グリッド・リスト/右パネル(詳細⇔タグ付与切替)"
-        viewmodels: "選択(Ctrl トグル・選択順)・空状態・ノード選択→評価呼び出し・階層編集のダーティ追跡は ViewModel ロジックとして unit 検査可能に分離(OC 系を UI から呼ぶだけにする)"
-        nav_empty: "(ECO-006/BL-001) 画像タブ左 NodeGraph ナビ: TreeRoots は選択ビューでルートを常に 1 件持つ(REQ-036)。AXAML はツリーと空状態プレースホルダを**排他**にし重ねない=子ノード無しビューはルートノードのみ表示し『階層が定義されていません』(nodeGraph.empty)を画像タブナビに出さない。MainWindowViewModel の遷移・評価は不変(表示層のみ是正)"
-        design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ"
-      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G3, CP-UI-G6, CP-L1-SMOKE]
+        trace_status: "ECO-024(M4)で as-built へ同期: シェルは薄いホスト(MainWindowViewModel=タブ切替+TagsTab/ImageTab/WorkTab 保持+ローカライズ+設定確定)。原典画像タブ Grid・harness・legacy VM(Browser/Detail/Tagging/FolderPane シェル・TreeRoots)は撤去済(ImageTabView 一本化)。画像タブの表示軸/モード/選択の逐条は E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041(+ViewPrismUI UI-IR)が権威。ECO-010〜021 の evolved design 全面 prose 同期は継続課題"
+        shell: "上部タブ『タグ(0)』『画像(1)』『作業(2)』+右端『設定』(ECO-020 で作業タブ追加)。タグタブ=3 ペイン(ビュー管理/階層エディタ(バッチ保存)/タグパレット+作成ダイアログ)。画像タブ=ImageTabView 単一 surface(コレクションペイン折り畳み+表示軸セレクタ(FS フォルダ/タグビュー)+チップ+パンくず / ツールバー(表示軸・ソート・グリッド⇔リスト・タグ編集/整理/作業/⋯)/ 中央グリッド・リスト / 文脈モード時のみ右ペイン(タグ編集 or 整理トレイ))。作業タブ=WorkTabView(E-UI-WORKSPACE-043)"
+        viewmodels: "画像タブの選択(Ctrl トグル・SHIFT 範囲・選択順)・空状態・表示軸ナビ・ノード評価呼び出し・文脈モード(タグ編集/整理/作業/削除)は ImageTabViewModel が自己完結で所有し unit 検査可能(OC 系を UI から呼ぶだけにする)。シェル(MainWindowViewModel)はタブ切替と stale 反映(TagsTab.DataChanged→ImageTab.ReloadTagCatalogAsync)のみ"
+        design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ(ImageTabViewModel の日本語ラベルは surface 内定数=モック CAD 準拠)"
+      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G6, CP-L1-SMOKE]  # ECO-023 で CP-UI-G3(詳細パネル)retired・ECO-024 で除去
       fmea_refs: [FMEA-013]
 
-    - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)
+    - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)。ECO-024 で原典 TaggingPanelViewModel を撤去し画像/作業タブのインライン実装へ実態化
       ebom_refs: [E-UI-TAGASSIGN-029]
       artifact:
-        path: src/ViewPrism2.App/(ViewModels/TaggingPanelViewModel.cs, Views/ 内タグ付与パネル+数値値ダイアログ)
+        path: "src/ViewPrism2.App/(ViewModels/ImageTabViewModel.cs=タグ編集モードのインライン付与[AddGroups/CurrentTags/ApplyTagAsync/ApplyTextValue/ApplyRating/ApplySequential/RemoveCurrentTag], ViewModels/WorkTabViewModel.cs=作業タブ再利用[ECO-021 β-2], Views/ 内グリッド右ペイン+数値値ダイアログ)"
         type: avalonia-app
       interface_contract:
-        panel: "TaggingPanelViewModel(selectedImages): CurrentTags(共通タグ+解除)/ AvailableTags(検索)/ ApplyAsync(原子バッチ)。選択 0 件はプレースホルダ"
-        numeric: "NumericValueDialog: モード=固定値|連番(開始値+選択順 i)。min/max/step 検証をダイアログ内で実施し範囲外は適用前に拒否"
-        textual: "候補値ドロップダウン(predefined_values 順)+自由入力"
+        panel: "画像タブ タグ編集モード(ImageTabViewModel): CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel(独立末端 VM)は ECO-024 で撤去(インライン化)"
+        numeric: "NumericValueDialog: モード=固定値|連番(開始値+選択順 i・ApplySequential=UQ-I02b)。min/max/step 検証をダイアログ内で実施し範囲外は適用前に拒否"
+        textual: "候補値ドロップダウン(predefined_values 順・インライン値チップ)+自由入力"
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
       acceptance_refs: [CP-TAGUI-013, CP-UI-G7]
@@ -310,6 +309,20 @@ mbom:
         - 機能の意味論は不変(視覚・表示整形のみ。既存 unit 234 件と凍結オラクルの回帰ゼロが前提)
       acceptance_refs: [CP-GF-015, CP-UI-G1, CP-UI-G6]
       fmea_refs: [FMEA-019]
+
+    - id: M-UI-WORKSPACE-029   # ECO-020/021(作業タブ surface)。ECO-024/M4 で E-UI-WORKSPACE-043 の製造トレースを追加(W2 解消)
+      ebom_refs: [E-UI-WORKSPACE-043]
+      artifact:
+        path: src/ViewPrism2.App/(ViewModels/WorkTabViewModel.cs, Views/WorkTabView.axaml(.cs))
+        type: avalonia-app
+      interface_contract:
+        shell: "作業タブ(第3タブ)= 左作業スペースサイドバー(一覧/選択/＋=デフォルト回転/インラインリネーム/件数/276-64 折り畳み)+ ワークスペースヘッダ(名前+既定バッジ+件数)+ 中央グリッド/リスト(フラット・表示軸/パンくずなし)+ ソート + 空状態(画像タブ作業モードへの誘導)"
+        modes: "(ECO-021 β-1〜β-4)作業モード=別スペースへ移動(E-WORKSPACE-042.MoveImages)/ タグ編集(E-UI-TAGASSIGN-029 再利用)/ 整理トレイ(E-UI-SIMILARITY-035+E-UI-MERGE-036 再利用・現スペース内)/ 削除+ゴミ箱 in-tab popup(E-TRASH-038/E-UI-REPAIR-039 再利用)。修復はコレクションスコープのため非搭載。選択機構・排他隠し(ECO-014§8)は作業タブ側でオーケストレート(UQ-W06=B 隔離方式)"
+        domain: "ドメイン操作は E-WORKSPACE-042 経由(状態遷移を UI で再実装しない)。ゴミ箱は workspace スコープ(GetDeletedImagesAsync)"
+      invariants:
+        - 件数/一覧は status=normal のみ(INV-W2)。デフォルトは常に 1 つ(INV-W1)・デフォルトはリネーム不可(INV-W3)
+        - Core 意味論不変(MoveImages/Merge/Trash は既存サービス再利用)。新 Core なし
+      acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-UI-G1]
 
     # ---------- v3.0 追加(loop-v3-similarity) ----------
     - id: M-PHASH-020

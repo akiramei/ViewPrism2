@@ -255,11 +255,11 @@ control_plan:
       approver: automated
 
     - id: CP-TAGUI-013
-      characteristic: タグ付与パネルの ViewModel ロジック(v1.2 追加・REQ-046)
+      characteristic: タグ付与ロジック(REQ-046・FMEA-014)。ECO-024 で原典 TaggingPanelViewModel を撤去し、検証は Core(TagService 原子バッチ)+ 画像タブ インライン付与(ImageTabViewModel)へ再帰属
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TAGUI-013)
+      fixture: "tests/ViewPrism2.Tests: TagService 原子バッチ/連番/固定値/範囲外/ロールバック/解除/textual=CpTag011(Trait cp=CP-TAG-011)+ 画像タブ インライン付与(共通タグ/選択0件プレースホルダ)=CpUiG1ImageTabSelectionTests 等(ImageTabViewModel.Tagging 経路)"
       oracle: 適用結果の DB 状態・計算値の完全一致
       approver: automated
       test_vectors:

@@ -90,8 +90,12 @@ public sealed class CpL1SmokeTests : IDisposable
     }
 
     [Fact]
-    public async Task フォルダ登録からグリッド表示までの正常系1本()
+    public async Task フォルダ登録からグリッド表示_タグ台帳反映_タグ編集までの正常系1本()
     {
+        // ECO-024: 原典画像タブ(Browser/Detail)撤去後の CP-L1-SMOKE 統合スモークを
+        // 新 surface(シェル→ImageTabViewModel)経路へ移行。詳細パネル(REQ-043)は ECO-023 で撤回済のため
+        // 代わりにタグ台帳反映(タグビュー軸)+タグ編集モードの現在タグ表示を通す。
+
         // --- フィクスチャフォルダ(実画像 3 枚) ---
         var files = Path.Combine(_root, "files");
         ImageFixtures.WriteEncoded(Path.Combine(files, "photo1.jpg"), 800, 600, SKEncodedImageFormat.Jpeg);
@@ -107,7 +111,7 @@ public sealed class CpL1SmokeTests : IDisposable
         Assert.True(scanResult.IsSuccess, scanResult.Message);
         Assert.Equal(3, scanResult.Value!.Added);
 
-        // --- 実サービス合成(App と同じ構成。i18n は実資産を読む) ---
+        // --- 実サービス合成(App と同じ構成。i18n は実資産を読む。ECO-024 後の薄いシェル ctor) ---
         var localization = new LocalizationService(
             I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
         var thumbnails = new ThumbnailService(_thumbDir);
@@ -120,78 +124,60 @@ public sealed class CpL1SmokeTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new ImageSorter(), thumbnails, localization, new AppSettings(), windows,
-            new FolderManagementViewModel(_db.Folders, scan, localization, windows),
+            new ImageSorter(), localization, new AppSettings(), windows,
             new TagsTabViewModel(viewService, tagService, _db.Tags, localization, windows),
-            new TaggingPanelViewModel(tagService, _db.Tags, localization, windows),
             new WorkspaceService(_db.Workspaces, _db.Clock));
+
+        var img = vm.ImageTab;
 
         // --- 起動初期化: コレクション未選択 → 選択を促す空状態(REQ-053 v1.3/CR-2) ---
         await vm.InitializeAsync();
-        Assert.False(vm.IsCollectionSelected);
-        Assert.True(vm.ShowCollectionPrompt);
-        Assert.True(vm.Browser.IsEmpty); // 母集合は空(横断表示なし)
+        Assert.True(vm.IsImagesTabSelected); // 初期は画像タブ
+        Assert.False(img.IsCollectionSelected);
+        Assert.True(img.ShowCollectionPrompt);
 
         // --- コレクション選択 → 当該コレクションの normal 画像が母集合になる ---
-        var collectionRow = vm.FolderPane.Folders.Single(r => r.Folder.Id == folder.Id);
-        await ((IAsyncRelayCommand)vm.SelectCollectionCommand).ExecuteAsync(collectionRow);
-        Assert.True(vm.IsCollectionSelected);
-        Assert.True(collectionRow.IsSelected);
-        Assert.Equal(3, collectionRow.ImageCount); // 項目に画像数(CR-8)
-        Assert.False(vm.Browser.IsEmpty);
-        Assert.Equal(3, vm.Browser.SortedItems.Count);
-        Assert.Single(vm.Browser.Rows); // 幅未供給時の暫定 4 列 × 3 枚 = 1 行
-        Assert.Equal("photo1.jpg", vm.Browser.SortedItems[0].FileName); // name asc
+        await ((IAsyncRelayCommand)img.SelectCollectionCommand).ExecuteAsync(folder.Id);
+        Assert.True(img.IsCollectionSelected);
+        var fileItems = img.Items.Where(i => !i.IsFolder).ToList();
+        Assert.Equal(3, fileItems.Count);
+        Assert.Equal("photo1.jpg", fileItems[0].Name); // name asc
 
         // --- サムネイル生成(「サムネイルが並ぶ」の in-process 確認) ---
-        foreach (var item in vm.Browser.SortedItems)
+        foreach (var item in fileItems)
         {
-            var thumb = await thumbnails.GetOrCreateAsync(item.AbsolutePath);
+            Assert.NotNull(item.AbsolutePath);
+            var thumb = await thumbnails.GetOrCreateAsync(item.AbsolutePath!);
             Assert.NotNull(thumb);
             Assert.True(File.Exists(thumb));
         }
 
-        // --- 選択 → 詳細パネル(REQ-043) ---
-        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, shift: false, isDoubleClick: false);
-        var waited = 0;
-        while (!vm.Detail.HasImage && waited < 100)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-            waited++;
-        }
-
-        Assert.True(vm.Detail.HasImage);
-        Assert.Equal("photo1.jpg", vm.Detail.FileName);
-        Assert.NotEqual(string.Empty, vm.Detail.SizeText);
-
-        // --- タグ付け → ビュー+階層 → NodeGraph 選択 → 絞り込み ---
+        // --- タグ付け → ビュー+階層 → タグ台帳反映 → タグビュー軸 → ノードで絞り込み ---
         var tag = await tagService.CreateAsync("色", TagType.Textual);
         Assert.True(tag.IsSuccess);
-        var imageId = vm.Browser.SortedItems[0].Record.Id;
+        var imageId = fileItems[0].Id;
         Assert.True((await tagService.TagImageAsync(imageId, tag.Value!.Id, "赤")).IsSuccess);
 
         var view = await viewService.CreateAsync("スモークビュー");
         Assert.True(view.IsSuccess);
         Assert.True((await viewService.AddNodeAsync(view.Value!.Id, tag.Value.Id, null, 0)).IsSuccess);
 
-        await vm.ReloadAsync();
-        var viewItem = vm.Recents.First(i => i.View?.Id == view.Value.Id);
-        await ((IAsyncRelayCommand)vm.SelectViewListItemCommand).ExecuteAsync(viewItem);
+        // タグ/ビューの永続変更を画像タブへ反映(タブ切替 stale 経路と同じ ReloadTagCatalogAsync)
+        await img.ReloadTagCatalogAsync();
 
-        Assert.Single(vm.TreeRoots);
-        var root = vm.TreeRoots[0];
-        Assert.Single(root.Children); // distinct 値 1 件 → 一体型「色: 赤」(REQ-035)
-        Assert.Equal("色: 赤", root.Children[0].DisplayName);
+        // タグビュー軸へ切替 → ノードチップが台帳から構築される(REQ-035: distinct 値 1 件 → 一体型「色: 赤」)
+        await ((IAsyncRelayCommand)img.SelectAxisCommand).ExecuteAsync(view.Value.Id);
+        Assert.True(img.IsViewAxis);
+        var navChip = img.Chips.Single(c => c.IsNav);
+        Assert.Equal("色: 赤", navChip.Label);
 
-        vm.SelectedTreeNode = root.Children[0];
-        var filtered = Assert.Single(vm.Browser.SortedItems); // equals(赤) で 1 枚に絞られる
-        Assert.Equal(imageId, filtered.Record.Id);
+        // ノードへ潜る → equals(赤) で 1 枚に絞られる
+        img.ClickChipCommand.Execute(navChip);
+        var filtered = img.Items.Where(i => !i.IsFolder).ToList();
+        Assert.Single(filtered);
+        Assert.Equal(imageId, filtered[0].Id);
 
-        vm.SelectedTreeNode = root; // ルート=ビュー条件のみ(無条件)→ 全 3 枚
-        Assert.Equal(3, vm.Browser.SortedItems.Count);
-
-        // --- v1.2 シェル: タブ切替(タグタブの遅延読込)+タグ編集モード(右パネル切替+ビューア無効) ---
-        Assert.True(vm.IsImagesTabSelected); // 初期は画像タブ
+        // --- タブ切替: タグタブの遅延読込 ---
         vm.SelectedTabIndex = 0;
         Assert.True(vm.IsTagsTabSelected);
         var waitedTab = 0;
@@ -204,21 +190,15 @@ public sealed class CpL1SmokeTests : IDisposable
         Assert.Contains(vm.TagsTab.Views, r => r.View.Id == view.Value.Id);
         Assert.Contains(vm.TagsTab.Palette.Tags, r => r.Tag.Id == tag.Value.Id);
 
+        // --- 画像タブへ戻りタグ編集モード: 選択画像の現在タグに付与済み「色」が出る(REQ-046) ---
         vm.SelectedTabIndex = 1;
-        vm.IsTagEditMode = true; // タグ付与パネルへ切替(REQ-046)
-        Assert.True(vm.Browser.SuppressOpenItem); // タグ編集モード中はダブルクリック無効(REQ-041 v1.2)
-        vm.Browser.HandleItemPointer(vm.Browser.SortedItems[0], ctrl: false, shift: false, isDoubleClick: false);
-        var waitedTagging = 0;
-        while (!vm.Tagging.HasSelection && waitedTagging < 100)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-            waitedTagging++;
-        }
-
-        Assert.True(vm.Tagging.HasSelection);
-        Assert.Contains(vm.Tagging.CurrentTags, r => r.Tag.Id == tag.Value.Id); // 付与済み「色」が現在タグに出る
-        vm.IsTagEditMode = false;
-        Assert.False(vm.Browser.SuppressOpenItem);
+        await ((IAsyncRelayCommand)img.SelectAxisCommand).ExecuteAsync("fs"); // FS 軸の素の一覧で編集
+        img.ToggleEditCommand.Execute(null);
+        Assert.True(img.EditMode);
+        var editItem = img.Items.First(i => !i.IsFolder && i.Id == imageId);
+        img.HandleItemClick(editItem, ctrl: false, shift: false);
+        Assert.True(img.HasSelection);
+        Assert.Contains(img.CurrentTags, t => t.Id == tag.Value.Id); // 付与済み「色」が現在タグに出る
     }
 
     [Fact]

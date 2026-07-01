@@ -3,6 +3,8 @@ using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
 using ViewPrism2.Core.Services.Repair;
+using ViewPrism2.Core.Services.Similarity;
+using ViewPrism2.Infrastructure.Imaging;
 using ViewPrism2.Infrastructure.Scanning;
 using Xunit;
 
@@ -144,24 +146,28 @@ public sealed class CpDisplayParity022Tests
     // ---- A-2: グリッド項目 VM(ImageItemViewModel)の SizeText ----
 
     [Fact]
-    public void A2_グリッド項目VMはサイズ文字列を公開する()
+    public async Task A2_グリッド項目VMはサイズ文字列を公開する()
     {
-        var browser = new ImageBrowserViewModel(CreateLoc(), new ImageSorter());
-        var record = new ImageRecord
-        {
-            Id = "i1",
-            SyncFolderId = Folder,
-            RelativePath = "a.jpg",
-            FileName = "a.jpg",
-            FileSize = 1024,
-            Hash = new string('0', 64),
-            CreatedDate = "2026-01-01T00:00:00.000Z",
-            ModifiedDate = "2026-01-01T00:00:00.000Z",
-        };
-        browser.SetImages([new ImageEntry(record, @"C:\img\a.jpg", [])]);
+        // ECO-024: 原典 ImageBrowserViewModel 撤去に伴い、A-2(グリッド項目 VM がサイズ文字列を公開・
+        // ECO-004/DC-GRID-001)の検査を新 surface ImageTabViewModel(ImageItemVM.SizeLabel)へ移行する。
+        using var db = new TempDb();
+        var col = new SyncFolder { Id = Folder, Name = "C", Path = @"C:\col" };
+        await db.Folders.AddAsync(col);
+        await db.Images.AddAsync(Image("i1", "a.jpg", ImageStatus.Normal, hash: new string('0', 64), size: 1024));
 
-        var item = Assert.Single(browser.SortedItems);
-        Assert.Equal("1.0 KB", item.SizeText);                         // A-2: ByteSizeFormatter(1024 → 1.0 KB)
+        var vm = new ImageTabViewModel(
+            db.Folders, db.Images, db.Tags, new ImageSorter(),
+            new ViewService(db.Views, db.Clock), new NodeGraphBuilder(),
+            new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(db.Folders, db.Images, db.Features, db.Similarities, new FakePHashImageReader(), db.Clock),
+            new MergeService(db.Images, db.Tags, db.Merges),
+            new TrashService(db.Images, db.Folders, new FilePresenceProbe()),
+            new NoopWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock));
+        await vm.InitializeAsync(col.Id);
+
+        var item = Assert.Single(vm.Items, i => !i.IsFolder);
+        Assert.False(string.IsNullOrEmpty(item.SizeLabel));            // A-2: グリッド項目 VM がサイズ文字列を公開
+        Assert.Equal("1 KB", item.SizeLabel);                          // 新 surface FmtSize(1024 → "1 KB")
     }
 
     // ---- A-3: TrashItemViewModel.SizeText ----

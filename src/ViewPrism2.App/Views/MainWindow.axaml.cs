@@ -1,142 +1,16 @@
-using System.ComponentModel;
 using Avalonia.Controls;
-using Avalonia.Input;
-using ViewPrism2.App.ViewModels;
 
 namespace ViewPrism2.App.Views;
 
 /// <summary>
-/// シェルの View(M-UI-013)。ロジックは MainWindowViewModel に置き、
-/// ここはポインタイベント→VM 呼び出し・TreeView 選択同期・ビューポート幅供給のみ(K-MVVM)。
+/// シェルの View(M-UI-013)。ECO-024 で原典画像タブ Grid・legacy code-behind を撤去。
+/// 各タブ surface(TagsTabView / ImageTabView / WorkTabView)が自前の View ロジックを持つため、
+/// シェルはタブのホストに徹する(K-MVVM)。
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly DoubleClickDetector _doubleClick = new();
-    private MainWindowViewModel? _viewModel;
-    private bool _syncingTreeSelection;
-
     public MainWindow()
     {
         InitializeComponent();
-        DataContextChanged += (_, _) => Attach(DataContext as MainWindowViewModel);
-    }
-
-    private void Attach(MainWindowViewModel? viewModel)
-    {
-        if (_viewModel is not null)
-        {
-            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        }
-
-        _viewModel = viewModel;
-        if (_viewModel is not null)
-        {
-            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        }
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        // VM 側の選択変更(ホームタグ初期選択・選択復元)を TreeView へ反映する
-        if (e.PropertyName == nameof(MainWindowViewModel.SelectedTreeNode) &&
-            _viewModel is not null &&
-            !_syncingTreeSelection &&
-            !Equals(NodeTree.SelectedItem, _viewModel.SelectedTreeNode))
-        {
-            NodeTree.SelectedItem = _viewModel.SelectedTreeNode;
-        }
-    }
-
-    private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (_viewModel is null)
-        {
-            return;
-        }
-
-        _syncingTreeSelection = true;
-        try
-        {
-            _viewModel.SelectedTreeNode = NodeTree.SelectedItem as GraphNodeViewModel;
-        }
-        finally
-        {
-            _syncingTreeSelection = false;
-        }
-    }
-
-    private void OnViewItemPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_viewModel is not null &&
-            sender is Control { DataContext: ViewListItemViewModel item } control &&
-            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
-        {
-            _viewModel.SelectViewListItemCommand.Execute(item);
-        }
-    }
-
-    /// <summary>
-    /// グリッドセル/リスト行のポインタ操作(REQ-041 v1.3: クリック・Ctrl+クリック・
-    /// SHIFT+クリック範囲 union・ダブルクリック)。
-    /// ダブルクリック判定は ClickCount に加えて自前検出(DoubleClickDetector)で補完する
-    /// (DF-4: ポインタ経路・活性化・微小移動で ClickCount が 2 に達しない事例への堅牢化)。
-    /// </summary>
-    private void OnCellPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_viewModel is null ||
-            sender is not Control { DataContext: ImageItemViewModel item } control ||
-            !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
-        {
-            return;
-        }
-
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        var detected = _doubleClick.ObserveClick(
-            item, (long)e.Timestamp, SystemDoubleClickTimeMs, ctrl || shift);
-        var isDouble = e.ClickCount >= 2 || detected;
-        _viewModel.Browser.HandleItemPointer(item, ctrl, shift, isDouble);
-
-        // GF-02(REQ-060(b)): セルクリックを処理済みにして親 ListBox(グリッド行)の行選択を抑止する。
-        // グリッドの選択状態はセル(ImageItemViewModel.IsSelected → cellFrame の枠+バッジ)のみが持ち、
-        // 行 ListBoxItem の :selected 背景が出ないようにする(行リスト仮想化は表示専用)。
-        // リスト表示モードは別ハンドラで行選択視覚を正として維持。
-        e.Handled = true;
-    }
-
-    /// <summary>OS のダブルクリック時間(ms)。本アプリは Windows 専用(仕様 §1)。</summary>
-    private static double SystemDoubleClickTimeMs
-    {
-        get
-        {
-            try
-            {
-                return GetDoubleClickTime();
-            }
-            catch (EntryPointNotFoundException)
-            {
-                return 500; // 既定値(Windows 標準)
-            }
-        }
-    }
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern uint GetDoubleClickTime();
-
-    /// <summary>コレクション項目のクリック(REQ-053 v1.3/CR-2: 選択スコープの切替)。</summary>
-    private void OnCollectionPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_viewModel is not null &&
-            sender is Control { DataContext: FolderRowViewModel row } control &&
-            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
-        {
-            _viewModel.SelectCollectionCommand.Execute(row);
-        }
-    }
-
-    private void OnContentSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        // セル辺・列幅の計算用にコンテンツ幅を VM へ供給(スクロールバー余裕 20px)
-        _viewModel?.Browser.UpdateViewportWidth(Math.Max(0, e.NewSize.Width - 20));
     }
 }

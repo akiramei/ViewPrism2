@@ -196,22 +196,15 @@ public partial class App : Application
         // View 層サービスと ViewModel(K-MVVM: ViewModel はトランジェント)
         services.AddSingleton<WindowService>();
         services.AddSingleton<IWindowService>(sp => sp.GetRequiredService<WindowService>());
-        services.AddTransient(sp => new FolderManagementViewModel(
-            sp.GetRequiredService<ISyncFolderRepository>(),
-            sp.GetRequiredService<ScanService>(),
-            sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<IWindowService>()));
         services.AddTransient(sp => new TagsTabViewModel(
             sp.GetRequiredService<ViewService>(),
             sp.GetRequiredService<TagService>(),
             sp.GetRequiredService<ITagRepository>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<IWindowService>()));
-        services.AddTransient(sp => new TaggingPanelViewModel(
-            sp.GetRequiredService<TagService>(),
-            sp.GetRequiredService<ITagRepository>(),
-            sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<IWindowService>()));
+        // ECO-024: 原典画像タブ撤去に伴い MainWindowViewModel から FolderManagementViewModel(シェル)/
+        // TaggingPanelViewModel/ThumbnailService 依存を除去。フォルダ管理モーダルは WindowService が
+        // FolderManagementViewModel を直接生成するため DI 登録は不要。
         services.AddTransient(sp => new MainWindowViewModel(
             sp.GetRequiredService<ISyncFolderRepository>(),
             sp.GetRequiredService<IImageRepository>(),
@@ -224,13 +217,10 @@ public partial class App : Application
             sp.GetRequiredService<MergeService>(),
             sp.GetRequiredService<TrashService>(),
             sp.GetRequiredService<ImageSorter>(),
-            sp.GetRequiredService<ThumbnailService>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<AppSettings>(),
             sp.GetRequiredService<IWindowService>(),
-            sp.GetRequiredService<FolderManagementViewModel>(),
             sp.GetRequiredService<TagsTabViewModel>(),
-            sp.GetRequiredService<TaggingPanelViewModel>(),
             sp.GetRequiredService<WorkspaceService>(),
             sp.GetRequiredService<ILogger<MainWindowViewModel>>()));
 

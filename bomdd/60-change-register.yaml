@@ -521,3 +521,27 @@ change_orders:
       R43-3: "生きている部分は保持: OC-7 サイズ整形器=共有(list/grid ECO-004)/ images.notes フィールド=DB 残置(dormant)"
     scope_out: "コード撤去(DetailPanelViewModel/MainWindow Detail.*)=原典撤去 ECO(次工程)。詳細/ノートの新機能追加(ビューアー等)=将来別 ECO"
     notes: "効果=原典撤去の最後のブロッカー(REQ-043 の行き先)が解消。register の旧 scope_out『詳細/ノート(REQ-043・別ECO)』(ECO-013/017/018/019/020/021)は歴史記録として残置=本 ECO で撤回により解消済。前セッションの案 A 設計ブリーフ(ViewPrismUI image_tab.md 詳細/ノート節・review_points IMG-012)は撤回注記へ差し替え"
+
+  - id: ECO-024
+    title: "画像タブ 原典(legacy)surface 撤去 — ImageTabView 一本化(as-built 実態化)"
+    type: surface 撤去(as-built 実態化・要件/不変条件/Core 意味論 不変)
+    status: implemented
+    golden: n/a
+    baseline: "ECO-023 適用後(main d09b1e6)"
+    bom_rev: "v4.0(eco:ECO-024)"
+    impacted_bom:
+      ["E-UI-SHELL-021(ECO-013 invariant『新 ImageTabView 一本化・原典撤去』の as-built 実現)",
+       "E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041(単独 realization=ImageTabView/ImageTabViewModel に確定・legacy Grid as-built 撤去)",
+       "M-UI-013(シェル VM artifact を legacy Grid 撤去後の実態へ・interface_contract v1.2 prose 同期は M4)",
+       "M-UI-016(TaggingPanelViewModel 撤去。E-UI-TAGASSIGN-029 realization を ImageTab/WorkTab inline タグ編集へ実態化)",
+       "33-control-plan CP-UI-G1 / CP-TAGUI-013 / CP-L1-SMOKE(検証点を新 surface/Core へ移行・全面同期は M4)"]
+    oracle: "S-01〜S-31 不変(Core 意味論不変・撤去のみ)。スキーマ不変"
+    verification: "build 0警告 / Tests(移行後・件数変動を報告に記録)/ Oracle 100+2skip / validate_bom 0 error"
+    decisions:
+      L1: "撤去対象=MainWindow legacy Grid(239-512)+harness トグル+MainWindowViewModel legacy 画像タブ・パイプライン全体+code-behind ハンドラ+DI 登録。削除ファイル=ImageBrowserViewModel/DetailPanelViewModel/ViewListItemViewModel/GraphNodeViewModel/TaggingPanelViewModel(+View)"
+      L2: "残す=ImageTab/WorkTab/TagsTab surface・DoubleClickDetector(新 surface が使用)・FolderManagementViewModel(モーダル用・WindowService が直接生成)"
+      L3: "テスト(maintainer 裁定=移行を確認してから削除): CpTagUi013=削除(TagService Core+新 surface で全 COVERED)/ CpDisplayParity022 A-2=移植(ImageItemVM.SizeText)/ CpL1Smoke=移植(新 surface スモーク)/ CpUiG1Selection=分割(DoubleClickDetector テスト保全・列計算等 legacy 機構は golden 担保で削除)"
+    body: 60-change-order-eco-024.md
+    m4_done: "ECO-024 スコープの M4 同期を実施: 32-mbom M-UI-013 interface_contract(薄いシェル+ImageTabView 一本化・撤去済 legacy 明記)/M-UI-016(TaggingPanelViewModel 撤去→ImageTab/WorkTab インライン実態化)/M-UI-013 acceptance から retired CP-UI-G3 除去/新 M-UI-WORKSPACE-029(E-UI-WORKSPACE-043 製造トレース=W2 解消)。33-control-plan CP-TAGUI-013 を TagService(CpTag011)+新 surface インラインへ再帰属。20-spec §2.6 に as-built 注記+左 NodeGraph ツリー/詳細パネルの撤去是正。validate_bom 0 error/0 warning。"
+    pending_sync: "ECO-010〜021 の evolved design(表示軸チップ/パンくず・整理/作業/削除/ゴミ箱の逐条)の 20-spec §2.6 全面 prose 同期は継続課題(累積 M4・本 ECO スコープ外=E-UI-BROWSE/AXIS/MODE+ViewPrismUI UI-IR が当面の権威)"
+    notes: "E-UI-SHELL-021/BROWSE-022 は ECO-013 で本撤去を予告済(実行はブロッカー解消まで保留)。全ブロッカー(整理/⋯/作業/削除/ゴミ箱/作業タブ/詳細ノート撤回)解消により実行。golden 不要(新 surface は ECO-013〜022 で golden 承認済・挙動不変の撤去)"
