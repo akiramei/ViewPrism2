@@ -177,6 +177,8 @@ public sealed partial class ViewerViewModel : ObservableObject
             OnPropertyChanged(nameof(IsSpread));
             OnPropertyChanged(nameof(IsSpreadRight));
             OnPropertyChanged(nameof(IsSpreadLeft));
+            OnPropertyChanged(nameof(CurrentModeLabel));
+            OnPropertyChanged(nameof(ShowTagControlBadge));
             OnPropertyChanged(nameof(Direction));
             OnPropertyChanged(nameof(ShowBottomBar));
             OnPropertyChanged(nameof(ShowSeek));
@@ -199,6 +201,19 @@ public sealed partial class ViewerViewModel : ObservableObject
 
     /// <summary>左開きが選択中(GF-V2-01)。</summary>
     public bool IsSpreadLeft => Mode == ViewerMode.SpreadLeft;
+
+    /// <summary>現在モードのラベル(設定ドロワーのモードバッジ用・GF-TAGCTRL-05 V3・モック modeLabel)。</summary>
+    public string CurrentModeLabel => Mode switch
+    {
+        ViewerMode.Normal => Loc?.T("viewer.mode.normal") ?? "単一",
+        ViewerMode.Scroll => Loc?.T("viewer.mode.scroll") ?? "縦スクロール",
+        ViewerMode.SpreadRight => Loc?.T("viewer.openDirection.right") ?? "右開き",
+        ViewerMode.SpreadLeft => Loc?.T("viewer.openDirection.left") ?? "左開き",
+        _ => string.Empty,
+    };
+
+    /// <summary>ツールバー「タグ制御 ON」バッジの表示可否(GF-TAGCTRL-05 V4)。見開き+タグ制御 ON のみ。</summary>
+    public bool ShowTagControlBadge => EnableTagControl && IsSpread;
 
     /// <summary>見開きの開き方向(spread のときのみ意味を持つ)。</summary>
     public SpreadDirection Direction =>
@@ -375,6 +390,7 @@ public sealed partial class ViewerViewModel : ObservableObject
             SyncTagControlSpreadFromMemory();
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsTagControlActive));
+            OnPropertyChanged(nameof(ShowTagControlBadge));
             RaisePositionChanged();
             CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -410,23 +426,50 @@ public sealed partial class ViewerViewModel : ObservableObject
     // 左空白→右空白。色はアクション固定の淡色(割り当てタグ色とは独立)。resolver の競合順(Core)とは無関係。
     private static readonly (ViewerTagAction Action, string Glyph, string IconBg, string IconFg, string Key)[] ActionRowDefs =
     {
-        (ViewerTagAction.ForceLeftPage, "◀", "#EAF1FE", "#2F6BED", "forceLeftPage"),
-        (ViewerTagAction.ForceRightPage, "▶", "#EAFAF3", "#0F8A5E", "forceRightPage"),
-        (ViewerTagAction.Spread, "↔", "#F3EFFE", "#7C3AED", "spread"),
-        (ViewerTagAction.Skip, "⊘", "#FDECEC", "#DC2626", "skip"),
-        (ViewerTagAction.LeftPageEmpty, "◑", "#FBF3DF", "#C99A1E", "leftPageEmpty"),
-        (ViewerTagAction.RightPageEmpty, "◐", "#FDEEDE", "#C47D18", "rightPageEmpty"),
+        // グリフ・色はモック(standalone.html actions[] + actionMeta.color)権威。GF-TAGCTRL-05 D7。
+        // IconBg=アクション色の 12% alpha(mock hexA(color,0.12) = ARGB #1F+RRGGBB)、IconFg=アクション色 100%。
+        (ViewerTagAction.ForceLeftPage, "◧", "#1F2F6BED", "#2F6BED", "forceLeftPage"),
+        (ViewerTagAction.ForceRightPage, "◨", "#1F12A594", "#12A594", "forceRightPage"),
+        (ViewerTagAction.Spread, "▭", "#1F8B5CF6", "#8B5CF6", "spread"),
+        (ViewerTagAction.Skip, "⊘", "#1FE5484D", "#E5484D", "skip"),
+        (ViewerTagAction.LeftPageEmpty, "▯", "#1FE8B931", "#E8B931", "leftPageEmpty"),
+        (ViewerTagAction.RightPageEmpty, "▯", "#1FF2912B", "#F2912B", "rightPageEmpty"),
     };
 
     private void RebuildTagActionRows()
     {
+        // tagId → それを使用するアクション集合(picker「使用中」バッジ D4 の判定用)。
+        var usedBy = new Dictionary<string, List<ViewerTagAction>>(StringComparer.Ordinal);
+        foreach (var (act, tagId) in _settings.TagActionMap)
+        {
+            if (string.IsNullOrEmpty(tagId))
+            {
+                continue;
+            }
+
+            if (!usedBy.TryGetValue(tagId, out var acts))
+            {
+                usedBy[tagId] = acts = new List<ViewerTagAction>(1);
+            }
+
+            acts.Add(act);
+        }
+
         var rows = new List<TagControlMappingRow>(ActionRowDefs.Length);
         foreach (var (action, glyph, iconBg, iconFg, key) in ActionRowDefs)
         {
             var assignedId = _settings.TagActionMap.GetValueOrDefault(action);
+
+            // 行ごとの picker 選択肢: IsSelected(この行に割当済=選択✓ D5)/ UsedElsewhere(他アクションが同タグ使用=使用中 D4)。
+            var rowOptions = _availableTags.Select(t => t with
+            {
+                IsSelected = string.Equals(t.Id, assignedId, StringComparison.Ordinal),
+                UsedElsewhere = usedBy.TryGetValue(t.Id, out var acts) && acts.Any(a => a != action),
+            }).ToList();
+
             var assigned = assignedId is null
                 ? null
-                : _availableTags.FirstOrDefault(t => string.Equals(t.Id, assignedId, StringComparison.Ordinal));
+                : rowOptions.FirstOrDefault(t => string.Equals(t.Id, assignedId, StringComparison.Ordinal));
 
             rows.Add(new TagControlMappingRow(
                 this,
@@ -438,7 +481,7 @@ public sealed partial class ViewerViewModel : ObservableObject
                 key,
                 Loc?.T($"viewer.tagControl.action.{key}.desc") ?? string.Empty,
                 assigned,
-                _availableTags,
+                rowOptions,
                 Loc?.T("viewer.tagControl.unassigned") ?? "未割り当て"));
         }
 

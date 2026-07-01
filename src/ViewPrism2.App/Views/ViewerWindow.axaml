@@ -194,6 +194,19 @@
               <TextBlock Text="{Binding Loc[viewer.displaySettings]}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
+
+          <!-- タグ制御 ON バッジ(GF-TAGCTRL-05 V4・見開き+タグ制御 ON 時のみ・モック準拠) -->
+          <Border IsVisible="{Binding ShowTagControlBadge}" Height="34" Padding="12,0" CornerRadius="9"
+                  Background="#F3EFFE" BorderBrush="#E2D7FB" BorderThickness="1" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+              <Border Width="8" Height="8" CornerRadius="4" Background="#8B5CF6" VerticalAlignment="Center"
+                      BoxShadow="0 0 0 3 #2E8B5CF6" Margin="3,0,0,0" />
+              <TextBlock Text="{Binding Loc[viewer.tagControl.badge]}" FontSize="12.5" FontWeight="SemiBold"
+                         Foreground="#7A5BD0" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding TagControlMappingBadge}" FontSize="11"
+                         Foreground="#9B8AD0" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
         </StackPanel>
       </DockPanel>
     </Border>
@@ -299,12 +312,17 @@
          ScrollViewer が有界高さ(= body 行高)を受け取りスクロールする。BODY と同じ `*` 行に重ねるが、
          下部バー(Row=2)とは別行なので Z オーダー不具合(GF-V2-TC-02)も再発しない。
          ヘッドレス実測で Viewport<Extent(=スクロール可)・Padding を内容 Margin 化で下端到達も確認済。 -->
-    <Border Grid.Row="1" HorizontalAlignment="Right" Width="360" IsVisible="{Binding SettingsOpen}"
+    <Border Grid.Row="1" HorizontalAlignment="Right" Width="376" IsVisible="{Binding SettingsOpen}"
               Background="{StaticResource AppBackgroundBrush}" BorderBrush="#E6E9EF" BorderThickness="1,0,0,0">
         <!-- Padding は ScrollViewer ではなく内容(StackPanel)の Margin に置く。Avalonia の
              ScrollViewer.Padding は Extent に含まれず最大スクロール時に下端が切れるため(GF-TAGCTRL 実測)。 -->
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <StackPanel Spacing="4" Margin="16,14,28,16">
+
+            <!-- モードバッジ(GF-TAGCTRL-05 V3・バッジのみ追随=歯車/X ヘッダは付けない。モック modeLabel) -->
+            <Border Background="#EAF1FE" CornerRadius="6" Padding="9,3" HorizontalAlignment="Left" Margin="0,0,0,6">
+              <TextBlock Text="{Binding CurrentModeLabel}" FontSize="12" FontWeight="SemiBold" Foreground="#2F6BED" />
+            </Border>
 
             <!-- ===== 単一: フィット / 背景 / info ===== -->
             <StackPanel Spacing="4" IsVisible="{Binding IsNormal}">
@@ -493,10 +511,11 @@
     <Panel Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding TagControlMappingOpen}">
         <!-- 暗幕(クリックで閉じる) -->
         <Border Background="#88000000" PointerPressed="OnTagControlBackdropPressed" />
+        <!-- 幅820・角丸14 はモック権威(standalone.html width:820px;border-radius:14px)。GF-TAGCTRL-05 D1。 -->
         <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                Width="600" MaxHeight="660"
+                Width="820" MaxHeight="720"
                 Background="{StaticResource AppBackgroundBrush}" BorderBrush="#E6E9EF" BorderThickness="1"
-                CornerRadius="16" Padding="0" BoxShadow="0 12 40 0 #40000000">
+                CornerRadius="14" Padding="0" BoxShadow="0 12 40 0 #40000000">
           <DockPanel>
             <!-- ヘッダ -->
             <Border DockPanel.Dock="Top" Padding="22,18" BorderBrush="#EEF0F4" BorderThickness="0,0,0,1">
@@ -504,7 +523,7 @@
                 <Border Grid.Column="0" Width="40" Height="40" CornerRadius="11" Background="#F3EFFE"
                         VerticalAlignment="Top" Margin="0,0,14,0">
                   <PathIcon Data="{StaticResource TagIcon}" Width="20" Height="20"
-                            Foreground="#7C3AED" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            Foreground="#8B5CF6" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Loc[viewer.tagControl.mapping.title]}"
@@ -518,6 +537,14 @@
                 </Button>
               </Grid>
             </Border>
+            <!-- 列見出し(GF-TAGCTRL-05 D2・モック grid 30/1fr/248・色 #AAB1BD)。
+                 左右インセット 33(=ItemsControl 18 + カード border1 + padding14)でカード内寸に揃える。 -->
+            <Grid DockPanel.Dock="Top" Margin="33,6,33,2" ColumnDefinitions="34,*,248">
+              <TextBlock Grid.Column="1" Text="{Binding Loc[viewer.tagControl.mapping.colAction]}" Margin="12,0,0,0"
+                         FontSize="11" FontWeight="Bold" Foreground="#AAB1BD" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Text="{Binding Loc[viewer.tagControl.mapping.colTag]}"
+                         FontSize="11" FontWeight="Bold" Foreground="#AAB1BD" VerticalAlignment="Center" />
+            </Grid>
             <!-- フッター -->
             <Border DockPanel.Dock="Bottom" Padding="22,14" BorderBrush="#EEF0F4" BorderThickness="0,1,0,0">
               <Grid ColumnDefinitions="*,Auto,Auto">
@@ -543,7 +570,8 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:TagControlMappingRow">
                     <Border Classes="tagRowCard">
-                      <Grid ColumnDefinitions="Auto,*,180" VerticalAlignment="Center">
+                      <!-- picker 列 248 はモック権威(grid ...248px)。GF-TAGCTRL-05 D3。 -->
+                      <Grid ColumnDefinitions="Auto,*,248" VerticalAlignment="Center">
                         <!-- アクションアイコンバッジ(アクション固定色) -->
                         <Border Grid.Column="0" Classes="tagRowIcon" Background="{Binding IconBg}"
                                 VerticalAlignment="Center" Margin="0,0,12,0">
@@ -577,8 +605,8 @@
                           </Grid>
                           <Button.Flyout>
                             <Flyout Placement="Bottom">
-                              <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel MinWidth="200" Spacing="1">
+                              <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel MinWidth="248" Spacing="1">
                                   <!-- 未割り当て(クリア) -->
                                   <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                           Classes="vToolBtn" BorderThickness="0"
@@ -588,15 +616,25 @@
                                   <ItemsControl ItemsSource="{Binding Options}">
                                     <ItemsControl.ItemTemplate>
                                       <DataTemplate x:DataType="vm:TagPickerOption">
-                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                        <!-- 行: 色ドット / タグ名 / 使用中バッジ(D4) / 選択✓(D5)。モック権威。 -->
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                                 Classes="vToolBtn" BorderThickness="0"
                                                 Command="{Binding $parent[ItemsControl].((vm:TagControlMappingRow)DataContext).AssignCommand}"
                                                 CommandParameter="{Binding}">
-                                          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <Ellipse Width="11" Height="11" VerticalAlignment="Center"
+                                          <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                                            <Ellipse Grid.Column="0" Width="11" Height="11" Margin="0,0,8,0" VerticalAlignment="Center"
                                                      Fill="{Binding Color, FallbackValue=#9AA3B0, TargetNullValue=#9AA3B0}" />
-                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                                          </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <Border Grid.Column="2" IsVisible="{Binding UsedElsewhere}" Background="#FDF2DD"
+                                                    CornerRadius="5" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                              <TextBlock Text="{Binding $parent[Window].((vm:ViewerViewModel)DataContext).Loc[viewer.tagControl.inUse]}"
+                                                         FontSize="9.5" FontWeight="SemiBold" Foreground="#C08A2A" />
+                                            </Border>
+                                            <TextBlock Grid.Column="3" Text="✓" IsVisible="{Binding IsSelected}"
+                                                       Foreground="#2F6BED" FontWeight="Bold" FontSize="13"
+                                                       Margin="8,0,0,0" VerticalAlignment="Center" />
+                                          </Grid>
                                         </Button>
                                       </DataTemplate>
                                     </ItemsControl.ItemTemplate>

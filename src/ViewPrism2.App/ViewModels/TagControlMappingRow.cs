@@ -5,8 +5,16 @@ namespace ViewPrism2.App.ViewModels;
 
 /// <summary>
 /// タグ制御マッピング picker の 1 選択肢(作成済みタグ。色ドット+ラベル)。ECO-022・§2.12.6。
+/// <paramref name="IsSelected"/>=この行(アクション)に現在割当済(選択✓ GF-TAGCTRL-05 D5)。
+/// <paramref name="UsedElsewhere"/>=他アクションが同タグを使用中(「使用中」バッジ D4)。
+/// いずれも行ごとに算出されるため、供給時(SetAvailableTags)は既定 false で、RebuildTagActionRows が行別に補正する。
 /// </summary>
-public sealed record TagPickerOption(string Id, string Name, string? Color);
+public sealed record TagPickerOption(
+    string Id,
+    string Name,
+    string? Color,
+    bool IsSelected = false,
+    bool UsedElsewhere = false);
 
 /// <summary>
 /// タグ制御マッピングモーダルの 1 行(予約アクション)。表示契約(§2.12.6・M-UI-018 tagctrl_ui):

@@ -50,8 +50,8 @@ public sealed class GfViewerDrawerScrollTests
             }
 
             var drawer = window.GetVisualDescendants().OfType<Border>()
-                .FirstOrDefault(b => Math.Abs(b.Width - 360) < 0.5);
-            Assert.NotNull(drawer); // 幅 360 の設定ドロワー Border
+                .FirstOrDefault(b => Math.Abs(b.Width - 376) < 0.5);
+            Assert.NotNull(drawer); // 幅 376 の設定ドロワー Border(GF-TAGCTRL-05 V1: 360→376)
 
             var sv = drawer!.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
             Assert.NotNull(sv); // ドロワー内 ScrollViewer
@@ -62,6 +62,51 @@ public sealed class GfViewerDrawerScrollTests
             // スクロール可能: 内容(Extent)が Viewport を超える
             Assert.True(sv.Extent.Height > sv.Viewport.Height + 0.5,
                 $"Extent.Height={sv.Extent.Height} <= Viewport.Height={sv.Viewport.Height} (スクロール域ゼロ)");
+
+            window.Close();
+        }, CancellationToken.None);
+
+    /// <summary>
+    /// GF-TAGCTRL-05 D1: タグ制御マッピングモーダルはモック権威の幅 820 で描画され、
+    /// 760 窓に縦方向で収まる(header/列見出し/6 行/常時フッターが MaxHeight 720 内)。
+    /// D1 幅 820 の headless 再計測(change-order §9 の残作業)を恒久ガード化する。
+    /// </summary>
+    [Fact]
+    public Task タグ制御マッピングモーダルは幅820で760窓に収まる() =>
+        Session.Dispatch(() =>
+        {
+            var items = Enumerable.Range(0, 6).Select(Entry).ToList();
+            var vm = new ViewerViewModel(items, startIndex: 2, new ViewerSettingsModel(), persist: null)
+            {
+                Loc = new LocalizationProxy(new LocalizationService(
+                    I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")))),
+            };
+            vm.Mode = ViewerMode.SpreadRight;
+            vm.EnableTagControl = true;
+            // picker の使用中(D4)/選択✓(D5)経路も VM 構築で通す(1 タグを 2 アクションへ割当)。
+            vm.SetAvailableTags(new[]
+            {
+                new TagPickerOption("t1", "タグA", "#2F6BED"),
+                new TagPickerOption("t2", "タグB", "#12A594"),
+            });
+            vm.SetTagActionMapping(ViewerTagAction.ForceLeftPage, "t1");
+            vm.SetTagActionMapping(ViewerTagAction.Skip, "t1"); // t1 は複数アクション=使用中
+            vm.TagControlMappingOpen = true;
+
+            var window = new ViewerWindow { DataContext = vm, Width = 1200, Height = 760 };
+            window.Show();
+            for (var i = 0; i < 8; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+            }
+
+            var modal = window.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(b => Math.Abs(b.Width - 820) < 0.5);
+            Assert.NotNull(modal); // 幅 820 のモーダル Border(D1)
+
+            // 760 窓に縦で収まる(スクロール無しで全行+フッター到達可能)
+            Assert.True(modal!.Bounds.Height > 0 && modal.Bounds.Height <= 760.5,
+                $"modal.Bounds.Height={modal.Bounds.Height} (760 窓に収まっていない)");
 
             window.Close();
         }, CancellationToken.None);

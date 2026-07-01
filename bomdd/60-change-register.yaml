@@ -434,7 +434,7 @@ change_orders:
     title: "画像ビューアー タグ制御モード(フェーズ2・仕様§5・予約アクション6種+マッピング永続化+設定モーダル)"
     type: 新規Core計算核(配置エンジン) + 永続化拡張 + 新surface(設定ドロワートグル+マッピングモーダル)
     status: implemented
-    golden: round1-fixed
+    golden: approved
     golden_detail: >
       golden G-11 第1回(2026-07-01・maintainer 実機)= 一連の GF を是正し受入。#1 設定ドロワースクロール OK・
       #2 マッピングモーダル(モック準拠)OK・#3 配置パリティ OK(タグ タブでタグ追加→画像タブ候補表示→
@@ -454,8 +454,16 @@ change_orders:
       `_imagesTabStale`→`ReloadAsync()` は legacy surface のみ再読込で M3 ImageTab の `_tagById` 未更新。公開
       `ReloadTagCatalogAsync()`(台帳+ビュー+画像タグ紐付け再読込・状態保持)を追加しタブ切替 stale 経路で併呼。
       再起動不要で新規タグ反映を maintainer 実機確認。
-      検証: Tests 505 PASS/ Oracle 100+2skip(Core 非依存で不変)/ build 0警告。残: golden 最終承認(50-as-built
-      golden_approvals へ CP-UI-G11 記録)は maintainer 一括コミット時に確定。
+      検証: Tests 505 PASS/ Oracle 100+2skip(Core 非依存で不変)/ build 0警告。
+      GF-TAGCTRL-05(2026-07-01・追随実装)= golden 承認版がモック(CAD)の簡略サブセットと判明したため、
+      一次モック standalone.html から全実測値を抽出しモック権威へ寄せた。追随: モーダル D1 幅820/角丸14・D2 列見出し・
+      D3 picker 248・D4 使用中バッジ・D5 選択✓・D6 フッター全文・D7 グリフ ◧◨▭⊘▯▯+色(actionMeta 由来)・D9 ヘッダ #8B5CF6 /
+      ビューア V1 ドロワー幅376・V3 モードバッジのみ(X/歯車なし)・V4 ツールバー タグ制御 ON バッジ。許容差分=D8 行文言・V2 スクリム・V5 タイトルバー。
+      検証: Tests 510(+1 headless probe=モーダル 820 が 760 窓に収まるを実測・D1 再計測ガード化。既存ドロワー probe は 376 へ更新)/
+      Oracle 100+2skip/ build 0警告。
+      **CP-UI-G11 GF-05 approved(2026-07-01・maintainer 実機)**: モーダル(820 幅・列見出し・グリフ ◧◨▭⊘▯▯+色・使用中バッジ・選択✓・
+      フッター全文・ヘッダ #8B5CF6)+ ビューア(ドロワー376・モードバッジのみ・ツールバー タグ制御 ON バッジ N/6)を実機確認し OK。
+      許容差分=D8 行文言・V2 スクリム・V5 タイトルバー。**→ ECO-022 クローズ**(golden は本 register で管理・ECO-017〜021 同様 50-as-built へは非追記)。
     baseline: "570fdef(ビューアーフェーズ1適用後・main)"
     bom_rev: "v4.0(eco:ECO-022)"
     impacted_bom:
