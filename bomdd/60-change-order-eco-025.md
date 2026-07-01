@@ -141,3 +141,14 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
 ## 10. 採番メモ
 
 ユーザー起票時の想定 ECO-024 は既に「画像タブ 原典撤去」で使用済み(register)。採番規則(逐次)に従い本 ECO は **ECO-025** で確定。
+
+## 11. 実装状況
+
+- **α = 製造済(golden pending)**:
+  - `ViewColumnModel`(App/ViewModels・純粋/決定論): 進化モデル(名前固定 VE-001・最大5 VE-002・タグ母集合限定・kind・display_columns 直列化=DisplayColumnParser 互換)。
+  - `ViewEditDialogViewModel` / `ViewEditDialog.axaml`: ビュー編集モーダルに列ピッカー(選択済み列+上下移動/削除+ソースチップ/色ドット+追加元カード[基本=破線/タグ=実線+種別チップ]+件数バッジ[上限アンバー]+名前固定バッジ)を追加。
+  - `WindowService.ShowViewEditDialogAsync`: ビューのタグ階層メンバー(`GetHierarchyAsync`→`Tag`)を母集合として供給。
+  - loc(ja/en 13 キー)。テスト `CpViewColumnModelTests` 11 件。
+  - 検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 485(+11)/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0。
+  - **残 = α 視覚 golden(maintainer 実機)**: 列ピッカーの密度・ソースチップ/色ドット・件数バッジのアンバー・名前固定バッジ・追加元カードの破線/実線。
+- **β = 未製造(pending)**: ファイル一覧の列描画(kind 別セル)+ 列ヘッダーソート(不変条件)+ 表示列ポップオーバー(列ピッカー再利用)。E-UI-BROWSE-022。

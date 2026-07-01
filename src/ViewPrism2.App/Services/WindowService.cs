@@ -144,10 +144,43 @@ public sealed class WindowService : IWindowService
             return false;
         }
 
-        var vm = new ViewEditDialogViewModel(existing, _viewService, _localization);
+        var viewTags = await LoadViewTagsAsync(existing);
+        var vm = new ViewEditDialogViewModel(existing, viewTags, _viewService, _localization);
         var window = new ViewEditDialog { DataContext = vm };
         vm.Saved += (_, _) => window.Close(true);
         return await window.ShowDialog<bool?>(Owner) == true;
+    }
+
+    /// <summary>
+    /// ビュー編集モーダルの表示列タグ母集合(ECO-025 α・REQ-079): 当該ビューのタグ階層メンバーを
+    /// 出現順で distinct 取得する。新規ビュー(existing=null)・階層なしは空(基本情報のみ選択可)。
+    /// </summary>
+    private async Task<IReadOnlyList<Tag>> LoadViewTagsAsync(View? view)
+    {
+        if (view is null)
+        {
+            return [];
+        }
+
+        var nodes = await _viewService.GetHierarchyAsync(view.Id);
+        if (nodes.Count == 0)
+        {
+            return [];
+        }
+
+        var all = await _tags.GetAllAsync();
+        var byId = all.ToDictionary(t => t.Id, StringComparer.Ordinal);
+        var result = new List<Tag>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (seen.Add(node.TagId) && byId.TryGetValue(node.TagId, out var tag))
+            {
+                result.Add(tag);
+            }
+        }
+
+        return result;
     }
 
     public async Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(

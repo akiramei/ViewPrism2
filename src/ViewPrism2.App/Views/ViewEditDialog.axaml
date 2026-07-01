@@ -3,25 +3,204 @@
         xmlns:vm="using:ViewPrism2.App.ViewModels"
         x:Class="ViewPrism2.App.Views.ViewEditDialog"
         x:DataType="vm:ViewEditDialogViewModel"
-        Width="420" SizeToContent="Height"
+        x:Name="Root"
+        Width="472" SizeToContent="Height" MaxHeight="760"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- ビュー作成/編集ダイアログ(仕様 §2.6 v1.2): 名前(必須)+説明(+お気に入り) -->
-  <StackPanel Margin="16" Spacing="8">
-    <TextBlock x:Name="TitleText" FontSize="16" />
-    <TextBlock Text="{Binding Loc[view.viewName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-    <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[view.viewNamePlaceholder]}" />
-    <TextBlock Text="{Binding Loc[view.description]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-    <TextBox Text="{Binding Description}" PlaceholderText="{Binding Loc[view.descriptionPlaceholder]}"
-             AcceptsReturn="True" MinHeight="64" TextWrapping="Wrap" />
-    <CheckBox IsChecked="{Binding IsFavorite}" Content="{Binding Loc[view.favorite]}" />
-    <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
-               FontSize="12" TextWrapping="Wrap" />
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="{Binding Loc[common.cancel]}" Click="OnCancelClick" MinWidth="80" />
-      <Button Content="{Binding Loc[common.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
+  <!-- ビュー作成/編集ダイアログ(仕様 §2.6 v1.2: 名前+説明+お気に入り)
+       + ECO-025 α: 表示列の構成(display_columns の進化モデル・列ピッカー・名前固定) -->
+  <Window.Styles>
+    <!-- 件数バッジ: 通常=アクセント / 上限到達=アンバー(VE-002) -->
+    <Style Selector="Border.countBadge">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.countBadge.atLimit">
+      <Setter Property="Background" Value="{StaticResource WarnBrush}" />
+    </Style>
+    <!-- 選択済み列の行 -->
+    <Style Selector="Border.colRow">
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+    </Style>
+    <!-- ソースチップ(基本=グレー / タグ=青) -->
+    <Style Selector="Border.srcChip">
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- 追加元カード: 基本情報=破線 / タグ=実線 -->
+    <Style Selector="Button.addCard">
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,5" />
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.addCard:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+    </Style>
+    <!-- アイコンボタン(上/下/削除) -->
+    <Style Selector="Button.iconBtn">
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="16" Spacing="8">
+      <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" />
+
+      <!-- 名前(必須)+説明+お気に入り -->
+      <TextBlock Text="{Binding Loc[view.viewName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[view.viewNamePlaceholder]}" />
+      <TextBlock Text="{Binding Loc[view.description]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+      <TextBox Text="{Binding Description}" PlaceholderText="{Binding Loc[view.descriptionPlaceholder]}"
+               AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap" />
+      <CheckBox IsChecked="{Binding IsFavorite}" Content="{Binding Loc[view.favorite]}" />
+
+      <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,1,0,0" Margin="0,4,0,0" Padding="0,10,0,0">
+        <StackPanel Spacing="8">
+          <!-- 表示列の設定 見出し + 件数バッジ -->
+          <DockPanel>
+            <Border DockPanel.Dock="Right" Classes="countBadge" Classes.atLimit="{Binding IsAtLimit}">
+              <TextBlock Text="{Binding ColumnCountText}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+            </Border>
+            <TextBlock Text="{Binding Loc[view.displayColumnsSection]}" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </DockPanel>
+          <TextBlock Text="{Binding Loc[view.displayColumnsToFileList]}" FontSize="11"
+                     Foreground="{StaticResource FaintTextBrush}" />
+
+          <!-- 選択済み列(順序どおり・先頭は name 固定) -->
+          <ItemsControl ItemsSource="{Binding SelectedColumns}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Spacing="4" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SelectedColumnRow">
+                <Border Classes="colRow">
+                  <DockPanel>
+                    <!-- 右: 上/下/削除(name 固定は「固定」バッジ) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                      <Border IsVisible="{Binding IsNameLocked}" Background="{StaticResource PanelBrush}"
+                              BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1"
+                              CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnFixed]}"
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                      </Border>
+                      <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding !IsNameLocked}">
+                        <Button Classes="iconBtn" Content="▲" FontSize="10"
+                                IsEnabled="{Binding CanMoveUp}"
+                                ToolTip.Tip="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnMoveUp]}"
+                                Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).MoveColumnUpCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Classes="iconBtn" Content="▼" FontSize="10"
+                                IsEnabled="{Binding CanMoveDown}"
+                                ToolTip.Tip="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnMoveDown]}"
+                                Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).MoveColumnDownCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Classes="iconBtn" Content="✕" FontSize="11" Foreground="{StaticResource DangerBrush}"
+                                ToolTip.Tip="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnRemove]}"
+                                Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).RemoveColumnCommand}"
+                                CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </StackPanel>
+                    <!-- 左: ソースチップ + 色ドット + ラベル -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <Border Classes="srcChip"
+                              Background="{StaticResource CardSelectedBgBrush}">
+                        <TextBlock Text="{Binding SourceLabel}" FontSize="10"
+                                   Foreground="{StaticResource TextMutedBrush}" />
+                      </Border>
+                      <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
+                               IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DockPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- 追加元: 基本情報(破線カード) -->
+          <TextBlock Text="{Binding Loc[view.basicInformation]}" FontSize="12" FontWeight="SemiBold" Margin="0,4,0,0" />
+          <ItemsControl ItemsSource="{Binding BasicSources}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AddSourceRow">
+                <Button Classes="addCard" Margin="0,0,6,6"
+                        BorderThickness="1" BorderBrush="{StaticResource TextMutedBrush}"
+                        IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).IsAtLimit}"
+                        Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).AddColumnCommand}"
+                        CommandParameter="{Binding}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="＋" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding Loc[view.noAvailableBasics]}" FontSize="11"
+                     Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding !HasBasicSources}" />
+
+          <!-- 追加元: タグ(実線カード・種別チップ+色ドット) -->
+          <TextBlock Text="{Binding Loc[view.addTagColumns]}" FontSize="12" FontWeight="SemiBold" Margin="0,4,0,0" />
+          <ItemsControl ItemsSource="{Binding TagSources}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AddSourceRow">
+                <Button Classes="addCard" Margin="0,0,6,6"
+                        IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).IsAtLimit}"
+                        Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).AddColumnCommand}"
+                        CommandParameter="{Binding}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
+                             IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                    <Border Classes="srcChip" Background="{StaticResource CardSelectedBgBrush}">
+                      <TextBlock Text="{Binding KindLabel}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                    </Border>
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding Loc[view.noAvailableTags]}" FontSize="11"
+                     Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding !HasTagSources}" />
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="{Binding Loc[view.saveColumnsNote]}" FontSize="11"
+                 Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+                 FontSize="12" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="{Binding Loc[common.cancel]}" Click="OnCancelClick" MinWidth="80" />
+        <Button Content="{Binding Loc[common.save]}" Command="{Binding SaveCommand}" MinWidth="80"
+                Background="{StaticResource CtaBrush}" Foreground="White" />
+      </StackPanel>
     </StackPanel>
-  </StackPanel>
+  </ScrollViewer>
 </Window>
