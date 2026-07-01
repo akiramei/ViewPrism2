@@ -1,7 +1,7 @@
 # 作業タブ UI-IR 抽出レポート
 
 - **scope**: 作業タブ (work tab) — 共通シェル第3タブ(タグ/画像/**作業**)
-- **入力 CAD**: `ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html`(現物=maintainer の Downloads・ViewPrismUI 取込が前提)
+- **入力 CAD**: `ViewPrismUI:資料/作業タブ/ViewPrism2 作業タブ.html`(+`ViewPrism2 作業タブ削除.html`。2026-07-01 に ViewPrismUI 取込済=P2 是正。正規化仕様=`ViewPrismUI/docs/screens/work_tab.md`)
 - **抽出日**: 2026-06-29
 - **基底**: 画像タブ UI-IR(`bomdd/ui/image-tab/`)。本タブは画像タブ右ペイン surface を丸ごと再利用する。
 
