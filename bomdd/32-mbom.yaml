@@ -193,7 +193,7 @@ mbom:
       fmea_refs: [FMEA-002, FMEA-003]
 
     - id: M-UI-013
-      ebom_refs: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]
+      ebom_refs: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]  # E-UI-DETAIL-023 は ECO-023 で撤回
       artifact:
         path: src/ViewPrism2.App/(Views/, ViewModels/)
         type: avalonia-app

@@ -498,3 +498,26 @@ change_orders:
     pending_sync: "golden G-11 第1回=maintainer 実機で実質パス(#1〜#3 OK・GF-TAGCTRL-01〜04 是正済)。残=maintainer が working tree を一括コミット時に 50-as-built へ CP-UI-G11 approved を記録し ECO-022 クローズ。未コミット src/tests/bomdd は maintainer がコミット。工程 retro(§10・2026-07-01): モーダルの mock→UI-IR 未取込で BOM がクローム未仕様→golden が設計工程化。A/C ガード追加済(FMEA-037・CP-UI-G11 クローム拡張・mock-ui-ir-is-cad メモリ)。B(ViewPrismUI へ UI-IR 取込)進捗 2026-07-01: IR 作成済=ViewPrismUI/docs/screens/image_viewer_tag_control.md(モック権威・integrated_ui_spec/README 索引追加)。突合で golden 承認版がモック簡略サブセットと判明→GF-TAGCTRL-05 起票(乖離 D1-D9・§9・裁定=IR モック権威/実装は追随 GF で寄せる/D8 説明文のみ許容差分)。一次モックは 資料/ビューア/ へコピー済(索引更新済)。GF-05 実装は未着手(別 ECO/セッション・D1 幅 820 は headless 再計測要)。残=GF-05 実装で modal を mock 準拠へ"
     scope_out: "scroll/normal の skip 以外アクション(TC-1)・原典の非決定的『次の適切な画像探索』ループ・タグ作成/編集(タグタブ責務)"
     notes: "データ配管の発見: ImageEntry が既に IReadOnlyList<EvalTagValue>(TagId 付き)Tags を保持=ビューアはタグIDを追加配管なしで取得済み。必要な新規入力はマッピング(action→tag_id)+enableTagControl のみ"
+
+  - id: ECO-023
+    title: "REQ-043(画像詳細パネル/ノート)の撤回 — リバース誤りの是正"
+    type: 要件撤回(リバース欠陥の遡及是正・ECO-003 同型)
+    status: implemented
+    golden: n/a
+    baseline: "ECO-022 クローズ後(main)"
+    bom_rev: "v4.0(eco:ECO-023)"
+    impacted_bom:
+      ["REQ-043(deprecated)",
+       "E-UI-DETAIL-023(削除・純撤回)",
+       "CP-UI-G3(retired)",
+       "20-spec §2.6/OC-7 帰属/§10 トレーサビリティ(是正)",
+       "50-as-built CP-UI-G3 承認(superseded_by ECO-023)"]
+    oracle: "不変(コード非変更)"
+    verification: "validate_bom 0 error(E-UI-DETAIL-023 削除後の dangling/consumer 整合確認)。Tests/Oracle は不変。maintainer 裁定=案1 撤回(2026-07-01)"
+    body: 60-change-order-eco-023.md
+    decisions:
+      R43-1: "原典 view-prism の詳細/ノートは ImageDetailModal(閲覧クリックで開くモーダル)であり、REQ-043 の『常時/選択詳細パネル』はリバース誤り(maintainer 2026-07-01 ソース確認)"
+      R43-2: "撤回(案1)。新設計に詳細/ノートを持ち込まない(後継なし)。将来はビューアーへ新機能として(別ECO)"
+      R43-3: "生きている部分は保持: OC-7 サイズ整形器=共有(list/grid ECO-004)/ images.notes フィールド=DB 残置(dormant)"
+    scope_out: "コード撤去(DetailPanelViewModel/MainWindow Detail.*)=原典撤去 ECO(次工程)。詳細/ノートの新機能追加(ビューアー等)=将来別 ECO"
+    notes: "効果=原典撤去の最後のブロッカー(REQ-043 の行き先)が解消。register の旧 scope_out『詳細/ノート(REQ-043・別ECO)』(ECO-013/017/018/019/020/021)は歴史記録として残置=本 ECO で撤回により解消済。前セッションの案 A 設計ブリーフ(ViewPrismUI image_tab.md 詳細/ノート節・review_points IMG-012)は撤回注記へ差し替え"

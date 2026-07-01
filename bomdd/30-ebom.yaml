@@ -412,7 +412,7 @@ ebom:
         - since ECO-017: 「作業」= タグ編集(E-UI-TAGASSIGN-029)/整理(E-UI-SIMILARITY-035 + E-UI-MERGE-036)に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、選択を `workTargets` 集合へ和集合追加する「追加」アクション(選択あり時のみ活性・追加後に選択クリア)と「作業対象 N 枚」チップを持つ。追加判定・和集合・選択クリア・件数は描画から独立した決定論ロジックとして unit 検査可能にする
         - since ECO-017: 作業モードは右ペインを開かない(中央フル幅)が、ECO-014 §8 の排他隠し規律を作業へ拡張する(作業中はツールバーが他モード入口・`⋯` を隠し、「作業を終了」+「追加」+「作業対象」チップ+表示軸/ソート/レイアウトのみ残す)。作業対象セル個別の視覚マーク(バッジ)は出さない(描画モック準拠)。`workTargets` はチップ表示用の session 蓄積を継続する
         - (ECO-020 更新) 「追加」(AddToWork)は session 蓄積に加え、選択画像を **E-WORKSPACE-042.AddImagesToDefault でデフォルト作業スペースへ永続追加**する(ECO-017 が「別ループ・永続化スコープ外」とした受け渡しの解消)。受け渡し先は作業タブ(E-UI-WORKSPACE-043)で閲覧できる
-        - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(E-UI-DETAIL-023)の新 surface 配置は別 ECO
+        - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(旧 E-UI-DETAIL-023)は ECO-023 で撤回(REQ-043 リバース誤り)=新 surface に配置しない
       acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10]
 
     - id: E-UI-WORKSPACE-043
@@ -436,15 +436,10 @@ ebom:
         - (ECO-021/β-4) ⋯メニュー(削除/ゴミ箱)を E-TRASH-038 / E-UI-REPAIR-039 から再利用配線。削除モード=4つ目の排他文脈モード(⋯から入る)→「ゴミ箱へ移動」=DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009)。ゴミ箱 in-tab popup(ECO-019 再利用・複数選択/すべて選択/復元 RestoreAsync/完全削除 PermanentDeleteAsync/空・確認文言は INV-009 忠実)。**修復はコレクションスコープで作業スペースに対応しないため作業タブ ⋯ から非搭載**(設計判断)。ゴミ箱は workspace スコープ(workspace_images × images status=deleted・E-WORKSPACE-042.GetDeletedImagesAsync 読み取りクエリ追加=新状態遷移なし)。完全削除は FK CASCADE で workspace_images も消滅。**ECO-β 完了**(β-1〜β-4)
       acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-UI-G1]
 
-    - id: E-UI-DETAIL-023
-      name: 画像詳細パネル(メタデータ・ノート編集・タグ一覧)
-      classification: surface
-      rationale_type: external-knowledge
-      requirement_refs: [REQ-043]
-      external_source_ref: K-AVALONIA
-      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-TAGSVC-008, E-HASH-006]
-      acceptance_refs: [CP-UI-G3]
+    # E-UI-DETAIL-023(画像詳細パネル)は ECO-023 で撤回(削除)。理由=REQ-043 リバース誤り:
+    # 原典 view-prism は詳細/ノートを常時パネルでなく ImageDetailModal(閲覧クリックで開くモーダル)として持つ。
+    # 新モック(CAD)は詳細を意図的に廃止。後継部品なし(純撤回)。メタ/サイズ表示は list/grid(ECO-004・
+    # CP-DISPLAY-PARITY-022)が担い、notes は images.notes に残置(dormant)。詳細は 60-change-order-eco-023.md。
 
     - id: E-UI-VIEWER-024
       name: "画像ビューア(normal フィット表示+v2.0 拡張: scroll/spread-right/spread-left・コントロールバー(モード切替+表示設定)・設定永続化結線・モード別位置記憶)+ ECO-022 タグ制御(設定トグル+マッピングモーダル+プラン描画結線)"
@@ -533,7 +528,7 @@ ebom:
       depends_on: []
       graph_edges:
         owner: E-DESIGN-028
-        consumers: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039]
+        consumers: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039]
       invariants:
         - (ECO-007/E7) タグ色プリセットは9色: #e5484d/#f2912b/#e8b931/#30a46c/#12a594/#2f6bed/#8b5cf6/#e93d82/#5b6473(Radix 系)。従来の Material-500 18色を置換。色は自由 hex 継続(プリセットは入力ショートカット)
       acceptance_refs: [CP-UI-G1]
@@ -566,7 +561,7 @@ ebom:
         - トラッシュは選択中コレクションの deleted 一覧+件数のみ(復元/完全削除なし — 仕様 §2.10.5)
         - マージ実行は E-MERGE-034 の原子 API のみ経由(UI 側でタグ操作を再実装しない)
         - (ECO-014/UQ-I07・IMG-005) マージは独立モーダル(原典 ImageMergeModal)でなく、**整理トレイ**(整理モード右ペイン)で提供する。トレイ = マージ先(残す1枚)/ 整理対象(統合し削除対象)/ タグ統合トグル(「マージ時にタグを含める」= E-MERGE-034 のタグ union)/ マージを実行(整理対象 ≥1 で有効)。整理中のグリッドクリックはマージ先未設定→マージ先・設定後→整理対象トグル(選択でなくトレイ割当)。完了は「統合しました」+結果(何枚を1枚へ/何枚削除)+「取り消す」「別の整理を続ける」。マージ実行は E-MERGE-034 の原子 API のみ経由(タグ union・マージ先優先・source=deleted・物理非破壊 INV-009)で意味論不変
-        - (ECO-014 スコープ外) **マージ実行の永続化ルール(IMG-011: 削除手段=論理/ゴミ箱・取り消し保持範囲・タグ統合の永続化単位・タグ衝突解決)と実ファイル操作は本 ECO 対象外**(後続 ECO)。整理完了の「取り消す」は affordance のみ提示し Undo 保持範囲は IMG-011 で確定する。トラッシュ復元/完全削除(E-TRASH-038)・修復(E-UI-REPAIR-039)・詳細パネル/ノート(E-UI-DETAIL-023)の整理 surface への配置も後続(UQ-I07 作業/⋯・原典撤去 ECO-013 残)
+        - (ECO-014 スコープ外) **マージ実行の永続化ルール(IMG-011: 削除手段=論理/ゴミ箱・取り消し保持範囲・タグ統合の永続化単位・タグ衝突解決)と実ファイル操作は本 ECO 対象外**(後続 ECO)。整理完了の「取り消す」は affordance のみ提示し Undo 保持範囲は IMG-011 で確定する。トラッシュ復元/完全削除(E-TRASH-038)・修復(E-UI-REPAIR-039)の整理 surface への配置も後続(UQ-I07 作業/⋯・原典撤去 ECO-013 残)。詳細パネル/ノート(旧 E-UI-DETAIL-023)は ECO-023 で撤回
       acceptance_refs: [CP-UI-G9]
 
     # ---------- v4.0 表面(loop-v4-repair-lifecycle) ----------

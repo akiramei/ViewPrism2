@@ -417,16 +417,24 @@ requirements:
       - "タグ列の対象タグが削除され、列ヘッダが空文字で表示される"
 
   - id: REQ-043
-    statement: "画像詳細パネル: ファイル名、ファイルサイズ(B/KB/MB/GB、1024 進、小数 1 桁)、解像度(幅×高さ px)、作成日時・更新日時(ロケール書式)、ノート(images.notes、編集可)、付与タグ一覧(タグ名+値)を表示する。選択画像が無い場合はプレースホルダ(『画像を選択してください』)を表示する"
+    status: deprecated            # ECO-023(2026-07-01)で撤回。リバース誤り。
+    deprecated_by: ECO-023
+    statement: "[撤回・ECO-023] 画像詳細パネル: ファイル名、ファイルサイズ(B/KB/MB/GB、1024 進、小数 1 桁)、解像度(幅×高さ px)、作成日時・更新日時(ロケール書式)、ノート(images.notes、編集可)、付与タグ一覧(タグ名+値)を表示する。選択画像が無い場合はプレースホルダ(『画像を選択してください』)を表示する"
+    deprecation_reason: |
+      リバース(仕様逆抽出)時の誤り。原典 view-prism は詳細/ノートを常時「詳細パネル」でなく
+      ImageDetailModal(閲覧モードで画像を単一クリックすると開くモーダル・src/components/Images/ImageDetail/
+      ImageDetailModal.tsx / useImageData.ts:157-161)として持つ。本要件はこれを「常時/選択詳細パネル」と取り違えた
+      (トレーサビリティ 20-spec.md:945 は正しく ImageDetailModal を指しており、誤りは spec 散文の『右パネル』形)。
+      新モック(CAD・ViewPrismUI)は詳細を意図的に廃止。maintainer 裁定(2026-07-01)で本要件を撤回し、詳細/ノートは
+      新設計に持ち込まない(後継なし)。**生きている部分は保持**: サイズ/解像度の整形表示は list/grid(ECO-004・
+      CP-DISPLAY-PARITY-022)が担当、images.notes フィールドは DB に残置(dormant)。将来ノートが必要になれば
+      ビューアーへ新機能として足す(別 ECO)。これで原典撤去の最後のブロッカーが解消。詳細 60-change-order-eco-023.md。
     rationale: |
-      原典 ImageDetailModal.tsx:177-289。レーティング(5 つ星)は原典の格納先が不明(unknown)のため V1 から除外し
-      カバレッジ監査に記録。受入: 表示値の整形ロジックは unit(テストベクタ: 1023B→'1023 B'、1024B→'1.0 KB')、
-      画面は golden+承認者。
+      (撤回前の記録)原典 ImageDetailModal.tsx:177-289。レーティング(5 つ星)は原典の格納先が不明(unknown)のため
+      V1 から除外しカバレッジ監査に記録。
     rationale_precision: ok
     classification_hint: surface
     external_source: "原典 UI(ImageDetailModal)のレイアウト"
-    counterexamples:
-      - "ノート編集が保存されず、詳細を開き直すと消えている"
 
   - id: REQ-044
     statement: "基本ビューア(単一画像表示): 画像をウィンドウ内に表示し、→/PageDown で次の画像、←/PageUp で前の画像、Esc・閉じるボタン・画像外余白のクリックのいずれかで閉じる。表示順は呼び出し元の一覧(REQ-038 の整列結果)に従い、端で停止する(ループしない)"

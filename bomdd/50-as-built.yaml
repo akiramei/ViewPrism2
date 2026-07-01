@@ -34,7 +34,7 @@ as_built:
   golden_approvals:
     - { cp_id: CP-UI-G1, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "コレクション絞り込み・画像数表示・列数自動調整・SHIFT 範囲選択 すべて確認(v1.3)。所見 GF-02(行背景色)は承認と独立に V2 申し送り" }
     - { cp_id: CP-UI-G2, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "列構成・行選択(第1回)+再起動で表示モード復元(v1.3 再判定)を確認" }
-    - { cp_id: CP-UI-G3, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "通常モード単一クリック→右パネル詳細を確認" }
+    - { cp_id: CP-UI-G3, date: 2026-06-12, approver: maintainer, verdict: approved, superseded_by: ECO-023, notes: "通常モード単一クリック→右パネル詳細を確認。【ECO-023(2026-07-01)で撤回】REQ-043 リバース誤り(原典は ImageDetailModal モーダル・新設計は詳細廃止)。本承認は歴史記録として残すが CP-UI-G3 は retired。" }
     - { cp_id: CP-UI-G4, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "ダブルクリック起動・余白クリックで閉じる を確認(v1.3)" }
     - { cp_id: CP-UI-G5, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "ja/en 切替でラベル・ボタンが即時切替を確認(v1.3)" }
     - { cp_id: CP-UI-G6, date: 2026-06-12, approver: maintainer, verdict: approved, notes: "タグ作成クラッシュなし・別名・条件・保存/キャンセルのバッチ・ビュー作成・階層表示/子入替・ホームタグ(トグル/強調+初期遷移 REQ-037)すべて確認。所見 GF-01(ダイアログ高さ)・GF-03(★アイコン)・GF-04(パレット選択視覚)・GF-05(条件サマリ表示)は V2 申し送り" }

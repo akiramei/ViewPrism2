@@ -485,7 +485,9 @@ control_plan:
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
     - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+画像タブ surface(E-UI-BROWSE-022 のグリッド/リスト、E-UI-AXIS-NAV-040 のFS/タグビュー軸、E-UI-MODE-041 の文脈モード入口)の描画と操作(G-1・v1.3+ECO-016)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+surface 分割後の3部品が同時に破綻しないこと", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G3, characteristic: "詳細パネルの全項目表示・ノート保存(G-3)",              classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    # CP-UI-G3 は ECO-023(2026-07-01)で撤回。REQ-043/E-UI-DETAIL-023 リバース誤りに伴い golden 対象から除外。
+    # 旧承認(50-as-built golden_approvals 2026-06-12)は歴史記録として残すが superseded(ECO-023)。
+    - { id: CP-UI-G3, status: retired, retired_by: ECO-023, characteristic: "[撤回] 詳細パネルの全項目表示・ノート保存(G-3)", classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止・背景クリック閉じる(G-4・v1.3)", classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
