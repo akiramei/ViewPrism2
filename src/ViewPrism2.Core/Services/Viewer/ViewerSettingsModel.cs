@@ -26,6 +26,26 @@ public sealed record ViewerSettingsModel
     public BackgroundMode BackgroundMode { get; init; } = BackgroundMode.Dark;
     public ScrollHAlign ScrollHAlign { get; init; } = ScrollHAlign.Center;
 
+    // ---- ECO-022 追加(REQ-077 タグ制御モード)----
+    /// <summary>タグ制御モード(既定 OFF)。OFF のときビューアは §2.9 と完全同一。</summary>
+    public bool EnableTagControl { get; init; }
+
+    /// <summary>アクション→割り当て tag_id(null=未割り当て)。6 アクション分(仕様 §2.12.1)。</summary>
+    public IReadOnlyDictionary<ViewerTagAction, string?> TagActionMap { get; init; }
+        = EmptyTagActionMap();
+
+    /// <summary>全アクション未割り当ての既定マップ。</summary>
+    public static IReadOnlyDictionary<ViewerTagAction, string?> EmptyTagActionMap() =>
+        new Dictionary<ViewerTagAction, string?>
+        {
+            [ViewerTagAction.ForceLeftPage] = null,
+            [ViewerTagAction.ForceRightPage] = null,
+            [ViewerTagAction.Spread] = null,
+            [ViewerTagAction.Skip] = null,
+            [ViewerTagAction.LeftPageEmpty] = null,
+            [ViewerTagAction.RightPageEmpty] = null,
+        };
+
     // ---- 文字列表現(JSON 格納値。仕様 §2.9 の表記そのまま)----
     public const string ModeNormal = "normal";
     public const string ModeScroll = "scroll";
@@ -77,8 +97,22 @@ public sealed record ViewerSettingsModel
             FitMode = ParseFit(settings.ViewerFitMode),
             BackgroundMode = ParseBackground(settings.ViewerBackground),
             ScrollHAlign = ParseScrollHAlign(settings.ViewerScrollHAlign),
+            EnableTagControl = settings.EnableTagControl,
+            TagActionMap = new Dictionary<ViewerTagAction, string?>
+            {
+                [ViewerTagAction.ForceLeftPage] = NormalizeTagId(settings.TagActionForceLeftPage),
+                [ViewerTagAction.ForceRightPage] = NormalizeTagId(settings.TagActionForceRightPage),
+                [ViewerTagAction.Spread] = NormalizeTagId(settings.TagActionSpread),
+                [ViewerTagAction.Skip] = NormalizeTagId(settings.TagActionSkip),
+                [ViewerTagAction.LeftPageEmpty] = NormalizeTagId(settings.TagActionLeftPageEmpty),
+                [ViewerTagAction.RightPageEmpty] = NormalizeTagId(settings.TagActionRightPageEmpty),
+            },
         };
     }
+
+    /// <summary>空文字・空白のみの tag_id は未割り当て(null)へ正規化する(破損耐性)。</summary>
+    public static string? NormalizeTagId(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 
     /// <summary>型付きモデルを AppSettings の Viewer* 項目へ書き戻す(文字列表現で格納)。</summary>
     public void ApplyTo(AppSettings settings)
@@ -94,6 +128,13 @@ public sealed record ViewerSettingsModel
         settings.ViewerFitMode = ToString(FitMode);
         settings.ViewerBackground = ToString(BackgroundMode);
         settings.ViewerScrollHAlign = ToString(ScrollHAlign);
+        settings.EnableTagControl = EnableTagControl;
+        settings.TagActionForceLeftPage = NormalizeTagId(TagActionMap.GetValueOrDefault(ViewerTagAction.ForceLeftPage));
+        settings.TagActionForceRightPage = NormalizeTagId(TagActionMap.GetValueOrDefault(ViewerTagAction.ForceRightPage));
+        settings.TagActionSpread = NormalizeTagId(TagActionMap.GetValueOrDefault(ViewerTagAction.Spread));
+        settings.TagActionSkip = NormalizeTagId(TagActionMap.GetValueOrDefault(ViewerTagAction.Skip));
+        settings.TagActionLeftPageEmpty = NormalizeTagId(TagActionMap.GetValueOrDefault(ViewerTagAction.LeftPageEmpty));
+        settings.TagActionRightPageEmpty = NormalizeTagId(TagActionMap.GetValueOrDefault(ViewerTagAction.RightPageEmpty));
     }
 
     public static ViewerMode ParseMode(string? value) => value switch

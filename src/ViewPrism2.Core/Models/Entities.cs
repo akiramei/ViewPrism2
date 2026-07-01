@@ -305,6 +305,39 @@ public sealed record AppSettings
     [System.Text.Json.Serialization.JsonConverter(typeof(TolerantStringConverter))]
     public string ViewerScrollHAlign { get; set; } = "center";
 
+    // ---- ECO-022 追加(REQ-077 タグ制御モードの永続化。E-SETTINGS-013 拡張) ----
+    // enableTagControl(既定 OFF)+ action→tag_id 6 個(既定すべて未割り当て=null)を settings.json へ保存。
+    // 破損・欠損・未知値は安全な既定(OFF / 未割り当て)へ正規化(項目単位の破損耐性)。
+    // 現存しない tag_id を指すマッピングは永続値を保持してよい(解決時は画像が当該 tag_id を持たず自然に無視)。
+
+    /// <summary>タグ制御モード(REQ-077)。既定 OFF。OFF のときビューアは §2.9 と完全同一。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantBoolConverter))]
+    public bool EnableTagControl { get; set; }
+
+    /// <summary>forceLeftPage に割り当てる tag_id(REQ-077)。null=未割り当て。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantNullableStringConverter))]
+    public string? TagActionForceLeftPage { get; set; }
+
+    /// <summary>forceRightPage に割り当てる tag_id(REQ-077)。null=未割り当て。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantNullableStringConverter))]
+    public string? TagActionForceRightPage { get; set; }
+
+    /// <summary>spread に割り当てる tag_id(REQ-077)。null=未割り当て。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantNullableStringConverter))]
+    public string? TagActionSpread { get; set; }
+
+    /// <summary>skip に割り当てる tag_id(REQ-077)。null=未割り当て。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantNullableStringConverter))]
+    public string? TagActionSkip { get; set; }
+
+    /// <summary>leftPageEmpty に割り当てる tag_id(REQ-077)。null=未割り当て。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantNullableStringConverter))]
+    public string? TagActionLeftPageEmpty { get; set; }
+
+    /// <summary>rightPageEmpty に割り当てる tag_id(REQ-077)。null=未割り当て。</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(TolerantNullableStringConverter))]
+    public string? TagActionRightPageEmpty { get; set; }
+
     /// <summary>
     /// ビューア設定の列挙系文字列を正規化する(CP-SET-009 v2.0)。読み込み後に呼び、
     /// 列挙外文字列・null を項目単位で既定値へ落とす(ViewerSettingsModel が唯一の真実)。
@@ -407,4 +440,42 @@ internal sealed class TolerantBoolConverter : System.Text.Json.Serialization.Jso
         bool value,
         System.Text.Json.JsonSerializerOptions options)
         => writer.WriteBooleanValue(value);
+}
+
+/// <summary>
+/// nullable 文字列の寛容な読み取り(ECO-022・REQ-077 タグ制御マッピングの破損耐性)。
+/// JSON 値が文字列なら採用、それ以外の型(数値・真偽・JSON null・欠損)は null=未割り当て。
+/// ファイル全体を破損扱いにせず、当該 action のみ未割り当てへ落とす。
+/// </summary>
+internal sealed class TolerantNullableStringConverter
+    : System.Text.Json.Serialization.JsonConverter<string?>
+{
+    public override string? Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        Type typeToConvert,
+        System.Text.Json.JsonSerializerOptions options)
+    {
+        if (reader.TokenType == System.Text.Json.JsonTokenType.String)
+        {
+            return reader.GetString();
+        }
+
+        reader.Skip(); // 文字列以外(数値・真偽・null)は未割り当て
+        return null;
+    }
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        string? value,
+        System.Text.Json.JsonSerializerOptions options)
+    {
+        if (value is null)
+        {
+            writer.WriteNullValue();
+        }
+        else
+        {
+            writer.WriteStringValue(value);
+        }
+    }
 }

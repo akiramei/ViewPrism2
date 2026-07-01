@@ -76,6 +76,40 @@
       <Setter Property="Foreground" Value="#C4282D" />
     </Style>
 
+    <!-- タグ制御 マッピング設定カード(モック準拠・淡紫) -->
+    <Style Selector="Button.tagMapCard">
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="#F3EFFE" />
+      <Setter Property="BorderBrush" Value="#E3D9FB" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.tagMapCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#ECE4FD" />
+      <Setter Property="BorderBrush" Value="#D5C6F8" />
+    </Style>
+    <Style Selector="Border.tagMapBadge">
+      <Setter Property="Background" Value="#E3D9FB" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="7,2" />
+    </Style>
+
+    <!-- タグ制御マッピングモーダル: 行カード + アクションアイコンバッジ(モック準拠) -->
+    <Style Selector="Border.tagRowCard">
+      <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="#EBEEF3" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+    <Style Selector="Border.tagRowIcon">
+      <Setter Property="Width" Value="34" />
+      <Setter Property="Height" Value="34" />
+      <Setter Property="CornerRadius" Value="9" />
+    </Style>
+
     <!-- 下部バーのナビ(ダーク) -->
     <Style Selector="Button.vNav">
       <Setter Property="Height" Value="38" />
@@ -123,9 +157,11 @@
     </Style>
   </Window.Styles>
 
-  <DockPanel>
+  <!-- 行で物理分割(ツールバー / BODY / 下部バー)。DockPanel は BODY の右ドロワーが下部バーと
+       重なる Z オーダー不具合があったため Grid 行に変更(golden GF-V2-TC-02) -->
+  <Grid RowDefinitions="Auto,*,Auto">
     <!-- ===================== TOOLBAR(白) ===================== -->
-    <Border DockPanel.Dock="Top" Background="{StaticResource AppBackgroundBrush}"
+    <Border Grid.Row="0" Background="{StaticResource AppBackgroundBrush}"
             BorderBrush="#E6E9EF" BorderThickness="0,0,0,1">
       <DockPanel Margin="14,9" VerticalAlignment="Center">
         <!-- 右: カウンタ+閉じる -->
@@ -163,7 +199,7 @@
     </Border>
 
     <!-- ===================== 下部バー(ダーク。単一・見開きのみ) ===================== -->
-    <Border DockPanel.Dock="Bottom" Background="#1B1E24" BorderBrush="#000000" BorderThickness="0,1,0,0"
+    <Border Grid.Row="2" Background="#1B1E24" BorderBrush="#000000" BorderThickness="0,1,0,0"
             IsVisible="{Binding ShowBottomBar}">
       <!-- カウンタ(左)とナビ(中央)を同一セルに重ね、ナビは「バー全幅」基準で中央化する。
            カウンタの桁数(1/32→10/32)が増えても中央のボタン位置がずれない(maintainer golden GF-V1)。 -->
@@ -181,7 +217,7 @@
     </Border>
 
     <!-- ===================== BODY(キャンバス + 右ドロワー) ===================== -->
-    <Panel>
+    <Panel Grid.Row="1">
       <!-- 背景レイヤ(下地色。モード host は透明で上に重なる) -->
       <Border Background="#15171C" IsVisible="{Binding IsBgDark}" />
       <Border Background="#EDEFF3" IsVisible="{Binding IsBgLight}" />
@@ -240,7 +276,8 @@
           </ListBox.ItemTemplate>
         </ListBox>
 
-        <!-- spread: 2 列。クリックは各半面全体で送り。空白ページは無地 -->
+        <!-- spread: 2 列。クリックは各半面全体で送り。空白ページは無地。
+             タグ制御 spread 占有時は両列にまたがる単一画像(SpreadOccupyImage)を表示する(§2.12)。 -->
         <Grid x:Name="SpreadHost" IsVisible="{Binding IsSpread}" ColumnDefinitions="*,*" Background="Transparent">
           <Panel Grid.Column="0" x:Name="SpreadLeftHalf" Background="Transparent" PointerPressed="OnSpreadLeftPressed">
             <c:ViewerImage x:Name="SpreadLeftImage" Margin="14" ErrorTemplate="{Binding LoadErrorTemplate}" />
@@ -248,14 +285,26 @@
           <Panel Grid.Column="1" x:Name="SpreadRightHalf" Background="Transparent" PointerPressed="OnSpreadRightPressed">
             <c:ViewerImage x:Name="SpreadRightImage" Margin="14" ErrorTemplate="{Binding LoadErrorTemplate}" />
           </Panel>
+          <!-- spread 占有(タグ制御): 1 枚で見開き全体を占有。クリックは右半面送り扱い。 -->
+          <Panel Grid.Column="0" Grid.ColumnSpan="2" x:Name="SpreadOccupyHalf" Background="Transparent"
+                 IsVisible="{Binding CurrentIsSpreadOccupy}" PointerPressed="OnSpreadRightPressed">
+            <c:ViewerImage x:Name="SpreadOccupyImage" Margin="14" ErrorTemplate="{Binding LoadErrorTemplate}" />
+          </Panel>
         </Grid>
       </Panel>
+    </Panel>
 
-      <!-- ===================== 設定ドロワー(右・モード別) ===================== -->
-      <Border HorizontalAlignment="Right" Width="312" IsVisible="{Binding SettingsOpen}"
+    <!-- ===================== 設定ドロワー(右) =====================
+         ScrollViewer の有界化(GF-TAGCTRL): ドロワーを `*` 行(Grid.Row=1)へ直接置くことで、
+         ScrollViewer が有界高さ(= body 行高)を受け取りスクロールする。BODY と同じ `*` 行に重ねるが、
+         下部バー(Row=2)とは別行なので Z オーダー不具合(GF-V2-TC-02)も再発しない。
+         ヘッドレス実測で Viewport<Extent(=スクロール可)・Padding を内容 Margin 化で下端到達も確認済。 -->
+    <Border Grid.Row="1" HorizontalAlignment="Right" Width="360" IsVisible="{Binding SettingsOpen}"
               Background="{StaticResource AppBackgroundBrush}" BorderBrush="#E6E9EF" BorderThickness="1,0,0,0">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="16,14">
-          <StackPanel Spacing="4">
+        <!-- Padding は ScrollViewer ではなく内容(StackPanel)の Margin に置く。Avalonia の
+             ScrollViewer.Padding は Extent に含まれず最大スクロール時に下端が切れるため(GF-TAGCTRL 実測)。 -->
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="4" Margin="16,14,28,16">
 
             <!-- ===== 単一: フィット / 背景 / info ===== -->
             <StackPanel Spacing="4" IsVisible="{Binding IsNormal}">
@@ -333,7 +382,7 @@
               <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0" IsEnabled="{Binding IsGapLoose}">
                 <TextBlock Grid.Column="0" Classes="vDesc" Margin="0" VerticalAlignment="Center"
                            Text="{Binding Loc[viewer.gapWidth]}" />
-                <TextBlock Grid.Column="1" Text="{Binding CustomGapPx}" Foreground="{StaticResource AccentBrush}"
+                <TextBlock Grid.Column="1" Text="{Binding CustomGapPx, StringFormat='{}{0} px'}" Foreground="{StaticResource AccentBrush}"
                            FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" />
               </Grid>
               <Slider Minimum="0" Maximum="100" Value="{Binding CustomGapPx}" IsEnabled="{Binding IsGapLoose}" />
@@ -386,7 +435,7 @@
               <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0" IsEnabled="{Binding IsGapLoose}">
                 <TextBlock Grid.Column="0" Classes="vDesc" Margin="0" VerticalAlignment="Center"
                            Text="{Binding Loc[viewer.gapWidth]}" />
-                <TextBlock Grid.Column="1" Text="{Binding CustomGapPx}" Foreground="{StaticResource AccentBrush}"
+                <TextBlock Grid.Column="1" Text="{Binding CustomGapPx, StringFormat='{}{0} px'}" Foreground="{StaticResource AccentBrush}"
                            FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" />
               </Grid>
               <Slider Minimum="0" Maximum="100" Value="{Binding CustomGapPx}" IsEnabled="{Binding IsGapLoose}" />
@@ -404,11 +453,167 @@
               </Border>
               <CheckBox IsChecked="{Binding StartWithEmptyPage}" Margin="0,8,0,0"
                         Content="{Binding Loc[viewer.startWithEmptyPage]}" />
+
+              <!-- ===== タグ制御モード(ECO-022 / §2.12.6・モック準拠): トグル + マッピング設定カード ===== -->
+              <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0">
+                <TextBlock Grid.Column="0" Classes="vHead" Text="{Binding Loc[viewer.tagControl]}" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableTagControl}" OnContent="" OffContent="" MinWidth="0" VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock Classes="vDesc" Text="{Binding Loc[viewer.tagControl.desc]}" />
+              <Button Classes="tagMapCard" Margin="0,8,0,0" HorizontalAlignment="Stretch"
+                      IsEnabled="{Binding EnableTagControl}"
+                      Command="{Binding ToggleTagControlMappingCommand}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <PathIcon Grid.Column="0" Data="{StaticResource FolderIcon}" Width="18" Height="18"
+                            Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Loc[viewer.tagControl.mapping.card.title]}" FontWeight="SemiBold"
+                               FontSize="13" Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text="{Binding Loc[viewer.tagControl.mapping.card.subtitle]}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" Margin="0,1,0,0" />
+                  </StackPanel>
+                  <Border Grid.Column="2" Classes="tagMapBadge" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="{Binding TagControlMappingBadge}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBrush}" />
+                  </Border>
+                  <PathIcon Grid.Column="3" Data="{StaticResource ChevronRightIcon}" Width="14" Height="14"
+                            Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
             </StackPanel>
 
           </StackPanel>
         </ScrollViewer>
-      </Border>
+    </Border>
+
+    <!-- ===================== タグ制御マッピングモーダル(全面オーバーレイ・ECO-019 同型・モック準拠) =====================
+         DockPanel: ヘッダ(Top・タグアイコン+タイトル+説明+X)/ フッター(Bottom・補足+既定に戻す+完了)/ 行(fill・カード・スクロール)。
+         フッターを常時 docked にして主操作「完了」を常に到達可能にし、行が多くても中央だけがスクロールする(GF-TAGCTRL・実測で有界)。
+         picker は即時適用(SetTagActionMapping/ライブ反映)を維持。「完了」=閉じる・「既定に戻す」=全アクション未割り当て。 -->
+    <Panel Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding TagControlMappingOpen}">
+        <!-- 暗幕(クリックで閉じる) -->
+        <Border Background="#88000000" PointerPressed="OnTagControlBackdropPressed" />
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="600" MaxHeight="660"
+                Background="{StaticResource AppBackgroundBrush}" BorderBrush="#E6E9EF" BorderThickness="1"
+                CornerRadius="16" Padding="0" BoxShadow="0 12 40 0 #40000000">
+          <DockPanel>
+            <!-- ヘッダ -->
+            <Border DockPanel.Dock="Top" Padding="22,18" BorderBrush="#EEF0F4" BorderThickness="0,0,0,1">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="11" Background="#F3EFFE"
+                        VerticalAlignment="Top" Margin="0,0,14,0">
+                  <PathIcon Data="{StaticResource TagIcon}" Width="20" Height="20"
+                            Foreground="#7C3AED" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Loc[viewer.tagControl.mapping.title]}"
+                             FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                  <TextBlock Text="{Binding Loc[viewer.tagControl.mapping.desc]}" Classes="vDesc"
+                             TextWrapping="Wrap" MaxWidth="440" Margin="0,3,0,0" />
+                </StackPanel>
+                <Button Grid.Column="2" Classes="iconBtn" VerticalAlignment="Top"
+                        Command="{Binding CloseTagControlMappingCommand}">
+                  <PathIcon Data="{StaticResource CloseIcon}" />
+                </Button>
+              </Grid>
+            </Border>
+            <!-- フッター -->
+            <Border DockPanel.Dock="Bottom" Padding="22,14" BorderBrush="#EEF0F4" BorderThickness="0,1,0,0">
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <!-- 補足は icon(Auto)+text(*) の Grid にして * 幅で折り返す。横 StackPanel だと
+                     テキストに無限幅が渡り折り返さずハードクリップする(GF-TAGCTRL)。通常は短縮文で 1 行。 -->
+                <Grid Grid.Column="0" ColumnDefinitions="Auto,*" Margin="0,0,12,0" VerticalAlignment="Center">
+                  <PathIcon Grid.Column="0" Data="{StaticResource InfoIcon}" Width="14" Height="14"
+                            Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Top" Margin="0,1,7,0" />
+                  <TextBlock Grid.Column="1" Text="{Binding Loc[viewer.tagControl.mapping.footer]}" TextWrapping="Wrap"
+                             FontSize="11.5" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                </Grid>
+                <Button Grid.Column="1" Classes="vToolBtn" Margin="0,0,10,0"
+                        Command="{Binding ResetTagControlMappingCommand}"
+                        Content="{Binding Loc[viewer.tagControl.mapping.reset]}" />
+                <Button Grid.Column="2" Classes="cta" MinWidth="96"
+                        Command="{Binding CloseTagControlMappingCommand}"
+                        Content="{Binding Loc[viewer.tagControl.mapping.done]}" />
+              </Grid>
+            </Border>
+            <!-- 6 行(予約アクション・カード) -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding TagActionRows}" Margin="18,14,18,4">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TagControlMappingRow">
+                    <Border Classes="tagRowCard">
+                      <Grid ColumnDefinitions="Auto,*,180" VerticalAlignment="Center">
+                        <!-- アクションアイコンバッジ(アクション固定色) -->
+                        <Border Grid.Column="0" Classes="tagRowIcon" Background="{Binding IconBg}"
+                                VerticalAlignment="Center" Margin="0,0,12,0">
+                          <TextBlock Text="{Binding Glyph}" FontSize="16" Foreground="{Binding IconFg}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <!-- 名前+英名+説明 -->
+                        <StackPanel Grid.Column="1" Margin="0,0,12,0" VerticalAlignment="Center">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5"
+                                       Foreground="{StaticResource TextPrimaryBrush}" />
+                            <TextBlock Text="{Binding EnglishName}" FontSize="11.5"
+                                       FontFamily="Cascadia Mono,Consolas,monospace"
+                                       Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
+                          </StackPanel>
+                          <TextBlock Text="{Binding Description}" Classes="vDesc" Margin="0,2,0,0"
+                                     TextWrapping="Wrap" />
+                        </StackPanel>
+                        <!-- タグ picker(即時適用 Flyout) -->
+                        <Button Grid.Column="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Classes="vToolBtn" Padding="10,0">
+                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                            <Ellipse Grid.Column="0" Width="11" Height="11" Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     IsVisible="{Binding HasAssignment}"
+                                     Fill="{Binding PickerColor, FallbackValue=#9AA3B0, TargetNullValue=#9AA3B0}" />
+                            <TextBlock Grid.Column="1" Text="{Binding PickerText}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <PathIcon Grid.Column="2" Data="{StaticResource ChevronDownIcon}"
+                                      Width="11" Height="11" Margin="6,0,0,0" />
+                          </Grid>
+                          <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                              <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel MinWidth="200" Spacing="1">
+                                  <!-- 未割り当て(クリア) -->
+                                  <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                          Classes="vToolBtn" BorderThickness="0"
+                                          Command="{Binding ClearCommand}"
+                                          Content="{Binding $parent[Window].((vm:ViewerViewModel)DataContext).Loc[viewer.tagControl.clear]}" />
+                                  <!-- 作成済みタグ(現存のみ) -->
+                                  <ItemsControl ItemsSource="{Binding Options}">
+                                    <ItemsControl.ItemTemplate>
+                                      <DataTemplate x:DataType="vm:TagPickerOption">
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                Classes="vToolBtn" BorderThickness="0"
+                                                Command="{Binding $parent[ItemsControl].((vm:TagControlMappingRow)DataContext).AssignCommand}"
+                                                CommandParameter="{Binding}">
+                                          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <Ellipse Width="11" Height="11" VerticalAlignment="Center"
+                                                     Fill="{Binding Color, FallbackValue=#9AA3B0, TargetNullValue=#9AA3B0}" />
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                          </StackPanel>
+                                        </Button>
+                                      </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                  </ItemsControl>
+                                </StackPanel>
+                              </ScrollViewer>
+                            </Flyout>
+                          </Button.Flyout>
+                        </Button>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
     </Panel>
-  </DockPanel>
+  </Grid>
 </Window>

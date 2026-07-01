@@ -369,7 +369,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             // タグタブでの永続変更(タグ・ビュー・階層)を画像タブへ反映
             _imagesTabStale = false;
-            _ = ReloadAsync();
+            _ = ReloadAsync();                    // legacy surface(原典画像タブ)
+            _ = ImageTab.ReloadTagCatalogAsync(); // M3 surface(新画像タブ/harness): タグ・ビュー台帳を反映
         }
     }
 

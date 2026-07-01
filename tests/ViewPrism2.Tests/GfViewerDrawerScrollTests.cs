@@ -1,0 +1,94 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using ViewPrism2.App.ViewModels;
+using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Services.Viewer;
+using ViewPrism2.Core.Services;
+using ViewPrism2.Infrastructure.I18n;
+using ViewPrism2.App.Views;
+using Xunit;
+
+namespace ViewPrism2.Tests;
+
+/// <summary>
+/// GF-TAGCTRL-01(ECO-022 golden G-11)の恒久回帰: ビューア設定ドロワーの ScrollViewer が
+/// 有界高さ(Viewport 有限)で内容が溢れるとき(Extent &gt; Viewport)スクロール可能であること。
+/// 製造時からの潜在レイアウトバグ(ドロワーが非有界コンテナ下で ScrollViewer に無限高さが渡り
+/// スクロールしない)を再発させないための ground-truth 実測(Avalonia.Headless の実レイアウトパス)。
+/// </summary>
+[Trait("cp", "CP-UI-G11")]
+public sealed class GfViewerDrawerScrollTests
+{
+    // ヘッドレスセッションは App リソース(スタイル/ブラシ/アイコン)を読み込むため App を起動する。
+    // Owner/DB は不要(lifetime 無し=App の重い DI/DB 初期化はスキップされる)。プロセス内で共有。
+    private static readonly HeadlessUnitTestSession Session =
+        HeadlessUnitTestSession.StartNew(typeof(HeadlessAppEntry));
+
+    [Fact]
+    public Task 設定ドロワーのScrollViewerは有界でありスクロール可能() =>
+        Session.Dispatch(() =>
+        {
+            var items = Enumerable.Range(0, 6).Select(Entry).ToList();
+            var vm = new ViewerViewModel(items, startIndex: 2, new ViewerSettingsModel(), persist: null)
+            {
+                Loc = new LocalizationProxy(new LocalizationService(
+                    I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")))),
+            };
+            vm.Mode = ViewerMode.SpreadRight; // ドロワーが見開き設定(最長)を表示
+            vm.EnableTagControl = true;       // タグ制御カードまで含む
+            vm.SettingsOpen = true;
+
+            var window = new ViewerWindow { DataContext = vm, Width = 1000, Height = 760 };
+            window.Show();
+            for (var i = 0; i < 8; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+            }
+
+            var drawer = window.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(b => Math.Abs(b.Width - 360) < 0.5);
+            Assert.NotNull(drawer); // 幅 360 の設定ドロワー Border
+
+            var sv = drawer!.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+            Assert.NotNull(sv); // ドロワー内 ScrollViewer
+
+            // 有界: Viewport 高さが有限かつ 0 超(= 行高から無限高さを受けていない)
+            Assert.True(double.IsFinite(sv!.Viewport.Height) && sv.Viewport.Height > 0,
+                $"Viewport.Height={sv.Viewport.Height} (有界化されていない)");
+            // スクロール可能: 内容(Extent)が Viewport を超える
+            Assert.True(sv.Extent.Height > sv.Viewport.Height + 0.5,
+                $"Extent.Height={sv.Extent.Height} <= Viewport.Height={sv.Viewport.Height} (スクロール域ゼロ)");
+
+            window.Close();
+        }, CancellationToken.None);
+
+    private static ImageEntry Entry(int i)
+    {
+        var name = $"img{i}.jpg";
+        var record = new ImageRecord
+        {
+            Id = name,
+            SyncFolderId = "f",
+            RelativePath = name,
+            FileName = name,
+            FileSize = 1,
+            Hash = new string('0', 64),
+            CreatedDate = "2026-07-01T00:00:00.000Z",
+            ModifiedDate = "2026-07-01T00:00:00.000Z",
+        };
+        return new ImageEntry(record, @"C:\img\" + name, []);
+    }
+
+    /// <summary>ヘッドレスセッション用の AppBuilder エントリ(Inter フォント込み・実機と同等のテキスト計測)。</summary>
+    private static class HeadlessAppEntry
+    {
+        public static AppBuilder BuildAvaloniaApp()
+            => AppBuilder.Configure<ViewPrism2.App.App>()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = true })
+                .WithInterFont();
+    }
+}

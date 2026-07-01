@@ -93,6 +93,34 @@ public sealed partial class ViewerViewModel : ObservableObject
                 return "0 / 0";
             }
 
+            // タグ制御 ON の見開き: 総数=非 skip 枚数・読み順の非 skip 位置で n-m / total(§2.12.4)
+            if (IsTagControlActive)
+            {
+                var plan = EnsurePlan();
+                if (plan.Spreads.Count == 0)
+                {
+                    return "0 / 0";
+                }
+
+                var sp = plan.Spreads[ClampSpread(_tagControlSpread, plan)];
+                var total = plan.NonSkipCount;
+
+                // 読み順: 右開き=右が先・左が後 / 左開き=左が先・右が後
+                var firstIdx = Direction == SpreadDirection.Right ? sp.RightIndex : sp.LeftIndex;
+                var secondIdx = Direction == SpreadDirection.Right ? sp.LeftIndex : sp.RightIndex;
+
+                // 片側空白・spread 占有は単独表示(canonical の位置)
+                if (sp.IsSpread || firstIdx is null || secondIdx is null)
+                {
+                    var pos = plan.NonSkipPosition.GetValueOrDefault(sp.CanonicalImage, sp.CanonicalImage + 1);
+                    return string.Create(CultureInfo.InvariantCulture, $"{pos} / {total}");
+                }
+
+                var n = plan.NonSkipPosition.GetValueOrDefault(firstIdx.Value, firstIdx.Value + 1);
+                var m = plan.NonSkipPosition.GetValueOrDefault(secondIdx.Value, secondIdx.Value + 1);
+                return string.Create(CultureInfo.InvariantCulture, $"{n}-{m} / {total}");
+            }
+
             if (IsSpread)
             {
                 var pair = CurrentSpreadPair;
@@ -139,7 +167,11 @@ public sealed partial class ViewerViewModel : ObservableObject
             _mode = value;
             _settings = _settings with { Mode = value };
             Persist();
+            // 方向が変わるとプランのスロット並びが変わるため無効化し、記憶画像から見開き同期(復元)
+            InvalidatePlan();
+            SyncTagControlSpreadFromMemory();
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsTagControlActive));
             OnPropertyChanged(nameof(IsNormal));
             OnPropertyChanged(nameof(IsScroll));
             OnPropertyChanged(nameof(IsSpread));
@@ -172,9 +204,268 @@ public sealed partial class ViewerViewModel : ObservableObject
     public SpreadDirection Direction =>
         Mode == ViewerMode.SpreadLeft ? SpreadDirection.Left : SpreadDirection.Right;
 
-    /// <summary>現在の見開きペア(OC-9)。spread でないときも計算上は右開き基準で返す。</summary>
-    public SpreadPair CurrentSpreadPair => SpreadPairCalculator.Calculate(
-        CurrentIndex < 0 ? 0 : CurrentIndex, _ordered.Count, Direction, _settings.StartWithEmptyPage);
+    /// <summary>
+    /// 現在の見開きペア(OC-9)。spread でないときも計算上は右開き基準で返す。
+    /// タグ制御 ON の見開きでは plan(OC-24)由来の見開きを返す(M-UI-018 plan→描画結線)。
+    /// </summary>
+    public SpreadPair CurrentSpreadPair
+    {
+        get
+        {
+            if (IsTagControlActive)
+            {
+                var plan = EnsurePlan();
+                if (plan.Spreads.Count == 0)
+                {
+                    return new SpreadPair { LeftIndex = null, RightIndex = null };
+                }
+
+                var sp = plan.Spreads[ClampSpread(_tagControlSpread, plan)];
+                return new SpreadPair { LeftIndex = sp.LeftIndex, RightIndex = sp.RightIndex };
+            }
+
+            return SpreadPairCalculator.Calculate(
+                CurrentIndex < 0 ? 0 : CurrentIndex, _ordered.Count, Direction, _settings.StartWithEmptyPage);
+        }
+    }
+
+    // ---- タグ制御モード(ECO-022・§2.12。配置/送り/現在画像は E-VIEWER-TAGCTRL-044 経由)----
+
+    /// <summary>タグ制御 ON が見開きで実効か(§5.5: 見開きのみフル。OFF/normal/scroll では従来経路)。</summary>
+    public bool IsTagControlActive => _settings.EnableTagControl && IsSpread && _ordered.Count > 0;
+
+    /// <summary>現在のプラン見開き index(タグ制御 ON の見開き専用座標系。OC-25)。</summary>
+    private int _tagControlSpread;
+
+    private TagControlPlan? _plan;
+
+    /// <summary>現プラン見開きが span(spread 占有)か(View の描画分岐。span は単一画像を左右占有)。</summary>
+    public bool CurrentIsSpreadOccupy
+    {
+        get
+        {
+            if (!IsTagControlActive)
+            {
+                return false;
+            }
+
+            var plan = EnsurePlan();
+            return plan.Spreads.Count != 0 && plan.Spreads[ClampSpread(_tagControlSpread, plan)].IsSpread;
+        }
+    }
+
+    /// <summary>spread 占有時に左右占有する画像 index(View 描画用。非占有時は -1)。</summary>
+    public int CurrentSpreadOccupyImage
+    {
+        get
+        {
+            if (!CurrentIsSpreadOccupy)
+            {
+                return -1;
+            }
+
+            var plan = EnsurePlan();
+            return plan.Spreads[ClampSpread(_tagControlSpread, plan)].CanonicalImage;
+        }
+    }
+
+    /// <summary>解決済みマッピング(action→tag_id?)。Resolve への入力。</summary>
+    private IReadOnlyDictionary<ViewerTagAction, string?> TagActionMap => _settings.TagActionMap;
+
+    /// <summary>(画像 index, 解決アクション)列を構築しプランをキャッシュする(OC-23→OC-24)。</summary>
+    private TagControlPlan EnsurePlan()
+    {
+        if (_plan is not null)
+        {
+            return _plan;
+        }
+
+        var items = new List<(int imageIndex, ViewerTagAction? action)>(_ordered.Count);
+        for (var i = 0; i < _ordered.Count; i++)
+        {
+            var tagIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var tag in _ordered[i].Tags)
+            {
+                tagIds.Add(tag.TagId);
+            }
+
+            var action = TagActionResolver.Resolve(tagIds, TagActionMap);
+            items.Add((i, action));
+        }
+
+        _plan = TagControlLayoutCalculator.Build(items, Direction, _settings.StartWithEmptyPage);
+        return _plan;
+    }
+
+    /// <summary>プラン無効化(マッピング/トグル/方向/空白開始の変更時)。次回参照で再計算。</summary>
+    private void InvalidatePlan() => _plan = null;
+
+    private static int ClampSpread(int spread, TagControlPlan plan) =>
+        plan.Spreads.Count == 0 ? 0 : Math.Clamp(spread, 0, plan.Spreads.Count - 1);
+
+    /// <summary>
+    /// タグ制御 ON の見開きへ入る/設定変更したとき、現在の記憶画像を含むプラン見開きへ
+    /// 同期する(モード復元の画像→見開き解決。canonical 現在画像 §2.12.4)。
+    /// </summary>
+    private void SyncTagControlSpreadFromMemory()
+    {
+        if (!IsTagControlActive)
+        {
+            return;
+        }
+
+        var plan = EnsurePlan();
+        var image = CurrentIndex < 0 ? 0 : CurrentIndex;
+        _tagControlSpread = ClampSpread(TagControlNavigator.SpreadOfImage(plan, image), plan);
+    }
+
+    /// <summary>プラン見開き送り後、canonical 現在画像を記憶へ書き戻す(normal/scroll への位置受け渡し)。</summary>
+    private void WriteBackCanonicalImage()
+    {
+        var plan = EnsurePlan();
+        var canonical = TagControlNavigator.CanonicalImage(plan, _tagControlSpread);
+        if (canonical >= 0)
+        {
+            _memory.Set(Mode, Math.Clamp(canonical, 0, _ordered.Count - 1));
+        }
+    }
+
+    /// <summary>タグ制御マッピングモーダルの開閉(ECO-019 in-tab popup 同型)。</summary>
+    [ObservableProperty] private bool _tagControlMappingOpen;
+
+    [RelayCommand]
+    private void ToggleTagControlMapping() => TagControlMappingOpen = !TagControlMappingOpen;
+
+    [RelayCommand]
+    private void CloseTagControlMapping() => TagControlMappingOpen = false;
+
+    /// <summary>マッピングを既定(全アクション未割り当て)へ戻す(モック「既定に戻す」)。即時保存・ライブ反映。</summary>
+    [RelayCommand]
+    private void ResetTagControlMapping()
+    {
+        // 割り当てが 1 つも無ければ no-op(既定 map は 6 キー値 null を持ちうるため Count ではなく値で判定)。
+        if (!_settings.TagActionMap.Values.Any(v => !string.IsNullOrEmpty(v)))
+        {
+            return;
+        }
+
+        _settings = _settings with { TagActionMap = new Dictionary<ViewerTagAction, string?>() };
+        InvalidatePlan();
+        Persist();
+        RebuildTagActionRows();
+        SyncTagControlSpreadFromMemory();
+        RaisePositionChanged();
+        CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>タグ制御モード(REQ-077)。トグルで即時保存し plan を無効化(回帰: OFF で従来経路)。</summary>
+    public bool EnableTagControl
+    {
+        get => _settings.EnableTagControl;
+        set
+        {
+            if (_settings.EnableTagControl == value)
+            {
+                return;
+            }
+
+            _settings = _settings with { EnableTagControl = value };
+            InvalidatePlan();
+            Persist();
+            SyncTagControlSpreadFromMemory();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsTagControlActive));
+            RaisePositionChanged();
+            CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleTagControl() => EnableTagControl = !EnableTagControl;
+
+    /// <summary>マッピングモーダルの 6 行(予約アクション・picker 表示用)。</summary>
+    public IReadOnlyList<TagControlMappingRow> TagActionRows { get; private set; } = [];
+
+    /// <summary>割り当て済みアクション数(0〜6。§2.12.6 マッピング設定カードの N/6 バッジ用)。</summary>
+    public int MappedActionCount => _settings.TagActionMap.Values.Count(v => !string.IsNullOrEmpty(v));
+
+    /// <summary>マッピング設定カードのバッジ「N/6」(モック準拠)。</summary>
+    public string TagControlMappingBadge =>
+        string.Create(CultureInfo.InvariantCulture, $"{MappedActionCount}/6");
+
+    /// <summary>
+    /// 現存タグ一覧(picker 用。WindowService が GetAllAsync の現存タグのみ供給 — major-1 補正)と
+    /// 現在のマッピングから 6 行を組み立てる。WindowService が起動時/タグ変更時に呼ぶ。
+    /// </summary>
+    public void SetAvailableTags(IReadOnlyList<TagPickerOption> tags)
+    {
+        ArgumentNullException.ThrowIfNull(tags);
+        _availableTags = tags;
+        RebuildTagActionRows();
+    }
+
+    private IReadOnlyList<TagPickerOption> _availableTags = [];
+
+    // 表示順・アイコンバッジ色はモック(M-UI-018 tagctrl_ui / CAD)準拠。順は左固定→右固定→占有→skip→
+    // 左空白→右空白。色はアクション固定の淡色(割り当てタグ色とは独立)。resolver の競合順(Core)とは無関係。
+    private static readonly (ViewerTagAction Action, string Glyph, string IconBg, string IconFg, string Key)[] ActionRowDefs =
+    {
+        (ViewerTagAction.ForceLeftPage, "◀", "#EAF1FE", "#2F6BED", "forceLeftPage"),
+        (ViewerTagAction.ForceRightPage, "▶", "#EAFAF3", "#0F8A5E", "forceRightPage"),
+        (ViewerTagAction.Spread, "↔", "#F3EFFE", "#7C3AED", "spread"),
+        (ViewerTagAction.Skip, "⊘", "#FDECEC", "#DC2626", "skip"),
+        (ViewerTagAction.LeftPageEmpty, "◑", "#FBF3DF", "#C99A1E", "leftPageEmpty"),
+        (ViewerTagAction.RightPageEmpty, "◐", "#FDEEDE", "#C47D18", "rightPageEmpty"),
+    };
+
+    private void RebuildTagActionRows()
+    {
+        var rows = new List<TagControlMappingRow>(ActionRowDefs.Length);
+        foreach (var (action, glyph, iconBg, iconFg, key) in ActionRowDefs)
+        {
+            var assignedId = _settings.TagActionMap.GetValueOrDefault(action);
+            var assigned = assignedId is null
+                ? null
+                : _availableTags.FirstOrDefault(t => string.Equals(t.Id, assignedId, StringComparison.Ordinal));
+
+            rows.Add(new TagControlMappingRow(
+                this,
+                action,
+                glyph,
+                iconBg,
+                iconFg,
+                Loc?.T($"viewer.tagControl.action.{key}.name") ?? key,
+                key,
+                Loc?.T($"viewer.tagControl.action.{key}.desc") ?? string.Empty,
+                assigned,
+                _availableTags,
+                Loc?.T("viewer.tagControl.unassigned") ?? "未割り当て"));
+        }
+
+        TagActionRows = rows;
+        OnPropertyChanged(nameof(TagActionRows));
+        OnPropertyChanged(nameof(MappedActionCount));
+        OnPropertyChanged(nameof(TagControlMappingBadge));
+    }
+
+    /// <summary>
+    /// マッピングを更新する(picker 選択。即時保存→plan 無効化→再計算反映。REQ-077/REQ-078)。
+    /// tagId=null でクリア(未割り当て)。
+    /// </summary>
+    public void SetTagActionMapping(ViewerTagAction action, string? tagId)
+    {
+        var map = new Dictionary<ViewerTagAction, string?>(_settings.TagActionMap)
+        {
+            [action] = ViewerSettingsModel.NormalizeTagId(tagId),
+        };
+        _settings = _settings with { TagActionMap = map };
+        InvalidatePlan();
+        Persist();
+        RebuildTagActionRows();
+        SyncTagControlSpreadFromMemory();
+        RaisePositionChanged();
+        CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     [RelayCommand]
     private void SetNormalMode() => Mode = ViewerMode.Normal;
@@ -382,6 +673,13 @@ public sealed partial class ViewerViewModel : ObservableObject
             return;
         }
 
+        // タグ制御 ON の見開き: プラン見開き単位で送る(OC-25。SHIFT/pageTurnMode 非適用 §2.12.4)
+        if (IsTagControlActive)
+        {
+            TagControlAdvance(forward: true);
+            return;
+        }
+
         var current = CurrentIndex;
         int next;
         if (IsSpread)
@@ -396,12 +694,39 @@ public sealed partial class ViewerViewModel : ObservableObject
         SetIndex(next);
     }
 
+    /// <summary>タグ制御 ON のプラン見開き送り(±1 クランプ・canonical を記憶へ書き戻し)。</summary>
+    private void TagControlAdvance(bool forward)
+    {
+        var plan = EnsurePlan();
+        var count = plan.Spreads.Count;
+        var prev = ClampSpread(_tagControlSpread, plan);
+        var next = forward
+            ? TagControlNavigator.Next(prev, count)
+            : TagControlNavigator.Prev(prev, count);
+
+        if (next == prev)
+        {
+            return;
+        }
+
+        _tagControlSpread = next;
+        WriteBackCanonicalImage();
+        RaisePositionChanged();
+        CurrentIndexChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>前へ。normal/scroll は 1 画像戻る。spread は REQ-057 のステップで戻す。先頭で停止。</summary>
     [RelayCommand]
     private void Prev()
     {
         if (_ordered.Count == 0)
         {
+            return;
+        }
+
+        if (IsTagControlActive)
+        {
+            TagControlAdvance(forward: false);
             return;
         }
 
@@ -537,6 +862,9 @@ public sealed partial class ViewerViewModel : ObservableObject
     {
         _settings = updated;
         Persist();
+        // 空白開始など plan に影響する設定が変わり得るため無効化し、記憶画像から見開き同期
+        InvalidatePlan();
+        SyncTagControlSpreadFromMemory();
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(ResizeMode));
         OnPropertyChanged(nameof(AlignMode));
@@ -589,6 +917,8 @@ public sealed partial class ViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentImagePath));
         OnPropertyChanged(nameof(CurrentPositionText));
         OnPropertyChanged(nameof(CurrentSpreadPair));
+        OnPropertyChanged(nameof(CurrentIsSpreadOccupy));
+        OnPropertyChanged(nameof(CurrentSpreadOccupyImage));
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(SeekValue));
     }

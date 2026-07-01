@@ -433,8 +433,29 @@ change_orders:
   - id: ECO-022
     title: "画像ビューアー タグ制御モード(フェーズ2・仕様§5・予約アクション6種+マッピング永続化+設定モーダル)"
     type: 新規Core計算核(配置エンジン) + 永続化拡張 + 新surface(設定ドロワートグル+マッピングモーダル)
-    status: staged
-    golden: pending
+    status: implemented
+    golden: round1-fixed
+    golden_detail: >
+      golden G-11 第1回(2026-07-01・maintainer 実機)= 一連の GF を是正し受入。#1 設定ドロワースクロール OK・
+      #2 マッピングモーダル(モック準拠)OK・#3 配置パリティ OK(タグ タブでタグ追加→画像タブ候補表示→
+      ビューアーでマッピング→左固定・スキップが実配置に効くのを確認・台帳再読込で再起動不要も確認)。所見(GF)是正:
+      GF-TAGCTRL-01 設定ドロワーがスクロールしない(製造時からの潜在レイアウトバグ・タグ制御追加で顕在化)=
+      ScrollViewer が非有界高さを受領。drawer Border を Grid の `*` 行(Row=1)へ直接置き有界化+ScrollViewer.Padding
+      を内容 StackPanel の Margin へ移動(Avalonia の ScrollViewer.Padding は Extent 非算入で下端切れ)。ヘッドレス実測で
+      Viewport<Extent(=スクロール可)・下端到達を確認。
+      GF-TAGCTRL-02 マッピングモーダルがモック非準拠+下部欠け=ヘッダ(タグアイコンバッジ+タイトル+説明+X)/行カード
+      (アクション固定色アイコンバッジ・モック順 forceLeft→forceRight→spread→skip→leftEmpty→rightEmpty)/常時 docked
+      フッター(補足+既定に戻す+完了 cta)へリワーク。即時適用ライブ反映は維持・完了=閉じる・既定に戻す=全アクション
+      未割り当て(新 ResetTagControlMappingCommand)。行文言は凍結挙動に忠実な現行を維持。
+      GF-TAGCTRL-03 フッター補足文の右端ハードクリップ=横 StackPanel でテキストに無限幅→折り返し不能。icon+text(*)
+      の Grid へ改め折り返し可能化+文言 1 行短縮(ja「未割り当ては無効。1タグを複数アクションへ割当可。」)。実測で希望
+      280px<列 319px の 1 行収まり確認。
+      GF-TAGCTRL-04(隣接バグ)新画像タブ(M3 surface)でタグ台帳が起動時固定=タグ タブ新規タグが候補に出ない。
+      `_imagesTabStale`→`ReloadAsync()` は legacy surface のみ再読込で M3 ImageTab の `_tagById` 未更新。公開
+      `ReloadTagCatalogAsync()`(台帳+ビュー+画像タグ紐付け再読込・状態保持)を追加しタブ切替 stale 経路で併呼。
+      再起動不要で新規タグ反映を maintainer 実機確認。
+      検証: Tests 505 PASS/ Oracle 100+2skip(Core 非依存で不変)/ build 0警告。残: golden 最終承認(50-as-built
+      golden_approvals へ CP-UI-G11 記録)は maintainer 一括コミット時に確定。
     baseline: "570fdef(ビューアーフェーズ1適用後・main)"
     bom_rev: "v4.0(eco:ECO-022)"
     impacted_bom:
@@ -453,9 +474,19 @@ change_orders:
       TC-3: "競合順=skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty(全順序・支配1つ)"
       TC-4: "フル BomDD 連鎖(charter→REQ→spec→BOM→固定オラクル凍結→隔離工場→受入→golden)"
     divergence: "原典 applyTagActions は spread>force>empty>skip のリアクティブ補正。ECO-022 は skip 最上位+(画像列,アクション列)→ページ列構築の決定的純粋計算核(§0.1)"
+    deviation: >
+      工程逸脱(maintainer 認識済・2026-06-30): 設計凍結(loop-eco022-r1=ce53d46)後に起動した隔離工場エージェントが
+      プロセス終了で死亡し、**castability 証明・ずる報告(cheat-log)を取得できなかった**。加えて会話開始時点で
+      既に未コミットのタグ制御コードが作業ツリーに存在し、現状コードの出所(前セッション製造か当該死亡工場か)が
+      不確実。**代替監査で受入**: ①固定オラクル S-32〜S-37(spec §2.12 から設計者が独立導出・工場テスト非コピー)
+      26 ケース全 PASS=correctness は出所非依存に確立 ②設計者による Core 4 ファイル直接査読でずる(excluded 近道)
+      不検出 ③設計者による surface ずる査読(M-UI-018/REQ-078/CP-UI-G11 scope)で blocker/major 不検出・表示契約
+      (6行×グリフ/名前/英名/説明/picker/色ドット/未割り当て)充足・OFF-identity 結線・現存タグのみ picker・即時保存
+      を確認。**残存リスク**: castability(BOM のみからの再現性)は新規実証されていない。ECO-003 と同型の記録済み逸脱。
+    acceptance: "設計者受入 PASS: Oracle 100 PASS+2 skip(S-32〜S-37 新規26+S-01〜S-31 回帰ゼロ74)/ Tests 505 PASS/0/ build 0警告0エラー(Release・TreatWarningsAsErrors)。surface ずる査読 blocker/major 0。次=golden G-11(maintainer 実機)で受入確定"
     cad_input: "Downloads/ViewPrism2 ビューア (standalone).html(タグ制御マッピングモーダル・ViewPrismUI 未取込)"
     spec_input: "view-prism/docs/view-prism-viewer-spec.md §5"
     body: 60-change-order-eco-022.md
-    pending_sync: "固定オラクル S-32〜S-37 凍結(maintainer レビュー→一括コミット→loop-eco022-r1 タグ)→ 隔離工場製造(routing_eco022)→ 設計者受入(S-32〜S-37 を Oracle 実装・全 PASS+回帰ゼロ)→ golden(G-11・maintainer 実機)"
+    pending_sync: "golden G-11 第1回=maintainer 実機で実質パス(#1〜#3 OK・GF-TAGCTRL-01〜04 是正済)。残=maintainer が working tree を一括コミット時に 50-as-built へ CP-UI-G11 approved を記録し ECO-022 クローズ。未コミット src/tests/bomdd は maintainer がコミット。工程 retro(§10・2026-07-01): モーダルの mock→UI-IR 未取込で BOM がクローム未仕様→golden が設計工程化。A/C ガード追加済(FMEA-037・CP-UI-G11 クローム拡張・mock-ui-ir-is-cad メモリ)。B(ViewPrismUI へ UI-IR 取込)進捗 2026-07-01: IR 作成済=ViewPrismUI/docs/screens/image_viewer_tag_control.md(モック権威・integrated_ui_spec/README 索引追加)。突合で golden 承認版がモック簡略サブセットと判明→GF-TAGCTRL-05 起票(乖離 D1-D9・§9・裁定=IR モック権威/実装は追随 GF で寄せる/D8 説明文のみ許容差分)。一次モックは 資料/ビューア/ へコピー済(索引更新済)。GF-05 実装は未着手(別 ECO/セッション・D1 幅 820 は headless 再計測要)。残=GF-05 実装で modal を mock 準拠へ"
     scope_out: "scroll/normal の skip 以外アクション(TC-1)・原典の非決定的『次の適切な画像探索』ループ・タグ作成/編集(タグタブ責務)"
     notes: "データ配管の発見: ImageEntry が既に IReadOnlyList<EvalTagValue>(TagId 付き)Tags を保持=ビューアはタグIDを追加配管なしで取得済み。必要な新規入力はマッピング(action→tag_id)+enableTagControl のみ"

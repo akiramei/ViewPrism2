@@ -185,6 +185,19 @@ routing_v4:
 routing_eco022:
   id: ROUTING-ECO022-TAGCTRL-001
   gate_g3_dryrun: "PASS(2026-06-30)— fresh エージェントに製造パッケージ(20 §2.12/30〜34+既存 src)のみ供与(原典/41/42/Oracle 非開示)。**3単位とも着手可・設計者質問ゼロ・blocker ゼロ**。実コード確証 (a)〜(e) 全て実在・適合: ImageEntry.Tags(EvalTagValue.TagId)/AppSettings 破損耐性 Tolerant*Converter/ViewerViewModel・WindowService(_tags・_tagService 既注入)/SpreadPairCalculator 公開 API で OFF-identity 照合可/Tag.Color+GetAllAsync。層規律 OK(配置核は Core 純粋・M-VIEWERCORE-017 同層)。**凍結前補正 2 件(質問でなく BOM 追記)**: major-2=M-UI-018 tagctrl_ui に plan→描画結線(ON 時 CurrentSpreadPair/CurrentPositionText/送りを plan 由来へ切替・span/spread/空白フラグで描画分岐)/ major-1=現存性濾過の責務分担(picker=GetAllAsync 現存のみ・Resolve は存在台帳を取らず自然無視)を M-UI-018/M-TAGCTRL-028 へ追記。ずる予想筆頭=force の空白強制近道(excluded 明記済で封じ込め十分)"
+  manufacturing_acceptance: >
+    製造(2026-06-30)= **工程逸脱あり(記録)**: 凍結(loop-eco022-r1=ce53d46)後に起動した隔離工場エージェントが
+    プロセス終了で死亡し cheat-log・castability 証明を取得できず。会話開始時に既に未コミットのタグ制御コードが
+    作業ツリーに存在しており現状コードの出所も不確実(前セッション製造 or 当該死亡工場)。**代替監査で受入**(maintainer 裁定
+    2026-06-30): ①設計者受入オラクル S-32〜S-37(spec §2.12 から独立導出・工場の CpTagCtrl024Tests 非コピー)26 ケース
+    全 PASS → correctness は出所非依存に確立 ②Core 4 ファイル(ViewerTagAction/TagActionResolver/TagControlLayoutCalculator/
+    TagControlNavigator)直接査読でずる(M-TAGCTRL-028.excluded 近道)不検出=skip 事前除去・リアクティブ補正なし・前方探索
+    ループなし・force は相方流入で empty のみ空白固定・seed 抑止実装済 ③surface ずる査読(M-UI-018/REQ-078/CP-UI-G11 scope)
+    blocker/major 0=plan(OC-24/25)経由の表示・送り・位置切替/OFF 経路は従来通り(IsTagControlActive ゲート)/モーダル6行の
+    表示契約(グリフ/名前/英名/説明/picker/色ドット/未割り当て)を XAML が全 bind/picker は GetAllAsync 現存のみ・即時 Persist/
+    code-behind は plan フラグ描画のみで配置ロジック非再実装/i18n ja・en 完備。**検証**: Oracle 100 PASS+2 skip(新規 S-32〜S-37=26
+    + 回帰 S-01〜S-31=74)/ Tests 505 PASS/0 / build 0警告0エラー。**残存リスク**: castability 新規未実証(ECO-003 同型の記録済み
+    逸脱)。**残=golden G-11(maintainer 実機)で受入確定**。
   purpose: ViewPrism2 タグ制御モード(配置核+永続化+設定トグル/マッピングモーダル)を、V1〜V4 完成コードベース+改訂 BOM のみから増分製造する
   factory_isolation: 製造装置には製造パッケージ(20-spec.md §2.12 / 30〜34 / 40 / docs/adr/)+完成コードベース(src/, tests/ViewPrism2.Tests)のみ供与。原典 view-prism ソース(tagControlUtils.ts 等)・設計対話・41 固定オラクル・42 探索プローブ・tests/ViewPrism2.Oracle は非開示
   cheat_report: BOM/K-BOM/Control Plan から導けなかった判断は実装を止めず全件 cheat-log 形式で報告する(分類 C1〜C6)。特に M-TAGCTRL-028.excluded の禁止近道(原典リアクティブ補正・前方探索ループ・skip 後置・force の空白強制)を採ったら必ず報告

@@ -319,4 +319,123 @@ public sealed class CpSet009Tests : IDisposable
         Assert.Equal("dark", loaded.ViewerBackground);
         Assert.Equal("center", loaded.ViewerScrollHAlign);
     }
+
+    // ==================== ECO-022: タグ制御設定(REQ-077) ====================
+
+    [Fact]
+    public void ECO022_タグ制御設定のラウンドトリップ()
+    {
+        var store = new SettingsStore(_directory);
+        var settings = new AppSettings
+        {
+            EnableTagControl = true,
+            TagActionSkip = "tag-ad",
+            TagActionForceRightPage = "tag-keep",
+            TagActionSpread = "tag-wide",
+            // ForceLeftPage/LeftPageEmpty/RightPageEmpty は未割り当てのまま
+        };
+
+        store.Save(settings);
+        var loaded = new SettingsStore(_directory).Load();
+
+        Assert.True(loaded.EnableTagControl);
+        Assert.Equal("tag-ad", loaded.TagActionSkip);
+        Assert.Equal("tag-keep", loaded.TagActionForceRightPage);
+        Assert.Equal("tag-wide", loaded.TagActionSpread);
+        Assert.Null(loaded.TagActionForceLeftPage);
+        Assert.Null(loaded.TagActionLeftPageEmpty);
+        Assert.Null(loaded.TagActionRightPageEmpty);
+    }
+
+    [Fact]
+    public void ECO022_既定はOFFかつ全マッピング未割り当て()
+    {
+        var defaults = new AppSettings();
+        Assert.False(defaults.EnableTagControl);
+        Assert.Null(defaults.TagActionForceLeftPage);
+        Assert.Null(defaults.TagActionForceRightPage);
+        Assert.Null(defaults.TagActionSpread);
+        Assert.Null(defaults.TagActionSkip);
+        Assert.Null(defaults.TagActionLeftPageEmpty);
+        Assert.Null(defaults.TagActionRightPageEmpty);
+    }
+
+    [Fact]
+    public void ECO022_割当クリア後の保存読込一致()
+    {
+        var store = new SettingsStore(_directory);
+        var assigned = new AppSettings { EnableTagControl = true, TagActionSkip = "tag-ad" };
+        store.Save(assigned);
+
+        // クリア(未割り当てへ戻す)+ OFF
+        var cleared = new AppSettings { EnableTagControl = false, TagActionSkip = null };
+        store.Save(cleared);
+        var loaded = new SettingsStore(_directory).Load();
+
+        Assert.False(loaded.EnableTagControl);
+        Assert.Null(loaded.TagActionSkip);
+    }
+
+    [Fact]
+    public void ECO022_破損耐性_未知値と型不正は安全な既定へ_例外なし()
+    {
+        Directory.CreateDirectory(_directory);
+        var store = new SettingsStore(_directory);
+        File.WriteAllText(store.SettingsFilePath, """
+            {
+              "locale": "ja",
+              "enableTagControl": "yes",
+              "tagActionSkip": 123,
+              "tagActionForceRightPage": "tag-keep",
+              "tagActionSpread": null
+            }
+            """);
+
+        var loaded = store.Load();
+
+        Assert.False(loaded.EnableTagControl);             // 未知値 "yes" → 既定 OFF
+        Assert.Null(loaded.TagActionSkip);                 // 型不正(数値)→ 未割り当て
+        Assert.Equal("tag-keep", loaded.TagActionForceRightPage); // 正常値は維持
+        Assert.Null(loaded.TagActionSpread);               // JSON null → 未割り当て
+        Assert.False(File.Exists(store.BackupFilePath));   // 項目単位の既定化(全体破損扱いにしない)
+    }
+
+    [Fact]
+    public void ECO022_前方互換_タグ制御キーなしの旧形式は既定で読める()
+    {
+        Directory.CreateDirectory(_directory);
+        var store = new SettingsStore(_directory);
+        File.WriteAllText(store.SettingsFilePath, """
+            { "locale": "en", "viewerMode": "spread-right" }
+            """);
+
+        var loaded = store.Load();
+
+        Assert.False(loaded.EnableTagControl);
+        Assert.Null(loaded.TagActionSkip);
+        Assert.Equal("spread-right", loaded.ViewerMode);
+    }
+
+    [Fact]
+    public void ECO022_ViewerSettingsModel_往復_マッピング維持()
+    {
+        var settings = new AppSettings
+        {
+            EnableTagControl = true,
+            TagActionSkip = "tag-ad",
+            TagActionForceRightPage = "tag-keep",
+        };
+
+        var model = ViewPrism2.Core.Services.Viewer.ViewerSettingsModel.FromSettings(settings);
+        Assert.True(model.EnableTagControl);
+        Assert.Equal("tag-ad", model.TagActionMap[ViewPrism2.Core.Services.Viewer.ViewerTagAction.Skip]);
+        Assert.Equal("tag-keep", model.TagActionMap[ViewPrism2.Core.Services.Viewer.ViewerTagAction.ForceRightPage]);
+        Assert.Null(model.TagActionMap[ViewPrism2.Core.Services.Viewer.ViewerTagAction.Spread]);
+
+        var written = new AppSettings();
+        model.ApplyTo(written);
+        Assert.True(written.EnableTagControl);
+        Assert.Equal("tag-ad", written.TagActionSkip);
+        Assert.Equal("tag-keep", written.TagActionForceRightPage);
+    }
 }

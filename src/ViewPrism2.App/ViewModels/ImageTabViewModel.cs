@@ -211,6 +211,28 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     /// <summary>
+    /// タグ タブでのタグ/ビュー永続変更(作成・編集・削除)を画像タブへ反映する軽量再読込。
+    /// InitializeAsync は重く状態復元(コレクション/表示モード)も伴うため、タブ切替毎の反映には
+    /// こちらを使う。タグ台帳(_tagById)・ビュー(_allViews)・画像タグ紐付けを入れ替え、コレクション
+    /// 選択・ナビ・表示モード・画像選択は保持したまま Recompute でタグ編集パネル(AddGroups/CurrentTags)
+    /// を作り直す。これが無いと _tagById が起動時のまま固定され、新規タグがタグ編集の候補に出ない
+    /// (private ReloadTagsAsync は画像↔タグ紐付けのみで台帳を再取得しないため別物)。
+    /// </summary>
+    public async Task ReloadTagCatalogAsync()
+    {
+        if (!_loaded)
+        {
+            return;
+        }
+
+        _tagById = (await _tags.GetAllAsync().ConfigureAwait(true)).ToDictionary(t => t.Id, StringComparer.Ordinal);
+        _allViews = (await _views.GetAllAsync().ConfigureAwait(true)).ToList();
+        await RefreshImageTagsAsync().ConfigureAwait(true);
+        BuildEntries();
+        Recompute();
+    }
+
+    /// <summary>
     /// 終了時の永続化スナップショット(REQ-052 v1.3/CR-5・CR-6)。選択・表示モードの変更時にも
     /// 逐次 settings へ書くが(堅牢化)、最終確定もここで行う。Locale/LastViewId はシェルが担う。
     /// </summary>

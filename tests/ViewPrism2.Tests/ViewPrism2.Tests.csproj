@@ -6,9 +6,16 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3(Infrastructure 経由の transitive・テスト時のみ)の既知 advisory。
+         パッケージ追加で restore audit が走ると TreatWarningsAsErrors によりエラー化するため、本テスト
+         プロジェクトに限りエラーではなく警告へ緩める(production 各プロジェクトの方針は不変)。上流更新で解消予定。 -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <!-- ECO-022 GF-TAGCTRL-01: ビューア設定ドロワー ScrollViewer の有界化(Extent/Viewport)を
+         実描画レイアウトで回帰検査するためのヘッドレス基盤(App バージョンに合わせ 12.0.4)。 -->
+    <PackageReference Include="Avalonia.Headless" Version="12.0.4" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ViewPrism2.Core\ViewPrism2.Core.csproj" />

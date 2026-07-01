@@ -198,6 +198,15 @@ public partial class ViewerWindow : Window
         }
     }
 
+    /// <summary>タグ制御マッピングモーダルの暗幕クリックで閉じる(ECO-019 in-tab popup 同型)。</summary>
+    private void OnTagControlBackdropPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _viewModel?.CloseTagControlMappingCommand.Execute(null);
+        }
+    }
+
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
@@ -295,6 +304,17 @@ public partial class ViewerWindow : Window
             return;
         }
 
+        // タグ制御 spread 占有: 両列にまたがる単一画像を表示し、左右半面はクリア(§2.12)
+        if (_viewModel.CurrentIsSpreadOccupy)
+        {
+            var occupy = _viewModel.CurrentSpreadOccupyImage;
+            SpreadOccupyImage.SourcePath = occupy >= 0 ? PathAt(occupy) : null;
+            SpreadLeftImage.SourcePath = null;
+            SpreadRightImage.SourcePath = null;
+            return;
+        }
+
+        SpreadOccupyImage.SourcePath = null;
         var pair = _viewModel.CurrentSpreadPair;
         SpreadLeftImage.SourcePath = PathAt(pair.LeftIndex);
         SpreadRightImage.SourcePath = PathAt(pair.RightIndex);

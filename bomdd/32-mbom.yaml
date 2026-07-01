@@ -548,6 +548,9 @@ fmea:
   - { id: FMEA-034, unit: M-UI-REPAIR-027, failure_mode: "(ECO-005)一括自動修復が候補2件以上(曖昧)の missing まで自動 relink する/1件の失敗で一括処理が止まる", effect: "曖昧な画像を誤った候補へ自動付け替え/大量 missing の一括修復が途中で停止", targeted_by: "CP-REPAIR-AUTOALL-023(auto-repairable=ちょうど1件のみ修復・失敗スキップ=unit)" }
   - { id: FMEA-035, unit: M-TAGCTRL-028, failure_mode: "(ECO-022)タグ制御 ON で配置プランが SpreadPairCalculator と OFF-identity で乖離する/両面空白の見開きを生成し canonical 現在画像が未定義になる/競合解決順を誤る", effect: "アクション無し/OFF でも見開き配置が崩れる(回帰)・空白だけの見開きで送り/位置/モード復元が止まる・複数制御タグで意図と違うアクションが効く", targeted_by: "CP-TAGCTRL-024(OFF-identity 全位置一致・seed 抑止で両面空白ゼロ・全順序解決を unit exact)+ 固定オラクル S-32〜(cross-factory)" }
   - { id: FMEA-036, unit: M-TAGCTRL-028, failure_mode: "(ECO-022)scroll/normal で skip 以外のアクションを効かせる/現存しない・未マッピングのタグを誤って適用する/原典の非決定的『次の適切な画像探索』ループを移植して順序非決定になる", effect: "§5.5 違反(限定対応モードで誤配置)・削除タグや無関係タグで配置が乱れる・同入力で出力が揺れオラクル化不能", targeted_by: "CP-TAGCTRL-024(scroll/normal=skip のみ・未マッピング/不在 tag_id 無視・決定的 plan を unit exact)" }
+  # 工程 FMEA(ECO-022 golden G-11 retro・2026-07-01): クローム脱漏。表示パリティ契約が「提示フィールド」に留まると
+  # golden が照合でなく設計工程になる。mock-ui-ir-is-cad メモリ Why(2)の BOM ガード化。FMEA-031(表示パリティ脱漏)の UI-chrome 版。
+  - { id: FMEA-037, unit: M-UI-018, failure_mode: "(ECO-022/工程)cad_input が ViewPrismUI/UI-IR 未取込のまま製造続行し、BOM が『6行×提示フィールド[グリフ/名前+英名+説明/picker]』の表示契約のみでモーダル クローム(ヘッダ=タグアイコン+タイトル+説明+X / フッター=既定に戻す・完了 / 行のカード化 / 行順 / 全体オーバーレイ)を仕様化できず『視覚は golden で確定』へ丸投げする", effect: "golden が照合でなく設計工程(モックからの作り直し)になる=承認往復コスト増・クローム乖離が固定オラクル(論理)で捕捉不能。ECO-022 マッピングモーダルで実発生: フッター(既定に戻す・完了)欠落・行順違い・カード無し→G-11 で全面リワーク(GF-TAGCTRL-02/03)", targeted_by: "CP-UI-G11(パリティをフィールド+クローム[ヘッダ/フッター/カード/行順/全体]まで拡張=golden 突合)+ プロセスゲート: cad_input=ViewPrismUI 未取込 の surface は製造をブロックし UI-IR 取込を先行、または『試作・golden で作図』と明示スコープ化する" }
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:

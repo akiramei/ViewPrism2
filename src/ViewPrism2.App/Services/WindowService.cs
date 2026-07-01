@@ -192,12 +192,17 @@ public sealed class WindowService : IWindowService
 
     public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
     {
-        // ビューア設定を復元(REQ-059)し、変更は即時 settings.json へ保存する
+        // ビューア設定を復元(REQ-059/REQ-077)し、変更は即時 settings.json へ保存する
         var settings = ViewerSettingsModel.FromSettings(_settings);
         var vm = new ViewerViewModel(ordered, startIndex, settings, Persist)
         {
             Loc = new LocalizationProxy(_localization),
         };
+
+        // タグ制御マッピング picker 用に現存タグのみを供給(major-1 補正・ECO-022)。
+        // 削除済みタグは出さない。Resolve(Core)はタグ存在台帳を取らず自然無視で結果整合する。
+        _ = LoadTagControlOptionsAsync(vm);
+
         var window = new ViewerWindow(_imageCache) { DataContext = vm };
         window.Show(Owner!);
 
@@ -205,6 +210,23 @@ public sealed class WindowService : IWindowService
         {
             model.ApplyTo(_settings);
             _settingsStore.Save(_settings);
+        }
+    }
+
+    private async Task LoadTagControlOptionsAsync(ViewerViewModel vm)
+    {
+        try
+        {
+            var tags = await _tags.GetAllAsync();
+            var options = tags
+                .Select(t => new TagPickerOption(t.Id, t.Name, t.Color))
+                .ToList();
+            vm.SetAvailableTags(options);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Data.Common.DbException)
+        {
+            // タグ取得失敗時はマッピング picker を空にして続行(ビューア本体は機能する)
+            vm.SetAvailableTags([]);
         }
     }
 
