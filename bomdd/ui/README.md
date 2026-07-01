@@ -1,5 +1,16 @@
 # UI-IR / UI-BOM 抽出一式
 
+> ## ⚠️ 凍結(archival)— 2026-07-01 P3 権威統一(maintainer 裁定 A)
+>
+> **UI 設計/IR の単一権威は ViewPrismUI の `docs/screens/`(モック+正規化プロース CAD)に一本化した。** 本 `bomdd/ui/` の構造化抽出(ui-ir.json / ui-bom.json / ui-trace-map.json ほか)は、**現行 E-BOM をブートストラップした歴史的成果物として凍結**する(トレーサビリティの出自として保存・以後は保守しない)。
+>
+> - **新規/変更 surface の正典フロー** = mock(ViewPrismUI 資料/)→ `ViewPrismUI/docs/screens/<screen>.md`(プロース CAD)→ ECO(`bomdd/60-change-order-*`)→ E-BOM(`bomdd/30-ebom.yaml`)。画像ビューアー(ECO-022)が既にこの経路で製造されており、本ディレクトリに viewer 抽出は存在しない=実態に一致。
+> - **乖離時の権威**: 本ディレクトリの記述が `docs/screens/` と食い違う場合、**常に ViewPrismUI が正**。
+> - 本ディレクトリは削除せず凍結保存(E-BOM の TMP-UI-* 由来トレースの証跡)。JSON を再生成・追記しない。
+> - 方法論(`BomDD/method/ui-ir-ui-bom.md`)の JSON 抽出ステップは、本プロジェクトではプロース CAD + ECO 規律に置換済み(project-level supersede)。
+>
+> 詳細: `ViewPrismUI/docs/02_mock_fidelity_policy.md` / メモリ [[viewprismui-cad-repo]] [[mock-ui-ir-is-cad]] / `bomdd/reports/ui-ir-coverage-readacross-2026-07-01.md` P3。
+
 > このディレクトリは画面(タブ)単位の UI-IR/UI-BOM 抽出を集約する。直下=**タグタブ**(初出のため平置き)、サブフォルダ=タブ別。
 > - タグタブ: 本ディレクトリ直下(下記)。入力モックは旧 `work/tag-tab/`。
 > - **画像タブ: [image-tab/](image-tab/)**(入力モックは `ViewPrismUI:資料/画像タブ/`)。
