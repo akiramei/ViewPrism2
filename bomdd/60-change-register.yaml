@@ -545,3 +545,33 @@ change_orders:
     m4_done: "ECO-024 スコープの M4 同期を実施: 32-mbom M-UI-013 interface_contract(薄いシェル+ImageTabView 一本化・撤去済 legacy 明記)/M-UI-016(TaggingPanelViewModel 撤去→ImageTab/WorkTab インライン実態化)/M-UI-013 acceptance から retired CP-UI-G3 除去/新 M-UI-WORKSPACE-029(E-UI-WORKSPACE-043 製造トレース=W2 解消)。33-control-plan CP-TAGUI-013 を TagService(CpTag011)+新 surface インラインへ再帰属。20-spec §2.6 に as-built 注記+左 NodeGraph ツリー/詳細パネルの撤去是正。validate_bom 0 error/0 warning。"
     pending_sync: "ECO-010〜021 の evolved design(表示軸チップ/パンくず・整理/作業/削除/ゴミ箱の逐条)の 20-spec §2.6 全面 prose 同期は継続課題(累積 M4・本 ECO スコープ外=E-UI-BROWSE/AXIS/MODE+ViewPrismUI UI-IR が当面の権威)"
     notes: "E-UI-SHELL-021/BROWSE-022 は ECO-013 で本撤去を予告済(実行はブロッカー解消まで保留)。全ブロッカー(整理/⋯/作業/削除/ゴミ箱/作業タブ/詳細ノート撤回)解消により実行。golden 不要(新 surface は ECO-013〜022 で golden 承認済・挙動不変の撤去)"
+
+  - id: ECO-025
+    title: "表示列モデル(ビュー編集モーダル + ファイル一覧)— ビュー.display_columns 進化モデル + 2 surface(CADモック由来・段階 α/β)"
+    type: 設計決定(既存属性 display_columns へ進化モデル付与 + 新編集/描画 surface・CADモック由来)
+    status: staged
+    golden: pending
+    baseline: "ECO-024 適用後(main c100097)"
+    bom_rev: "v4.0(eco:ECO-025)"
+    impacted_bom:
+      ["REQ-079(新設: 表示列 進化モデル・順序/最大5/名前固定/基本∪ビュー内タグ/kind/ビュー所有/種類廃止・VE-001/002/003)",
+       "REQ-080(新設: ビュー編集モーダル surface・表示列構成エディタ=列ピッカー・名前固定バッジ)",
+       "REQ-081(新設: ファイル一覧 列描画契約[kind 別セル]+ 列ヘッダーソート不変条件[空値末尾・型別比較・安定タイブレーク])",
+       "E-VIEWSVC-009(display_columns 所有/不変条件 VE-001/002/003・タグ母集合・kind・種類廃止・modified_at。requirement_refs += REQ-079)",
+       "E-DB-010(現状追認: views.display_columns TEXT 既存=マイグレーション不要。進化モデルは同一 TEXT/JSON へ前方互換直列化・CP-DB-006 スキーマ同値不変)",
+       "E-UI-TAGS-026(α: ビュー管理から開くビュー編集モーダル surface・列ピッカー・名前固定。external_source_ref にモック追記・requirement_refs += REQ-079/080・acceptance += CP-VIEW-012)",
+       "E-UI-BROWSE-022(β: リスト列描画契約[kind 別セル]+ 列ヘッダーソート[不変条件・unit 検査可能]+ 表示列ポップオーバー[列ピッカー・書き戻り]。requirement_refs += REQ-081・depends_on += E-VIEWSVC-009)",
+       "35-design-system-bom(SC-COLUMN-PICKER-001 列ピッカー共有部品候補=DRY 統合先を追加)"]
+    oracle: "S-01〜S-31 不変(本 ECO=staged・コード非製造)。スキーマ不変(display_columns 既存・マイグレーション無し・CP-DB-006 同値)"
+    verification: "起票 + E-BOM(30)/REQ(10)同期。validate_bom.py 0 error / 0 warning。spec §2.6/§2.x・M-BOM 製造トレース・Control Plan の全面同期と α/β 実装は製造フェーズ(M4)"
+    decisions:
+      VE-001: "名前列は固定(先頭・削除/移動不可・「固定」バッジ)を両画面の正。ビュー編集モックの通常列扱いはモック是正でロック(安全/整合はモックより上位)。columns[0]==c_name(maintainer 2026-07-02)"
+      VE-002: "最大列数=標準 5・固定で先行(DC 可変レンジ min2/max8・min3/max7 は製造仕様でない)。下限/上限の可変化は未確定=保留(maintainer 2026-07-02)"
+      VE-003: "display_columns はビュー定義所有(コレクション×ビューのローカル上書き無し)。ファイル一覧の表示列編集も同一 display_columns を書き戻す(maintainer 2026-07-02)"
+      RECONCILE: "display_columns は net-new スキーマではない(V1 から DatabaseSchema/View.DisplayColumns/ViewService/ViewRepository/DisplayColumnParser/REQ-030/042/CP-VIEW-012 に存在)。net-new は 進化モデル+不変条件・ビュー編集モーダル surface・列ヘッダーソート+型別セル描画。DB マイグレーション不要(ECO-020 と対照)"
+      STAGED: "work_tab α/β と同じ運用。α=display_columns 進化モデル E-BOM 化+ビュー編集モーダル(名前ロック)。β=ファイル一覧 列描画+列ヘッダーソート(不変条件)。列ピッカーは両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY 統合(isolate now, DRY later)"
+      SURFACE_HOME: "新 surface id は新設せず既存を拡張(α=E-UI-TAGS-026 のビュー管理ダイアログ群/β=E-UI-BROWSE-022 のリスト描画)。独立受入可能な共有部品=列ピッカーは user 指示どおり golden 後 DRY のため 35-design-system-bom の SC-* 候補(screen-surface でなく shared-component)。専用 E-UI-VIEWEDIT surface への昇格は必要なら後続 ECO(可逆)"
+    cad_input: "ViewPrismUI:資料/タグタブ/ViewPrism2 ビュー編集 (standalone).html / 資料/画像タブ/ViewPrism2 ファイル一覧 (standalone).html / docs/screens/view_edit.md / file_list.md"
+    body: 60-change-order-eco-025.md
+    pending_sync: "α/β 製造(列ピッカー/ソート比較器の unit + golden=maintainer 実機)。spec §2.6(ビュー編集)/§2.x(リスト列・ソート)・M-BOM 製造トレース・Control Plan 全面同期は M4。未確定=VE-004(空名保存)・FL-001(グリッド/リスト共有)・FL-002(ソート永続範囲)"
+    notes: "採番: user 起票時の想定 ECO-024 は原典撤去で使用済のため採番規則(逐次)で ECO-025 確定。E-UI-AXIS-NAV-040(アクティブビュー供給は既存)・E-UI-NODEGRAPH-025(タグ階層=別軸)・E-SORT-004(sort_field 整列=別軸)は非改変"

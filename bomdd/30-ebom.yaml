@@ -117,14 +117,18 @@ ebom:
       acceptance_refs: [CP-TAG-011]
 
     - id: E-VIEWSVC-009
-      name: ビュー管理サービス(CRUD・modified_at 規則・お気に入り/最近・階層ノード管理)
+      name: ビュー管理サービス(CRUD・modified_at 規則・お気に入り/最近・階層ノード管理・表示列 display_columns 所有)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-030, REQ-032, REQ-033, REQ-034]
+      requirement_refs: [REQ-030, REQ-032, REQ-033, REQ-034, REQ-079]
       depends_on: [E-DOMAIN-001, E-DB-010]
       invariants:
         - INV-002 modified_at はビュー本体・条件・階層の変更で更新、閲覧では不変
         - INV-004 ビュー階層ノードの移動で循環を作らない
+        - (ECO-025/VE-003) 表示列 display_columns は**ビュー定義が所有**する順序付き列配列(基本情報 name/size/modified_date ∪ 当該ビューのタグ階層メンバーのタグ)。コレクション×ビューのローカル上書きを持たない。ファイル一覧の「表示列」編集も同一の display_columns を書き戻す(別コレクションで同ビューを開いても同一列構成)。display_columns 変更でも modified_at を更新する(INV-002 の一部・閲覧では不変)
+        - (ECO-025/VE-001) columns[0] は常に name(c_name)。先頭固定・削除/移動不可(名前不在の列構成は保存不可)。両画面(ビュー編集・ファイル一覧)共通
+        - (ECO-025/VE-002) 列数は 1 ≤ N ≤ 最大(標準 5・固定で先行)。名前固定により下限は常に 1 以上。DC プロップの可変レンジ(min2/max8・min3/max7)は製造仕様でない
+        - (ECO-025) タグ列候補の母集合は当該ビューのタグ階層メンバーシップに限る。各列は kind∈{basic,num,text,simple}(basic=name/size/date、タグ列は タグ型→num/text/simple に射影)を持ちセル描画/ソート(E-UI-BROWSE-022)を規定する。Ver1「種類(kind)」列は廃止(列ソースは基本情報とタグのみ)
       acceptance_refs: [CP-VIEW-012]
 
     - id: E-DB-010
@@ -142,6 +146,7 @@ ebom:
         - 新規 DB = 最新スキーマ+全マイグレーション既適用マーク
         - 接続ごとに PRAGMA journal_mode=WAL・foreign_keys=ON を明示発行
         - (ECO-020) マイグレーション 004-workspaces で workspaces / workspace_images を追加。is_default の部分 UNIQUE 索引でデフォルト高々 1 件を担保(INV-W1)。両 FK→CASCADE(workspace 削除・画像の完全削除で所属消滅)。LatestDdl 末尾と列順・索引名を揃えスキーマ同値(CP-DB-006)を保つ
+        - (ECO-025・現状追認) 表示列 display_columns は既存 views.display_columns TEXT(JSON)へ格納=**マイグレーション不要**(ECO-020 の workspaces 追加と対照)。ECO-025 の進化モデル(順序・kind・名前固定・最大5)は同一 TEXT 列へ前方互換に直列化する。スキーマ同値(CP-DB-006)不変
       acceptance_refs: [CP-DB-006]
 
     - id: E-CACHE-011
@@ -350,12 +355,12 @@ ebom:
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-041, REQ-042]
-      external_source_ref: K-AVALONIA
+      requirement_refs: [REQ-041, REQ-042, REQ-081]
+      external_source_ref: "K-AVALONIA + ViewPrismUI:資料/画像タブ/ViewPrism2 ファイル一覧 (standalone).html(ECO-025 β 列描画+ソート)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       supersedes: E-UI-GRID-022
       split_by: ECO-016
-      depends_on: [E-SORT-004, E-THUMB-020]
+      depends_on: [E-SORT-004, E-THUMB-020, E-VIEWSVC-009]
       interface_contracts:
         - E-UI-MODE-041 がクリック意味論(既定選択/整理割当/無操作)を決め、E-UI-BROWSE-022 は描画・母集合・既定選択計算を所有する
       invariants:
@@ -367,6 +372,9 @@ ebom:
         - since ECO-012/I13: 閲覧時グリッドのタグ色ドットは左下・最大3(超過は先頭3)
         - since ECO-013: 画像タブのグリッド/リストは画像タブ surface が単独で描画する。選択ロジックの unit 検査点は画像タブの独立した状態/操作ロジックへ移る(母集合=選択コレクションの status=normal・REQ-053)
         - since ECO-017: 既定選択(クリック=選択)は E-UI-MODE-041 が宣言する選択許可モード(タグ編集・作業)で有効化される。本部品は選択許可フラグ(inSelect)を受け、グリッドのチェック/選択順バッジとタグドット非表示を一貫適用する(選択機構の再利用・作業モードで再宣言しない)
+        - (ECO-025/β/REQ-081) リスト表示のテーブル列はアクティブなビューの display_columns(進化モデル・E-VIEWSVC-009)を描画契約とする。名前は固定列(先頭・削除/移動不可・「固定」バッジ)で伸縮(minmax)、他は固定幅。**kind 別セル描画**: basic(size=X.X MB/X KB(1MB 未満 KB)・date=日付) / num=★×値+数値(金色・未設定=淡色「未設定」) / text=値チップ(タグ色淡塗り+境界・未設定=「—」) / simple=色ドット+ラベル(付与)/オフ(未付与)
+        - (ECO-025/β/REQ-081) 各列ヘッダーはソートトグル(別列クリック=昇順開始・同列再クリック=昇順⇄降順・ソート概要「クリア」で解除)。ソート不変条件(選択ロジックと同じ『描画から独立した決定論ロジックとして unit 検査可能』規律)は、未設定タグ行を方向に関わらず常に末尾(空値末尾。ただし simple は空扱いにせず有無順=付与を先)、型別比較を 数値タグ・basic size=数値順／テキストタグ・basic name/date=localeCompare('ja')／simple=有無順、同値のタイブレークを名前の昇順で安定化する。画像一覧の sort_field 整列(E-SORT-004)とは別軸の列ヘッダーソート
+        - (ECO-025/β) 「表示列」ポップオーバーで列を追加/削除/並べ替え(view_edit=E-UI-TAGS-026 と同一の列ピッカー・display_columns をビュー定義へ書き戻す VE-003・除去列がソート中ならソート解除)。上限到達で件数バッジ アンバー+追加元不活性。両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY 統合
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022]
 
     - id: E-UI-AXIS-NAV-040
@@ -474,11 +482,11 @@ ebom:
       acceptance_refs: [CP-UI-G6, CP-GF-015, CP-UI-G1]
 
     - id: E-UI-TAGS-026
-      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)— v1.2 改訂+v2.0 GF-01/04 是正
+      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)+ ビュー編集モーダル(表示列構成)— v1.2 改訂+v2.0 GF-01/04 是正+ECO-025(α)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030, REQ-060]
-      external_source_ref: "原典 TagManagementPanel/ViewManagementPanel(仕様 §2.6 v1.2)"
+      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030, REQ-060, REQ-079, REQ-080]
+      external_source_ref: "原典 TagManagementPanel/ViewManagementPanel(仕様 §2.6 v1.2)+ ViewPrismUI:資料/タグタブ/ViewPrism2 ビュー編集 (standalone).html(ECO-025 表示列構成モーダル)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-TAGSVC-008, E-VIEWSVC-009]
       invariants:
@@ -490,7 +498,8 @@ ebom:
         - (ECO-007/E6) タグ作成ダイアログの種別セレクタはセグメント(3タブ: シンプル/テキスト/数値)で表示する(従来 ComboBox)
         - (ECO-007/E7) タグ色プリセットは E-DESIGN-028 の9色(Radix 系)。色は自由 hex 継続(プリセットは入力ショートカット)
         - (ECO-008) タグ種別は作成時に確定し作成後は変更不可(ライブ仕様 §2.6 L233 と整合・現状追認)
-      acceptance_refs: [CP-UI-G6, CP-DISPLAY-PARITY-022]
+        - (ECO-025/α/REQ-080) ビュー管理の行から「ビューを編集」モーダルを開き、ビュー名・説明・**表示列**(display_columns・E-VIEWSVC-009 所有)を編集する。表示列エディタ=**列ピッカー**: 選択済み列を順序表示(各行に上下移動/削除・ソースチップ[基本=グレー/タグ=青]・タグ列は色ドット)、追加元カード(基本情報=破線/ビュー内タグ=実線+種別チップ+色ドット)クリックで末尾追加(上限/重複は無視)、件数バッジ「合計 N 列 / 最大 M」は上限到達で青→アンバー+追加元カード不活性(not-allowed・淡色)。名前(c_name)は先頭固定・移動/削除不可・「固定」バッジ(VE-001=モックの通常列扱いをロックへ是正)。空状態(追加元に基本情報/タグ無し)は各セクションに案内・端の列で上下矢印を不活性。保存で display_columns をビュー定義へ書き戻し(VE-003)ファイル一覧へ即反映。列ピッカーは E-UI-BROWSE-022 の「表示列」ポップオーバーと同一モデル(両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY 統合)
+      acceptance_refs: [CP-UI-G6, CP-DISPLAY-PARITY-022, CP-VIEW-012]
 
     - id: E-UI-TAGASSIGN-029
       name: タグ付与パネル(画像タブ右・タグ編集モード。現在のタグ/タグ追加(種別グループ)/適用。値入力は右パネル内インライン・連番付与は独立アクション)— v1.2 追加(ずる裁定)+ECO-010(値入力インライン化・連番別動線)
