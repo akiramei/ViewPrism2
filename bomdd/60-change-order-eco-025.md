@@ -151,7 +151,9 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
   - loc(ja/en 13 キー)。テスト `CpViewColumnModelTests` 11 件。
   - 検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 485(+11)/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0。
   - **α golden 反復(maintainer 実機)GF-1〜5 是正済**: GF-1 お気に入り撤去(廃止仕様)/ GF-2〜3 レイアウトをモック権威へ(フッター下部 docked・本体スクロール・追加元2カラム)/ GF-4 単一スクロール化(mock是正=二重スクロール解消)/ GF-5 スクロールバー inset(内容 Margin・K-AVALONIA)。
-- **β 列描画+ソート = 製造済(golden pending)**: `ViewColumnSorter`(ソート不変条件)+ `ListColumnBuilder`(display_columns→列定義+型別セル)+ `ImageTabView` 配線(動的列テーブル=workspace型 sticky ヘッダー・名前 1.7* 伸縮・`GridColumnsBinder` で列位置一致・kind 別セル・列ヘッダーソートトグル・ソート概要クリア)。テスト CpViewColumnSorterTests 6 + CpListColumnBuilderTests 9。検証 build 0/0・Tests 500・Oracle 100+2skip・validate_bom 0/0。**残 = β 視覚 golden(maintainer 実機)+ 表示列ポップオーバー(β-2 残・モーダル型・列ピッカー再利用=両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY)**。
+- **β 列描画 = 製造済(golden pending・v2 有効)**: `ListColumnBuilder`(display_columns→列定義+型別セル)+ `ViewColumnSorter`(ソート不変条件)+ `ImageTabView` 動的列テーブル(workspace型 sticky ヘッダー・名前 1.7* 伸縮・`GridColumnsBinder` で列位置一致・kind 別セル)。テスト CpViewColumnSorterTests 6 + CpListColumnBuilderTests 9。検証 build 0/0・Tests 500〜501・Oracle 100+2skip・validate_bom 0/0。列描画・型別セル・ソート比較器は **v2 でも不変で有効**。
+- **β ソート導線 = v2 で刷新(§13・実装は再製造が必要)**: ECO-025 暫定のソート導線(リスト=ヘッダー+概要バー / グリッド=旧 名前/更新日/サイズ 固定メニュー継続 / `74e4620` の暫定是正)は **FL-003 v2 で superseded**。詳細 §13。
+- **残 = β ソート導線 v2 実装 + 表示列ポップオーバー(β-2・モーダル型・列ピッカー再利用=両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY)+ β 視覚 golden**。
 
 ## 12. レイアウト不変条件を実装契約化(golden retro・maintainer 2026-07-02)
 
@@ -168,3 +170,19 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
 - **モーダル/全画面型**: サーフェス単一スクロール・docked フッター・GF-V1(ビュー編集モーダル・表示列ポップオーバー)。
 
 **ViewPrismUI が正**=当該レイアウト不変条件節を実装契約として扱う(E-UI-TAGS-026=モーダル型/E-UI-BROWSE-022=リスト workspace型+ポップオーバー モーダル型 の invariant に権威参照+型名を反映済)。GF-5(スクロールバー inset)は Avalonia Fluent 固有のため ViewPrism2 K-AVALONIA 側の実装規約(HTML モックには現れない)。
+
+## 13. ソートモデル v2 統一(FL-003・CAD v2 反映・maintainer/ViewPrismUI 担当 2026-07-02)
+
+**経緯(工程 retro)**: β 実機で「表示列に追加したタグ列がソート対象に選べない」を指摘 → 私が**診断前に修正着手＝手順違反**(commit `74e4620` 暫定是正 + 名前/方向統合チップ化を試行 → 破棄)。工程診断で**主原因=UI-IR/CAD がリストモードのソートモデルを未抽出(S3・VP-UI-007 同族)**と判明し、レポート化(`bomdd/reports/eco025-list-sort-model-cad-gap-2026-07-02.md`)→ ViewPrismUI 担当へ。担当が **CAD を v2 へ刷新**(`ViewPrismUI 3e820b8`・`docs/screens/file_list.md` = リスト/アイコンのソート単一権威)。
+
+**v2 契約(実装契約=BOM/REQ に反映済)**:
+- **ソート対象=アクティブなビューの表示列(基本情報+タグ)**。リスト/アイコンで対象集合は同一・導線 UI だけ表示形式で変える。
+- **ソート状態(sortCol/sortDir)は表示形式(grid/list)を跨いで共有**。
+- **旧・名前/更新日/サイズ 固定ソートメニュー(sort_field/E-SORT-004 由来のブラウズ・ソート導線)は廃止**。ECO-025 暫定(アイコンに固定メニュー継続)は **superseded**。
+- リスト=列ヘッダー(ソート入口)+ ツールバー要約チップ(方向+列名+✕クリア)。アイコン=単一「並び替え」メニュー(候補=表示列・種別チップ+色ドット・アクティブ強調+方向矢印・下部に昇順/降順)+ボタンに現在ソート列名バッジ。
+- **アイコンタイルのソート項目表示(net-new)**: ソート中かつ名前以外のとき、タイルに名前+ソート項目(列名+当該列値・型別描画)。未ソート/名前ソート時は名前だけ。
+- ソート規則(空値末尾・型別比較・安定タイブレーク=`ViewColumnSorter`)は不変。
+
+**反映先**: REQ-081(v2 統一モデルへ改訂)/ E-UI-BROWSE-022 invariant(FL-003 v2・リスト/アイコン導線・共有状態・旧固定メニュー廃止・タイルソート項目)/ external_source_ref を v2 モックへ。
+
+**実装への含意(未着手・要再製造)**: 既存 β の**列描画・型別セル・ViewColumnSorter は v2 でも有効**。要再製造=①旧 名前/更新日/サイズ ソートを browse から撤去し**表示列ソートへ一本化**(_sortColKey/_sortColDir をグリッドにも適用=共有)②アイコンの「並び替え」メニュー(候補=表示列)③アイコンタイルのソート項目表示④リストのソートチップ(✕クリア)。`74e4620`(暫定導線)の扱い(revert/前方修正)は再製造時に整理。**着手前に file_list.md v2 のソート節を契約として読む**(前回 retro の教訓)。**golden=maintainer 実機**。
