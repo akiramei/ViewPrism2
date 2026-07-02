@@ -162,17 +162,34 @@ public static class ListColumnBuilder
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentNullException.ThrowIfNull(columns);
 
+        // (ECO-026/#4) 画像ごとに tagId→値 辞書を 1 回だけ作り O(1) 引き(行×列×タグ数の線形探索を排除)。
+        // タグ列が無ければ辞書生成もしない。重複 tagId は先勝ち(旧 TagValue の先頭一致と同義)。
+        Dictionary<string, string?>? tagValues = null;
+        for (var i = 0; i < columns.Count; i++)
+        {
+            if (columns[i].TagId is not null)
+            {
+                tagValues = new Dictionary<string, string?>(StringComparer.Ordinal);
+                foreach (var t in entry.Tags)
+                {
+                    tagValues.TryAdd(t.TagId, t.Value);
+                }
+
+                break;
+            }
+        }
+
         var cells = new List<ListCell>(columns.Count);
         for (var i = 0; i < columns.Count; i++)
         {
-            cells.Add(BuildCell(i, columns[i], entry, formatSize, formatDate));
+            cells.Add(BuildCell(i, columns[i], entry, tagValues, formatSize, formatDate));
         }
 
         return cells;
     }
 
     private static ListCell BuildCell(
-        int index, ListColumnDef col, ImageEntry entry,
+        int index, ListColumnDef col, ImageEntry entry, IReadOnlyDictionary<string, string?>? tagValues,
         Func<long, string> formatSize, Func<string, string> formatDate)
     {
         switch (col.Kind)
@@ -185,7 +202,7 @@ public static class ListColumnBuilder
                 return new ListCell(index, col.Kind, formatDate(entry.Record.ModifiedDate), 0, null, true);
             case ListCellKind.Num:
             {
-                var value = TagValue(entry, col.TagId);
+                var value = TagValue(tagValues, col.TagId);
                 if (value is not null &&
                     double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var n))
                 {
@@ -198,7 +215,7 @@ public static class ListColumnBuilder
 
             case ListCellKind.Text:
             {
-                var value = TagValue(entry, col.TagId);
+                var value = TagValue(tagValues, col.TagId);
                 return string.IsNullOrEmpty(value)
                     ? new ListCell(index, col.Kind, string.Empty, 0, col.Color, false) // —
                     : new ListCell(index, col.Kind, value, 0, col.Color, true);
@@ -206,7 +223,7 @@ public static class ListColumnBuilder
 
             case ListCellKind.Simple:
             {
-                var present = HasTag(entry, col.TagId);
+                var present = HasTag(tagValues, col.TagId);
                 return new ListCell(index, col.Kind, present ? col.Label : string.Empty, 0, col.Color, present);
             }
 
@@ -236,24 +253,9 @@ public static class ListColumnBuilder
         return new ListColumnDef(tag.Id, tag.Id, kind, label ?? tag.Name, tag.Color, width, IsNameLocked: false);
     }
 
-    private static string? TagValue(ImageEntry entry, string? tagId)
-    {
-        if (tagId is null)
-        {
-            return null;
-        }
+    private static string? TagValue(IReadOnlyDictionary<string, string?>? tagValues, string? tagId) =>
+        tagId is not null && tagValues is not null && tagValues.TryGetValue(tagId, out var v) ? v : null;
 
-        foreach (var tag in entry.Tags)
-        {
-            if (string.Equals(tag.TagId, tagId, StringComparison.Ordinal))
-            {
-                return tag.Value;
-            }
-        }
-
-        return null;
-    }
-
-    private static bool HasTag(ImageEntry entry, string? tagId) =>
-        tagId is not null && entry.Tags.Any(t => string.Equals(t.TagId, tagId, StringComparison.Ordinal));
+    private static bool HasTag(IReadOnlyDictionary<string, string?>? tagValues, string? tagId) =>
+        tagId is not null && tagValues is not null && tagValues.ContainsKey(tagId);
 }

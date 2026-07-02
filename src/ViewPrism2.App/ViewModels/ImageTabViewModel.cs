@@ -423,14 +423,20 @@ public sealed partial class ImageTabViewModel : ObservableObject
         return list;
     }
 
-    /// <summary>ビュー条件 + ノードパス条件で _entries(選択コレクション scope)を絞り込む(OC-1/OC-3 再利用)。</summary>
-    private List<ImageEntry> ViewMatched(IReadOnlyList<GraphNode> fullPath)
+    /// <summary>
+    /// ビュー条件 + ノードパス条件で対象集合を絞り込む(OC-1/OC-3 再利用)。
+    /// (ECO-026/#3) <paramref name="within"/> を渡すとその集合内だけで評価する。子ノードの matched は
+    /// 親ノードの matched の部分集合(子条件は親条件へ AND 追加)のため、子件数は親 matched(files)内で
+    /// 評価しても同一で、入力が全 _entries から現ノード集合へ縮む(子数×全件評価を回避)。
+    /// </summary>
+    private List<ImageEntry> ViewMatched(IReadOnlyList<GraphNode> fullPath, IReadOnlyList<ImageEntry>? within = null)
     {
+        var source = within ?? _entries;
         var conds = new List<ViewCondition>(_viewConditions);
         conds.AddRange(_pathConverter.BuildConditions(fullPath));
-        if (conds.Count == 0) return _entries.ToList();
-        var res = _evaluator.Evaluate(_entries.Select(e => e.ToImageWithTags()), conds);
-        return _entries.Where(e => res.MatchedImageIds.Contains(e.Record.Id)).ToList();
+        if (conds.Count == 0) return source.ToList();
+        var res = _evaluator.Evaluate(source.Select(e => e.ToImageWithTags()), conds);
+        return source.Where(e => res.MatchedImageIds.Contains(e.Record.Id)).ToList();
     }
 
     // =====================================================================
@@ -664,7 +670,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             {
                 var key = "vc" + ci++;
                 _currentChildren[key] = child;
-                int count = ViewMatched(Append(fullPath, child)).Count;
+                // (ECO-026/#3) 子件数は現ノードの matched(files)内で評価=全 _entries を子数ぶん再評価しない
+                int count = ViewMatched(Append(fullPath, child), files).Count;
                 var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
                 Chips.Add(ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
             }
@@ -1217,11 +1224,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private void ClearColumnSort() { _sortColKey = null; Recompute(); }
 
+    // (ECO-026/#2) 表示形式切替は同一データ(Items)を作り直さない=表示状態のフリップのみ。
+    // grid/list は同じ ImageItemVM(cells + ソート項目)を別レイアウトで描画するだけで、母集合・列・ソートは不変。
     [RelayCommand]
-    private void SetGrid() { _layout = "grid"; _settings.DisplayMode = "grid"; Recompute(); } // CR-6
+    private void SetGrid() { if (_layout == "grid") return; _layout = "grid"; _settings.DisplayMode = "grid"; OnPropertyChanged(string.Empty); } // CR-6
 
     [RelayCommand]
-    private void SetList() { _layout = "list"; _settings.DisplayMode = "list"; SortMenuOpen = false; Recompute(); } // CR-6・FL-003 リスト切替で並び替えメニューを閉じる
+    private void SetList() { _layout = "list"; _settings.DisplayMode = "list"; SortMenuOpen = false; OnPropertyChanged(string.Empty); } // CR-6・FL-003 リスト切替で並び替えメニューを閉じる
 
     [RelayCommand]
     private void ToggleEdit()
