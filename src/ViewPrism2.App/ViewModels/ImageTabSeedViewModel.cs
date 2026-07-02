@@ -746,14 +746,19 @@ public sealed partial class ImageItemVM : ObservableObject
     public ImageItemVM(string id, string name, bool isFolder, bool isPlaceholder, bool hasThumb,
         IBrush? thumbBrush, bool selectable, bool isSelected, bool hasTagDots, List<IBrush> tagDots,
         string sizeLabel, string dateLabel, string? target, string? absolutePath = null,
-        int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false)
+        int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false,
+        IReadOnlyList<ListCell>? cells = null)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
         ThumbBrush = thumbBrush; Selectable = selectable; _isSelected = isSelected;
         HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
         Target = target; AbsolutePath = absolutePath; _selectionOrder = selectionOrder;
         _isMergeTarget = isMergeTarget; _isOrganizeTarget = isOrganizeTarget;
+        Cells = cells ?? [];
     }
+
+    /// <summary>ファイル一覧(リスト)の型別セル(ECO-025 β・アクティブビューの display_columns 由来)。</summary>
+    public IReadOnlyList<ListCell> Cells { get; }
     public string Id { get; }
     public string Name { get; }
     public bool IsFolder { get; }

@@ -27,6 +27,14 @@ public sealed record ListColumnDef(
     string Width,
     bool IsNameLocked);
 
+/// <summary>ファイル一覧のヘッダー列 1 件(ソートトグル・ECO-025 β)。Grid.Column=<see cref="ColumnIndex"/> に配置。</summary>
+public sealed record ListColumnHeaderVM(
+    int ColumnIndex,
+    string Key,
+    string Label,
+    bool IsSortActive,
+    double ArrowAngle);
+
 /// <summary>ファイル一覧セル 1 件(行×列)。kind に応じて XAML が描画する。</summary>
 public sealed record ListCell(
     int ColumnIndex,
@@ -34,7 +42,20 @@ public sealed record ListCell(
     string Text,
     int Stars,
     string? Color,
-    bool HasValue);
+    bool HasValue)
+{
+    // XAML の kind 別テンプレ切替(enum 等価をバインドで書かずに済ませる)
+    public bool IsBasic => Kind is ListCellKind.BasicName or ListCellKind.BasicSize or ListCellKind.BasicDate;
+    public bool IsNum => Kind == ListCellKind.Num;
+    public bool IsTextCell => Kind == ListCellKind.Text;
+    public bool IsSimple => Kind == ListCellKind.Simple;
+
+    /// <summary>数値セルの ★ 表示(値ぶんの星)。未設定は空。</summary>
+    public string StarsText => HasValue ? new string('★', Stars) : string.Empty;
+
+    /// <summary>未設定(空値)か。数値=「未設定」/テキスト=「—」/シンプル=オフ の淡色表示に使う。</summary>
+    public bool IsEmpty => !HasValue;
+}
 
 /// <summary>
 /// ファイル一覧の列/セル構築(ECO-025 β・REQ-081・純粋/決定論・unit 検査可能)。

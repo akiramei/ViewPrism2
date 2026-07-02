@@ -72,6 +72,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private string _layout = "grid";
     private SortField _sortField = SortField.Name;
     private SortDirection _sortDir = SortDirection.Asc;
+    // ECO-025 β: リストの列ヘッダーソート(null=未ソート → toolbar _sortField を使用)。列 key = name/size/modified_date/タグ id。
+    private string? _sortColKey;
+    private SortDirection _sortColDir = SortDirection.Asc;
+    private IReadOnlyList<ListColumnDef> _listColumnDefs = [];
     private string? _tagFilter;
     private bool _editMode;
     private readonly List<string> _selected = new();
@@ -322,10 +326,70 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     private List<ImageEntry> SortFiles(List<ImageEntry> files)
     {
+        // ECO-025 β: リスト表示で列ヘッダーソートが有効なときは列比較器(空値末尾・型別・安定タイブレーク)を使う。
+        // それ以外(グリッド・未ソート)は従来の sort_field 整列(E-SORT-004)。
+        if (_layout == "list" && _sortColKey is { } key)
+        {
+            return ViewColumnSorter.Sort(files, ResolveSortColumn(key), _sortColDir).ToList();
+        }
+
         var byId = files.ToDictionary(e => e.Record.Id, StringComparer.Ordinal);
         var sorted = _sorter.Sort(files.Select(e => e.Record), _sortField, _sortDir);
         return sorted.Select(r => byId[r.Id]).ToList();
     }
+
+    /// <summary>列 key(basic or タグ id)から比較列を解決(ECO-025 β)。タグ型は _tagById から。</summary>
+    private ViewSortColumn ResolveSortColumn(string key) =>
+        _tagById.TryGetValue(key, out var tag)
+            ? ViewSortColumn.ForTag(key, tag.Type)
+            : ViewSortColumn.ForBasic(key);
+
+    /// <summary>
+    /// リスト表示のヘッダー列と Grid 列テンプレートを構築(ECO-025 β)。
+    /// 列 = アクティブビュー(view 軸のとき)の display_columns。FS 軸・未選択は既定 3 列。
+    /// ソート中の列が現構成から消えたらソート解除(file_list「除去列がソート中ならソート解除」)。
+    /// </summary>
+    private void BuildListColumns()
+    {
+        var view = _axis == "view" && _viewId is not null
+            ? _allViews.FirstOrDefault(v => string.Equals(v.Id, _viewId, StringComparison.Ordinal))
+            : null;
+        _listColumnDefs = ListColumnBuilder.Build(view?.DisplayColumns, _tagById, BasicColLabel);
+        ColumnTemplate = ListColumnBuilder.ColumnTemplate(_listColumnDefs);
+
+        // 除去列がソート中ならソート解除
+        if (_sortColKey is { } sk && !_listColumnDefs.Any(c => string.Equals(c.Key, sk, StringComparison.Ordinal)))
+        {
+            _sortColKey = null;
+        }
+
+        ListColumns.Clear();
+        for (int i = 0; i < _listColumnDefs.Count; i++)
+        {
+            var d = _listColumnDefs[i];
+            bool active = string.Equals(_sortColKey, d.Key, StringComparison.Ordinal);
+            double angle = active && _sortColDir == SortDirection.Desc ? 180 : 0;
+            ListColumns.Add(new ListColumnHeaderVM(i, d.Key, d.Label, active, angle));
+        }
+
+        if (_sortColKey is { } key)
+        {
+            var def = _listColumnDefs.FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.Ordinal));
+            ColumnSortLabel = $"{def?.Label ?? key}（{(_sortColDir == SortDirection.Desc ? "降順" : "昇順")}）";
+        }
+        else
+        {
+            ColumnSortLabel = "";
+        }
+    }
+
+    private static string BasicColLabel(string key) => key switch
+    {
+        ViewColumnModel.NameKey => "名前",
+        ViewColumnModel.SizeKey => "サイズ",
+        ViewColumnModel.ModifiedDateKey => "更新日",
+        _ => key,
+    };
 
     private List<ImageEntry> AllLoadedImagesInContext()
     {
@@ -364,6 +428,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public ObservableCollection<CrumbVM> Crumbs { get; } = new();
     public ObservableCollection<ChipVM> Chips { get; } = new();
     public ObservableCollection<ImageItemVM> Items { get; } = new();
+    // ECO-025 β: リスト表示のヘッダー列(アクティブビューの display_columns 由来)+ Grid 列テンプレート(ヘッダーと各行が同一値で整列)
+    public ObservableCollection<ListColumnHeaderVM> ListColumns { get; } = new();
+    public string ColumnTemplate { get; private set; } = "1.7*,120,150";
+    /// <summary>列ヘッダーソート中か(ソート概要+クリアの表示・ECO-025 β)。</summary>
+    public bool IsColumnSorted => _sortColKey is not null;
+    /// <summary>ソート概要ラベル「<列名>（昇順/降順）」(ECO-025 β)。</summary>
+    public string ColumnSortLabel { get; private set; } = "";
     public ObservableCollection<AddGroupVM> AddGroups { get; } = new();
     public ObservableCollection<CurrentTagVM> CurrentTags { get; } = new();
     // 整理トレイ(ECO-014): 整理対象の一覧 + 検索結果候補(中央ペイン)
@@ -609,13 +680,17 @@ public sealed partial class ImageTabViewModel : ObservableObject
             Crumbs.Add(new CrumbVM(crumbNames[i], i == crumbNames.Count - 1, i));
         CountLabel = $"{folders.Count + files.Count} 項目";
 
+        // ---- リスト列(ECO-025 β: アクティブビューの display_columns → ヘッダー列 + Grid テンプレート) ----
+        BuildListColumns();
+
         // ---- items ----
         var selSet = new HashSet<string>(_selected);
         Items.Clear();
         foreach (var (name, _) in folders)
             Items.Add(new ImageItemVM(name, name, isFolder: true, isPlaceholder: false, hasThumb: false,
                 thumbBrush: null, selectable: false, isSelected: false, hasTagDots: false,
-                tagDots: new List<IBrush>(), sizeLabel: "—", dateLabel: "—", target: name));
+                tagDots: new List<IBrush>(), sizeLabel: "—", dateLabel: "—", target: name,
+                cells: [new ListCell(0, ListCellKind.BasicName, name, 0, null, true)]));
         foreach (var e in files)
         {
             bool selected = selSet.Contains(e.Record.Id);
@@ -631,7 +706,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 sizeLabel: FmtSize(e.Record.FileSize), dateLabel: FmtDate(e.Record.ModifiedDate),
                 target: null, absolutePath: e.AbsolutePath, selectionOrder: order,
                 isMergeTarget: _organizeMode && string.Equals(e.Record.Id, _mergeTargetId, StringComparison.Ordinal),
-                isOrganizeTarget: _organizeMode && _organizeTargets.Contains(e.Record.Id)));
+                isOrganizeTarget: _organizeMode && _organizeTargets.Contains(e.Record.Id),
+                cells: ListColumnBuilder.BuildCells(e, _listColumnDefs, FmtSize, FmtDate)));
         }
 
         // ---- 編集パネル / 整理トレイ(選択依存・小コレクション)----
@@ -1013,6 +1089,21 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleSortDir() { _sortDir = _sortDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc; Recompute(); }
+
+    /// <summary>リスト列ヘッダーのソート(ECO-025 β)。別列=昇順開始 / 同列再クリック=昇順⇄降順トグル。</summary>
+    [RelayCommand]
+    private void SelectColumnSort(string? key)
+    {
+        if (key is null) return;
+        if (string.Equals(_sortColKey, key, StringComparison.Ordinal))
+            _sortColDir = _sortColDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc;
+        else { _sortColKey = key; _sortColDir = SortDirection.Asc; }
+        Recompute();
+    }
+
+    /// <summary>ソート概要の「クリア」(ECO-025 β)。列ヘッダーソートを解除し元順へ。</summary>
+    [RelayCommand]
+    private void ClearColumnSort() { _sortColKey = null; Recompute(); }
 
     [RelayCommand]
     private void SetGrid() { _layout = "grid"; _settings.DisplayMode = "grid"; Recompute(); } // CR-6

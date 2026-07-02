@@ -151,7 +151,7 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
   - loc(ja/en 13 キー)。テスト `CpViewColumnModelTests` 11 件。
   - 検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 485(+11)/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0。
   - **α golden 反復(maintainer 実機)GF-1〜5 是正済**: GF-1 お気に入り撤去(廃止仕様)/ GF-2〜3 レイアウトをモック権威へ(フッター下部 docked・本体スクロール・追加元2カラム)/ GF-4 単一スクロール化(mock是正=二重スクロール解消)/ GF-5 スクロールバー inset(内容 Margin・K-AVALONIA)。
-- **β = 未製造(pending)**: ファイル一覧の列描画(kind 別セル)+ 列ヘッダーソート(不変条件・`ViewColumnSorter` 済)+ 表示列ポップオーバー(列ピッカー再利用)。E-UI-BROWSE-022。
+- **β 列描画+ソート = 製造済(golden pending)**: `ViewColumnSorter`(ソート不変条件)+ `ListColumnBuilder`(display_columns→列定義+型別セル)+ `ImageTabView` 配線(動的列テーブル=workspace型 sticky ヘッダー・名前 1.7* 伸縮・`GridColumnsBinder` で列位置一致・kind 別セル・列ヘッダーソートトグル・ソート概要クリア)。テスト CpViewColumnSorterTests 6 + CpListColumnBuilderTests 9。検証 build 0/0・Tests 500・Oracle 100+2skip・validate_bom 0/0。**残 = β 視覚 golden(maintainer 実機)+ 表示列ポップオーバー(β-2 残・モーダル型・列ピッカー再利用=両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY)**。
 
 ## 12. レイアウト不変条件を実装契約化(golden retro・maintainer 2026-07-02)
 
