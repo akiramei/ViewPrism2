@@ -805,11 +805,17 @@
           <TextBlock Text="画像がありません" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
         </StackPanel>
 
-        <!-- グリッド -->
+        <!-- グリッド(ECO-026/#1: REQ-041/KBOM 適合の仮想化。旧 ItemsControl+WrapPanel=非仮想化 → ItemsRepeater+
+             UniformGridLayout で画面外セル/サムネを実体化しない。ビューア scroll で是正した FMEA-013 の罠と同型。
+             ItemsRepeater/UniformGridLayout は別 NuGet Avalonia.Controls.ItemsRepeater(12.0.0)。
+             MinItemHeight=206 はソート項目タイル込みの最大セル高でクリップ回避(無ソート時は下方に僅かな余白)。
+             選択はコード側 PointerPressed(OnItemPressed)維持=セル DataTemplate は不変・視覚は maintainer 実機 golden 再確認)。 -->
         <ScrollViewer IsVisible="{Binding ShowBrowseGrid}">
-          <ItemsControl ItemsSource="{Binding Items}" Margin="11">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
+          <ItemsRepeater ItemsSource="{Binding Items}" Margin="11">
+            <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="164" MinItemHeight="206" MinColumnSpacing="0" MinRowSpacing="0" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
               <DataTemplate x:DataType="vm:ImageItemVM">
                 <Border Classes="thumbCellWrap" Width="164" Padding="7" PointerPressed="OnItemPressed">
                  <StackPanel Width="150">
@@ -877,8 +883,8 @@
                  </StackPanel>
                 </Border>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+            </ItemsRepeater.ItemTemplate>
+          </ItemsRepeater>
         </ScrollViewer>
 
         <!-- リスト(ECO-025 β: アクティブビューの display_columns を動的列テーブルで描画+列ヘッダーソート)

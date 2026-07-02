@@ -6,12 +6,20 @@
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3(Infrastructure 経由の transitive)の既知 advisory。
+         ECO-026 で Avalonia.Controls.ItemsRepeater を追加し restore audit が走ると TreatWarningsAsErrors で
+         エラー化するため、警告へ緩める(NoWarn で握り潰さず警告として残す。上流更新で解消予定)。
+         ViewPrism2.Tests と同一方針(そちらの csproj に先行記録あり)。 -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.4" />
     <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <!-- ECO-026/#1: グリッド仮想化(REQ-041 適合)。ItemsRepeater/UniformGridLayout は本体と別 NuGet。
+         最新 12.0.0(Avalonia >= 12.0.0 依存=本体 12.0.4 と併用可)。procurement は 32-mbom/31-kbom へ M4 同期。 -->
+    <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
