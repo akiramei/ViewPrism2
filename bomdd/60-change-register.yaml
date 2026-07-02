@@ -26,7 +26,7 @@ bomdd:
 #   round1-fixed = golden 第1回を実施し所見を是正済(後続回が残る場合あり)。
 
 active_scope:
-  baseline_commit: 8e91b3b          # HEAD(ECO-015 製造)
+  baseline_commit: 486a5c5          # HEAD(ECO-015 製造。旧 8e91b3b=2026-07-03 GitHub push 時の email 書換で再ハッシュ)
   active_charter: 00-charter-v4.md  # loop-v4-repair-lifecycle
   bom_version: "v4.0"
   frozen_oracle_tag: loop-v4-r1     # S-01〜S-31
@@ -37,6 +37,10 @@ active_scope:
     ECO-001/002 は Loop V1(BOM v1.x)期の変更。ECO-003 以降は Loop V4 完了個体
     (BOM v4.0・loop-v4-r1)への post-delivery 変更。ECO-016 は文書/BOM 構造のみの
     surface 部品体系化で、全期間スキーマ不変・S-01〜S-31 凍結。
+    ハッシュ注記(2026-07-03): GitHub 初 push 時に全履歴の author/committer email を noreply へ書き換えた
+    (GH007 回避)ため全コミットハッシュが再採番された。本台帳の active_scope と最新 ECO(027)は post-rewrite の
+    現行ハッシュへ更新済。過去 ECO 本文中の commits/baseline ハッシュは pre-rewrite のスナップショット(タグ名
+    loop-v*-r* が安定アンカー)。
 
 change_orders:
   - id: ECO-001
@@ -634,7 +638,7 @@ change_orders:
     type: 機能追加(UI レイアウト・NFR「狭幅で重ならない」)+ CAD 準拠是正(表示列のモード非表示)
     status: implemented
     golden: approved          # CP-UI-G1=maintainer 実機 golden OK(2026-07-03)。往復2回で是正後 approved
-    baseline: "ECO-026 クローズ後(main e21175b)"
+    baseline: "ECO-026 クローズ後(main f54e0c7。email 書換前=e21175b)"
     bom_rev: "v4.0(eco:ECO-027)"
     authority: "ViewPrismUI(CAD 単一権威)。モック=ツールバー収まりのみ権威 / CAD=docs/screens/image_tab.md「ツールバーのレスポンシブ収納」/ 判断台帳 IMG-014・SRC-007 / ハンドオフ docs/handoff/img-014_toolbar_responsive.md"
     input: "ViewPrismUI 実装ハンドオフ(IMG-014)。使えるツールバー幅はウィンドウ幅だけで決まらない(左ペイン折り畳み 276/64・右ペイン開閉で中央幅が変わる)ため実測幅で段階収納する"
@@ -642,7 +646,7 @@ change_orders:
       approach: "判定ロジックは VM(ImageTabViewModel)に集約=unit 検査可能・実測供給は View(ImageTabView)責務(ResizeObserver 相当=LayoutUpdated で実測)。段階=①ラベル畳み(<約820・CollapseEntryLabels)②整理を⋯へ退避(<約640・StowOrganizeToMenu)③回り込み(左右クラスタが単一行に入らない時に右クラスタを2段目へ=ToolbarWrapped・左クラスタも極狭では WrapPanel 内部折り返し)。段階しきい値近傍は epsilon(2px)+ヒステリシス帯(24px)で安定化"
       structure: "中央ツールバーを DockPanel→2 列×2 行 Grid。広い時=左(row0/col0)+右(row0/col1 右寄せ)=従来と同一。狭い時=左(row0 全幅)+右(row1 全幅 右寄せ)。左クラスタは WrapPanel(旧 Spacing=14 は子 Margin で等価再現=通常幅は視覚不変)。回り込み判定=左右クラスタ自然幅合算 > 使える幅(左=子希望幅合算で安定・右=StackPanel DesiredSize)"
       cad_conformance: "モード中も表示列が出ていたのは CAD 逸脱(image_tab.md『モード中に残すのは表示軸・ソート・グリッド/リスト・終了だけ』)で狭幅潜り込みの主因。ShowColumnsEntry=CanEditColumns && !InAnyMode でモード中は隠し、モード突入時に開いていた列ピッカーを閉じる"
-      commits: "(このコミットで起票+実装+M4 を一括)"
+      commits: "ViewPrism2 5bf9cbf(起票+実装+M4 一括) / ViewPrismUI c518f62(review_points 実装完了)。GitHub 初 push 済(private・2026-07-03。email 書換前=VP2 0e6f25d / VPUI 95cc651)"
     contract:
       - "①どの幅でも重ならない/潜り込まない(右ペイン開でも)"
       - "②畳む順序=ラベル → 整理の⋯退避 → 回り込み(いきなり回り込み/重なりへ逃げない)"

@@ -13,7 +13,7 @@ bomdd:
 #       各版の本文を上書きしない。事実のみ宣言し、未確定は "未確認" と書く。
 
 active:
-  baseline_commit: 8e91b3b            # HEAD(ECO-015 製造)
+  baseline_commit: 486a5c5            # HEAD(ECO-015 製造。旧 8e91b3b=2026-07-03 GitHub push 時の email 書換で再ハッシュ)
   bom_version: "v4.0"
   frozen_oracle_tag: loop-v4-r1       # 横断固定オラクル S-01〜S-31
 
