@@ -7,17 +7,17 @@ using ViewPrism2.Core.Services;
 namespace ViewPrism2.App.ViewModels;
 
 /// <summary>
-/// 表示列ポップオーバーの列ピッカー(ECO-025 β-2・ファイル一覧「表示列」)。
-/// ビュー編集モーダル(α)と<b>同一の決定論モデル</b> <see cref="ViewColumnModel"/> を消費し、
-/// 追加/削除/並べ替えは即時にモデルへ反映して <see cref="Changed"/> を発火する(VE-003=ビュー定義へ書き戻し・ライブ編集)。
+/// 列ピッカーの共通部品(SC-COLUMN-PICKER-001・ECO-025)。決定論モデル <see cref="ViewColumnModel"/> を消費し、
+/// 選択済み列(順序・名前固定)+追加元(基本情報/タグ)+件数/上限バッジ+追加/削除/並べ替えコマンドを提供する。
+/// 追加/削除/並べ替えのたびに <see cref="Changed"/> を発火する(β-2 のライブ書き戻し駆動。α は無視して保存時に <see cref="Serialize"/>)。
 ///
-/// α との差(mock 権威 file_list.md):
-/// - 追加元は<b>単一リスト</b>(基本情報+タグ混在・各カードに種別チップ「基本/数値/テキスト/シンプル」)。α は 2 カラム分割。
-/// - 保存/キャンセルの<b>フッターを持たない</b>(編集は即反映)。
-/// 名前固定(VE-001)・上限5(VE-002)はモデルが担保する。
+/// 両 surface が同一 VM を消費し、<b>ビューだけが golden 承認済みのレイアウトを保つ</b>:
+/// - <b>β-2(ファイル一覧「表示列」ポップオーバー)</b>: 追加元は単一リスト <see cref="AvailableColumns"/>
+///   (基本情報→タグ・各カードに種別チップ「基本/数値/テキスト/シンプル」)。保存/キャンセル無し=ライブ編集。
+/// - <b>α(ビュー編集モーダル)</b>: 追加元は 2 カラム <see cref="BasicSources"/>(チップ無し)/<see cref="TagSources"/>(チップ有り)。保存で反映。
 ///
-/// DRY(SC-COLUMN-PICKER-001)は α/β-2 が golden 後に本 VM と <see cref="ViewEditDialogViewModel"/> の
-/// 列ピッカー部を共通化する予定(行 DTO <see cref="SelectedColumnRow"/>/<see cref="AddSourceRow"/> は既に共有)。
+/// 名前固定(VE-001)・上限5(VE-002)・タグ母集合限定・書き戻し直列化(VE-003)はモデルが担保する。
+/// 行 DTO <see cref="SelectedColumnRow"/>/<see cref="AddSourceRow"/> は両 surface 共有。
 /// </summary>
 public sealed partial class ColumnPickerViewModel : ObservableObject
 {
@@ -40,8 +40,17 @@ public sealed partial class ColumnPickerViewModel : ObservableObject
     /// <summary>選択済み列(順序どおり・先頭は name の固定列・上/下/削除)。</summary>
     public ObservableCollection<SelectedColumnRow> SelectedColumns { get; } = [];
 
-    /// <summary>追加元(単一リスト・基本情報→タグの順・各カードに種別チップ+タグ色ドット)。β-2 は α と違い1列。</summary>
+    /// <summary>追加元(単一リスト・基本情報→タグの順・各カードに種別チップ+タグ色ドット)。β-2 用(1列)。</summary>
     public ObservableCollection<AddSourceRow> AvailableColumns { get; } = [];
+
+    /// <summary>追加元の基本情報(破線カード・種別チップ無し)。α 用(2 カラム左)。</summary>
+    public ObservableCollection<AddSourceRow> BasicSources { get; } = [];
+
+    /// <summary>追加元のビュー内タグ(実線カード・種別チップ+色ドット)。α 用(2 カラム右)。</summary>
+    public ObservableCollection<AddSourceRow> TagSources { get; } = [];
+
+    public bool HasBasicSources => BasicSources.Count > 0;
+    public bool HasTagSources => TagSources.Count > 0;
 
     // ---- ローカライズ済みラベル(ポップオーバーは開くたびに再生成される短命 VM のため getter で解決) ----
     public string SectionLabel => _localization.T("view.displayColumns");
@@ -151,29 +160,25 @@ public sealed partial class ColumnPickerViewModel : ObservableObject
             });
         }
 
-        // 追加元=単一リスト。基本情報→タグの順(α の 2 カラムを縦一列へ)。基本情報にも種別チップ「基本」を付ける。
+        // 追加元。β-2=単一マージリスト AvailableColumns(基本情報→タグ・基本にも「基本」チップ)。
+        // α=2 カラム BasicSources(チップ無し)/TagSources(チップ有り)。同一モデル状態から両射影を作る。
+        var basicChip = _localization.T("view.columnChipBasic");
         AvailableColumns.Clear();
+        BasicSources.Clear();
         foreach (var column in _columns.AvailableBasics)
         {
-            AvailableColumns.Add(new AddSourceRow
-            {
-                Key = column.Key,
-                Label = LabelFor(column),
-                KindLabel = _localization.T("view.columnChipBasic"),
-                IsTag = false,
-            });
+            var label = LabelFor(column);
+            AvailableColumns.Add(new AddSourceRow { Key = column.Key, Label = label, KindLabel = basicChip, IsTag = false });
+            BasicSources.Add(new AddSourceRow { Key = column.Key, Label = label, IsTag = false });
         }
 
+        TagSources.Clear();
         foreach (var column in _columns.AvailableTags)
         {
-            AvailableColumns.Add(new AddSourceRow
-            {
-                Key = column.Key,
-                Label = LabelFor(column),
-                KindLabel = KindLabel(column.TagType),
-                Color = column.Color,
-                IsTag = true,
-            });
+            var label = LabelFor(column);
+            var kind = KindLabel(column.TagType);
+            AvailableColumns.Add(new AddSourceRow { Key = column.Key, Label = label, KindLabel = kind, Color = column.Color, IsTag = true });
+            TagSources.Add(new AddSourceRow { Key = column.Key, Label = label, KindLabel = kind, Color = column.Color, IsTag = true });
         }
 
         OnPropertyChanged(nameof(ColumnCountText));
@@ -181,7 +186,12 @@ public sealed partial class ColumnPickerViewModel : ObservableObject
         OnPropertyChanged(nameof(AtMaxNote));
         OnPropertyChanged(nameof(HasAvailable));
         OnPropertyChanged(nameof(ShowNoAvailable));
+        OnPropertyChanged(nameof(HasBasicSources));
+        OnPropertyChanged(nameof(HasTagSources));
     }
+
+    /// <summary>言語切替時に行の baked ラベルを作り直す(α のモーダルが CultureChanged で呼ぶ・DF-3)。</summary>
+    public void RefreshLabels() => Rebuild();
 
     private string LabelFor(ViewColumn column)
     {

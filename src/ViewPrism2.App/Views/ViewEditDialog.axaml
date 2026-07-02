@@ -100,8 +100,8 @@
           <StackPanel Spacing="8">
             <!-- 表示列の設定 見出し + 件数バッジ -->
             <DockPanel>
-              <Border DockPanel.Dock="Right" Classes="countBadge" Classes.atLimit="{Binding IsAtLimit}">
-                <TextBlock Text="{Binding ColumnCountText}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+              <Border DockPanel.Dock="Right" Classes="countBadge" Classes.atLimit="{Binding Columns.IsAtLimit}">
+                <TextBlock Text="{Binding Columns.ColumnCountText}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
               </Border>
               <TextBlock Text="{Binding Loc[view.displayColumnsSection]}" FontWeight="SemiBold" VerticalAlignment="Center" />
             </DockPanel>
@@ -109,7 +109,7 @@
                        Foreground="{StaticResource FaintTextBrush}" />
 
             <!-- 選択済み列(順序どおり・先頭は name 固定) -->
-            <ItemsControl ItemsSource="{Binding SelectedColumns}">
+            <ItemsControl ItemsSource="{Binding Columns.SelectedColumns}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                   <StackPanel Spacing="4" />
@@ -131,16 +131,16 @@
                           <Button Classes="iconBtn" Content="▲" FontSize="10"
                                   IsEnabled="{Binding CanMoveUp}"
                                   ToolTip.Tip="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnMoveUp]}"
-                                  Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).MoveColumnUpCommand}"
+                                  Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Columns.MoveColumnUpCommand}"
                                   CommandParameter="{Binding}" />
                           <Button Classes="iconBtn" Content="▼" FontSize="10"
                                   IsEnabled="{Binding CanMoveDown}"
                                   ToolTip.Tip="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnMoveDown]}"
-                                  Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).MoveColumnDownCommand}"
+                                  Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Columns.MoveColumnDownCommand}"
                                   CommandParameter="{Binding}" />
                           <Button Classes="iconBtn" Content="✕" FontSize="11" Foreground="{StaticResource DangerBrush}"
                                   ToolTip.Tip="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Loc[view.columnRemove]}"
-                                  Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).RemoveColumnCommand}"
+                                  Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Columns.RemoveColumnCommand}"
                                   CommandParameter="{Binding}" />
                         </StackPanel>
                       </StackPanel>
@@ -165,12 +165,12 @@
               <!-- 左: 基本情報(破線相当カード) -->
               <StackPanel Grid.Column="0" Spacing="4">
                 <TextBlock Text="{Binding Loc[view.basicInformation]}" FontSize="12" FontWeight="SemiBold" />
-                <ItemsControl ItemsSource="{Binding BasicSources}">
+                <ItemsControl ItemsSource="{Binding Columns.BasicSources}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:AddSourceRow">
                       <Button Classes="addCard" BorderBrush="{StaticResource TextMutedBrush}"
-                              IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).IsAtLimit}"
-                              Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).AddColumnCommand}"
+                              IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).Columns.IsAtLimit}"
+                              Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Columns.AddColumnCommand}"
                               CommandParameter="{Binding}">
                         <DockPanel>
                           <TextBlock DockPanel.Dock="Left" Text="＋" FontSize="12" Margin="0,0,6,0"
@@ -183,18 +183,18 @@
                 </ItemsControl>
                 <TextBlock Text="{Binding Loc[view.noAvailableBasics]}" FontSize="11"
                            Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap"
-                           IsVisible="{Binding !HasBasicSources}" />
+                           IsVisible="{Binding !Columns.HasBasicSources}" />
               </StackPanel>
 
               <!-- 右: タグ(ビュー内)。内部スクロールは持たせず外側の本体スクロール1つに統一(GF maintainer) -->
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="{Binding Loc[view.addTagColumns]}" FontSize="12" FontWeight="SemiBold" />
-                <ItemsControl ItemsSource="{Binding TagSources}">
+                <ItemsControl ItemsSource="{Binding Columns.TagSources}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:AddSourceRow">
                       <Button Classes="addCard"
-                              IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).IsAtLimit}"
-                              Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).AddColumnCommand}"
+                              IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).Columns.IsAtLimit}"
+                              Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).Columns.AddColumnCommand}"
                               CommandParameter="{Binding}">
                         <DockPanel>
                           <TextBlock DockPanel.Dock="Left" Text="＋" FontSize="12" Margin="0,0,6,0"
@@ -214,7 +214,7 @@
                 </ItemsControl>
                 <TextBlock Text="{Binding Loc[view.noAvailableTags]}" FontSize="11"
                            Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap"
-                           IsVisible="{Binding !HasTagSources}" />
+                           IsVisible="{Binding !Columns.HasTagSources}" />
               </StackPanel>
             </Grid>
           </StackPanel>
