@@ -152,6 +152,23 @@ control_plan:
         - "ノード移動: 自己・子孫へ → CircularReference"
         - "display_columns ラウンドトリップ(basic+tag 列)"
 
+    - id: CP-COLPICKER-025
+      characteristic: 列ピッカー共通 VM(SC-COLUMN-PICKER-001・ColumnPickerViewModel)の決定論が ECO-025 β-2/DRY と一致する
+      classification: surface
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-COLPICKER-025)
+      oracle: 追加元リスト内容/選択済み列状態/件数・上限/Changed 発火回数/書き戻し JSON の完全一致
+      approver: automated
+      test_vectors:
+        - "追加元は基本情報→タグの単一マージリスト・基本は種別チップ「基本」・タグは型別チップ+色ドット(β-2)"
+        - "選択済み先頭は名前固定(IsNameLocked・移動不可)・index1 は name 直後で上へ動けない(VE-001)"
+        - "追加/削除/並べ替えは Changed を発火・名前削除は no-op(Changed 出ない)"
+        - "上限5で IsAtLimit・件数バッジ・AtMaxNote 表示・ShowNoAvailable=false(VE-002)"
+        - "追加元を出し切ると ShowNoAvailable=true(『追加できる列はありません』)"
+        - "Serialize は DisplayColumnParser で往復(VE-003 書き戻し)"
+      notes: "描画(2 surface の golden 承認レイアウト=α 2カラム/β-2 単一マージ・ポップオーバー クローム)は maintainer 実機 golden(CP-UI-G2/G6 系)。本 CP は共通 VM の決定論のみ。"
+
     - id: CP-DB-006
       characteristic: スキーマ・PRAGMA・マイグレーション契約が仕様 §2.0・REQ-003〜005 と一致する
       classification: core

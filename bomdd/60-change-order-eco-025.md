@@ -1,6 +1,6 @@
 # ECO-025: 表示列モデル(ビュー編集モーダル + ファイル一覧)— ビュー.columns[] 進化モデル + 2 surface(CADモック由来・段階 α/β)
 
-- **status**: staged(起票 + E-BOM(30)/REQ(10)同期。spec §2.6/§2.x・M-BOM・Control Plan の全面同期と実装は製造フェーズ=α/β・M4)
+- **status**: implemented(α/β/β-2/DRY 製造済・全 surface golden approved[maintainer 実機 2026-07-02]。M4 同期済=spec §2.6/§2.x・M-BOM・Control Plan・35-dsbom・CAD フッター是正。ECO-025 クローズ)
 - **type**: 設計決定(既存ドメイン属性 display_columns へ進化モデル付与 + 新編集/描画 surface・CADモック由来)。要件は ECO-020/022 と同型の CAD→ECO→E-BOM フロー
 - **baseline**: ECO-024 適用後(main `c100097`)
 - **bom_rev**: v4.0(eco:ECO-025)
@@ -130,13 +130,14 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
 - Oracle/Tests: 本 ECO はコード非製造(staged)につき不変(S-01〜S-31・既存 Tests)。α/β 製造時に unit(列ピッカー/ソート比較器の決定論ベクタ)+ golden(承認者 maintainer)で受入。
 - スキーマ不変(display_columns 既存・マイグレーション無し)。
 
-## 9. pending_sync(製造フェーズ・M4)
+## 9. pending_sync(製造フェーズ・M4)— 完了(2026-07-02)
 
-- **α 製造**: ビュー編集モーダル(E-UI-TAGS-026)実装 + 列ピッカー unit + golden。
-- **β 製造**: ファイル一覧 列描画 + ソート比較器(unit・空値末尾/型別/タイブレークの決定論ベクタ)+ 列ヘッダー golden。
-- **DRY**: 両 surface golden 後に SC-COLUMN-PICKER-001 へ列ピッカー統合。
-- **spec §2.6(タグタブ ビュー編集)/§2.x(リスト列・ソート)・M-BOM 製造トレース・Control Plan** の全面同期。
-- **未確定の確定**: VE-004(空名保存)・FL-001(グリッド/リスト共有)・FL-002(ソート永続範囲)。
+- ~~**α 製造**: ビュー編集モーダル(E-UI-TAGS-026)実装 + 列ピッカー unit + golden~~ → **完了(golden approved)**。
+- ~~**β 製造**: ファイル一覧 列描画 + ソート比較器 + 列ヘッダー golden~~ → **完了(v2 統一ソート含む・golden approved)**。
+- ~~**β-2 製造**: 表示列ポップオーバー~~ → **完了(golden approved・§11)**。
+- ~~**DRY**: 両 surface golden 後に SC-COLUMN-PICKER-001 へ列ピッカー統合~~ → **完了(`ColumnPickerViewModel` 共通化・§11)**。
+- ~~**spec §2.6/§2.x・M-BOM 製造トレース・Control Plan の全面同期**~~ → **完了(M4)**: spec §2.6(β-2 ポップオーバー=ライブ編集・列ピッカー共通化)/ M-UI-013 as-built 追記 / CP-COLPICKER-025 新設 / 35-dsbom SC-COLUMN-PICKER-001 統合 / CAD `file_list.md` フッター是正。
+- **未確定(後続 ECO・本 ECO 範囲外)**: VE-004(空名保存)・FL-001(グリッド/リスト共有)・FL-002(ソート永続範囲)。
 
 ## 10. 採番メモ
 
@@ -153,7 +154,15 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
   - **α golden 反復(maintainer 実機)GF-1〜5 是正済**: GF-1 お気に入り撤去(廃止仕様)/ GF-2〜3 レイアウトをモック権威へ(フッター下部 docked・本体スクロール・追加元2カラム)/ GF-4 単一スクロール化(mock是正=二重スクロール解消)/ GF-5 スクロールバー inset(内容 Margin・K-AVALONIA)。
 - **β 列描画 = 製造済(golden pending・v2 有効)**: `ListColumnBuilder`(display_columns→列定義+型別セル)+ `ViewColumnSorter`(ソート不変条件)+ `ImageTabView` 動的列テーブル(workspace型 sticky ヘッダー・名前 1.7* 伸縮・`GridColumnsBinder` で列位置一致・kind 別セル)。テスト CpViewColumnSorterTests 6 + CpListColumnBuilderTests 9。検証 build 0/0・Tests 500〜501・Oracle 100+2skip・validate_bom 0/0。列描画・型別セル・ソート比較器は **v2 でも不変で有効**。
 - **β ソート導線 = v2 製造済(golden pending・§13)**: FL-003 v2 統一モデルを実装(ソート対象=表示列・grid/list 共有・旧固定メニュー廃止・リスト=ヘッダー+チップ・アイコン=並び替えメニュー+タイルソート項目)。ECO-025 暫定導線は superseded。Tests 502・build 0/0・Oracle 100+2skip・validate_bom 0/0。
-- **残 = β 視覚 golden(maintainer 実機)+ 表示列ポップオーバー(β-2・モーダル型・列ピッカー再利用=両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY)**。
+- **β 視覚 golden = maintainer 実機 OK(2026-07-02)**。
+- **β-2 = 製造済(golden approved・maintainer 実機 2026-07-02)**:
+  - `ColumnPickerViewModel`(App/ViewModels・SC-COLUMN-PICKER-001): `ViewColumnModel` を消費し 選択済み列/追加元/追加・削除・並べ替えコマンド/件数・上限バッジ/ラベル解決 を提供。編集ごとに `Changed` を発火。
+  - `ColumnPickerView`(.axaml/.cs): 表示列ポップオーバーの列ピッカー。モーダル型クローム(ヘッダ固定=見出し+件数バッジ / ボディ scroll・**フッター無し=ライブ編集**)。追加元は単一マージリスト(基本情報→タグ・基本にも種別チップ「基本」)= α(2 カラム)との差(mock file_list.md 権威)。
+  - `ImageTabView`(ツールバー「表示列」ボタン[view 軸+ビュー選択時のみ=CanEditColumns]+Popup・`ViewColumnIcon`)/ `ImageTabViewModel`(`ToggleColumnPicker`/ビュー内タグ母集合ロード/`Changed`→`ViewService.UpdateAsync` で display_columns 書き戻し[VE-003]→`Recompute` で列/ソート再構築・除去列がソート中ならソート解除/軸・ビュー切替でピッカーを閉じる)。`LocalizationService` を注入。
+  - loc(ja/en `filelist.*` 4キー)。テスト `CpColumnPickerViewModelTests` 7 件(Trait CP-COLPICKER-025)。
+  - 検証: build 0/0・Tests 509(+7)・Oracle 100+2skip・validate_bom 0/0。
+  - **CAD 是正(M4)**: `file_list.md` L68「docked フッター」はモック v2 に無く、本ポップオーバーはライブ編集(VE-003)のためフッターを持たない。CAD/spec を「ライブ編集・操作フッター無し」に是正。
+- **DRY = 完了(SC-COLUMN-PICKER-001)**: 両 surface golden 済を受け、列ピッカー VM ロジックを共通 `ColumnPickerViewModel` へ集約。`ViewEditDialogViewModel` は名前/説明/お気に入り/保存のみ担い列部は `Columns` へ委譲(合成)。視覚不変=golden 維持(同一 DTO・同一レイアウト・同一ラベル)。共通 VM は α 用 2 カラム射影(BasicSources/TagSources)と β-2 用単一マージ(AvailableColumns)の両方を提供。言語切替は `Columns.RefreshLabels()`。
 
 ## 12. レイアウト不変条件を実装契約化(golden retro・maintainer 2026-07-02)
 

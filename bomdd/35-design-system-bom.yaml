@@ -48,20 +48,25 @@ design_system_bom:
       shared_component: [SC-CARD-001, SC-CTA-BUTTON-001, SC-TYPE-CHIP-001, SC-CONDITION-CHIP-001, SC-VALUE-CHIP-001, SC-BADGE-001, SC-ICON-BUTTON-001, SC-SECTION-HEADER-001, SC-HELP-BOX-001, SC-DRAG-HANDLE-001, SC-COLUMN-PICKER-001]
       screen_surface: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-SHELL-021, E-UI-TAGASSIGN-029, E-UI-TAGS-026, E-UI-NODEGRAPH-025, E-UI-REPAIR-039]
 
-  # ECO-025(表示列モデル・段階 α/β)で導入する共有部品候補。
+  # ECO-025(表示列モデル・段階 α/β/β-2)で導入した共有部品。
   # 列ピッカー = 選択済み列(順序・上下移動/削除・ソースチップ・色ドット)+ 追加元カード(基本/ビュー内タグ・種別チップ)
   # + 件数バッジ(合計 N/最大 M・上限でアンバー+追加元不活性)+ 名前固定(先頭・「固定」バッジ)。
-  # 消費 surface = E-UI-TAGS-026(ビュー編集モーダル・α)と E-UI-BROWSE-022(表示列ポップオーバー・β)。
-  # disposition: 両 surface が golden 済みになるまでは各 surface が独立インスタンスを実装(isolate now)。
-  #              golden 後に本 SC-* へ DRY 統合する(DRY later)。それまでは candidate。
+  # 消費 surface = E-UI-TAGS-026(ビュー編集モーダル・α)と E-UI-BROWSE-022(表示列ポップオーバー・β-2)。
+  # disposition: isolate now, DRY later を完遂。両 surface が golden 済(maintainer 実機 2026-07-02)になった後、
+  #              共通 VM ColumnPickerViewModel(App/ViewModels)へ DRY 統合済。ビューは各 surface の golden 承認レイアウトを保つ
+  #              (α=追加元 2 カラム / β-2=単一マージ)= 同一 VM の別射影。ファイル全体 disposition は candidate のまま
+  #              (PLM は 35 を E-BOM と同列に扱わない)だが、本部品は実体化済(realized)。
   column_picker_candidate:
     id: SC-COLUMN-PICKER-001
     name: 表示列ピッカー(選択済み列 + 追加元カード + 並べ替え + 上限バッジ + 名前固定)
     part_kind: shared-component-sub-bom
     lifecycle: candidate
+    dry_status: realized   # ECO-025 M4: 両 surface golden 後に ColumnPickerViewModel へ統合済(DRY 完了)
+    realized_by: "src/ViewPrism2.App/ViewModels/ColumnPickerViewModel.cs(+ Views/ColumnPickerView.axaml=β-2 / ViewEditDialog.axaml=α が合成消費)"
     introduced_by: ECO-025
     consumed_by: [E-UI-TAGS-026, E-UI-BROWSE-022]
-    dry_gate: "両 surface(ビュー編集モーダル α / 表示列ポップオーバー β)が golden 済みになった後に統合する(ECO-021 の isolate now, DRY later と同運用)"
+    control_plan_refs: [CP-COLPICKER-025]
+    dry_gate: "両 surface(ビュー編集モーダル α / 表示列ポップオーバー β-2)が golden 済み(2026-07-02)→ 統合完了(ECO-021 の isolate now, DRY later と同運用)"
 
   source_cad_refs:
     ui_mock_ref: <HTML mock / screenshot / Figma ref>
