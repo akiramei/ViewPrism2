@@ -554,7 +554,7 @@ change_orders:
     baseline: "ECO-024 適用後(main c100097)"
     bom_rev: "v4.0(eco:ECO-025)"
     stages:
-      alpha: "実装済(golden 第1回 GF 是正済・再golden pending): ViewColumnModel(進化モデル=名前固定 VE-001/最大5 VE-002/タグ母集合限定/kind/display_columns 直列化=DisplayColumnParser 互換)+ ViewEditDialog 列ピッカー(選択済み列+上下移動/削除+ソースチップ/色ドット+追加元カード[基本=破線/タグ=実線+種別チップ]+件数バッジ[上限アンバー]+名前固定バッジ)+ WindowService タグ母集合供給(GetHierarchyAsync→Tag)+ loc(ja/en 13キー)。テスト CpViewColumnModelTests 11件。golden 第1〜2回(maintainer 実機)GF 是正: GF-1 お気に入りチェックボックス撤去(favorite 廃止仕様・IsFavorite データは既存値保持=データ損失なし)/ GF-2→GF-3 レイアウトをモック権威へ寄せる=固定高さ DockPanel でフッター(キャンセル/保存)を下部固定し件数増でも常に押せる+本体スクロール、追加元を2カラム(基本情報|タグ ビュー内)化しタグ側は内部スクロール(モックの UX 準拠)。検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 491/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0"
+      alpha: "実装済(golden 第1回 GF 是正済・再golden pending): ViewColumnModel(進化モデル=名前固定 VE-001/最大5 VE-002/タグ母集合限定/kind/display_columns 直列化=DisplayColumnParser 互換)+ ViewEditDialog 列ピッカー(選択済み列+上下移動/削除+ソースチップ/色ドット+追加元カード[基本=破線/タグ=実線+種別チップ]+件数バッジ[上限アンバー]+名前固定バッジ)+ WindowService タグ母集合供給(GetHierarchyAsync→Tag)+ loc(ja/en 13キー)。テスト CpViewColumnModelTests 11件。golden 第1〜2回(maintainer 実機)GF 是正: GF-1 お気に入りチェックボックス撤去(favorite 廃止仕様・IsFavorite データは既存値保持=データ損失なし)/ GF-2→GF-3 レイアウトをモック権威へ寄せる=固定高さ DockPanel でフッター(キャンセル/保存)を下部固定し件数増でも常に押せる+本体スクロール、追加元を2カラム(基本情報|タグ ビュー内)化(モックの UX 準拠)。GF-4=二重スクロール解消(タグ候補の内部スクロールを撤去しスクロールは外側の本体1つに統一=maintainer)。検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 491/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0"
       beta: "未製造(pending): ファイル一覧の列描画契約(kind 別セル=★/値チップ/有無ドット)+ 列ヘッダーソート(不変条件=空値末尾・型別比較・安定タイブレーク・unit 検査可能)+ 表示列ポップオーバー(列ピッカー再利用)。E-UI-BROWSE-022"
     impacted_bom:
       ["REQ-079(新設: 表示列 進化モデル・順序/最大5/名前固定/基本∪ビュー内タグ/kind/ビュー所有/種類廃止・VE-001/002/003)",

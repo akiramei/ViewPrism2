@@ -183,34 +183,32 @@
                            IsVisible="{Binding !HasBasicSources}" />
               </StackPanel>
 
-              <!-- 右: タグ(ビュー内)・内部スクロールで有界化 -->
+              <!-- 右: タグ(ビュー内)。内部スクロールは持たせず外側の本体スクロール1つに統一(GF maintainer) -->
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="{Binding Loc[view.addTagColumns]}" FontSize="12" FontWeight="SemiBold" />
-                <ScrollViewer MaxHeight="188" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                  <ItemsControl ItemsSource="{Binding TagSources}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:AddSourceRow">
-                        <Button Classes="addCard"
-                                IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).IsAtLimit}"
-                                Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).AddColumnCommand}"
-                                CommandParameter="{Binding}">
-                          <DockPanel>
-                            <TextBlock DockPanel.Dock="Left" Text="＋" FontSize="12" Margin="0,0,6,0"
-                                       Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-                            <Border DockPanel.Dock="Right" Classes="srcChip" Background="{StaticResource CardSelectedBgBrush}">
-                              <TextBlock Text="{Binding KindLabel}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
-                            </Border>
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                              <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
-                                       IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
-                              <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-                            </StackPanel>
-                          </DockPanel>
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                <ItemsControl ItemsSource="{Binding TagSources}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AddSourceRow">
+                      <Button Classes="addCard"
+                              IsEnabled="{Binding !#Root.((vm:ViewEditDialogViewModel)DataContext).IsAtLimit}"
+                              Command="{Binding #Root.((vm:ViewEditDialogViewModel)DataContext).AddColumnCommand}"
+                              CommandParameter="{Binding}">
+                        <DockPanel>
+                          <TextBlock DockPanel.Dock="Left" Text="＋" FontSize="12" Margin="0,0,6,0"
+                                     Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                          <Border DockPanel.Dock="Right" Classes="srcChip" Background="{StaticResource CardSelectedBgBrush}">
+                            <TextBlock Text="{Binding KindLabel}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                          </Border>
+                          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
+                                     IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </DockPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <TextBlock Text="{Binding Loc[view.noAvailableTags]}" FontSize="11"
                            Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap"
                            IsVisible="{Binding !HasTagSources}" />
