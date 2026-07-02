@@ -480,8 +480,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>⋯ メンテナンス(トラッシュ/修復)はコレクションスコープ。未選択時は無効(REQ-053)。</summary>
     public bool CanOpenMaintenance => _collectionId is not null;
     // ---- ソート(ECO-025 β/FL-003 v2: リスト=ヘッダー+チップ / アイコン=並び替えメニュー・対象=表示列・状態共有) ----
-    /// <summary>リスト表示の要約チップを出すか(列ソート中かつリスト)。✕ でクリア。</summary>
-    public bool ShowSortChip => _sortColKey is not null && _layout == "list";
+    /// <summary>ソート要約チップを出すか。ソート中は list/grid とも表示(モック=isSorted・✕ でクリア)。アイコンでも唯一のクリア手段。</summary>
+    public bool ShowSortChip => _sortColKey is not null;
     /// <summary>ソート方向矢印角(降順=180)。チップ・ヘッダー・メニュー共通。</summary>
     public double ColumnSortArrowAngle => _sortColDir == SortDirection.Desc ? 180 : 0;
     /// <summary>アイコンの「並び替え」ボタンのバッジ=現在のソート列名(未ソート=「なし」)。</summary>
