@@ -81,9 +81,12 @@
       </DockPanel>
     </StackPanel>
 
-    <!-- ===== 本体(スクロール) ===== -->
+    <!-- ===== 本体(スクロール) =====
+         Fluent の縦スクロールバーはオーバーレイ表示のため、内容右端に重ならないよう
+         スクロールバー分の右マージンを内容側に確保する(ScrollViewer.Padding は Extent 非算入で
+         下端が切れるため使わない — ECO-013/GF-TAGCTRL-01 教訓) -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="8">
+      <StackPanel Spacing="8" Margin="0,0,14,0">
         <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" />
 
         <!-- 名前(必須)+説明 -->
