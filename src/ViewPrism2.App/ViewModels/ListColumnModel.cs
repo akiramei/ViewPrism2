@@ -35,6 +35,21 @@ public sealed record ListColumnHeaderVM(
     bool IsSortActive,
     double ArrowAngle);
 
+/// <summary>
+/// アイコン(グリッド)表示の「並び替え」メニュー候補 1 件(ECO-025 β・FL-003 v2)。候補=ビューの表示列。
+/// 種別チップ+タグ色ドット・アクティブ強調+方向矢印を持つ。
+/// </summary>
+public sealed record SortOptionVM(
+    string Key,
+    string Label,
+    string KindChip,
+    string? Color,
+    bool IsActive,
+    double ArrowAngle)
+{
+    public bool ShowColorDot => Color is not null;
+}
+
 /// <summary>ファイル一覧セル 1 件(行×列)。kind に応じて XAML が描画する。</summary>
 public sealed record ListCell(
     int ColumnIndex,
@@ -127,6 +142,15 @@ public static class ListColumnBuilder
     /// <summary>Grid の列テンプレート文字列(各列 Width を "," 連結)。名前=伸縮・他=固定 px。</summary>
     public static string ColumnTemplate(IReadOnlyList<ListColumnDef> columns) =>
         string.Join(",", columns.Select(c => c.Width));
+
+    /// <summary>kind→種別チップ表示(基本/数値/テキスト/シンプル・並び替えメニュー候補・追加元カード用)。</summary>
+    public static string KindChipLabel(ListCellKind kind) => kind switch
+    {
+        ListCellKind.Num => "数値",
+        ListCellKind.Text => "テキスト",
+        ListCellKind.Simple => "シンプル",
+        _ => "基本",
+    };
 
     /// <summary>画像 1 件の各列セルを組む(型別セル描画データ)。</summary>
     public static IReadOnlyList<ListCell> BuildCells(

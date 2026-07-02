@@ -70,9 +70,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly List<GraphNode> _viewPath = new();
     private readonly Dictionary<string, GraphNode> _currentChildren = new(StringComparer.Ordinal);
     private string _layout = "grid";
-    private SortField _sortField = SortField.Name;
-    private SortDirection _sortDir = SortDirection.Asc;
-    // ECO-025 β: リストの列ヘッダーソート(null=未ソート → toolbar _sortField を使用)。列 key = name/size/modified_date/タグ id。
+    // ECO-025 β/FL-003 v2: ソートはアクティブビューの表示列を軸に grid/list で共有(旧 名前/更新日/サイズ 固定ソートは廃止)。
+    // null=未ソート=名前昇順の既定順。列 key = name/size/modified_date/タグ id。
     private string? _sortColKey;
     private SortDirection _sortColDir = SortDirection.Asc;
     private IReadOnlyList<ListColumnDef> _listColumnDefs = [];
@@ -326,15 +325,15 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     private List<ImageEntry> SortFiles(List<ImageEntry> files)
     {
-        // ECO-025 β: リスト表示で列ヘッダーソートが有効なときは列比較器(空値末尾・型別・安定タイブレーク)を使う。
-        // それ以外(グリッド・未ソート)は従来の sort_field 整列(E-SORT-004)。
-        if (_layout == "list" && _sortColKey is { } key)
+        // ECO-025 β/FL-003 v2: ソート対象=ビュー表示列・状態(sortCol/dir)は grid/list で共有。
+        // 列ソート中は列比較器(空値末尾・型別・安定タイブレーク)。未ソートは既定順(名前昇順・決定的)。
+        if (_sortColKey is { } key)
         {
             return ViewColumnSorter.Sort(files, ResolveSortColumn(key), _sortColDir).ToList();
         }
 
         var byId = files.ToDictionary(e => e.Record.Id, StringComparer.Ordinal);
-        var sorted = _sorter.Sort(files.Select(e => e.Record), _sortField, _sortDir);
+        var sorted = _sorter.Sort(files.Select(e => e.Record), SortField.Name, SortDirection.Asc);
         return sorted.Select(r => byId[r.Id]).ToList();
     }
 
@@ -363,13 +362,24 @@ public sealed partial class ImageTabViewModel : ObservableObject
             _sortColKey = null;
         }
 
+        var arrow = _sortColDir == SortDirection.Desc ? 180.0 : 0.0;
+
+        // リスト: ヘッダー列(全列がソート入口)
         ListColumns.Clear();
         for (int i = 0; i < _listColumnDefs.Count; i++)
         {
             var d = _listColumnDefs[i];
             bool active = string.Equals(_sortColKey, d.Key, StringComparison.Ordinal);
-            double angle = active && _sortColDir == SortDirection.Desc ? 180 : 0;
-            ListColumns.Add(new ListColumnHeaderVM(i, d.Key, d.Label, active, angle));
+            ListColumns.Add(new ListColumnHeaderVM(i, d.Key, d.Label, active, active ? arrow : 0));
+        }
+
+        // アイコン: 「並び替え」メニュー候補=同じ表示列(名前含む全列・種別チップ+色ドット・アクティブ強調+方向矢印)
+        SortColumns.Clear();
+        foreach (var d in _listColumnDefs)
+        {
+            bool active = string.Equals(_sortColKey, d.Key, StringComparison.Ordinal);
+            SortColumns.Add(new SortOptionVM(
+                d.Key, d.Label, ListColumnBuilder.KindChipLabel(d.Kind), d.Color, active, active ? arrow : 0));
         }
 
         if (_sortColKey is { } key)
@@ -430,6 +440,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public ObservableCollection<ImageItemVM> Items { get; } = new();
     // ECO-025 β: リスト表示のヘッダー列(アクティブビューの display_columns 由来)+ Grid 列テンプレート(ヘッダーと各行が同一値で整列)
     public ObservableCollection<ListColumnHeaderVM> ListColumns { get; } = new();
+    /// <summary>アイコン(グリッド)の「並び替え」メニュー候補=アクティブビューの表示列(ECO-025 β/FL-003 v2)。</summary>
+    public ObservableCollection<SortOptionVM> SortColumns { get; } = new();
     public string ColumnTemplate { get; private set; } = "1.7*,120,150";
     /// <summary>列ヘッダーソート中か(ソート概要+クリアの表示・ECO-025 β)。</summary>
     public bool IsColumnSorted => _sortColKey is not null;
@@ -467,20 +479,18 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool MoreMenuOpen { get; private set; }
     /// <summary>⋯ メンテナンス(トラッシュ/修復)はコレクションスコープ。未選択時は無効(REQ-053)。</summary>
     public bool CanOpenMaintenance => _collectionId is not null;
-    public string SortLabel => _sortField switch
-    {
-        SortField.Name => "名前",
-        SortField.FileSize => "サイズ",
-        SortField.ModifiedDate => "更新日",
-        SortField.CreatedDate => "作成日",
-        _ => "名前",
-    };
-    public bool SortNoneActive => false;
-    public bool SortNameActive => _sortField == SortField.Name;
-    public bool SortDateActive => _sortField == SortField.ModifiedDate;
-    public bool SortSizeActive => _sortField == SortField.FileSize;
-    public bool SortEnabled => true;
-    public double SortArrowAngle => _sortDir == SortDirection.Desc ? 180 : 0;
+    // ---- ソート(ECO-025 β/FL-003 v2: リスト=ヘッダー+チップ / アイコン=並び替えメニュー・対象=表示列・状態共有) ----
+    /// <summary>リスト表示の要約チップを出すか(列ソート中かつリスト)。✕ でクリア。</summary>
+    public bool ShowSortChip => _sortColKey is not null && _layout == "list";
+    /// <summary>ソート方向矢印角(降順=180)。チップ・ヘッダー・メニュー共通。</summary>
+    public double ColumnSortArrowAngle => _sortColDir == SortDirection.Desc ? 180 : 0;
+    /// <summary>アイコンの「並び替え」ボタンのバッジ=現在のソート列名(未ソート=「なし」)。</summary>
+    public string SortButtonBadge => _sortColKey is null
+        ? "なし"
+        : (_listColumnDefs.FirstOrDefault(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal))?.Label ?? _sortColKey);
+    /// <summary>並び替えメニュー下部の 昇順/降順 セグメント。</summary>
+    public bool SortAscActive => _sortColDir == SortDirection.Asc;
+    public bool SortDescActive => _sortColDir == SortDirection.Desc;
     public bool EditMode => _editMode;
     public string EditButtonLabel => _editMode ? "タグ編集を終了" : "タグ編集";
     public bool HomeActive { get; private set; }
@@ -655,7 +665,6 @@ public sealed partial class ImageTabViewModel : ObservableObject
             var ctx = ResolveFs();
             files = SortFiles(ctx.Files);
             folders = ctx.Folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
-            if (_sortDir == SortDirection.Desc) folders.Reverse();
             crumbNames = _fsPath.ToList();
             HomeActive = _fsPath.Count == 0;
             if (ctx.AnyTagged)
@@ -685,6 +694,22 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
         // ---- items ----
         var selSet = new HashSet<string>(_selected);
+        // アイコンタイルのソート項目(ECO-025 β/FL-003 v2): ソート中かつ名前以外のとき、タイルに列名+当該列値を表示
+        int sortItemIndex = -1;
+        string? sortItemLabel = null;
+        if (_sortColKey is { } sortKey && !string.Equals(sortKey, ViewColumnModel.NameKey, StringComparison.Ordinal))
+        {
+            for (int i = 0; i < _listColumnDefs.Count; i++)
+            {
+                if (string.Equals(_listColumnDefs[i].Key, sortKey, StringComparison.Ordinal))
+                {
+                    sortItemIndex = i;
+                    sortItemLabel = _listColumnDefs[i].Label;
+                    break;
+                }
+            }
+        }
+
         Items.Clear();
         foreach (var (name, _) in folders)
             Items.Add(new ImageItemVM(name, name, isFolder: true, isPlaceholder: false, hasThumb: false,
@@ -700,6 +725,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             var dots = (!inSelect && tagsOf.Count > 0)
                 ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
                 : new List<IBrush>();
+            var cells = ListColumnBuilder.BuildCells(e, _listColumnDefs, FmtSize, FmtDate);
+            var sortItemCell = sortItemIndex >= 0 && sortItemIndex < cells.Count ? cells[sortItemIndex] : null;
             Items.Add(new ImageItemVM(e.Record.Id, e.Record.FileName, isFolder: false, isPlaceholder: false,
                 hasThumb: true, thumbBrush: null, selectable: inSelect, isSelected: selected,
                 hasTagDots: !inSelect && tagsOf.Count > 0, tagDots: dots,
@@ -707,7 +734,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 target: null, absolutePath: e.AbsolutePath, selectionOrder: order,
                 isMergeTarget: _organizeMode && string.Equals(e.Record.Id, _mergeTargetId, StringComparison.Ordinal),
                 isOrganizeTarget: _organizeMode && _organizeTargets.Contains(e.Record.Id),
-                cells: ListColumnBuilder.BuildCells(e, _listColumnDefs, FmtSize, FmtDate)));
+                cells: cells,
+                sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
+                sortItemCell: sortItemCell));
         }
 
         // ---- 編集パネル / 整理トレイ(選択依存・小コレクション)----
@@ -1073,24 +1102,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
+    /// <summary>アイコン「並び替え」メニューの 昇順/降順 セグメント(ECO-025 β/FL-003 v2)。ソート列がある時のみ効く。</summary>
     [RelayCommand]
-    private void SelectSort(string? col)
-    {
-        _sortField = col switch
-        {
-            "name" => SortField.Name,
-            "date" => SortField.ModifiedDate,
-            "size" => SortField.FileSize,
-            _ => SortField.Name,
-        };
-        SortMenuOpen = false;
-        Recompute();
-    }
+    private void SetSortAsc() { if (_sortColKey is not null && _sortColDir != SortDirection.Asc) { _sortColDir = SortDirection.Asc; Recompute(); } }
 
     [RelayCommand]
-    private void ToggleSortDir() { _sortDir = _sortDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc; Recompute(); }
+    private void SetSortDesc() { if (_sortColKey is not null && _sortColDir != SortDirection.Desc) { _sortColDir = SortDirection.Desc; Recompute(); } }
 
-    /// <summary>リスト列ヘッダーのソート(ECO-025 β)。別列=昇順開始 / 同列再クリック=昇順⇄降順トグル。</summary>
+    /// <summary>列ソートの入口(ECO-025 β/FL-003 v2・リスト列ヘッダー / アイコン並び替えメニュー候補で共有)。別列=昇順開始 / 同列再クリック=昇順⇄降順トグル。</summary>
     [RelayCommand]
     private void SelectColumnSort(string? key)
     {
@@ -1109,7 +1128,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void SetGrid() { _layout = "grid"; _settings.DisplayMode = "grid"; Recompute(); } // CR-6
 
     [RelayCommand]
-    private void SetList() { _layout = "list"; _settings.DisplayMode = "list"; Recompute(); } // CR-6
+    private void SetList() { _layout = "list"; _settings.DisplayMode = "list"; SortMenuOpen = false; Recompute(); } // CR-6・FL-003 リスト切替で並び替えメニューを閉じる
 
     [RelayCommand]
     private void ToggleEdit()

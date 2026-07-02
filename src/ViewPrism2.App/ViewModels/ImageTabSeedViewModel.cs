@@ -747,7 +747,7 @@ public sealed partial class ImageItemVM : ObservableObject
         IBrush? thumbBrush, bool selectable, bool isSelected, bool hasTagDots, List<IBrush> tagDots,
         string sizeLabel, string dateLabel, string? target, string? absolutePath = null,
         int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false,
-        IReadOnlyList<ListCell>? cells = null)
+        IReadOnlyList<ListCell>? cells = null, string? sortItemLabel = null, ListCell? sortItemCell = null)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
         ThumbBrush = thumbBrush; Selectable = selectable; _isSelected = isSelected;
@@ -755,10 +755,20 @@ public sealed partial class ImageItemVM : ObservableObject
         Target = target; AbsolutePath = absolutePath; _selectionOrder = selectionOrder;
         _isMergeTarget = isMergeTarget; _isOrganizeTarget = isOrganizeTarget;
         Cells = cells ?? [];
+        SortItemLabel = sortItemLabel; SortItemCell = sortItemCell;
     }
 
     /// <summary>ファイル一覧(リスト)の型別セル(ECO-025 β・アクティブビューの display_columns 由来)。</summary>
     public IReadOnlyList<ListCell> Cells { get; }
+
+    /// <summary>アイコン(グリッド)タイルのソート項目ラベル(ECO-025 β/FL-003・ソート中かつ名前以外のみ非 null)。</summary>
+    public string? SortItemLabel { get; }
+
+    /// <summary>アイコンタイルのソート項目セル(型別描画・ソート中かつ名前以外のみ非 null)。</summary>
+    public ListCell? SortItemCell { get; }
+
+    /// <summary>アイコンタイルにソート項目を表示するか(ソート中かつ名前以外)。</summary>
+    public bool ShowSortItem => SortItemLabel is not null && SortItemCell is not null;
     public string Id { get; }
     public string Name { get; }
     public bool IsFolder { get; }

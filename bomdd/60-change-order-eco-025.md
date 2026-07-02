@@ -152,8 +152,8 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
   - 検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 485(+11)/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0。
   - **α golden 反復(maintainer 実機)GF-1〜5 是正済**: GF-1 お気に入り撤去(廃止仕様)/ GF-2〜3 レイアウトをモック権威へ(フッター下部 docked・本体スクロール・追加元2カラム)/ GF-4 単一スクロール化(mock是正=二重スクロール解消)/ GF-5 スクロールバー inset(内容 Margin・K-AVALONIA)。
 - **β 列描画 = 製造済(golden pending・v2 有効)**: `ListColumnBuilder`(display_columns→列定義+型別セル)+ `ViewColumnSorter`(ソート不変条件)+ `ImageTabView` 動的列テーブル(workspace型 sticky ヘッダー・名前 1.7* 伸縮・`GridColumnsBinder` で列位置一致・kind 別セル)。テスト CpViewColumnSorterTests 6 + CpListColumnBuilderTests 9。検証 build 0/0・Tests 500〜501・Oracle 100+2skip・validate_bom 0/0。列描画・型別セル・ソート比較器は **v2 でも不変で有効**。
-- **β ソート導線 = v2 で刷新(§13・実装は再製造が必要)**: ECO-025 暫定のソート導線(リスト=ヘッダー+概要バー / グリッド=旧 名前/更新日/サイズ 固定メニュー継続 / `74e4620` の暫定是正)は **FL-003 v2 で superseded**。詳細 §13。
-- **残 = β ソート導線 v2 実装 + 表示列ポップオーバー(β-2・モーダル型・列ピッカー再利用=両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY)+ β 視覚 golden**。
+- **β ソート導線 = v2 製造済(golden pending・§13)**: FL-003 v2 統一モデルを実装(ソート対象=表示列・grid/list 共有・旧固定メニュー廃止・リスト=ヘッダー+チップ・アイコン=並び替えメニュー+タイルソート項目)。ECO-025 暫定導線は superseded。Tests 502・build 0/0・Oracle 100+2skip・validate_bom 0/0。
+- **残 = β 視覚 golden(maintainer 実機)+ 表示列ポップオーバー(β-2・モーダル型・列ピッカー再利用=両 surface golden 後に SC-COLUMN-PICKER-001 へ DRY)**。
 
 ## 12. レイアウト不変条件を実装契約化(golden retro・maintainer 2026-07-02)
 
@@ -185,4 +185,10 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
 
 **反映先**: REQ-081(v2 統一モデルへ改訂)/ E-UI-BROWSE-022 invariant(FL-003 v2・リスト/アイコン導線・共有状態・旧固定メニュー廃止・タイルソート項目)/ external_source_ref を v2 モックへ。
 
-**実装への含意(未着手・要再製造)**: 既存 β の**列描画・型別セル・ViewColumnSorter は v2 でも有効**。要再製造=①旧 名前/更新日/サイズ ソートを browse から撤去し**表示列ソートへ一本化**(_sortColKey/_sortColDir をグリッドにも適用=共有)②アイコンの「並び替え」メニュー(候補=表示列)③アイコンタイルのソート項目表示④リストのソートチップ(✕クリア)。`74e4620`(暫定導線)の扱い(revert/前方修正)は再製造時に整理。**着手前に file_list.md v2 のソート節を契約として読む**(前回 retro の教訓)。**golden=maintainer 実機**。
+**実装(v2 再製造=製造済・golden pending)**: 既存 β の列描画・型別セル・ViewColumnSorter を活かし前方修正:
+- 旧 名前/更新日/サイズ ソート(SelectSort/ToggleSortDir/SortLabel 等)を browse から撤去。`_sortColKey/_sortColDir` を**グリッドにも適用=表示形式間で共有**(SortFiles の list 限定を解除・未ソートは名前昇順の既定順)。
+- リスト: ツールバーの要約チップ(方向矢印+列名（方向）+✕クリア・`ShowSortChip`)。列ヘッダーソートは維持。
+- アイコン: 単一「並び替え」メニュー(候補=`SortColumns`=表示列・種別チップ+色ドット・アクティブ強調+方向矢印・下部に昇順/降順セグメント `SetSortAsc`/`SetSortDesc`)+ボタンに現在ソート列名バッジ(`SortButtonBadge`・未ソート=「なし」)。リスト切替でメニューを閉じる。
+- アイコンタイル: ソート中かつ名前以外のとき名前+ソート項目(列名+当該列値・型別描画)を表示(`ImageItemVM.SortItemCell`/`SortItemLabel`/`ShowSortItem`)。
+- `74e4620` 暫定導線(リストでツールバーソート隠す・⇅)は v2 で上書き。統合チップ試作は破棄済(maintainer「名前と方向は統合しない」)。
+- テスト: `CpUiG1ImageTabSelectionTests` に v2 共有ソート(アイコンでも効く・候補=表示列・状態共有)を追加。検証 build 0/0(Debug/Release)・Tests 502・Oracle 100+2skip・validate_bom 0/0。**残=β 視覚 golden(maintainer 実機)+ 表示列ポップオーバー(β-2)**。**golden=maintainer 実機**。

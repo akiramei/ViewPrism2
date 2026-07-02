@@ -110,6 +110,38 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
         Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
     }
 
+    /// <summary>ECO-025 β/FL-003 v2: ソートは表示形式間で共有・アイコンの並び替え候補=表示列・未ソートは名前昇順の既定順。</summary>
+    [Fact]
+    public async Task アイコン表示でもソートは共有され並び替え候補は表示列になる()
+    {
+        var (vm, _) = await NewWithImagesAsync("c.jpg", "a.jpg", "b.jpg"); // 既定=アイコン(grid)
+
+        // 未ソート: バッジ「なし」・既定順=名前昇順
+        Assert.False(vm.IsColumnSorted);
+        Assert.Equal("なし", vm.SortButtonBadge);
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
+
+        // 並び替え候補=ビューの表示列(ビュー無し=既定3列 name/size/modified_date)
+        Assert.Equal(["name", "size", "modified_date"], vm.SortColumns.Select(o => o.Key));
+
+        // アイコン(grid)でも列ソートが効く(状態共有・旧 名前/更新日/サイズ固定メニューは廃止)
+        vm.SelectColumnSortCommand.Execute("name");
+        vm.SelectColumnSortCommand.Execute("name"); // 降順トグル
+        Assert.Equal(["c.jpg", "b.jpg", "a.jpg"], FileNames(vm));
+        Assert.Equal("名前", vm.SortButtonBadge);
+        Assert.True(vm.SortColumns.Single(o => o.Key == "name").IsActive);
+
+        // 昇順/降順セグメント
+        vm.SetSortAscCommand.Execute(null);
+        Assert.True(vm.SortAscActive);
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
+
+        // リストへ切替えてもソート状態は保持(共有)
+        vm.SetListCommand.Execute(null);
+        Assert.True(vm.IsColumnSorted);
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
+    }
+
     [Fact]
     public async Task 編集モードのクリックは選択順番号を1起点で付与する()
     {

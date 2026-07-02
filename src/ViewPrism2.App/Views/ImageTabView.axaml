@@ -456,62 +456,89 @@
         <DockPanel VerticalAlignment="Center">
           <!-- 右クラスタ: ソート + レイアウト -->
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <!-- ソート: リスト表示では列ヘッダーがソート導線(file_list mock 準拠)のため隠す。グリッドではツールバーで行う -->
-            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsList}">
-              <Panel>
-                <Button x:Name="SortTrigger" Classes="toolbarBtn" Command="{Binding ToggleSortMenuCommand}">
-                  <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <PathIcon Data="{StaticResource SortIcon}" Foreground="{StaticResource FaintTextBrush}" />
-                    <TextBlock Text="{Binding SortLabel}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
-                  </StackPanel>
-                </Button>
-                <Popup PlacementTarget="{Binding #SortTrigger}" Placement="BottomEdgeAlignedRight"
-                       VerticalOffset="6" IsOpen="{Binding SortMenuOpen}" IsLightDismissEnabled="True"
-                       Closed="OnMenuClosed">
-                  <Border Classes="popupMenu" Width="180">
-                    <StackPanel>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortNoneActive}" />
-                          <TextBlock Text="クリア" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="name">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortNameActive}" />
-                          <TextBlock Text="名前" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="date">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortDateActive}" />
-                          <TextBlock Text="更新日" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="size">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortSizeActive}" />
-                          <TextBlock Text="サイズ" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
-                    </StackPanel>
-                  </Border>
-                </Popup>
-              </Panel>
-              <Button Classes="sortDirBtn" IsEnabled="{Binding SortEnabled}" Command="{Binding ToggleSortDirCommand}"
-                      ToolTip.Tip="昇順 / 降順">
-                <PathIcon Data="{StaticResource ArrowUpIcon}" RenderTransformOrigin="50%,50%">
-                  <PathIcon.RenderTransform>
-                    <RotateTransform Angle="{Binding SortArrowAngle}" />
-                  </PathIcon.RenderTransform>
+            <!-- ソート(ECO-025 β/FL-003 v2): 対象=アクティブビューの表示列・状態は表示形式間で共有。
+                 リスト=列ヘッダー+要約チップ / アイコン=単一「並び替え」メニュー(候補=表示列・昇順/降順) -->
+            <!-- リスト: 要約チップ(方向矢印 + 列名（方向） + ✕でクリア) -->
+            <Border IsVisible="{Binding ShowSortChip}" Background="#EAF1FE" BorderBrush="#CFE0FC" BorderThickness="1"
+                    CornerRadius="14" Padding="10,3" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource ArrowUpIcon}" Width="12" Height="12" Foreground="{StaticResource AccentBrush}"
+                          RenderTransformOrigin="50%,50%">
+                  <PathIcon.RenderTransform><RotateTransform Angle="{Binding ColumnSortArrowAngle}" /></PathIcon.RenderTransform>
                 </PathIcon>
+                <TextBlock Text="{Binding ColumnSortLabel}" FontSize="12.5" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextPrimaryBrush}" />
+                <Button Command="{Binding ClearColumnSortCommand}" Background="Transparent" Padding="2"
+                        ToolTip.Tip="ソートを解除" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CloseIcon}" Width="11" Height="11" Foreground="{StaticResource TextMutedBrush}" />
+                </Button>
+              </StackPanel>
+            </Border>
+            <!-- アイコン: 単一「並び替え」メニュー -->
+            <Panel IsVisible="{Binding IsGrid}">
+              <Button x:Name="SortTrigger" Classes="toolbarBtn" Command="{Binding ToggleSortMenuCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource SortIcon}" Foreground="{StaticResource FaintTextBrush}" />
+                  <TextBlock Text="並び替え" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                  <Border Background="{StaticResource CardSelectedBgBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SortButtonBadge}" FontSize="11.5" Foreground="{StaticResource AccentBrush}" />
+                  </Border>
+                  <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
+                </StackPanel>
               </Button>
-            </StackPanel>
+              <Popup PlacementTarget="{Binding #SortTrigger}" Placement="BottomEdgeAlignedRight" VerticalOffset="6"
+                     IsOpen="{Binding SortMenuOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
+                <Border Classes="popupMenu" Width="248">
+                  <StackPanel>
+                    <StackPanel Margin="12,10,12,6">
+                      <TextBlock Text="並び替え" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                      <TextBlock Text="ビューの表示列から選択" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding SortColumns}">
+                      <ItemsControl.Styles>
+                        <Style Selector="Button.sortOpt.active">
+                          <Setter Property="Background" Value="#F3F8FF" />
+                        </Style>
+                      </ItemsControl.Styles>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SortOptionVM">
+                          <Button Classes="menuRow sortOpt" Classes.active="{Binding IsActive}"
+                                  Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).SelectColumnSortCommand}"
+                                  CommandParameter="{Binding Key}">
+                            <DockPanel>
+                              <PathIcon DockPanel.Dock="Right" Data="{StaticResource ArrowUpIcon}" Width="13" Height="13"
+                                        Foreground="{StaticResource AccentBrush}" IsVisible="{Binding IsActive}"
+                                        RenderTransformOrigin="50%,50%" VerticalAlignment="Center">
+                                <PathIcon.RenderTransform><RotateTransform Angle="{Binding ArrowAngle}" /></PathIcon.RenderTransform>
+                              </PathIcon>
+                              <Border DockPanel.Dock="Right" Background="{StaticResource CardSelectedBgBrush}" CornerRadius="4"
+                                      Padding="5,1" Margin="6,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding KindChip}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                              </Border>
+                              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
+                                         IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Label}" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                              </StackPanel>
+                            </DockPanel>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Border Classes="segmented" Margin="12,6,12,10">
+                      <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="segBtn" Classes.active="{Binding SortAscActive}" Command="{Binding SetSortAscCommand}">
+                          <TextBlock Text="昇順" FontSize="12.5" />
+                        </Button>
+                        <Button Classes="segBtn" Classes.active="{Binding SortDescActive}" Command="{Binding SetSortDescCommand}">
+                          <TextBlock Text="降順" FontSize="12.5" />
+                        </Button>
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </Border>
+              </Popup>
+            </Panel>
             <Border Classes="segmented">
               <StackPanel Orientation="Horizontal" Spacing="2">
                 <Button Classes="segBtn" Classes.active="{Binding IsGrid}" Command="{Binding SetGridCommand}" ToolTip.Tip="グリッド">
@@ -802,6 +829,32 @@
                     </Panel>
                   </Border>
                   <TextBlock Classes="thumbName" Text="{Binding Name}" HorizontalAlignment="Center" />
+                  <!-- ソート項目(ECO-025 β/FL-003 v2): ソート中かつ名前以外のとき、タイルに 列名+値 を型別表示 -->
+                  <StackPanel IsVisible="{Binding ShowSortItem}" Orientation="Horizontal" Spacing="4"
+                              HorizontalAlignment="Center" Margin="0,1,0,0">
+                    <TextBlock Text="{Binding SortItemLabel}" FontSize="10.5" VerticalAlignment="Center"
+                               Foreground="{StaticResource FaintTextBrush}" />
+                    <TextBlock Text="{Binding SortItemCell.Text}" FontSize="10.5" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding SortItemCell.IsBasic}" />
+                    <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding SortItemCell.IsNum}" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SortItemCell.StarsText}" FontSize="10.5" IsVisible="{Binding SortItemCell.HasValue}"
+                                 Foreground="{Binding SortItemCell.Color, FallbackValue=Gray}" />
+                      <TextBlock Text="{Binding SortItemCell.Text}" FontSize="10.5" IsVisible="{Binding SortItemCell.HasValue}"
+                                 Foreground="{Binding SortItemCell.Color, FallbackValue=Gray}" />
+                      <TextBlock Text="未設定" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
+                    </StackPanel>
+                    <Panel IsVisible="{Binding SortItemCell.IsTextCell}" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SortItemCell.Text}" FontSize="10.5" IsVisible="{Binding SortItemCell.HasValue}"
+                                 Foreground="{Binding SortItemCell.Color, FallbackValue=Gray}" />
+                      <TextBlock Text="—" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
+                    </Panel>
+                    <StackPanel Orientation="Horizontal" Spacing="3" IsVisible="{Binding SortItemCell.IsSimple}" VerticalAlignment="Center">
+                      <Ellipse Width="8" Height="8" Fill="{Binding SortItemCell.Color, FallbackValue=Transparent}"
+                               IsVisible="{Binding SortItemCell.HasValue}" VerticalAlignment="Center" />
+                      <TextBlock Text="あり" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding SortItemCell.HasValue}" />
+                      <TextBlock Text="なし" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
+                    </StackPanel>
+                  </StackPanel>
                  </StackPanel>
                 </Border>
               </DataTemplate>
@@ -831,15 +884,7 @@
             </Style>
           </DockPanel.Styles>
 
-          <!-- ソート概要(クリア) -->
-          <Border DockPanel.Dock="Top" IsVisible="{Binding IsColumnSorted}" Padding="46,4,8,4">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <TextBlock Text="{Binding ColumnSortLabel}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-              <Button Content="クリア" FontSize="12" Padding="8,2" Background="Transparent"
-                      Command="{Binding ClearColumnSortCommand}" />
-            </StackPanel>
-          </Border>
-
+          <!-- ソート概要は v2 でツールバーの要約チップへ移行(FL-003)。リストはヘッダー+チップが導線 -->
           <!-- ヘッダー行(クロム固定・sticky) -->
           <Border DockPanel.Dock="Top" Classes="imageListHeader">
             <DockPanel VerticalAlignment="Center">
