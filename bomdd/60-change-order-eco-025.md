@@ -163,4 +163,8 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
 3. お気に入り廃止を明記。
 4. `docs/templates/screen_spec_template.md` に「レイアウト不変条件」を**必須節**として追加(方法論横展開)。
 
-既存3画面(tag_tab/image_tab/work_tab)への遡及 backfill は **VP-UI-007** で追跡。**ViewPrismUI が正**=当該レイアウト不変条件節を実装契約として扱う(E-UI-TAGS-026/E-UI-BROWSE-022 invariant に権威参照を反映済)。GF-5(スクロールバー inset)は Avalonia Fluent 固有のため ViewPrism2 K-AVALONIA 側の実装規約(HTML モックには現れない)。
+遡及 backfill は **VP-UI-007 完了**(tag_tab/image_tab/work_tab + viewer 系2画面も名前付き節へ集約=全7画面+テンプレで layoutInvariant 義務化)。**契約は2型**:
+- **workspace型**: ペイン境界=スクロール境界・各ペイン単一スクロール・クロム固定(ファイル一覧リスト=画像タブ中央ペイン。列ヘッダー・ツールバー固定で行だけスクロール)。
+- **モーダル/全画面型**: サーフェス単一スクロール・docked フッター・GF-V1(ビュー編集モーダル・表示列ポップオーバー)。
+
+**ViewPrismUI が正**=当該レイアウト不変条件節を実装契約として扱う(E-UI-TAGS-026=モーダル型/E-UI-BROWSE-022=リスト workspace型+ポップオーバー モーダル型 の invariant に権威参照+型名を反映済)。GF-5(スクロールバー inset)は Avalonia Fluent 固有のため ViewPrism2 K-AVALONIA 側の実装規約(HTML モックには現れない)。
