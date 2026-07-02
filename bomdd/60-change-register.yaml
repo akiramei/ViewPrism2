@@ -628,3 +628,37 @@ change_orders:
     body: 60-change-order-eco-026.md
     pending_sync: "完了(M4 同期済・2026-07-02): 20-spec §2.6(グリッド仮想化 as-built)・32-mbom procurement(ItemsRepeater 12.0.0/SQLitePCLRaw 3.0.3)・31-kbom(ItemsRepeater 採用へ上書き)・30-ebom E-UI-BROWSE-022 as-built・33-control-plan CP-NFR-026・register golden=approved"
     notes: "採番: ECO-025 クローズ後の逐次採番で ECO-026。#1 は最適化でなく REQ-041/KBOM 不適合(FMEA-013 同型)=優先。βのリスト仮想化時に KBOM 指針がグリッドへ未横展開だった工程漏れ(S3 同族)。工程 retro=ItemsRepeater 調査で当初 DLL 文字列 grep で存在判断し検証がブレた(正=まず参照確認・KBOM 行98 に既存判断あり)+NU1903 は当初抑制のみ→maintainer 指摘で根本解消。教訓は memory へ"
+
+  - id: ECO-027
+    title: "画像タブ ツールバーの狭幅レスポンシブ収納(IMG-014)+ 表示列のモード非表示(CAD 準拠是正)"
+    type: 機能追加(UI レイアウト・NFR「狭幅で重ならない」)+ CAD 準拠是正(表示列のモード非表示)
+    status: implemented
+    golden: approved          # CP-UI-G1=maintainer 実機 golden OK(2026-07-03)。往復2回で是正後 approved
+    baseline: "ECO-026 クローズ後(main e21175b)"
+    bom_rev: "v4.0(eco:ECO-027)"
+    authority: "ViewPrismUI(CAD 単一権威)。モック=ツールバー収まりのみ権威 / CAD=docs/screens/image_tab.md「ツールバーのレスポンシブ収納」/ 判断台帳 IMG-014・SRC-007 / ハンドオフ docs/handoff/img-014_toolbar_responsive.md"
+    input: "ViewPrismUI 実装ハンドオフ(IMG-014)。使えるツールバー幅はウィンドウ幅だけで決まらない(左ペイン折り畳み 276/64・右ペイン開閉で中央幅が変わる)ため実測幅で段階収納する"
+    resolution:
+      approach: "判定ロジックは VM(ImageTabViewModel)に集約=unit 検査可能・実測供給は View(ImageTabView)責務(ResizeObserver 相当=LayoutUpdated で実測)。段階=①ラベル畳み(<約820・CollapseEntryLabels)②整理を⋯へ退避(<約640・StowOrganizeToMenu)③回り込み(左右クラスタが単一行に入らない時に右クラスタを2段目へ=ToolbarWrapped・左クラスタも極狭では WrapPanel 内部折り返し)。段階しきい値近傍は epsilon(2px)+ヒステリシス帯(24px)で安定化"
+      structure: "中央ツールバーを DockPanel→2 列×2 行 Grid。広い時=左(row0/col0)+右(row0/col1 右寄せ)=従来と同一。狭い時=左(row0 全幅)+右(row1 全幅 右寄せ)。左クラスタは WrapPanel(旧 Spacing=14 は子 Margin で等価再現=通常幅は視覚不変)。回り込み判定=左右クラスタ自然幅合算 > 使える幅(左=子希望幅合算で安定・右=StackPanel DesiredSize)"
+      cad_conformance: "モード中も表示列が出ていたのは CAD 逸脱(image_tab.md『モード中に残すのは表示軸・ソート・グリッド/リスト・終了だけ』)で狭幅潜り込みの主因。ShowColumnsEntry=CanEditColumns && !InAnyMode でモード中は隠し、モード突入時に開いていた列ピッカーを閉じる"
+      commits: "(このコミットで起票+実装+M4 を一括)"
+    contract:
+      - "①どの幅でも重ならない/潜り込まない(右ペイン開でも)"
+      - "②畳む順序=ラベル → 整理の⋯退避 → 回り込み(いきなり回り込み/重なりへ逃げない)"
+      - "③離脱/実行ボタン(◯◯を終了・ゴミ箱へ移動 等)のラベルは狭幅でも維持=モード中の可視ボタンはラベルを畳まない"
+      - "しきい値 820/640 は目安で調整可。px 値を変えても ①②③ を崩さなければ mock 是正に当たらない"
+    impacted_bom:
+      ["20-spec §2.6(ツールバー: 狭幅レスポンシブ収納 as-built・モード中は表示列も隠す)",
+       "30-ebom E-UI-MODE-041(since ECO-027: 表示列モード非表示=CAD 準拠 / 実測幅による段階収納+回り込み。acceptance_refs += CP-TOOLBAR-RESPONSIVE-027)",
+       "33-control-plan CP-TOOLBAR-RESPONSIVE-027(新設・unit 決定論ガード=段階/ヒステリシス/回り込みマッピング/表示列モードゲート)。視覚は CP-UI-G1(golden)",
+       "非改変: ソート(FL-003/ECO-025)・列描画・表示列モデル・グリッド仮想化(ECO-026)"]
+    oracle: "S-01〜S-31 不変(Core 意味論不変・レイアウトのみ)。選択/ソート/チップ件数/タグ列は既存 Tests/Oracle 退行ゼロ"
+    verification: "build 0警告/0エラー・Tests 526(+CP-TOOLBAR-RESPONSIVE-027 13)・Oracle 100+2skip・validate_bom 0/0。視覚=maintainer 実機 golden 承認(CP-UI-G1・2026-07-03)"
+    decisions:
+      SCOPE: "ツールバーの収まり(段階収納)のみ。作業/修復/削除/ゴミ箱の詳細機能(IMG-010)は範囲外=継続未確定。既存の排他隠し(ECO-014 §8)は維持"
+      MEASURE_NOT_VIEWPORT: "判定は実測幅(左右ペイン状態を反映)。ビューポート幅メディアクエリは不可"
+      REFLOW_OVER_CLIP: "極狭では回り込み/内部折り返しで対処し離脱ボタンをクリップしない(契約③)。中央 ClipToBounds は最終保険として残置"
+    body: 60-change-order-eco-027.md
+    pending_sync: "完了(M4 同期済・2026-07-03): 20-spec §2.6・30-ebom E-UI-MODE-041・33-control-plan CP-TOOLBAR-RESPONSIVE-027・register golden=approved"
+    notes: "採番: ECO-026 クローズ後の逐次採番で ECO-027。工程 retro=実機 golden 往復2回((1)モード中の表示列潜り込み→CAD 逸脱と診断しモード非表示化+右クラスタ回り込み /(2)極狭で『タグ編集を終了』クリップ→左クラスタも WrapPanel 内部折り返しへ)。最初にモック単一 flex-wrap の含意(全項目が独立折り返し)を左右双方へ適用すべきだった"

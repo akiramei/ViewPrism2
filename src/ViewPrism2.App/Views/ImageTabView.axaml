@@ -446,17 +446,23 @@
     </Border>
 
     <!-- ===== 中央: ツールバー + パンくず + チップ + 本体 ===== -->
-    <!-- ClipToBounds: 右ペインを開いて中央が狭い時、横長ツールバーが隣の整理/タグ編集ペインへ
-         描画上はみ出すのを封じる(左サイドバーと同じ封じ込め)。詰め込み自体の本格対応=
-         レスポンシブ overflow は UQ-I07(作業/⋯)設計と一体で別途。Popup メニューは上位層で非クリップ。 -->
+    <!-- 詰め込みの本格対応は IMG-014(ツールバー狭幅レスポンシブ収納)で実装済み=実測幅による段階収納
+         (ラベル畳み→整理を⋯へ退避→WrapPanel 折り返し)。ClipToBounds は最終保険として残す(段階収納で
+         吸収しきれない極狭幅でも隣ペインへ描画はみ出しを封じる)。Popup メニューは上位層で非クリップ。 -->
     <DockPanel ClipToBounds="True">
 
-      <!-- ツールバー -->
-      <Border DockPanel.Dock="Top" MinHeight="60" Padding="18,0"
+      <!-- ツールバー(IMG-014: 狭幅レスポンシブ収納。x:Name=code-behind が SizeChanged で実測幅を報告) -->
+      <Border x:Name="ToolbarRoot" DockPanel.Dock="Top" MinHeight="60" Padding="18,0"
               BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
-        <DockPanel VerticalAlignment="Center">
+        <!-- IMG-014 tier3: 2 列×2 行 Grid でモック flex-wrap を再現。広い時=左(row0/col0)+右(row0/col1・右寄せ)、
+             狭い時(ToolbarWrapped)=左(row0 全幅)+右(row1 全幅・右寄せ)へ右クラスタを下段へ回り込ませる。
+             回り込み判定は code-behind が各クラスタ実測幅の合算 > 使える幅 で行う(重なり原理排除)。 -->
+        <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
           <!-- 右クラスタ: ソート + レイアウト -->
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <StackPanel x:Name="RightCluster"
+                      Grid.Row="{Binding RightClusterRow}" Grid.Column="{Binding RightClusterColumn}"
+                      Grid.ColumnSpan="{Binding RightClusterColumnSpan}"
+                      Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
             <!-- ソート(ECO-025 β/FL-003 v2): 対象=アクティブビューの表示列・状態は表示形式間で共有。
                  リスト=列ヘッダー+要約チップ / アイコン=単一「並び替え」メニュー(候補=表示列・昇順/降順) -->
             <!-- 要約チップ(方向矢印 + 列名（方向） + ✕でクリア)。ソート中は list/grid とも表示=アイコンでもクリア可(モック isSorted) -->
@@ -552,8 +558,12 @@
             </Border>
           </StackPanel>
 
-          <!-- 左: 表示軸 + アクション -->
-          <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+          <!-- 左: 表示軸 + アクション。IMG-014 tier3 で狭幅時(ToolbarWrapped)は row0 全幅を占め、右クラスタが
+               row1 へ回り込む。さらに左クラスタ単体でも全幅に入りきらない極狭幅では WrapPanel が内部で折り返し、
+               離脱ボタン(◯◯を終了)をクリップせず次行へ送る(契約③=終了ラベル維持)。旧 Spacing="14" は各子の
+               Margin="14,0,0,0" で等価再現(通常幅は不変)。回り込み判定用の自然幅は code-behind が子希望幅を合算。 -->
+          <WrapPanel x:Name="LeftCluster" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding LeftClusterColumnSpan}"
+                     Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
               <TextBlock Text="表示" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource FaintTextBrush}"
                          VerticalAlignment="Center" />
@@ -609,8 +619,9 @@
             </StackPanel>
 
             <!-- 表示列(ECO-025 β-2): アクティブビューの display_columns を編集(ライブ書き戻し=VE-003)。
-                 view 軸+ビュー選択時のみ表示(FS 軸は書き戻し先が無い=CanEditColumns)。列ピッカー=ColumnPickerView。 -->
-            <Panel IsVisible="{Binding CanEditColumns}">
+                 view 軸+ビュー選択時のみ表示(FS 軸は書き戻し先が無い)。さらに CAD 準拠で文脈モード中は隠す
+                 (残すのは表示軸・ソート・グリッド/リスト・終了だけ=ShowColumnsEntry・IMG-014)。列ピッカー=ColumnPickerView。 -->
+            <Panel IsVisible="{Binding ShowColumnsEntry}" Margin="14,0,0,0">
               <Button x:Name="ColumnsTrigger" Classes="toolbarBtn" Padding="12,0" Command="{Binding ToggleColumnPickerCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource ViewColumnIcon}" Foreground="{StaticResource FaintTextBrush}" />
@@ -626,31 +637,34 @@
               </Popup>
             </Panel>
 
-            <Border Width="1" Height="26" Background="{StaticResource CardBorderBrush}" />
+            <Border Width="1" Height="26" Background="{StaticResource CardBorderBrush}" Margin="14,0,0,0" VerticalAlignment="Center" />
 
             <!-- モード中(タグ編集/整理/作業)は他モード入口・⋯ を隠し、当該モードの「終了」と
                  表示軸/ソート/レイアウトのみ残す(集中・排他可視化・狭い中央列での被り解消)。ECO-014 §8 / ECO-017 -->
-            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center" Margin="14,0,0,0">
+              <!-- 入口ボタン(タグ編集/整理/作業): IMG-014 tier1 でラベルをアイコンのみへ畳む(CollapseEntryLabels)。
+                   ToolTip でツールチップは残す。モード中は当該ボタンが「終了」=離脱導線になりラベル維持(契約③)。 -->
               <Button Classes="toolbarBtn" Classes.active="{Binding EditMode}" FontWeight="SemiBold"
-                      IsVisible="{Binding ShowEditEntry}" Command="{Binding ToggleEditCommand}">
+                      IsVisible="{Binding ShowEditEntry}" ToolTip.Tip="{Binding EditButtonLabel}" Command="{Binding ToggleEditCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource PencilIcon}" />
-                  <TextBlock Text="{Binding EditButtonLabel}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding EditButtonLabel}" VerticalAlignment="Center" IsVisible="{Binding !CollapseEntryLabels}" />
                 </StackPanel>
               </Button>
+              <!-- 整理入口: tier2(<約640px)で ⋯ メニューへ退避(ShowOrganizeEntryButton=false)。整理モード中の「整理を終了」は退避しない。 -->
               <Button Classes="toolbarBtn" Classes.active="{Binding OrganizeMode}" FontWeight="SemiBold"
-                      IsVisible="{Binding ShowOrganizeEntry}" Command="{Binding ToggleOrganizeCommand}">
+                      IsVisible="{Binding ShowOrganizeEntryButton}" ToolTip.Tip="{Binding OrganizeButtonLabel}" Command="{Binding ToggleOrganizeCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource TuneIcon}" />
-                  <TextBlock Text="{Binding OrganizeButtonLabel}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding OrganizeButtonLabel}" VerticalAlignment="Center" IsVisible="{Binding !CollapseEntryLabels}" />
                 </StackPanel>
               </Button>
               <!-- 作業=3つ目の排他文脈モード(ECO-017)。active=緑塗り。作業中は「作業を終了」+「追加」+作業対象チップ。 -->
               <Button Classes="toolbarBtn" Classes.workActive="{Binding WorkMode}" FontWeight="SemiBold"
-                      IsVisible="{Binding ShowWorkEntry}" Command="{Binding ToggleWorkCommand}">
+                      IsVisible="{Binding ShowWorkEntry}" ToolTip.Tip="{Binding WorkButtonLabel}" Command="{Binding ToggleWorkCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource WorkIcon}" />
-                  <TextBlock Text="{Binding WorkButtonLabel}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding WorkButtonLabel}" VerticalAlignment="Center" IsVisible="{Binding !CollapseEntryLabels}" />
                 </StackPanel>
               </Button>
               <!-- 追加: 選択を作業対象セットへ蓄積(作業モード中のみ・選択あり時のみ活性・件数バッジ) -->
@@ -697,6 +711,14 @@
                        VerticalOffset="6" IsOpen="{Binding MoreMenuOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
                   <Border Classes="popupMenu" Width="200">
                     <StackPanel>
+                      <!-- 整理(IMG-014 tier2 退避): 実測幅 <約640px で「整理」入口をここへ移す。ラベル維持。通常幅では非表示 -->
+                      <Button Classes="menuRow" IsVisible="{Binding StowOrganizeToMenu}" Command="{Binding ToggleOrganizeCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource TuneIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
+                          <TextBlock Text="整理" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                      </Button>
+                      <Border Height="1" Background="{StaticResource CardBorderBrush}" Margin="8,4" IsVisible="{Binding StowOrganizeToMenu}" />
                       <!-- 修復: 既存モーダル(ECO-015・変更なし) -->
                       <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -726,8 +748,8 @@
                 </Popup>
               </Panel>
             </StackPanel>
-          </StackPanel>
-        </DockPanel>
+          </WrapPanel>
+        </Grid>
       </Border>
 
       <!-- パンくず -->

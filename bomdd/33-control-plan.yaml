@@ -185,6 +185,22 @@ control_plan:
         - "(#6) ThumbnailImage は detach/リサイクルで進行中ロードをキャンセルし Bitmap を Dispose する"
       notes: "(#1)グリッド仮想化=画面外セル非実体化 は探索プローブ P-07 系(1万件で操作可能)+ maintainer 実機 golden で受入。本 CP は決定論ガードを担い、壁時計性能はプローブが担う。"
 
+    - id: CP-TOOLBAR-RESPONSIVE-027
+      characteristic: 画像タブ ツールバー狭幅レスポンシブ収納(IMG-014/ECO-027)の段階/回り込み状態計算と表示列モードゲートが退行しない
+      classification: surface
+      depth: unit
+      tolerance: "しきい値(ラベル畳み<820/整理退避<640)・ヒステリシス・畳む順序・回り込み Grid 配置マッピング・表示列モードゲートを exact 検査(壁時計/実レイアウトは golden=CP-UI-G1 が担う)"
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TOOLBAR-RESPONSIVE-027。ImageTabViewModel の ReportToolbarWidth/SetToolbarWrapped)
+      oracle: 段階フラグ/回り込み行列スパン/ShowColumnsEntry の完全一致
+      approver: automated
+      test_vectors:
+        - "実測幅 <約820 で入口ラベルを畳む(CollapseEntryLabels)・<約640 で整理を⋯へ退避(StowOrganizeToMenu・ShowOrganizeEntryButton=false)。畳む順序=ラベルが先・退避が後(700px はラベルのみ)"
+        - "ヒステリシス帯でしきい値近傍のばたつきを抑える(800→畳み、830 は畳んだまま、900 で戻る)。0/負/NaN 幅は無視して直前段階を維持"
+        - "契約③: モード中(InAnyMode)は狭幅でも入口ラベルを畳まず整理も退避しない(離脱/実行=終了ボタンのラベル維持)。整理モード中の『整理を終了』はツールバー上に維持"
+        - "回り込み(SetToolbarWrapped): 非回り込み=右クラスタ row0/col1・回り込み=右クラスタ row1/col0 全幅+左クラスタ colspan2(左右が横方向を共有しない)"
+        - "表示列モードゲート: ShowColumnsEntry=CanEditColumns && !InAnyMode(FS 軸/モード中は false)。回り込み判定の実測供給は View 責務(本 CP はロジックのみ)"
+      notes: "実レイアウトでの重なり無し・回り込みの見た目・終了ラベル維持は maintainer 実機 golden(CP-UI-G1)で受入(2026-07-03 approved)。本 CP は段階/回り込み/ゲートの決定論ガードを担う。"
+
     - id: CP-DB-006
       characteristic: スキーマ・PRAGMA・マイグレーション契約が仕様 §2.0・REQ-003〜005 と一致する
       classification: core

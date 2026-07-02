@@ -507,6 +507,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- 表示列ポップオーバー(ECO-025 β-2・FL/VE-003: ライブ編集でビュー定義へ書き戻し) ----
     /// <summary>「表示列」ボタンの活性=アクティブビューがある(view 軸+ビュー選択)。FS 軸は書き戻し先が無いので隠す。</summary>
     public bool CanEditColumns => _axis == "view" && _viewId is not null;
+    /// <summary>ツールバー上の「表示列」入口の可視。CAD(image_tab.md「ツールバー」)は文脈モード中に残す項目を
+    /// 「表示軸・ソート・グリッド/リストと当該モードの終了」だけと定めるため、モード中は表示列も隠す(IMG-014
+    /// 実機所見: モード中の表示列が狭幅で右クラスタへ潜り込む逸脱を解消)。列編集はモードを抜けてから行う。</summary>
+    public bool ShowColumnsEntry => CanEditColumns && !InAnyMode;
     /// <summary>表示列ポップオーバーの開閉。</summary>
     public bool ColumnPickerOpen { get; private set; }
     /// <summary>ポップオーバーが host する列ピッカー(開くたびにアクティブビューから生成)。</summary>
@@ -556,6 +560,76 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool ShowEditEntry => !_organizeMode && !_workMode && !_deleteMode;
     public bool ShowOrganizeEntry => !_editMode && !_workMode && !_deleteMode;
     public bool ShowWorkEntry => !_editMode && !_organizeMode && !_deleteMode;
+
+    // ---- ツールバー狭幅レスポンシブ収納(IMG-014) ----
+    // 判定はビューポート幅でなく「ツールバー実測幅」(content 幅=Border 幅−水平パディング)。左ペイン折り畳み
+    // (276/64)・右ペイン開閉で使える幅が変わるため CSS メディアクエリ相当(ウィンドウ幅)では判定できない。
+    // View が SizeChanged/初期シードで ReportToolbarWidth に content 幅を供給する。段階(モック権威):
+    //   通常 → ラベル畳み(<820: 入口ボタンをアイコン化) → 「整理」を⋯へ退避(<640) → flex-wrap 折り返し(XAML)。
+    // しきい値 820/640 はモック由来の目安で調整可。確定契約は px 値でなく ①重ならない ②畳む順序 ③離脱/実行ラベル維持。
+    private double _toolbarWidth = double.PositiveInfinity; // seed 前は「広い」扱い=畳まない(初期フラッシュ防止)
+    private bool _labelsCollapsed;
+    private bool _organizeStowed;
+
+    private const double LabelCollapseWidth = 820; // 入口ボタンをアイコンのみへ畳む(目安)
+    private const double OrganizeStowWidth = 640;   // 「整理」を⋯メニューへ退避(目安)
+    private const double HysteresisBand = 24;       // しきい値近傍のばたつき防止(戻すのは +band 超過時)
+    private const double WidthEpsilon = 2;          // 微小変化(数px)は無視
+
+    /// <summary>
+    /// View がツールバー content 幅(水平パディング控除済み・実測)を報告する。ヒステリシス帯で段階フラグを更新し、
+    /// 段階が変わったときだけ通知する。微小変化(&lt; WidthEpsilon)は無視してばたつきを避ける。
+    /// </summary>
+    public void ReportToolbarWidth(double contentWidth)
+    {
+        if (double.IsNaN(contentWidth) || contentWidth <= 0) return;
+        if (Math.Abs(contentWidth - _toolbarWidth) < WidthEpsilon) return;
+        _toolbarWidth = contentWidth;
+
+        var labels = _labelsCollapsed;
+        if (!labels && contentWidth < LabelCollapseWidth) labels = true;
+        else if (labels && contentWidth > LabelCollapseWidth + HysteresisBand) labels = false;
+
+        var stow = _organizeStowed;
+        if (!stow && contentWidth < OrganizeStowWidth) stow = true;
+        else if (stow && contentWidth > OrganizeStowWidth + HysteresisBand) stow = false;
+
+        if (labels == _labelsCollapsed && stow == _organizeStowed) return; // 段階不変=再描画不要
+        _labelsCollapsed = labels;
+        _organizeStowed = stow;
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>入口ボタン(タグ編集・整理・作業)のラベルをアイコンのみへ畳む。通常閲覧時のみ効く
+    /// (モード中の可視ボタンは「終了/実行」=離脱/実行導線なのでラベル維持=契約③)。</summary>
+    public bool CollapseEntryLabels => _labelsCollapsed && !InAnyMode;
+    /// <summary>「整理」入口を⋯メニューへ退避する段階。通常閲覧時のみ(整理モード中の「整理を終了」は退避しない)。</summary>
+    public bool StowOrganizeToMenu => _organizeStowed && !InAnyMode;
+    /// <summary>ツールバー上の「整理」入口ボタンの可視。退避中(StowOrganizeToMenu)は隠して⋯へ移す。</summary>
+    public bool ShowOrganizeEntryButton => ShowOrganizeEntry && !StowOrganizeToMenu;
+
+    // ---- tier3 回り込み(mock flex-wrap 相当) ----
+    // 段階収納(ラベル畳み/退避)で吸収しきれない狭幅(特にモード中=畳みが効かず右ペインで中央が狭い)では、
+    // 右クラスタ(ソート+グリッド/リスト)を2段目へ回り込ませて左右が横方向を共有しないようにする(重なり原理排除)。
+    // 判定は View が左右クラスタの実測希望幅の合算 vs 使える幅で行い SetToolbarWrapped で反映する。
+    private bool _toolbarWrapped;
+    /// <summary>回り込み中(右クラスタが2段目)。Grid 配置(下記スパン/行列)を切り替える。</summary>
+    public bool ToolbarWrapped => _toolbarWrapped;
+    /// <summary>左クラスタの列スパン: 回り込み時は全幅(2)。</summary>
+    public int LeftClusterColumnSpan => _toolbarWrapped ? 2 : 1;
+    /// <summary>右クラスタ行: 広い時 row0(左と同段)、回り込み時 row1(下段)。</summary>
+    public int RightClusterRow => _toolbarWrapped ? 1 : 0;
+    /// <summary>右クラスタ列: 広い時 col1(右寄せ)、回り込み時 col0 全幅(右寄せ維持)。</summary>
+    public int RightClusterColumn => _toolbarWrapped ? 0 : 1;
+    public int RightClusterColumnSpan => _toolbarWrapped ? 2 : 1;
+
+    /// <summary>View が実測(左右クラスタ希望幅の合算 vs 使える幅・ヒステリシス)で回り込み状態を設定する。変化時のみ通知。</summary>
+    public void SetToolbarWrapped(bool wrapped)
+    {
+        if (wrapped == _toolbarWrapped) return;
+        _toolbarWrapped = wrapped;
+        OnPropertyChanged(string.Empty);
+    }
 
     // ---- 削除モード(ECO-018)公開契約 ----
     public bool DeleteMode => _deleteMode;
@@ -638,6 +712,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void Recompute()
     {
         if (!_loaded) return;
+
+        // 文脈モード中は「表示列」入口を隠す(ShowColumnsEntry)ため、開いていた列ピッカーは閉じておく
+        // (プレースメント対象が消えたポップアップの浮き残り防止・IMG-014)。
+        if (InAnyMode) ColumnPickerOpen = false;
 
         // ---- collections ----
         Collections.Clear();
