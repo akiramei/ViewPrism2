@@ -76,6 +76,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private string? _sortColKey;
     private SortDirection _sortColDir = SortDirection.Asc;
     private IReadOnlyList<ListColumnDef> _listColumnDefs = [];
+    // (ECO-026/#5) 現在表示中の matched をキャッシュ=表示列ライブ編集で母集合を再評価せず Items を作り直すため。
+    private List<(string Name, int Count)> _matchedFolders = new();
+    private List<ImageEntry> _matchedFiles = new();
     private string? _tagFilter;
     private bool _editMode;
     private readonly List<string> _selected = new();
@@ -710,7 +713,24 @@ public sealed partial class ImageTabViewModel : ObservableObject
         // ---- リスト列(ECO-025 β: アクティブビューの display_columns → ヘッダー列 + Grid テンプレート) ----
         BuildListColumns();
 
-        // ---- items ----
+        // ---- items(ECO-026/#5: matched をキャッシュし列編集で BuildItemsFromMatched を再利用) ----
+        _matchedFolders = folders;
+        _matchedFiles = files;
+        BuildItemsFromMatched();
+
+        // ---- 編集パネル / 整理トレイ(選択依存・小コレクション)----
+        BuildContextPanels(new HashSet<string>(_selected));
+
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>
+    /// キャッシュした matched(<see cref="_matchedFolders"/>/<see cref="_matchedFiles"/>)から Items を作り直す。
+    /// 列/セル/ソート項目のみに依存し、ビューグラフ評価・チップ・フォルダ算出は伴わない(ECO-026/#5 で再利用)。
+    /// _matchedFiles は呼び出し前に表示順(SortFiles)であること。
+    /// </summary>
+    private void BuildItemsFromMatched()
+    {
         var selSet = new HashSet<string>(_selected);
         // アイコンタイルのソート項目(ECO-025 β/FL-003 v2): ソート中かつ名前以外のとき、タイルに列名+当該列値を表示
         int sortItemIndex = -1;
@@ -729,12 +749,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
         }
 
         Items.Clear();
-        foreach (var (name, _) in folders)
+        foreach (var (name, _) in _matchedFolders)
             Items.Add(new ImageItemVM(name, name, isFolder: true, isPlaceholder: false, hasThumb: false,
                 thumbBrush: null, selectable: false, isSelected: false, hasTagDots: false,
                 tagDots: new List<IBrush>(), sizeLabel: "—", dateLabel: "—", target: name,
                 cells: [new ListCell(0, ListCellKind.BasicName, name, 0, null, true)]));
-        foreach (var e in files)
+        foreach (var e in _matchedFiles)
         {
             bool selected = selSet.Contains(e.Record.Id);
             int? order = selected ? _selected.IndexOf(e.Record.Id) + 1 : null; // 選択順バッジ(1 起点・REQ-041 CR-3)
@@ -756,10 +776,17 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
                 sortItemCell: sortItemCell));
         }
+    }
 
-        // ---- 編集パネル / 整理トレイ(選択依存・小コレクション)----
-        BuildContextPanels(selSet);
-
+    /// <summary>
+    /// 表示列ライブ編集(ECO-026/#5)の部分再構築: 列(BuildListColumns=除去列がソート中なら解除を含む)+
+    /// 現 matched の再ソート + Items 再構築のみ。母集合/チップ/フォルダ/パンくずは列変更で不変なので回さない。
+    /// </summary>
+    private void RebuildColumnsAndItems()
+    {
+        BuildListColumns();
+        _matchedFiles = SortFiles(_matchedFiles); // 除去列がソート中なら解除された順へ整列し直す
+        BuildItemsFromMatched();
         OnPropertyChanged(string.Empty);
     }
 
@@ -1073,8 +1100,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             if (!result.IsSuccess) return;
 
             _allViews[idx] = result.Value!;
-            Recompute(); // BuildListColumns 経由でリスト列/並び替え候補/ソートチップを再構築
-            OnPropertyChanged(string.Empty);
+            // (ECO-026/#5) 列変更は母集合/チップ/フォルダ不変=列+セル(+除去列ソート解除)だけ部分再構築する
+            RebuildColumnsAndItems();
         }
         catch (Exception)
         {
