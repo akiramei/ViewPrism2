@@ -550,7 +550,12 @@ change_orders:
     title: "表示列モデル(ビュー編集モーダル + ファイル一覧)— ビュー.display_columns 進化モデル + 2 surface(CADモック由来・段階 α/β)"
     type: 設計決定(既存属性 display_columns へ進化モデル付与 + 新編集/描画 surface・CADモック由来)
     status: implemented          # α=製造済(コード merged・golden pending)。β=未製造(pending)。詳細は stages。
-    golden: pending
+    golden: pending          # α+β(列描画/v2ソート)=maintainer 実機承認済(2026-07-02)。残=表示列ポップオーバー β-2 の golden
+    golden_detail: >
+      α(ビュー編集モーダル・列ピッカー・名前固定)= GF-1〜5 是正し maintainer 実機 OK。
+      β(ファイル一覧 列描画+v2 統一ソート=リスト ヘッダー+チップ / アイコン 並び替えメニュー+タイルのソート項目・
+      表示形式間で状態共有)= 機能 OK + perf 是正(比較器キー事前計算・リスト仮想化)+ GF(アイコンでもチップ✕でクリア)
+      を maintainer 実機で確認 OK(2026-07-02)。残=表示列ポップオーバー(β-2・モーダル型)実装とその golden、列ピッカー DRY(SC-COLUMN-PICKER-001)、M4。
     baseline: "ECO-024 適用後(main c100097)"
     bom_rev: "v4.0(eco:ECO-025)"
     stages:
