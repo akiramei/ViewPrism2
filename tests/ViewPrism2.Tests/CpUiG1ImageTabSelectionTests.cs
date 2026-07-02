@@ -82,6 +82,34 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
     private static ImageItemVM Item(ImageTabViewModel vm, string name)
         => vm.Items.Single(i => !i.IsFolder && i.Name == name);
 
+    private static string[] FileNames(ImageTabViewModel vm)
+        => vm.Items.Where(i => !i.IsFolder).Select(i => i.Name).ToArray();
+
+    /// <summary>ECO-025 β: リスト列ヘッダーソートの配線(SelectColumnSort→SortFiles→ViewColumnSorter)。</summary>
+    [Fact]
+    public async Task リスト列ヘッダーソートは列比較器で並べ替えトグルとクリアが効く()
+    {
+        var (vm, _) = await NewWithImagesAsync("c.jpg", "a.jpg", "b.jpg"); // 挿入順≠表示順
+        vm.SetListCommand.Execute(null);
+
+        // 既定は名前昇順(_sortField)
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
+
+        // 名前列ヘッダー: 別列クリック=昇順開始(既定と同じ順)
+        vm.SelectColumnSortCommand.Execute("name");
+        Assert.True(vm.IsColumnSorted);
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
+
+        // 同列再クリック=降順トグル(順が反転すれば列比較器が効いている)
+        vm.SelectColumnSortCommand.Execute("name");
+        Assert.Equal(["c.jpg", "b.jpg", "a.jpg"], FileNames(vm));
+
+        // クリアで解除(元順=名前昇順)
+        vm.ClearColumnSortCommand.Execute(null);
+        Assert.False(vm.IsColumnSorted);
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], FileNames(vm));
+    }
+
     [Fact]
     public async Task 編集モードのクリックは選択順番号を1起点で付与する()
     {
