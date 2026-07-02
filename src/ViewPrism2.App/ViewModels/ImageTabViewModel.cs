@@ -45,6 +45,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly IWindowService _windows;
     private readonly AppSettings _settings;
     private readonly WorkspaceService _workspaces; // ECO-020: 作業「追加」の行き先=デフォルト作業スペース(受け渡し)
+    private readonly LocalizationService _localization; // ECO-025 β-2: 表示列ポップオーバーの列ピッカー生成に使用
 
     // ---- ロード済みデータ ----
     private List<SyncFolder> _collections = new();
@@ -135,7 +136,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         TrashService trash,
         IWindowService windows,
         AppSettings settings,
-        WorkspaceService workspaces)
+        WorkspaceService workspaces,
+        LocalizationService localization)
     {
         _folders = folders;
         _images = images;
@@ -153,6 +155,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _windows = windows;
         _settings = settings;
         _workspaces = workspaces;
+        _localization = localization;
     }
 
     // ---------------- 色ヘルパ ----------------
@@ -491,6 +494,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>並び替えメニュー下部の 昇順/降順 セグメント。</summary>
     public bool SortAscActive => _sortColDir == SortDirection.Asc;
     public bool SortDescActive => _sortColDir == SortDirection.Desc;
+
+    // ---- 表示列ポップオーバー(ECO-025 β-2・FL/VE-003: ライブ編集でビュー定義へ書き戻し) ----
+    /// <summary>「表示列」ボタンの活性=アクティブビューがある(view 軸+ビュー選択)。FS 軸は書き戻し先が無いので隠す。</summary>
+    public bool CanEditColumns => _axis == "view" && _viewId is not null;
+    /// <summary>表示列ポップオーバーの開閉。</summary>
+    public bool ColumnPickerOpen { get; private set; }
+    /// <summary>ポップオーバーが host する列ピッカー(開くたびにアクティブビューから生成)。</summary>
+    public ColumnPickerViewModel? ColumnPicker { get; private set; }
     public bool EditMode => _editMode;
     public string EditButtonLabel => _editMode ? "タグ編集を終了" : "タグ編集";
     public bool HomeActive { get; private set; }
@@ -942,12 +953,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleAxisMenu() { AxisMenuOpen = !AxisMenuOpen; SortMenuOpen = false; MoreMenuOpen = false; OnPropertyChanged(string.Empty); }
+    private void ToggleAxisMenu() { AxisMenuOpen = !AxisMenuOpen; SortMenuOpen = false; MoreMenuOpen = false; ColumnPickerOpen = false; OnPropertyChanged(string.Empty); }
 
     public void CloseMenusFromDismiss()
     {
-        if (!AxisMenuOpen && !SortMenuOpen && !MoreMenuOpen) return;
-        AxisMenuOpen = false; SortMenuOpen = false; MoreMenuOpen = false;
+        if (!AxisMenuOpen && !SortMenuOpen && !MoreMenuOpen && !ColumnPickerOpen) return;
+        AxisMenuOpen = false; SortMenuOpen = false; MoreMenuOpen = false; ColumnPickerOpen = false;
         OnPropertyChanged(string.Empty);
     }
 
@@ -955,6 +966,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private async Task SelectAxis(string id)
     {
         AxisMenuOpen = false;
+        CloseColumnPicker(); // 軸/ビュー切替で表示列ピッカーを閉じる(古いビュー向けの書き戻し混線を防ぐ・ECO-025 β-2)
         _tagFilter = null; _selected.Clear(); _expandTag = null;
         if (id == "fs")
         {
@@ -980,10 +992,91 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleSortMenu() { SortMenuOpen = !SortMenuOpen; AxisMenuOpen = false; MoreMenuOpen = false; OnPropertyChanged(string.Empty); }
+    private void ToggleSortMenu() { SortMenuOpen = !SortMenuOpen; AxisMenuOpen = false; MoreMenuOpen = false; ColumnPickerOpen = false; OnPropertyChanged(string.Empty); }
+
+    /// <summary>
+    /// 「表示列」ポップオーバーを開閉(ECO-025 β-2)。開くときアクティブビューの display_columns +
+    /// タグ母集合(ビューのタグ階層メンバー)で列ピッカーを生成し、編集は <see cref="OnColumnPickerChanged"/>
+    /// でビュー定義へ即書き戻す(VE-003)。FS 軸・未選択では何もしない(書き戻し先が無い・CanEditColumns)。
+    /// </summary>
+    [RelayCommand]
+    private async Task ToggleColumnPicker()
+    {
+        if (ColumnPickerOpen)
+        {
+            ColumnPickerOpen = false;
+            OnPropertyChanged(string.Empty);
+            return;
+        }
+
+        var view = _axis == "view" && _viewId is not null
+            ? _allViews.FirstOrDefault(v => string.Equals(v.Id, _viewId, StringComparison.Ordinal))
+            : null;
+        if (view is null) { OnPropertyChanged(string.Empty); return; }
+
+        var viewTags = await LoadActiveViewTagsAsync(view).ConfigureAwait(true);
+        if (ColumnPicker is not null) ColumnPicker.Changed -= OnColumnPickerChanged;
+        var picker = new ColumnPickerViewModel(view.DisplayColumns, viewTags, _localization);
+        picker.Changed += OnColumnPickerChanged;
+        ColumnPicker = picker;
+        ColumnPickerOpen = true;
+        AxisMenuOpen = false; SortMenuOpen = false; MoreMenuOpen = false;
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>表示列ピッカーを閉じてイベント購読を解除(軸/ビュー切替時に古いピッカーの書き戻しを止める)。</summary>
+    private void CloseColumnPicker()
+    {
+        if (ColumnPicker is not null) ColumnPicker.Changed -= OnColumnPickerChanged;
+        ColumnPicker = null;
+        ColumnPickerOpen = false;
+    }
+
+    /// <summary>アクティブビューのタグ母集合=タグ階層メンバーを出現順で distinct(WindowService と同方針)。階層なしは空。</summary>
+    private async Task<IReadOnlyList<Tag>> LoadActiveViewTagsAsync(View view)
+    {
+        var nodes = await _views.GetHierarchyAsync(view.Id).ConfigureAwait(true);
+        if (nodes.Count == 0) return [];
+        var result = new List<Tag>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (seen.Add(node.TagId) && _tagById.TryGetValue(node.TagId, out var tag))
+            {
+                result.Add(tag);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 列ピッカーの編集(追加/削除/並べ替え)ごとにビュー定義 display_columns を書き戻し、リスト列/ソートを作り直す
+    /// (VE-003 直接書き戻し・除去列がソート中なら BuildListColumns がソート解除)。async void=UI イベントハンドラ。
+    /// </summary>
+    private async void OnColumnPickerChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (_viewId is null || ColumnPicker is null) return;
+            var idx = _allViews.FindIndex(v => string.Equals(v.Id, _viewId, StringComparison.Ordinal));
+            if (idx < 0) return;
+
+            var updated = _allViews[idx] with { DisplayColumns = ColumnPicker.Serialize() };
+            var result = await _views.UpdateAsync(updated).ConfigureAwait(true);
+            if (!result.IsSuccess) return;
+
+            _allViews[idx] = result.Value!;
+            Recompute(); // BuildListColumns 経由でリスト列/並び替え候補/ソートチップを再構築
+            OnPropertyChanged(string.Empty);
+        }
+        catch (Exception)
+        {
+            // 書き戻し失敗で UI を落とさない(INV-008 系)。次の編集で再試行可能。
+        }
+    }
 
     [RelayCommand]
-    private void ToggleMoreMenu() { MoreMenuOpen = !MoreMenuOpen; AxisMenuOpen = false; SortMenuOpen = false; OnPropertyChanged(string.Empty); }
+    private void ToggleMoreMenu() { MoreMenuOpen = !MoreMenuOpen; AxisMenuOpen = false; SortMenuOpen = false; ColumnPickerOpen = false; OnPropertyChanged(string.Empty); }
 
     /// <summary>⋯ メニュー「ゴミ箱」: トラッシュを画像タブ内ポップアップで開く(ECO-019)。deleted 一覧を読み込み overlay を表示。</summary>
     [RelayCommand]

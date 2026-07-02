@@ -74,7 +74,7 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            win, new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock));
+            win, new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
         await vm.InitializeAsync(_col.Id);
         return (vm, win);
     }

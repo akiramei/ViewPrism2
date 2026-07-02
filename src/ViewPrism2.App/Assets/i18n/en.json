@@ -953,5 +953,9 @@
   "viewer.tagControl.action.leftPageEmpty.name": "Left page empty",
   "viewer.tagControl.action.leftPageEmpty.desc": "Leave the left page of that spread blank and place the image on the right.",
   "viewer.tagControl.action.rightPageEmpty.name": "Right page empty",
-  "viewer.tagControl.action.rightPageEmpty.desc": "Leave the right page of that spread blank and place the image on the left."
+  "viewer.tagControl.action.rightPageEmpty.desc": "Leave the right page of that spread blank and place the image on the left.",
+  "filelist.columnsButton": "Display columns",
+  "filelist.addColumn": "Add column",
+  "filelist.atMaxNote": "Maximum {max} columns. Remove a column to add another.",
+  "filelist.noAvailableColumns": "No columns available to add"
 }

@@ -1,0 +1,179 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ViewPrism2.App.ViewModels"
+             x:Class="ViewPrism2.App.Views.ColumnPickerView"
+             x:DataType="vm:ColumnPickerViewModel"
+             x:Name="Root">
+  <!-- 表示列ポップオーバーの列ピッカー(ECO-025 β-2・ファイル一覧「表示列」)。
+       クローム=標準モーダル型(ヘッダ固定=見出し+件数バッジ / ボディ=スクロール)。フッター無し=編集は即反映(VE-003)。
+       追加元は単一リスト(基本情報→タグ・種別チップ+色ドット)= α(2カラム)との差(mock file_list.md)。
+       DRY(SC-COLUMN-PICKER-001)で ViewEditDialog と共通化予定(golden 後)。 -->
+  <UserControl.Styles>
+    <!-- 件数バッジ: 通常=アクセント / 上限=アンバー(VE-002) -->
+    <Style Selector="Border.countBadge">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.countBadge.atLimit">
+      <Setter Property="Background" Value="{StaticResource WarnBrush}" />
+    </Style>
+    <!-- 選択済み列の行 -->
+    <Style Selector="Border.colRow">
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+    </Style>
+    <!-- ソースチップ / 種別チップ -->
+    <Style Selector="Border.srcChip">
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- 追加元カード(単一リスト・上限時は不活性) -->
+    <Style Selector="Button.addCard">
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,5" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.addCard:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+    </Style>
+    <!-- アイコンボタン(上/下/削除) -->
+    <Style Selector="Button.iconBtn">
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel MaxHeight="440">
+    <!-- ===== ヘッダ(固定): 見出し + 件数バッジ ===== -->
+    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="14,12,14,8">
+      <DockPanel>
+        <Border DockPanel.Dock="Right" Classes="countBadge" Classes.atLimit="{Binding IsAtLimit}">
+          <TextBlock Text="{Binding ColumnCountText}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+        </Border>
+        <TextBlock Text="{Binding SectionLabel}" FontWeight="SemiBold" FontSize="14"
+                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+      </DockPanel>
+      <TextBlock Text="{Binding ToFileListNote}" FontSize="11"
+                 Foreground="{StaticResource FaintTextBrush}" />
+    </StackPanel>
+
+    <!-- ===== ボディ(スクロール): 選択済み列 + 列を追加 ===== -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="8" Margin="14,0,14,12">
+        <!-- 選択済み列(順序どおり・先頭は name 固定) -->
+        <ItemsControl ItemsSource="{Binding SelectedColumns}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="4" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SelectedColumnRow">
+              <Border Classes="colRow">
+                <DockPanel>
+                  <!-- 右: 上/下/削除(name 固定は「固定」バッジ) -->
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Border IsVisible="{Binding IsNameLocked}" Background="{StaticResource PanelBrush}"
+                            BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1"
+                            CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding #Root.((vm:ColumnPickerViewModel)DataContext).FixedLabel}"
+                                 FontSize="10" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding !IsNameLocked}">
+                      <Button Classes="iconBtn" Content="▲" FontSize="10"
+                              IsEnabled="{Binding CanMoveUp}"
+                              Command="{Binding #Root.((vm:ColumnPickerViewModel)DataContext).MoveColumnUpCommand}"
+                              CommandParameter="{Binding}" />
+                      <Button Classes="iconBtn" Content="▼" FontSize="10"
+                              IsEnabled="{Binding CanMoveDown}"
+                              Command="{Binding #Root.((vm:ColumnPickerViewModel)DataContext).MoveColumnDownCommand}"
+                              CommandParameter="{Binding}" />
+                      <Button Classes="iconBtn" Content="✕" FontSize="11" Foreground="{StaticResource DangerBrush}"
+                              Command="{Binding #Root.((vm:ColumnPickerViewModel)DataContext).RemoveColumnCommand}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+                  </StackPanel>
+                  <!-- 左: ソースチップ + 色ドット + ラベル -->
+                  <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border Classes="srcChip" Background="{StaticResource CardSelectedBgBrush}">
+                      <TextBlock Text="{Binding SourceLabel}" FontSize="10"
+                                 Foreground="{StaticResource TextMutedBrush}" />
+                    </Border>
+                    <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
+                             IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 列を追加(単一リスト・基本情報→タグ・種別チップ) -->
+        <TextBlock Text="{Binding AddColumnLabel}"
+                   FontSize="11" FontWeight="SemiBold"
+                   Foreground="{StaticResource FaintTextBrush}" Margin="2,4,0,0" />
+
+        <ItemsControl ItemsSource="{Binding AvailableColumns}" IsVisible="{Binding HasAvailable}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="0" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:AddSourceRow">
+              <Button Classes="addCard"
+                      IsEnabled="{Binding !#Root.((vm:ColumnPickerViewModel)DataContext).IsAtLimit}"
+                      Command="{Binding #Root.((vm:ColumnPickerViewModel)DataContext).AddColumnCommand}"
+                      CommandParameter="{Binding}">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Text="＋" FontSize="12" Margin="0,0,6,0"
+                             Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                  <Border DockPanel.Dock="Right" Classes="srcChip" Background="{StaticResource CardSelectedBgBrush}">
+                    <TextBlock Text="{Binding KindLabel}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                  </Border>
+                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
+                             IsVisible="{Binding ShowColorDot}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DockPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 上限アンバー警告(VE-002) -->
+        <Border IsVisible="{Binding IsAtLimit}" Background="#FFF7ED" BorderBrush="#FBE2C4" BorderThickness="1"
+                CornerRadius="10" Padding="9,7">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource InfoIcon}" Width="14" Height="14" Foreground="#D98324"
+                      VerticalAlignment="Top" />
+            <TextBlock Text="{Binding AtMaxNote}" FontSize="11.5" Foreground="#9A6418"
+                       TextWrapping="Wrap" MaxWidth="220" />
+          </StackPanel>
+        </Border>
+
+        <!-- 追加元なし(上限未達のとき) -->
+        <TextBlock Text="{Binding NoAvailableLabel}"
+                   FontSize="12" Foreground="{StaticResource FaintTextBrush}"
+                   IsVisible="{Binding ShowNoAvailable}" Margin="2,2,0,4" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

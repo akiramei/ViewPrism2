@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ViewPrism2.App.ViewModels"
+             xmlns:views="using:ViewPrism2.App.Views"
              xmlns:c="using:ViewPrism2.App.Controls"
              xmlns:cv="using:ViewPrism2.App.Converters"
              xmlns:media="clr-namespace:Avalonia.Media;assembly=Avalonia.Base"
@@ -606,6 +607,24 @@
                 </Popup>
               </Panel>
             </StackPanel>
+
+            <!-- 表示列(ECO-025 β-2): アクティブビューの display_columns を編集(ライブ書き戻し=VE-003)。
+                 view 軸+ビュー選択時のみ表示(FS 軸は書き戻し先が無い=CanEditColumns)。列ピッカー=ColumnPickerView。 -->
+            <Panel IsVisible="{Binding CanEditColumns}">
+              <Button x:Name="ColumnsTrigger" Classes="toolbarBtn" Padding="12,0" Command="{Binding ToggleColumnPickerCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource ViewColumnIcon}" Foreground="{StaticResource FaintTextBrush}" />
+                  <TextBlock Text="表示列" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                  <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
+                </StackPanel>
+              </Button>
+              <Popup PlacementTarget="{Binding #ColumnsTrigger}" Placement="BottomEdgeAlignedLeft" VerticalOffset="6"
+                     IsOpen="{Binding ColumnPickerOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
+                <Border Classes="popupMenu" Width="304">
+                  <views:ColumnPickerView DataContext="{Binding ColumnPicker}" />
+                </Border>
+              </Popup>
+            </Panel>
 
             <Border Width="1" Height="26" Background="{StaticResource CardBorderBrush}" />
 

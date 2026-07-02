@@ -953,5 +953,9 @@
   "viewer.tagControl.action.leftPageEmpty.name": "左を空白",
   "viewer.tagControl.action.leftPageEmpty.desc": "その見開きの画面左を空白にし、画像を画面右へ配置します。",
   "viewer.tagControl.action.rightPageEmpty.name": "右を空白",
-  "viewer.tagControl.action.rightPageEmpty.desc": "その見開きの画面右を空白にし、画像を画面左へ配置します。"
+  "viewer.tagControl.action.rightPageEmpty.desc": "その見開きの画面右を空白にし、画像を画面左へ配置します。",
+  "filelist.columnsButton": "表示列",
+  "filelist.addColumn": "列を追加",
+  "filelist.atMaxNote": "最大 {max} 列です。追加するには列を削除してください。",
+  "filelist.noAvailableColumns": "追加できる列はありません"
 }

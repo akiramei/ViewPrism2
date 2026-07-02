@@ -53,7 +53,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         TagsTab = tagsTab;
 
         // 画像タブ実 VM(モック準拠 surface)。注入済みリポジトリ/サービスを共有する。
-        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings, workspaces);
+        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings, workspaces, localization);
 
         // 作業タブ surface(第3タブ・ECO-020)。
         WorkTab = new WorkTabViewModel(workspaces, folders, tags, similar, merge, trash, windows, sorter, settings);

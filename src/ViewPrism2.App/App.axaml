@@ -70,6 +70,7 @@
     <StreamGeometry x:Key="RepairIcon">M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z</StreamGeometry>
     <StreamGeometry x:Key="PlusIcon">M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z</StreamGeometry>
     <StreamGeometry x:Key="ViewListIcon">M3 5h18v2H3zM3 11h18v2H3zM3 17h11v2H3z</StreamGeometry>
+    <StreamGeometry x:Key="ViewColumnIcon">M10 18h5V5h-5v13zm-6 0h5V5H4v13zM16 5v13h5V5h-5z</StreamGeometry>
     <StreamGeometry x:Key="FunnelIcon">M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z</StreamGeometry>
     <StreamGeometry x:Key="FolderIcon">M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z</StreamGeometry>
     <!-- 画像タブ製造(M2): 追加 geometry(Material filled。PathIcon=塗り)。
