@@ -595,8 +595,8 @@ change_orders:
   - id: ECO-026
     title: "画像タブ一覧の性能是正(グリッド仮想化 REQ-041 適合 + 一覧 VM 再構築/チップ件数/タグ列/サムネ最適化)"
     type: 不具合是正(REQ-041/KBOM 仮想化不適合=FMEA-013 同型)+ 性能最適化(NFR)。視覚不変
-    status: staged          # 起票+REQ/E-BOM/Control Plan 同期。実装は段階(性能オラクル→低リスク→グリッド仮想化)・M4
-    golden: pending          # グリッド仮想化は golden 面=maintainer 実機で視覚不変を再確認
+    status: implemented          # #1-#6 実装済+NU1903 根本解消。全 surface golden approved(maintainer 実機)。M4 同期済
+    golden: approved          # グリッド仮想化(#1)=maintainer 実機 golden OK(2026-07-02)。他 #2-#6 は視覚不変
     baseline: "ECO-025 クローズ後(main b939eff)"
     bom_rev: "v4.0(eco:ECO-026)"
     input: "maintainer 性能レビュー(調査のみ・2026-07-02)。6 所見 + REQ-041 グリッド仮想化不適合。ViewPrism2 実コードで全件裏取り済"
@@ -607,18 +607,24 @@ change_orders:
       f4: "タグ列セル=行×列×画像タグ数 の線形探索(ListColumnModel.cs:239 entry.Tags 走査)。画像ごと tagId→値 辞書化で O(1)"
       f5: "表示列ライブ編集ごとに一覧全件 Recompute(OnColumnPickerChanged)。列定義+行セルのみ再構築へ範囲縮小"
       f6: "ThumbnailImage に detach/リサイクル時の明示 Release/キャンセル無し(ViewerImage にはある)。#1 仮想化リサイクルで効く"
+      nu1903: "(派生・maintainer 指摘)ItemsRepeater パッケージ追加の restore audit で NU1903(SQLitePCLRaw.lib.e_sqlite3 2.1.11・GHSA-2m69-gcr7-jv3q・HIGH)が TreatWarningsAsErrors でエラー化。当初 WarningsNotAsErrors で緩めた(=抑制のみ)が、2.1 系は 2.1.11 が最新で修正版なし・3.0 系に修正ありと判明→Infrastructure に SQLitePCLRaw.bundle_e_sqlite3 3.0.3 を明示ピンし根本解消(audit クリーン)。暫定回避(App/Tests の WarningsNotAsErrors)は撤去"
+    resolution:
+      packages_added: "Avalonia.Controls.ItemsRepeater 12.0.0(#1 グリッド仮想化・K-AVALONIA スパイク条件通過で採用=非採用判断を上書き・archived after 12.0=major 更新時に再評価) / SQLitePCLRaw.bundle_e_sqlite3 3.0.3(NU1903 根本解消)"
+      commits: "起票 894da20 / #2-#6+CP-NFR-026 e7e3cc7 / #5 5b249ef / #1 7b0f125 / NU1903 3104d8b"
     impacted_bom:
       ["REQ-041(現状追認+不適合是正: グリッド仮想化は必須要件・実装が ItemsControl+WrapPanel で未達→KBOM 既定方式へ)",
        "E-UI-BROWSE-022(invariant: グリッドは仮想化パネル[ItemsRepeater/VSP 行リスト]必須=非仮想 ItemsControl 直置き禁止・FMEA-013 同型 / 表示形式切替は Items 非再構築 / タグ列引き O(1)。fmea_refs += FMEA-013・acceptance += CP-NFR-026)",
        "E-THUMB-020/ThumbnailImage(detach/リサイクルで進行中ロード cancel + Bitmap Dispose=K-AVALONIA v2.0 Run2 規律の横展開)",
        "33-control-plan(CP-NFR-026 新設: 一覧再構築/チップ件数評価回数/タグ列引き/サムネ Release の決定論ガード)",
-       "31-kbom(M4: グリッド仮想化罠は画像タブグリッドにも適用と明記・K-AVALONIA prose)"]
+       "31-kbom(K-AVALONIA: ItemsRepeater 非採用判断を上書き=スパイク通過で採用・archived リスク併記)",
+       "32-mbom(procurement += Avalonia.Controls.ItemsRepeater 12.0.0 / SQLitePCLRaw.bundle_e_sqlite3 3.0.3)",
+       "20-spec §2.6(グリッド仮想化 as-built=ItemsRepeater+UniformGridLayout)"]
     oracle: "S-01〜S-31 不変(描画実体化戦略の是正・Core 意味論不変)。選択/範囲/ソート/チップ件数/タグ列セル内容は既存 Tests/Oracle 退行ゼロ"
-    verification: "起票時点: REQ/E-BOM/Control Plan 同期・validate_bom 0/0。実装は段階で CP-NFR-026 unit + 既存 Tests/Oracle 退行ゼロ + グリッド視覚 golden(maintainer 実機・視覚不変が目標)"
+    verification: "#1-#6 実装済+NU1903 根本解消。全体 build 0警告/0エラー(NU1903 消失)・Tests 513(+CP-NFR-026 4)・Oracle 100+2skip・validate_bom 0/0。グリッド視覚=maintainer 実機 golden 承認済(通常/切替/列編集/大量件数スクロール/サムネ Release)。M4 同期済"
     decisions:
       SCOPE: "視覚レイアウト(ViewPrismUI CAD)は不変。是正対象は実体化戦略・VM 再構築範囲・件数/タグ引きアルゴリズム・サムネ資源管理のみ。ソートモデル(FL-003 v2)・列描画契約・表示列モデルは非改変"
       GRID_VIRT: "KBOM 既定=ItemsRepeater(UniformGridLayout)または VSP 行リスト。選択はコード側 PointerPressed 維持(ItemsRepeater は選択機構を持たない=既存方式と整合)。視覚 golden 不変が受入条件"
       GUARD_FIRST: "壁時計テストは flaky のため、決定論ガード(評価回数・O(1) 引き・Release 呼び出し)を先行させ退行を捕まえる(CP-NFR-026)"
     body: 60-change-order-eco-026.md
-    pending_sync: "spec §2.6(グリッド仮想化 as-built)・M-BOM(M-UI-013)・31-kbom(グリッド罠の画像タブ適用明記)は M4。実装(性能オラクル→低リスク #3/#4/#5/#6→グリッド仮想化 #1/#2)"
-    notes: "採番: ECO-025 クローズ後の逐次採番で ECO-026。#1 は最適化でなく REQ-041/KBOM 不適合(FMEA-013 同型)=優先。βのリスト仮想化時に KBOM 指針がグリッドへ未横展開だった工程漏れ(S3 同族)"
+    pending_sync: "完了(M4 同期済・2026-07-02): 20-spec §2.6(グリッド仮想化 as-built)・32-mbom procurement(ItemsRepeater 12.0.0/SQLitePCLRaw 3.0.3)・31-kbom(ItemsRepeater 採用へ上書き)・30-ebom E-UI-BROWSE-022 as-built・33-control-plan CP-NFR-026・register golden=approved"
+    notes: "採番: ECO-025 クローズ後の逐次採番で ECO-026。#1 は最適化でなく REQ-041/KBOM 不適合(FMEA-013 同型)=優先。βのリスト仮想化時に KBOM 指針がグリッドへ未横展開だった工程漏れ(S3 同族)。工程 retro=ItemsRepeater 調査で当初 DLL 文字列 grep で存在判断し検証がブレた(正=まず参照確認・KBOM 行98 に既存判断あり)+NU1903 は当初抑制のみ→maintainer 指摘で根本解消。教訓は memory へ"

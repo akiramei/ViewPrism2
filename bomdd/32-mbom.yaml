@@ -512,8 +512,10 @@ procurement:
   - { package: Avalonia.Themes.Fluent,                     version: 12.0.4,  rationale: "標準テーマ(ライト)",         license: MIT,        substitutable: false }
   - { package: Avalonia.Fonts.Inter,                       version: 12.0.4,  rationale: "K-DESIGN 指定フォント",        license: MIT,        substitutable: false }
   - { package: Avalonia.Diagnostics,                       version: 12.0.4,  rationale: "Debug 構成のみ参照可",         license: MIT,        substitutable: true }
+  - { package: Avalonia.Controls.ItemsRepeater,            version: 12.0.0,  rationale: "ECO-026/#1 グリッド仮想化(REQ-041 適合・UniformGridLayout)。本体別 NuGet(Avalonia>=12.0.0 依存=12.0.4 と併用可)。採用可否スパイク通過(build/run/maintainer golden)で K-AVALONIA の非採用判断を上書き。archived after 12.0=Avalonia major 更新時に再評価", license: MIT, substitutable: true }
   - { package: CommunityToolkit.Mvvm,                      version: 8.4.2,   rationale: "ADR-0005 MVVM",               license: MIT,        substitutable: false }
   - { package: Microsoft.Data.Sqlite,                      version: 10.0.9,  rationale: "ADR-0003 SQLite ドライバ",     license: MIT,        substitutable: false }
+  - { package: SQLitePCLRaw.bundle_e_sqlite3,              version: 3.0.3,   rationale: "ECO-026 セキュリティ: transitive の脆弱 SQLitePCLRaw.lib.e_sqlite3 2.1.11(GHSA-2m69-gcr7-jv3q・HIGH)を明示ピンで 3.0.3 へ上書き解消。Microsoft.Data.Sqlite 10.0.9 と実行時互換(Oracle/Tests 確認済)", license: Apache-2.0, substitutable: false }
   - { package: Dapper,                                     version: 2.1.79,  rationale: "ADR-0003 マッピング",          license: Apache-2.0, substitutable: false }
   - { package: SkiaSharp,                                  version: 3.119.4, rationale: "ADR-0004 画像処理",            license: MIT,        substitutable: false }
   - { package: Microsoft.Extensions.DependencyInjection,   version: 10.0.9,  rationale: "ADR-0002 DI(SB-F-01 で exact ピン化)",      license: MIT,        substitutable: false }

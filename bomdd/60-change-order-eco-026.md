@@ -1,6 +1,6 @@
 # ECO-026: 画像タブ一覧の性能是正(グリッド仮想化 REQ-041 適合 + 一覧 VM 再構築/チップ件数/タグ列/サムネの最適化)
 
-- **status**: staged(起票 + REQ/E-BOM/Control Plan 同期。実装は段階=性能オラクル→低リスク→グリッド仮想化・M4)
+- **status**: implemented(#1-#6 実装済+NU1903 根本解消・グリッド golden approved[maintainer 実機 2026-07-02]・M4 同期済=spec/E-BOM/M-BOM procurement/KBOM/Control Plan/register。ECO-026 クローズ)
 - **type**: 不具合是正(REQ-041/KBOM 仮想化不適合=FMEA-013 同型)+ 性能最適化(NFR)。CAD 視覚は不変(挙動・実体化戦略の是正)
 - **baseline**: ECO-025 クローズ後(main `b939eff`)
 - **bom_rev**: v4.0(eco:ECO-026)
