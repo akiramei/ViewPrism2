@@ -591,3 +591,34 @@ change_orders:
     body: 60-change-order-eco-025.md
     pending_sync: "完了(M4 同期済・2026-07-02): spec §2.6/§2.x・M-BOM(M-UI-013)・Control Plan(CP-COLPICKER-025)・35-dsbom(SC-COLUMN-PICKER-001 統合済)・CAD フッター是正。残る未確定=VE-004(空名保存)・FL-001(グリッド/リスト共有)・FL-002(ソート永続範囲)は後続 ECO(本 ECO 範囲外)"
     notes: "採番: user 起票時の想定 ECO-024 は原典撤去で使用済のため採番規則(逐次)で ECO-025 確定。E-UI-AXIS-NAV-040(アクティブビュー供給は既存)・E-UI-NODEGRAPH-025(タグ階層=別軸)・E-SORT-004(sort_field 整列=別軸)は非改変"
+
+  - id: ECO-026
+    title: "画像タブ一覧の性能是正(グリッド仮想化 REQ-041 適合 + 一覧 VM 再構築/チップ件数/タグ列/サムネ最適化)"
+    type: 不具合是正(REQ-041/KBOM 仮想化不適合=FMEA-013 同型)+ 性能最適化(NFR)。視覚不変
+    status: staged          # 起票+REQ/E-BOM/Control Plan 同期。実装は段階(性能オラクル→低リスク→グリッド仮想化)・M4
+    golden: pending          # グリッド仮想化は golden 面=maintainer 実機で視覚不変を再確認
+    baseline: "ECO-025 クローズ後(main b939eff)"
+    bom_rev: "v4.0(eco:ECO-026)"
+    input: "maintainer 性能レビュー(調査のみ・2026-07-02)。6 所見 + REQ-041 グリッド仮想化不適合。ViewPrism2 実コードで全件裏取り済"
+    findings:
+      f1: "アイコングリッドが ScrollViewer>ItemsControl>WrapPanel=非仮想化(ImageTabView.axaml:809-811)。全セル+サムネ一斉実体化=REQ-041(100件+仮想化必須・1万件操作可能)/KBOM(31:82 グリッドは ItemsRepeater/VSP 行リスト)不適合・ビューア scroll で是正した FMEA-013 の罠と同型がグリッドに残存"
+      f2: "SetGrid/SetList→Recompute→Items.Clear+全件 ImageItemVM+BuildCells 再構築(ImageTabViewModel.cs:1221,724)。表示形式切替は同一データで Items 再構築不要"
+      f3: "ビュー軸チップ件数=子ノードごと ViewMatched 再評価(:663-667)=子数+1 回の全件条件評価。1 パス集計へ"
+      f4: "タグ列セル=行×列×画像タグ数 の線形探索(ListColumnModel.cs:239 entry.Tags 走査)。画像ごと tagId→値 辞書化で O(1)"
+      f5: "表示列ライブ編集ごとに一覧全件 Recompute(OnColumnPickerChanged)。列定義+行セルのみ再構築へ範囲縮小"
+      f6: "ThumbnailImage に detach/リサイクル時の明示 Release/キャンセル無し(ViewerImage にはある)。#1 仮想化リサイクルで効く"
+    impacted_bom:
+      ["REQ-041(現状追認+不適合是正: グリッド仮想化は必須要件・実装が ItemsControl+WrapPanel で未達→KBOM 既定方式へ)",
+       "E-UI-BROWSE-022(invariant: グリッドは仮想化パネル[ItemsRepeater/VSP 行リスト]必須=非仮想 ItemsControl 直置き禁止・FMEA-013 同型 / 表示形式切替は Items 非再構築 / タグ列引き O(1)。fmea_refs += FMEA-013・acceptance += CP-NFR-026)",
+       "E-THUMB-020/ThumbnailImage(detach/リサイクルで進行中ロード cancel + Bitmap Dispose=K-AVALONIA v2.0 Run2 規律の横展開)",
+       "33-control-plan(CP-NFR-026 新設: 一覧再構築/チップ件数評価回数/タグ列引き/サムネ Release の決定論ガード)",
+       "31-kbom(M4: グリッド仮想化罠は画像タブグリッドにも適用と明記・K-AVALONIA prose)"]
+    oracle: "S-01〜S-31 不変(描画実体化戦略の是正・Core 意味論不変)。選択/範囲/ソート/チップ件数/タグ列セル内容は既存 Tests/Oracle 退行ゼロ"
+    verification: "起票時点: REQ/E-BOM/Control Plan 同期・validate_bom 0/0。実装は段階で CP-NFR-026 unit + 既存 Tests/Oracle 退行ゼロ + グリッド視覚 golden(maintainer 実機・視覚不変が目標)"
+    decisions:
+      SCOPE: "視覚レイアウト(ViewPrismUI CAD)は不変。是正対象は実体化戦略・VM 再構築範囲・件数/タグ引きアルゴリズム・サムネ資源管理のみ。ソートモデル(FL-003 v2)・列描画契約・表示列モデルは非改変"
+      GRID_VIRT: "KBOM 既定=ItemsRepeater(UniformGridLayout)または VSP 行リスト。選択はコード側 PointerPressed 維持(ItemsRepeater は選択機構を持たない=既存方式と整合)。視覚 golden 不変が受入条件"
+      GUARD_FIRST: "壁時計テストは flaky のため、決定論ガード(評価回数・O(1) 引き・Release 呼び出し)を先行させ退行を捕まえる(CP-NFR-026)"
+    body: 60-change-order-eco-026.md
+    pending_sync: "spec §2.6(グリッド仮想化 as-built)・M-BOM(M-UI-013)・31-kbom(グリッド罠の画像タブ適用明記)は M4。実装(性能オラクル→低リスク #3/#4/#5/#6→グリッド仮想化 #1/#2)"
+    notes: "採番: ECO-025 クローズ後の逐次採番で ECO-026。#1 は最適化でなく REQ-041/KBOM 不適合(FMEA-013 同型)=優先。βのリスト仮想化時に KBOM 指針がグリッドへ未横展開だった工程漏れ(S3 同族)"

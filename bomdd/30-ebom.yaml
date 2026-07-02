@@ -379,7 +379,12 @@ ebom:
         - (ECO-025/β/REQ-081・FL-003 net-new) **アイコンタイルのソート項目表示**: ソート中かつ sortCol≠name のとき、タイルに名前に加え**ソート項目(列名+その画像の当該列値・型別描画=basic テキスト/num=★+値/text=値チップ/simple=あり・なし・未設定は淡色)**を表示。未ソート/名前ソート時はタイルは名前だけ(名前の二重表示回避)
         - (ECO-025/β-2・製造済・golden approved) 「表示列」ポップオーバー(ツールバー・view 軸+ビュー選択時のみ=CanEditColumns)で列を追加/削除/並べ替え(view_edit=E-UI-TAGS-026 と同一の列ピッカー=SC-COLUMN-PICKER-001=ColumnPickerViewModel・display_columns をビュー定義へ**即書き戻す VE-003 ライブ編集**・除去列がソート中ならソート解除)。上限到達で件数バッジ アンバー+追加元不活性。**追加元は単一マージリスト**(基本情報→タグ・基本にも種別チップ「基本」)= α(2 カラム)との差(mock file_list.md 権威)。**両 surface golden 後に SC-COLUMN-PICKER-001(ColumnPickerViewModel)へ DRY 統合済**(α ViewEditDialog が同一 VM を合成消費)
         - (ECO-025/β-2・レイアウト不変条件・権威=ViewPrismUI docs/screens/file_list.md「レイアウト不変条件」節) ファイル一覧リストは **workspace型**(画像タブ中央ペイン内=ペイン境界がスクロール境界・中央ペイン単一スクロール・クロム[ツールバー・列ヘッダー行]固定=行だけがスクロール。リスト行は VirtualizingStackPanel=可視行のみ実体化)。列テンプレは 名前=伸縮(minmax)・他=固定幅/表示密度(標準52・コンパクト42)。表示列ポップオーバーは **モーダル型クローム**(ヘッダ固定=見出し+件数バッジ / ボディ単一スクロール)だが **操作フッター(保存/キャンセル)を持たない=ライブ編集**(VE-003・CAD file_list.md L68 の「docked フッター」はビュー編集モーダル向けで本ライブ編集ポップオーバーには非適用=CAD 是正済)。スクロールバー inset は K-AVALONIA 実装規約
-      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022, CP-COLPICKER-025]
+        - (ECO-026/#1・REQ-041/KBOM 適合・FMEA-013 同型) **アイコングリッドは仮想化パネル必須**=非仮想 ItemsControl(既定 StackPanel/WrapPanel)直置き禁止。KBOM 既定=ItemsRepeater(UniformGridLayout)または VirtualizingStackPanel の行リストで画面外セル/サムネを実体化しない(REQ-041=100件+で仮想化・1万件操作可能。ビューア scroll で是正した FMEA-013 の罠と同型)。選択はコード側 PointerPressed 維持(ItemsRepeater は選択機構を持たない)。視覚は不変(セル DataTemplate 再利用・golden 維持が受入)
+        - (ECO-026/#2) 表示形式(grid/list)切替は `_layout` と表示切替のみ=同一データの `Items` を作り直さない(SetGrid/SetList で全件 ImageItemVM+BuildCells を再構築しない)
+        - (ECO-026/#4) タグ列セルの値取得は画像ごとの tagId→値 辞書で O(1)(行×列×タグ数の線形探索を排除)。セル表示内容は不変
+        - (ECO-026/#5) 表示列ライブ編集は列定義+各行セル(BuildCells)の再構築で足り、フォルダ/チップ/母集合の全 Recompute を回さない(除去列がソート中の解除は維持)
+      acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022, CP-COLPICKER-025, CP-NFR-026]
+      fmea_refs: [FMEA-013]
 
     - id: E-UI-AXIS-NAV-040
       name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割

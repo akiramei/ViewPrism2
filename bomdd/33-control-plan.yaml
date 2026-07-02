@@ -169,6 +169,22 @@ control_plan:
         - "Serialize は DisplayColumnParser で往復(VE-003 書き戻し)"
       notes: "描画(2 surface の golden 承認レイアウト=α 2カラム/β-2 単一マージ・ポップオーバー クローム)は maintainer 実機 golden(CP-UI-G2/G6 系)。本 CP は共通 VM の決定論のみ。"
 
+    - id: CP-NFR-026
+      characteristic: 画像タブ一覧の性能不変条件(ECO-026)=一覧再構築・件数計算・タグ列引き・サムネ資源が退行しない
+      classification: surface
+      depth: unit
+      tolerance: "評価回数・アルゴリズム計算量・資源解放の呼び出しを exact 検査(壁時計は flaky のため決定論ガード)"
+      fixture: tests/ViewPrism2.Tests(Trait cp=CP-NFR-026。ConditionEvaluator スパイ・カウンタ等)
+      oracle: 評価回数/引きの計算量/Release 呼び出しの完全一致
+      approver: automated
+      test_vectors:
+        - "(#3) ビュー軸チップ件数算出は母集合を 1 パスでバケット集計=子ノード数に比例した全件条件評価を行わない(評価回数上限を検証)"
+        - "(#4) タグ列セル値取得は画像ごと辞書で O(1)(行×列×タグ数の線形探索でない)。セル内容は既存と一致"
+        - "(#2) 表示形式(grid/list)切替では Items(ImageItemVM)を作り直さない(同一インスタンス維持を検証)"
+        - "(#5) 表示列ライブ編集は列/セル再構築のみでフォルダ/チップ全 Recompute を回さない"
+        - "(#6) ThumbnailImage は detach/リサイクルで進行中ロードをキャンセルし Bitmap を Dispose する"
+      notes: "(#1)グリッド仮想化=画面外セル非実体化 は探索プローブ P-07 系(1万件で操作可能)+ maintainer 実機 golden で受入。本 CP は決定論ガードを担い、壁時計性能はプローブが担う。"
+
     - id: CP-DB-006
       characteristic: スキーマ・PRAGMA・マイグレーション契約が仕様 §2.0・REQ-003〜005 と一致する
       classification: core
