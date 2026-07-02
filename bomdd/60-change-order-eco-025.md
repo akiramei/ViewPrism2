@@ -150,5 +150,17 @@ CAD は「ビュー.`columns[]` を net-new ドメイン属性」と表現する
   - `WindowService.ShowViewEditDialogAsync`: ビューのタグ階層メンバー(`GetHierarchyAsync`→`Tag`)を母集合として供給。
   - loc(ja/en 13 キー)。テスト `CpViewColumnModelTests` 11 件。
   - 検証: build 0/0(Debug/Release・TreatWarningsAsErrors)/ Tests 485(+11)/ Oracle 100+2skip(退行ゼロ)/ validate_bom 0/0。
-  - **残 = α 視覚 golden(maintainer 実機)**: 列ピッカーの密度・ソースチップ/色ドット・件数バッジのアンバー・名前固定バッジ・追加元カードの破線/実線。
-- **β = 未製造(pending)**: ファイル一覧の列描画(kind 別セル)+ 列ヘッダーソート(不変条件)+ 表示列ポップオーバー(列ピッカー再利用)。E-UI-BROWSE-022。
+  - **α golden 反復(maintainer 実機)GF-1〜5 是正済**: GF-1 お気に入り撤去(廃止仕様)/ GF-2〜3 レイアウトをモック権威へ(フッター下部 docked・本体スクロール・追加元2カラム)/ GF-4 単一スクロール化(mock是正=二重スクロール解消)/ GF-5 スクロールバー inset(内容 Margin・K-AVALONIA)。
+- **β = 未製造(pending)**: ファイル一覧の列描画(kind 別セル)+ 列ヘッダーソート(不変条件・`ViewColumnSorter` 済)+ 表示列ポップオーバー(列ピッカー再利用)。E-UI-BROWSE-022。
+
+## 12. レイアウト不変条件を実装契約化(golden retro・maintainer 2026-07-02)
+
+α golden の GF-1〜5 の根本原因は **UI-IR/プロース CAD がレイアウト不変条件を抽出していなかったこと**(S3=データ分散レイアウト欠陥・GF-V1 同型。CAPA は方法論に存在したが本画面 CAD へ未適用=横展開漏れ)。BOM/製造計画は妥当・golden は所見を捕捉(計画は正常機能)。
+
+**ViewPrismUI(CAD 権威)側で是正済(maintainer 2026-07-02)**:
+1. `docs/screens/view_edit.md` / `file_list.md` に「レイアウト不変条件」節を追記(モーダル=ヘッダ固定/本体スクロール/フッター docked 常時可視/単一スクロール/可変兄弟がフッターを押し出さない・リスト=列ヘッダー固定/名前列/密度)。
+2. GF-4 単一スクロールを **mock是正として記録**(モックは2カラム+タグ内部スクロール・単一スクロール採用の理由=操作性)。
+3. お気に入り廃止を明記。
+4. `docs/templates/screen_spec_template.md` に「レイアウト不変条件」を**必須節**として追加(方法論横展開)。
+
+既存3画面(tag_tab/image_tab/work_tab)への遡及 backfill は **VP-UI-007** で追跡。**ViewPrismUI が正**=当該レイアウト不変条件節を実装契約として扱う(E-UI-TAGS-026/E-UI-BROWSE-022 invariant に権威参照を反映済)。GF-5(スクロールバー inset)は Avalonia Fluent 固有のため ViewPrism2 K-AVALONIA 側の実装規約(HTML モックには現れない)。
