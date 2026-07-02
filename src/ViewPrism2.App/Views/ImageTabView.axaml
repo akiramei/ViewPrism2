@@ -929,7 +929,14 @@
 
           <!-- 行(スクロール) -->
           <ScrollViewer>
+            <!-- 仮想化(REQ-041/055・ECO-025 β perf): リスト行は 入れ子 ItemsControl+Grid+型別セル で重い。
+                 VirtualizingStackPanel で可視行のみ実体化し、大量件数でも Recompute/ソートを軽くする。 -->
             <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ImageItemVM">
                   <Border Classes="imageListRow" Classes.selected="{Binding IsSelected}" PointerPressed="OnItemPressed">
