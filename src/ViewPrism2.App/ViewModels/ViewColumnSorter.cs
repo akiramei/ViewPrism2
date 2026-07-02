@@ -46,6 +46,11 @@ public readonly record struct ViewSortColumn(string Key, bool IsTag, ColumnSortK
 /// - 同値のタイブレークは名前(FileName)の昇順で安定化(さらに id 昇順で全順序=完全に決定的)。
 ///
 /// 画像一覧の sort_field 整列(<see cref="ImageSorter"/>)とは別軸(任意の表示列で並べる)。
+///
+/// 性能(ECO-025 β perf・maintainer 2026-07-02): ソートキーはエントリごとに1回だけ事前計算する
+/// (decorate-sort-undecorate)。タグ値の線形探索・数値 parse・カルチャ比較を毎比較で繰り返さない。
+/// テキストは <see cref="SortKey"/>(<see cref="CompareInfo.GetSortKey(string,CompareOptions)"/>)に
+/// しておき、比較を高速なバイト比較にする(localeCompare('ja') を O(n log n) 回呼ばない)。
 /// </summary>
 public static class ViewColumnSorter
 {
@@ -55,133 +60,157 @@ public static class ViewColumnSorter
         IReadOnlyList<ImageEntry> entries, ViewSortColumn column, SortDirection direction)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        var comparer = new EntryComparer(column, direction);
-        // OrderBy は安定ソート。比較器は id まで含む全順序のため結果は完全に決定的。
-        return entries.OrderBy(e => e, comparer).ToList();
+        var desc = direction == SortDirection.Desc;
+
+        // decorate: ソートキーを1回だけ事前計算(タグ線形探索・parse・GetSortKey をエントリ数ぶんに限定)。
+        var keys = new SortEntry[entries.Count];
+        for (var i = 0; i < entries.Count; i++)
+        {
+            keys[i] = Decorate(entries[i], column, i);
+        }
+
+        // 比較器は事前計算済みキーのみ参照。id まで含む全順序のため結果は完全に決定的。
+        var kind = column.Kind;
+        Array.Sort(keys, (a, b) => Compare(a, b, kind, desc));
+
+        var result = new List<ImageEntry>(keys.Length);
+        foreach (var k in keys)
+        {
+            result.Add(k.Entry);
+        }
+
+        return result;
     }
 
-    private sealed class EntryComparer(ViewSortColumn column, SortDirection direction) : IComparer<ImageEntry>
+    /// <summary>事前計算済みソートキー(decorate-sort-undecorate の decorate 結果)。</summary>
+    private readonly struct SortEntry(
+        ImageEntry entry, int index, bool isEmpty, double num, SortKey? text, bool present, SortKey nameKey)
     {
-        public int Compare(ImageEntry? a, ImageEntry? b)
+        public ImageEntry Entry { get; } = entry;
+        public int Index { get; } = index;               // 予備(現状はタイブレーク=id を使用)
+        public bool IsEmpty { get; } = isEmpty;           // Text/Numeric の未設定(末尾)
+        public double Num { get; } = num;                 // Numeric 値(未設定は 0・IsEmpty で除外)
+        public SortKey? Text { get; } = text;             // Text ソートキー(未設定は null)
+        public bool Present { get; } = present;           // Simple 有無
+        public SortKey NameKey { get; } = nameKey;        // タイブレーク(名前昇順)
+    }
+
+    private static SortEntry Decorate(ImageEntry e, ViewSortColumn column, int index)
+    {
+        var nameKey = Ja.GetSortKey(e.Record.FileName, CompareOptions.None);
+        switch (column.Kind)
         {
-            if (ReferenceEquals(a, b))
+            case ColumnSortKind.Simple:
+                return new SortEntry(e, index, isEmpty: false, num: 0, text: null,
+                    present: HasTag(e, column.Key), nameKey);
+            case ColumnSortKind.Numeric:
             {
-                return 0;
+                var n = NumericValue(e, column);
+                return new SortEntry(e, index, isEmpty: n is null, num: n ?? 0, text: null, present: false, nameKey);
             }
 
-            if (a is null)
+            default: // Text
             {
-                return 1;
+                var t = TextValue(e, column);
+                return new SortEntry(e, index, isEmpty: t is null, num: 0,
+                    text: t is null ? null : Ja.GetSortKey(t, CompareOptions.None), present: false, nameKey);
+            }
+        }
+    }
+
+    private static int Compare(in SortEntry a, in SortEntry b, ColumnSortKind kind, bool desc)
+    {
+        if (kind == ColumnSortKind.Simple)
+        {
+            // 有無順: 昇順=付与を先。降順は付与を後(空扱いにしない=常に方向で反転)。
+            if (a.Present != b.Present)
+            {
+                var r = a.Present ? -1 : 1;
+                return desc ? -r : r;
             }
 
-            if (b is null)
-            {
-                return -1;
-            }
-
-            var desc = direction == SortDirection.Desc;
-
-            if (column.Kind == ColumnSortKind.Simple)
-            {
-                // 有無順: 昇順=付与を先。降順は付与を後。空扱いにしない(常に方向で反転)。
-                var pa = HasTag(a);
-                var pb = HasTag(b);
-                if (pa != pb)
-                {
-                    var r = pa ? -1 : 1; // 昇順=付与(true)を先
-                    return desc ? -r : r;
-                }
-
-                return NameTiebreak(a, b);
-            }
-
-            // Text / Numeric: 未設定は方向に関わらず末尾(空値末尾)
-            var ea = IsEmpty(a);
-            var eb = IsEmpty(b);
-            if (ea != eb)
-            {
-                return ea ? 1 : -1;
-            }
-
-            if (ea)
-            {
-                return NameTiebreak(a, b); // 双方未設定 → 名前昇順
-            }
-
-            var cmp = column.Kind == ColumnSortKind.Numeric ? CompareNumeric(a, b) : CompareText(a, b);
-            if (desc)
-            {
-                cmp = -cmp;
-            }
-
-            return cmp != 0 ? cmp : NameTiebreak(a, b); // タイブレークは常に名前昇順(方向で反転しない)
+            return NameTiebreak(a, b);
         }
 
-        private int CompareNumeric(ImageEntry a, ImageEntry b)
+        // Text / Numeric: 未設定は方向に関わらず末尾(空値末尾)。
+        if (a.IsEmpty != b.IsEmpty)
         {
-            var na = NumericValue(a) ?? 0;
-            var nb = NumericValue(b) ?? 0;
-            return na.CompareTo(nb);
+            return a.IsEmpty ? 1 : -1;
         }
 
-        private int CompareText(ImageEntry a, ImageEntry b) =>
-            Ja.Compare(TextValue(a) ?? string.Empty, TextValue(b) ?? string.Empty, CompareOptions.None);
-
-        /// <summary>当該列で「未設定(空)」か(Text/Numeric)。basic name/size/date は常に非空。</summary>
-        private bool IsEmpty(ImageEntry e) => column.Kind == ColumnSortKind.Numeric
-            ? NumericValue(e) is null
-            : TextValue(e) is null;
-
-        private bool HasTag(ImageEntry e) =>
-            e.Tags.Any(t => string.Equals(t.TagId, column.Key, StringComparison.Ordinal));
-
-        private double? NumericValue(ImageEntry e)
+        if (a.IsEmpty)
         {
-            if (!column.IsTag)
+            return NameTiebreak(a, b); // 双方未設定 → 名前昇順
+        }
+
+        var cmp = kind == ColumnSortKind.Numeric ? a.Num.CompareTo(b.Num) : SortKey.Compare(a.Text!, b.Text!);
+        if (desc)
+        {
+            cmp = -cmp;
+        }
+
+        return cmp != 0 ? cmp : NameTiebreak(a, b); // タイブレークは名前昇順(方向で反転しない)
+    }
+
+    private static int NameTiebreak(in SortEntry a, in SortEntry b)
+    {
+        var byName = SortKey.Compare(a.NameKey, b.NameKey);
+        return byName != 0 ? byName : string.CompareOrdinal(a.Entry.Record.Id, b.Entry.Record.Id);
+    }
+
+    private static bool HasTag(ImageEntry e, string tagId)
+    {
+        foreach (var t in e.Tags)
+        {
+            if (string.Equals(t.TagId, tagId, StringComparison.Ordinal))
             {
-                return column.Key == ViewColumnModel.SizeKey ? e.Record.FileSize : null;
+                return true;
             }
-
-            var value = TagValue(e);
-            return value is not null &&
-                   double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var n)
-                ? n
-                : null;
         }
 
-        private string? TextValue(ImageEntry e)
+        return false;
+    }
+
+    private static double? NumericValue(ImageEntry e, ViewSortColumn column)
+    {
+        if (!column.IsTag)
         {
-            if (!column.IsTag)
+            return column.Key == ViewColumnModel.SizeKey ? e.Record.FileSize : null;
+        }
+
+        var value = TagValue(e, column.Key);
+        return value is not null &&
+               double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var n)
+            ? n
+            : null;
+    }
+
+    private static string? TextValue(ImageEntry e, ViewSortColumn column)
+    {
+        if (!column.IsTag)
+        {
+            return column.Key switch
             {
-                return column.Key switch
-                {
-                    ViewColumnModel.NameKey => e.Record.FileName,
-                    ViewColumnModel.ModifiedDateKey => e.Record.ModifiedDate,
-                    _ => null,
-                };
-            }
-
-            var value = TagValue(e);
-            return string.IsNullOrEmpty(value) ? null : value;
+                ViewColumnModel.NameKey => e.Record.FileName,
+                ViewColumnModel.ModifiedDateKey => e.Record.ModifiedDate,
+                _ => null,
+            };
         }
 
-        private string? TagValue(ImageEntry e)
+        var value = TagValue(e, column.Key);
+        return string.IsNullOrEmpty(value) ? null : value;
+    }
+
+    private static string? TagValue(ImageEntry e, string tagId)
+    {
+        foreach (var t in e.Tags)
         {
-            foreach (var tag in e.Tags)
+            if (string.Equals(t.TagId, tagId, StringComparison.Ordinal))
             {
-                if (string.Equals(tag.TagId, column.Key, StringComparison.Ordinal))
-                {
-                    return tag.Value;
-                }
+                return t.Value;
             }
-
-            return null;
         }
 
-        private static int NameTiebreak(ImageEntry a, ImageEntry b)
-        {
-            var byName = Ja.Compare(a.Record.FileName, b.Record.FileName, CompareOptions.None);
-            return byName != 0 ? byName : string.CompareOrdinal(a.Record.Id, b.Record.Id);
-        }
+        return null;
     }
 }
