@@ -6,11 +6,6 @@
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3(Infrastructure 経由の transitive)の既知 advisory。
-         ECO-026 で Avalonia.Controls.ItemsRepeater を追加し restore audit が走ると TreatWarningsAsErrors で
-         エラー化するため、警告へ緩める(NoWarn で握り潰さず警告として残す。上流更新で解消予定)。
-         ViewPrism2.Tests と同一方針(そちらの csproj に先行記録あり)。 -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.4" />

@@ -5,6 +5,11 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <!-- ECO-026: transitive の脆弱な SQLitePCLRaw.lib.e_sqlite3 2.1.11(GHSA-2m69-gcr7-jv3q・HIGH)を明示ピンで
+         3.0.3 へ上書きし根本解消(2.1 系は 2.1.11 が最新=インライン修正版なし・修正は 3.0 系)。
+         Microsoft.Data.Sqlite 10.0.9 との実行時互換は Oracle(100+2skip)/Tests(513)で確認済。
+         NU1903 audit はこれで消えるため App/Tests の WarningsNotAsErrors 暫定回避は撤去。procurement は 32-mbom へ M4 同期。 -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
   </ItemGroup>

@@ -6,10 +6,8 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3(Infrastructure 経由の transitive・テスト時のみ)の既知 advisory。
-         パッケージ追加で restore audit が走ると TreatWarningsAsErrors によりエラー化するため、本テスト
-         プロジェクトに限りエラーではなく警告へ緩める(production 各プロジェクトの方針は不変)。上流更新で解消予定。 -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
+    <!-- NU1903(SQLitePCLRaw.lib.e_sqlite3 2.1.11・GHSA-2m69-gcr7-jv3q)は ECO-026 で Infrastructure が
+         SQLitePCLRaw.bundle_e_sqlite3 3.0.3 を明示ピンして根本解消したため、暫定の WarningsNotAsErrors 回避は撤去。 -->
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
