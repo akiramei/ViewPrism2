@@ -684,7 +684,7 @@ changes:
   - id: ECO-029
     title: "trace-map/台帳の複合記法・変種品番の正規化(参照欄は単一 ID+注釈は note へ)"
     type: 台帳正規化(doc-only)
-    status: staged
+    status: applied   # 2026-07-03 適用: 1対多は配列(ref-v0.6 配列エッジ併記とセット)・trace-map 76フィールド機械変換・変種0006A/B/CはIRへderived定義・30/42の合成値分離。付随の真正2件是正(ebomItemRefのK-REGEX混在/作業タブモックの取込先パス誤り)。lint: error 81→0・warn 87→85
     golden: n/a
     baseline: "main 30f2ed9"
     findings: "R-003 計82所見(ui-trace-map 77・ui-bom 変種 0006A/B/C 3・30-ebom 合成値 1・42 散文 1)"

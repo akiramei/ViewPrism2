@@ -11,83 +11,802 @@
       "M3": "work/tag-tab/ViewPrism2 配置タグ設定.dc.html"
     }
   },
-
   "entries": [
-    { "file": "M1", "locator": "ルート .dc 全体(タグタブ)", "uiIr": "TMP-UI-SCR-0001", "uiBom": "TMP-UI-SCR-0001", "ebomItemRef": ["E-UI-TAGS-026", "E-UI-NODEGRAPH-025"], "handling": "bom" },
-
-    { "file": "M1", "locator": "titlebar(ロゴ+ViewPrism 2+window controls)", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
-    { "file": "M1", "locator": "menu strip(File/Edit/View/Window/Help)", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
-    { "file": "M1", "locator": "nav bar tabs(タグ/画像/作業)", "uiIr": "TMP-UI-ACT-0029", "uiBom": "TMP-UI-ACT-0029", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
-    { "file": "M1", "locator": "nav bar 検索(タグ・ビューを検索 ⌘K)", "uiIr": "TMP-UI-ACT-0030 / TMP-UI-INP-0016", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "nonBom", "note": "決定 UQ-E4: グローバル検索は不採用。UI-BOM へ昇格しない。" },
-    { "file": "M1", "locator": "nav bar 設定", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
-
-    { "file": "M1", "locator": "PANE 1 : VIEWS コンテナ", "uiIr": "TMP-UI-REG-0002", "uiBom": "TMP-UI-REG-0002", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 1 新規ビュー ボタン", "uiIr": "TMP-UI-ACT-0001", "uiBom": "TMP-UI-ACT-0001", "ebomItemRef": ["E-UI-TAGS-026", "E-VIEWSVC-009"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 1 sc-for views > view.rowStyle(行)", "uiIr": "TMP-UI-CMP-0001", "uiBom": "TMP-UI-CMP-0001", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom", "note": "onClick=view.select → TMP-UI-ACT-0002。badge=tags(タグ数)。決定 UQ-E1: お気に入り★削除・説明は tooltip(DC-VIEWLIST-001 改訂 ECO)。" },
-    { "file": "M1", "locator": "PANE 1 view 行 折り畳みボタン(«)", "uiIr": "TMP-UI-REG-0002 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-TAGS-026"], "handling": "trace", "note": "ペイン折り畳み可否は UQ。" },
-
-    { "file": "M1", "locator": "PANE 2 : HIERARCHY コンテナ(主役)", "uiIr": "TMP-UI-REG-0003", "uiBom": "TMP-UI-REG-0003", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 2 ヘッダ操作(collapse-all chevrons / +)", "uiIr": "TMP-UI-ACT-0003 / TMP-UI-ACT-0023", "uiBom": "TMP-UI-ACT-0023", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "trace" },
-    { "file": "M1", "locator": "PANE 2 『ビュー階層構造』+ {{treeTagCount}} タグ バッジ", "uiIr": "TMP-UI-REG-0003", "uiBom": "TMP-UI-REG-0003", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 2 sc-for nodes > node.rowStyle(親行)", "uiIr": "TMP-UI-OCC-0004", "uiBom": "TMP-UI-OCC-0004", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom", "note": "caret=展開(TMP-UI-ACT-0003)、childCount バッジ、dot/typeChip。" },
-    { "file": "M1", "locator": "PANE 2 node.children > leaf.rowStyle(子行+drag handle)", "uiIr": "TMP-UI-OCC-0005", "uiBom": "TMP-UI-OCC-0005", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom", "note": "drag handle=TMP-UI-ACT-0004。" },
-    { "file": "M1", "locator": "PANE 2 末尾 ヒント box(右パレットから…)", "uiIr": "unmodeled", "uiBom": null, "ebomItemRef": [], "handling": "nonBom" },
-
-    { "file": "M1", "locator": "PANE 3 : TAG PALETTE コンテナ", "uiIr": "TMP-UI-REG-0004", "uiBom": "TMP-UI-REG-0004", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 検索 input(onInput=onSearch)", "uiIr": "TMP-UI-INP-0001 / TMP-UI-ACT-0005", "uiBom": "TMP-UI-ACT-0005", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 追加 ボタン", "uiIr": "TMP-UI-ACT-0006", "uiBom": "TMP-UI-ACT-0006", "ebomItemRef": ["E-UI-TAGS-026", "E-TAGSVC-008"], "handling": "bom", "note": "opens TMP-UI-CMP-0007。" },
-    { "file": "M1", "locator": "PANE 3 件数サマリ(paletteCount / totalTags)+種別凡例", "uiIr": "TMP-UI-CMP-0004", "uiBom": "TMP-UI-CMP-0004", "ebomItemRef": ["E-DESIGN-028"], "handling": "trace", "note": "凡例の色=種別チップトークン。" },
-    { "file": "M1", "locator": "PANE 3 sc-for palette > tag.cardStyle(カード)", "uiIr": "TMP-UI-CMP-0003", "uiBom": "TMP-UI-CMP-0003", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 カード えんぴつ", "uiIr": "TMP-UI-ACT-0007", "uiBom": "TMP-UI-ACT-0007", "ebomItemRef": ["E-UI-TAGS-026", "E-TAGSVC-008"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 カード ごみ箱", "uiIr": "TMP-UI-ACT-0008", "uiBom": "TMP-UI-ACT-0008", "ebomItemRef": ["E-UI-TAGS-026", "E-TAGSVC-008"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 カード sc-if tag.isText(候補値チップ)", "uiIr": "TMP-UI-OCC-0002", "uiBom": "TMP-UI-OCC-0002", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 カード sc-if tag.isNum(範囲+刻み)", "uiIr": "TMP-UI-OCC-0003", "uiBom": "TMP-UI-OCC-0003", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "PANE 3 カード sc-if tag.isSimple(値なし注記)", "uiIr": "TMP-UI-OCC-0001", "uiBom": "TMP-UI-OCC-0001", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M1", "locator": "DESIGN DIRECTION バンド/原則カード/トークンデモ/NEXT STEPS", "uiIr": "unmodeled", "uiBom": null, "ebomItemRef": ["E-DESIGN-028"], "handling": "nonBom", "note": "トークンデモのみ E-DESIGN-028 の reference。" },
-
-    { "file": "M2", "locator": "MODAL ルート(新しいタグを作成)", "uiIr": "TMP-UI-CMP-0007", "uiBom": "TMP-UI-CMP-0007", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "ghost backdrop + scrim", "uiIr": "unmodeled", "uiBom": null, "ebomItemRef": [], "handling": "nonBom" },
-    { "file": "M2", "locator": "modal header 閉じる(×)", "uiIr": "TMP-UI-ACT-0017", "uiBom": "TMP-UI-ACT-0017", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "LEFT タグ名 input(onName)*", "uiIr": "TMP-UI-INP-0002", "uiBom": "TMP-UI-INP-0002", "ebomItemRef": ["E-UI-TAGS-026", "E-TAGSVC-008"], "handling": "bom" },
-    { "file": "M2", "locator": "LEFT 種別セグメント(setSimple/setText/setNumber)", "uiIr": "TMP-UI-CMP-0009 / TMP-UI-ACT-0010", "uiBom": "TMP-UI-CMP-0009", "ebomItemRef": ["E-UI-TAGS-026", "E-DOMAIN-001"], "handling": "bom" },
-    { "file": "M2", "locator": "LEFT カラー swatches(sc-for swatches)", "uiIr": "TMP-UI-CMP-0010 / TMP-UI-INP-0004", "uiBom": "TMP-UI-CMP-0010", "ebomItemRef": ["E-UI-TAGS-026", "E-DESIGN-028"], "handling": "bom" },
-    { "file": "M2", "locator": "LEFT 説明 textarea(onDesc)", "uiIr": "TMP-UI-INP-0003", "uiBom": "TMP-UI-INP-0003", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "RIGHT sc-if isSimple(シンプル用設定パネル=用途説明)", "uiIr": "TMP-UI-CMP-0015 / TMP-UI-STA-0004", "uiBom": "TMP-UI-CMP-0015", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom", "note": "型別サブ部品(simple)。設定なし。" },
-    { "file": "M2", "locator": "RIGHT sc-if isText(テキスト用設定パネル=選択肢 input+追加+リスト)", "uiIr": "TMP-UI-CMP-0016 / TMP-UI-INP-0005 / TMP-UI-ACT-0012", "uiBom": "TMP-UI-CMP-0016", "ebomItemRef": ["E-UI-TAGS-026", "E-TAGSVC-008"], "handling": "bom", "note": "型別サブ部品(text)。option-row(CMP-0011)を内包。" },
-    { "file": "M2", "locator": "RIGHT sc-for options > opt(行+remove)", "uiIr": "TMP-UI-CMP-0011 / TMP-UI-ACT-0013 / TMP-UI-ACT-0014", "uiBom": "TMP-UI-CMP-0011", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "RIGHT sc-if noOptions(空状態)", "uiIr": "TMP-UI-STA-0006", "uiBom": "TMP-UI-STA-0006", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "RIGHT sc-if isNumber(数値用設定パネル=min/max/step/unit+プリセット)", "uiIr": "TMP-UI-CMP-0017 / TMP-UI-INP-0006/0007/0008/0009", "uiBom": "TMP-UI-CMP-0017", "ebomItemRef": ["E-UI-TAGS-026", "E-DOMAIN-001"], "handling": "bom", "note": "型別サブ部品(number)。min/max/step/unit は INP-0006〜0009。" },
-    { "file": "M2", "locator": "RIGHT 数値プリセット(presetStar/preset100/preset10)", "uiIr": "TMP-UI-ACT-0015", "uiBom": "TMP-UI-ACT-0015", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "preview strip(previewDot/Name + 種別別表現)", "uiIr": "TMP-UI-CMP-0012 / TMP-UI-STA-0007 / TMP-UI-ACT-0028", "uiBom": "TMP-UI-CMP-0012", "ebomItemRef": ["E-UI-TAGS-026", "E-UI-TAGASSIGN-029"], "handling": "bom", "note": "決定 UQ-E5: 付与表現の表示一致を契約化(DC-TAGPREVIEW-001 候補)。" },
-    { "file": "M2", "locator": "footer キャンセル", "uiIr": "TMP-UI-ACT-0017", "uiBom": "TMP-UI-ACT-0017", "ebomItemRef": ["E-UI-TAGS-026"], "handling": "bom" },
-    { "file": "M2", "locator": "footer 保存(saveBtnStyle / canSave)", "uiIr": "TMP-UI-ACT-0016 / TMP-UI-STA-0005", "uiBom": "TMP-UI-ACT-0016", "ebomItemRef": ["E-UI-TAGS-026", "E-TAGSVC-008"], "handling": "bom" },
-
-    { "file": "M3", "locator": "titlebar(タグ / 階層構造)", "uiIr": "TMP-UI-REG-0001 / unmodeled", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
-    { "file": "M3", "locator": "feature cards(別名/条件/ホーム説明)", "uiIr": "unmodeled", "uiBom": null, "ebomItemRef": [], "handling": "nonBom" },
-    { "file": "M3", "locator": "hierarchy pane header + タグを配置 ボタン", "uiIr": "TMP-UI-REG-0003 / TMP-UI-ACT-0023", "uiBom": "TMP-UI-ACT-0023", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom", "note": "決定 UQ-E3: 汎用ラベル採用(GF-04 撤回 ECO)。" },
-    { "file": "M3", "locator": "『ビュー階層構造』+ {{tagCount}} タグ", "uiIr": "TMP-UI-REG-0003", "uiBom": "TMP-UI-REG-0003", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "sc-for rows > row(配置タグ行)", "uiIr": "TMP-UI-CMP-0002", "uiBom": "TMP-UI-CMP-0002", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom", "note": "M1 階層行の高忠実度版。正準アフォーダンス。" },
-    { "file": "M3", "locator": "row ホーム⬡ toggle(toggleHome)", "uiIr": "TMP-UI-ACT-0018 / TMP-UI-STA-0008", "uiBom": "TMP-UI-ACT-0018", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-GRAPH-003"], "handling": "bom" },
-    { "file": "M3", "locator": "row 別名インライン編集(sc-if editing / aliasDraft / confirmAlias)", "uiIr": "TMP-UI-INP-0010 / TMP-UI-ACT-0019 / TMP-UI-ACT-0020 / TMP-UI-STA-0010", "uiBom": "TMP-UI-INP-0010", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-VIEWSVC-009"], "handling": "bom" },
-    { "file": "M3", "locator": "row 別名表示(sc-if hasAlias『＝元名』)", "uiIr": "TMP-UI-STA-0009", "uiBom": "TMP-UI-STA-0009", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "row 種別チップ", "uiIr": "TMP-UI-CMP-0004", "uiBom": "TMP-UI-CMP-0004", "ebomItemRef": ["E-DESIGN-028"], "handling": "trace" },
-    { "file": "M3", "locator": "row HOME ピル(sc-if isHome)", "uiIr": "TMP-UI-STA-0008", "uiBom": "TMP-UI-STA-0008", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "row 条件バッジ(sc-if condShow / condSummary)", "uiIr": "TMP-UI-CMP-0006 / TMP-UI-STA-0011", "uiBom": "TMP-UI-CMP-0006", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-I18N-ASSETS-027"], "handling": "bom" },
-    { "file": "M3", "locator": "row アクション えんぴつ(startEdit)", "uiIr": "TMP-UI-ACT-0019", "uiBom": "TMP-UI-ACT-0019", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "row アクション じょうご(openCond)", "uiIr": "TMP-UI-ACT-0021", "uiBom": "TMP-UI-ACT-0021", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "row アクション ごみ箱(削除)", "uiIr": "TMP-UI-ACT-0022", "uiBom": "TMP-UI-ACT-0022", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "home explainer box(いまホームは…)", "uiIr": "TMP-UI-STA-0008", "uiBom": "TMP-UI-STA-0008", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "trace" },
-
-    { "file": "M3", "locator": "CONDITION DIALOG ルート(sc-if dlg.open)", "uiIr": "TMP-UI-CMP-0008", "uiBom": "TMP-UI-CMP-0008", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-EVAL-002"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog header(色ドット+対象名+×)", "uiIr": "TMP-UI-ACT-0017", "uiBom": "TMP-UI-ACT-0017", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog 条件タイプ セグメント(typeOptions)", "uiIr": "TMP-UI-CMP-0013 / TMP-UI-ACT-0024 / TMP-UI-STA-0012", "uiBom": "TMP-UI-CMP-0013", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-EVAL-002"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog sc-if isPattern(正規表現 input)", "uiIr": "TMP-UI-INP-0011", "uiBom": "TMP-UI-INP-0011", "ebomItemRef": ["E-EVAL-002", "K-REGEX"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog sc-if isSelect(候補値チェックリスト)", "uiIr": "TMP-UI-CMP-0014 / TMP-UI-INP-0012 / TMP-UI-ACT-0025", "uiBom": "TMP-UI-CMP-0014", "ebomItemRef": ["E-EVAL-002"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog sc-if noCandidates(空状態)", "uiIr": "TMP-UI-STA-0014", "uiBom": "TMP-UI-STA-0014", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog sc-if isEqual(等値 input)", "uiIr": "TMP-UI-INP-0013", "uiBom": "TMP-UI-INP-0013", "ebomItemRef": ["E-EVAL-002"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog sc-if isRange(min〜max input)", "uiIr": "TMP-UI-INP-0014 / TMP-UI-INP-0015", "uiBom": "TMP-UI-INP-0014", "ebomItemRef": ["E-EVAL-002"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog footer クリア(clearCond)", "uiIr": "TMP-UI-ACT-0026", "uiBom": "TMP-UI-ACT-0026", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog footer キャンセル(cancelCond)", "uiIr": "TMP-UI-ACT-0017", "uiBom": "TMP-UI-ACT-0017", "ebomItemRef": ["E-UI-NODEGRAPH-025"], "handling": "bom" },
-    { "file": "M3", "locator": "dialog footer 適用(applyCond / applyEnabled)", "uiIr": "TMP-UI-ACT-0027 / TMP-UI-STA-0013", "uiBom": "TMP-UI-ACT-0027", "ebomItemRef": ["E-UI-NODEGRAPH-025", "E-EVAL-002"], "handling": "bom" }
+    {
+      "file": "M1",
+      "locator": "ルート .dc 全体(タグタブ)",
+      "uiIr": "TMP-UI-SCR-0001",
+      "uiBom": "TMP-UI-SCR-0001",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "titlebar(ロゴ+ViewPrism 2+window controls)",
+      "uiIr": "TMP-UI-REG-0001",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M1",
+      "locator": "menu strip(File/Edit/View/Window/Help)",
+      "uiIr": "TMP-UI-REG-0001",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M1",
+      "locator": "nav bar tabs(タグ/画像/作業)",
+      "uiIr": "TMP-UI-ACT-0029",
+      "uiBom": "TMP-UI-ACT-0029",
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace"
+    },
+    {
+      "file": "M1",
+      "locator": "nav bar 検索(タグ・ビューを検索 ⌘K)",
+      "uiIr": [
+        "TMP-UI-ACT-0030",
+        "TMP-UI-INP-0016"
+      ],
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "nonBom",
+      "note": "決定 UQ-E4: グローバル検索は不採用。UI-BOM へ昇格しない。"
+    },
+    {
+      "file": "M1",
+      "locator": "nav bar 設定",
+      "uiIr": "TMP-UI-REG-0001",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 1 : VIEWS コンテナ",
+      "uiIr": "TMP-UI-REG-0002",
+      "uiBom": "TMP-UI-REG-0002",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 1 新規ビュー ボタン",
+      "uiIr": "TMP-UI-ACT-0001",
+      "uiBom": "TMP-UI-ACT-0001",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-VIEWSVC-009"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 1 sc-for views > view.rowStyle(行)",
+      "uiIr": "TMP-UI-CMP-0001",
+      "uiBom": "TMP-UI-CMP-0001",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom",
+      "note": "onClick=view.select → TMP-UI-ACT-0002。badge=tags(タグ数)。決定 UQ-E1: お気に入り★削除・説明は tooltip(DC-VIEWLIST-001 改訂 ECO)。"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 1 view 行 折り畳みボタン(«)",
+      "uiIr": "TMP-UI-REG-0002",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "trace",
+      "note": "ペイン折り畳み可否は UQ。",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 2 : HIERARCHY コンテナ(主役)",
+      "uiIr": "TMP-UI-REG-0003",
+      "uiBom": "TMP-UI-REG-0003",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 2 ヘッダ操作(collapse-all chevrons / +)",
+      "uiIr": [
+        "TMP-UI-ACT-0003",
+        "TMP-UI-ACT-0023"
+      ],
+      "uiBom": "TMP-UI-ACT-0023",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "trace"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 2 『ビュー階層構造』+ {{treeTagCount}} タグ バッジ",
+      "uiIr": "TMP-UI-REG-0003",
+      "uiBom": "TMP-UI-REG-0003",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 2 sc-for nodes > node.rowStyle(親行)",
+      "uiIr": "TMP-UI-OCC-0004",
+      "uiBom": "TMP-UI-OCC-0004",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom",
+      "note": "caret=展開(TMP-UI-ACT-0003)、childCount バッジ、dot/typeChip。"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 2 node.children > leaf.rowStyle(子行+drag handle)",
+      "uiIr": "TMP-UI-OCC-0005",
+      "uiBom": "TMP-UI-OCC-0005",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom",
+      "note": "drag handle=TMP-UI-ACT-0004。"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 2 末尾 ヒント box(右パレットから…)",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [],
+      "handling": "nonBom",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 : TAG PALETTE コンテナ",
+      "uiIr": "TMP-UI-REG-0004",
+      "uiBom": "TMP-UI-REG-0004",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 検索 input(onInput=onSearch)",
+      "uiIr": [
+        "TMP-UI-INP-0001",
+        "TMP-UI-ACT-0005"
+      ],
+      "uiBom": "TMP-UI-ACT-0005",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 追加 ボタン",
+      "uiIr": "TMP-UI-ACT-0006",
+      "uiBom": "TMP-UI-ACT-0006",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-TAGSVC-008"
+      ],
+      "handling": "bom",
+      "note": "opens TMP-UI-CMP-0007。"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 件数サマリ(paletteCount / totalTags)+種別凡例",
+      "uiIr": "TMP-UI-CMP-0004",
+      "uiBom": "TMP-UI-CMP-0004",
+      "ebomItemRef": [
+        "E-DESIGN-028"
+      ],
+      "handling": "trace",
+      "note": "凡例の色=種別チップトークン。"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 sc-for palette > tag.cardStyle(カード)",
+      "uiIr": "TMP-UI-CMP-0003",
+      "uiBom": "TMP-UI-CMP-0003",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 カード えんぴつ",
+      "uiIr": "TMP-UI-ACT-0007",
+      "uiBom": "TMP-UI-ACT-0007",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-TAGSVC-008"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 カード ごみ箱",
+      "uiIr": "TMP-UI-ACT-0008",
+      "uiBom": "TMP-UI-ACT-0008",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-TAGSVC-008"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 カード sc-if tag.isText(候補値チップ)",
+      "uiIr": "TMP-UI-OCC-0002",
+      "uiBom": "TMP-UI-OCC-0002",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 カード sc-if tag.isNum(範囲+刻み)",
+      "uiIr": "TMP-UI-OCC-0003",
+      "uiBom": "TMP-UI-OCC-0003",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "PANE 3 カード sc-if tag.isSimple(値なし注記)",
+      "uiIr": "TMP-UI-OCC-0001",
+      "uiBom": "TMP-UI-OCC-0001",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M1",
+      "locator": "DESIGN DIRECTION バンド/原則カード/トークンデモ/NEXT STEPS",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-DESIGN-028"
+      ],
+      "handling": "nonBom",
+      "note": "トークンデモのみ E-DESIGN-028 の reference。",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M2",
+      "locator": "MODAL ルート(新しいタグを作成)",
+      "uiIr": "TMP-UI-CMP-0007",
+      "uiBom": "TMP-UI-CMP-0007",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "ghost backdrop + scrim",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [],
+      "handling": "nonBom",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M2",
+      "locator": "modal header 閉じる(×)",
+      "uiIr": "TMP-UI-ACT-0017",
+      "uiBom": "TMP-UI-ACT-0017",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "LEFT タグ名 input(onName)*",
+      "uiIr": "TMP-UI-INP-0002",
+      "uiBom": "TMP-UI-INP-0002",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-TAGSVC-008"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "LEFT 種別セグメント(setSimple/setText/setNumber)",
+      "uiIr": [
+        "TMP-UI-CMP-0009",
+        "TMP-UI-ACT-0010"
+      ],
+      "uiBom": "TMP-UI-CMP-0009",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-DOMAIN-001"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "LEFT カラー swatches(sc-for swatches)",
+      "uiIr": [
+        "TMP-UI-CMP-0010",
+        "TMP-UI-INP-0004"
+      ],
+      "uiBom": "TMP-UI-CMP-0010",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-DESIGN-028"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "LEFT 説明 textarea(onDesc)",
+      "uiIr": "TMP-UI-INP-0003",
+      "uiBom": "TMP-UI-INP-0003",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "RIGHT sc-if isSimple(シンプル用設定パネル=用途説明)",
+      "uiIr": [
+        "TMP-UI-CMP-0015",
+        "TMP-UI-STA-0004"
+      ],
+      "uiBom": "TMP-UI-CMP-0015",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom",
+      "note": "型別サブ部品(simple)。設定なし。"
+    },
+    {
+      "file": "M2",
+      "locator": "RIGHT sc-if isText(テキスト用設定パネル=選択肢 input+追加+リスト)",
+      "uiIr": [
+        "TMP-UI-CMP-0016",
+        "TMP-UI-INP-0005",
+        "TMP-UI-ACT-0012"
+      ],
+      "uiBom": "TMP-UI-CMP-0016",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-TAGSVC-008"
+      ],
+      "handling": "bom",
+      "note": "型別サブ部品(text)。option-row(CMP-0011)を内包。"
+    },
+    {
+      "file": "M2",
+      "locator": "RIGHT sc-for options > opt(行+remove)",
+      "uiIr": [
+        "TMP-UI-CMP-0011",
+        "TMP-UI-ACT-0013",
+        "TMP-UI-ACT-0014"
+      ],
+      "uiBom": "TMP-UI-CMP-0011",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "RIGHT sc-if noOptions(空状態)",
+      "uiIr": "TMP-UI-STA-0006",
+      "uiBom": "TMP-UI-STA-0006",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "RIGHT sc-if isNumber(数値用設定パネル=min/max/step/unit+プリセット)",
+      "uiIr": [
+        "TMP-UI-CMP-0017",
+        "TMP-UI-INP-0006",
+        "TMP-UI-INP-0007",
+        "TMP-UI-INP-0008",
+        "TMP-UI-INP-0009"
+      ],
+      "uiBom": "TMP-UI-CMP-0017",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-DOMAIN-001"
+      ],
+      "handling": "bom",
+      "note": "型別サブ部品(number)。min/max/step/unit は INP-0006〜0009。"
+    },
+    {
+      "file": "M2",
+      "locator": "RIGHT 数値プリセット(presetStar/preset100/preset10)",
+      "uiIr": "TMP-UI-ACT-0015",
+      "uiBom": "TMP-UI-ACT-0015",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "preview strip(previewDot/Name + 種別別表現)",
+      "uiIr": [
+        "TMP-UI-CMP-0012",
+        "TMP-UI-STA-0007",
+        "TMP-UI-ACT-0028"
+      ],
+      "uiBom": "TMP-UI-CMP-0012",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-UI-TAGASSIGN-029"
+      ],
+      "handling": "bom",
+      "note": "決定 UQ-E5: 付与表現の表示一致を契約化(DC-TAGPREVIEW-001 候補)。"
+    },
+    {
+      "file": "M2",
+      "locator": "footer キャンセル",
+      "uiIr": "TMP-UI-ACT-0017",
+      "uiBom": "TMP-UI-ACT-0017",
+      "ebomItemRef": [
+        "E-UI-TAGS-026"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M2",
+      "locator": "footer 保存(saveBtnStyle / canSave)",
+      "uiIr": [
+        "TMP-UI-ACT-0016",
+        "TMP-UI-STA-0005"
+      ],
+      "uiBom": "TMP-UI-ACT-0016",
+      "ebomItemRef": [
+        "E-UI-TAGS-026",
+        "E-TAGSVC-008"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "titlebar(タグ / 階層構造)",
+      "uiIr": "TMP-UI-REG-0001",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M3",
+      "locator": "feature cards(別名/条件/ホーム説明)",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [],
+      "handling": "nonBom",
+      "uiIrNote": "unmodeled"
+    },
+    {
+      "file": "M3",
+      "locator": "hierarchy pane header + タグを配置 ボタン",
+      "uiIr": [
+        "TMP-UI-REG-0003",
+        "TMP-UI-ACT-0023"
+      ],
+      "uiBom": "TMP-UI-ACT-0023",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom",
+      "note": "決定 UQ-E3: 汎用ラベル採用(GF-04 撤回 ECO)。"
+    },
+    {
+      "file": "M3",
+      "locator": "『ビュー階層構造』+ {{tagCount}} タグ",
+      "uiIr": "TMP-UI-REG-0003",
+      "uiBom": "TMP-UI-REG-0003",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "sc-for rows > row(配置タグ行)",
+      "uiIr": "TMP-UI-CMP-0002",
+      "uiBom": "TMP-UI-CMP-0002",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom",
+      "note": "M1 階層行の高忠実度版。正準アフォーダンス。"
+    },
+    {
+      "file": "M3",
+      "locator": "row ホーム⬡ toggle(toggleHome)",
+      "uiIr": [
+        "TMP-UI-ACT-0018",
+        "TMP-UI-STA-0008"
+      ],
+      "uiBom": "TMP-UI-ACT-0018",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025",
+        "E-GRAPH-003"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row 別名インライン編集(sc-if editing / aliasDraft / confirmAlias)",
+      "uiIr": [
+        "TMP-UI-INP-0010",
+        "TMP-UI-ACT-0019",
+        "TMP-UI-ACT-0020",
+        "TMP-UI-STA-0010"
+      ],
+      "uiBom": "TMP-UI-INP-0010",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025",
+        "E-VIEWSVC-009"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row 別名表示(sc-if hasAlias『＝元名』)",
+      "uiIr": "TMP-UI-STA-0009",
+      "uiBom": "TMP-UI-STA-0009",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row 種別チップ",
+      "uiIr": "TMP-UI-CMP-0004",
+      "uiBom": "TMP-UI-CMP-0004",
+      "ebomItemRef": [
+        "E-DESIGN-028"
+      ],
+      "handling": "trace"
+    },
+    {
+      "file": "M3",
+      "locator": "row HOME ピル(sc-if isHome)",
+      "uiIr": "TMP-UI-STA-0008",
+      "uiBom": "TMP-UI-STA-0008",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row 条件バッジ(sc-if condShow / condSummary)",
+      "uiIr": [
+        "TMP-UI-CMP-0006",
+        "TMP-UI-STA-0011"
+      ],
+      "uiBom": "TMP-UI-CMP-0006",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025",
+        "E-I18N-ASSETS-027"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row アクション えんぴつ(startEdit)",
+      "uiIr": "TMP-UI-ACT-0019",
+      "uiBom": "TMP-UI-ACT-0019",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row アクション じょうご(openCond)",
+      "uiIr": "TMP-UI-ACT-0021",
+      "uiBom": "TMP-UI-ACT-0021",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "row アクション ごみ箱(削除)",
+      "uiIr": "TMP-UI-ACT-0022",
+      "uiBom": "TMP-UI-ACT-0022",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "home explainer box(いまホームは…)",
+      "uiIr": "TMP-UI-STA-0008",
+      "uiBom": "TMP-UI-STA-0008",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "trace"
+    },
+    {
+      "file": "M3",
+      "locator": "CONDITION DIALOG ルート(sc-if dlg.open)",
+      "uiIr": "TMP-UI-CMP-0008",
+      "uiBom": "TMP-UI-CMP-0008",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025",
+        "E-EVAL-002"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog header(色ドット+対象名+×)",
+      "uiIr": "TMP-UI-ACT-0017",
+      "uiBom": "TMP-UI-ACT-0017",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog 条件タイプ セグメント(typeOptions)",
+      "uiIr": [
+        "TMP-UI-CMP-0013",
+        "TMP-UI-ACT-0024",
+        "TMP-UI-STA-0012"
+      ],
+      "uiBom": "TMP-UI-CMP-0013",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025",
+        "E-EVAL-002"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog sc-if isPattern(正規表現 input)",
+      "uiIr": "TMP-UI-INP-0011",
+      "uiBom": "TMP-UI-INP-0011",
+      "ebomItemRef": [
+        "E-EVAL-002"
+      ],
+      "handling": "bom",
+      "kbomRef": [
+        "K-REGEX"
+      ],
+      "note": "ECO-029: K-REGEX は E 品目でなく K 知識につき kbomRef へ分離"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog sc-if isSelect(候補値チェックリスト)",
+      "uiIr": [
+        "TMP-UI-CMP-0014",
+        "TMP-UI-INP-0012",
+        "TMP-UI-ACT-0025"
+      ],
+      "uiBom": "TMP-UI-CMP-0014",
+      "ebomItemRef": [
+        "E-EVAL-002"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog sc-if noCandidates(空状態)",
+      "uiIr": "TMP-UI-STA-0014",
+      "uiBom": "TMP-UI-STA-0014",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog sc-if isEqual(等値 input)",
+      "uiIr": "TMP-UI-INP-0013",
+      "uiBom": "TMP-UI-INP-0013",
+      "ebomItemRef": [
+        "E-EVAL-002"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog sc-if isRange(min〜max input)",
+      "uiIr": [
+        "TMP-UI-INP-0014",
+        "TMP-UI-INP-0015"
+      ],
+      "uiBom": "TMP-UI-INP-0014",
+      "ebomItemRef": [
+        "E-EVAL-002"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog footer クリア(clearCond)",
+      "uiIr": "TMP-UI-ACT-0026",
+      "uiBom": "TMP-UI-ACT-0026",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog footer キャンセル(cancelCond)",
+      "uiIr": "TMP-UI-ACT-0017",
+      "uiBom": "TMP-UI-ACT-0017",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M3",
+      "locator": "dialog footer 適用(applyCond / applyEnabled)",
+      "uiIr": [
+        "TMP-UI-ACT-0027",
+        "TMP-UI-STA-0013"
+      ],
+      "uiBom": "TMP-UI-ACT-0027",
+      "ebomItemRef": [
+        "E-UI-NODEGRAPH-025",
+        "E-EVAL-002"
+      ],
+      "handling": "bom"
+    }
   ]
 }

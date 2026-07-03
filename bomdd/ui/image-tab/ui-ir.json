@@ -100,6 +100,39 @@
       ],
       "confidence": "high",
       "notes": "タグ編集モード時だけ出る文脈ペイン(344px)。ヘッダ(タグ編集+選択枚数pill+×)/未選択ガイド/現在のタグ・タグ追加タブ。E-UI-TAGASSIGN-029(タグ付与パネル)に対応。差分: 値入力はダイアログでなくインライン展開。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0006A",
+      "name": "ブラウズ一覧領域(グリッド/リスト)",
+      "screen": "TMP-UI-SCR-0002",
+      "source": [
+        "derived"
+      ],
+      "confidence": "high",
+      "derivedFrom": "TMP-UI-REG-0006",
+      "notes": "ECO-029(2026-07-03): 観測でなく設計分割 — ECO-016 の品目3分割(E-UI-BROWSE-022/E-UI-AXIS-NAV-040/E-UI-MODE-041)に伴い ui-bom が採番した変種(parent=TMP-UI-REG-0006)の定義を IR へ正規配置(UI-BOM は新規採番しない原則の回復)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0006B",
+      "name": "表示軸ナビ領域(FS/タグビュー)",
+      "screen": "TMP-UI-SCR-0002",
+      "source": [
+        "derived"
+      ],
+      "confidence": "high",
+      "derivedFrom": "TMP-UI-REG-0006",
+      "notes": "ECO-029(2026-07-03): 観測でなく設計分割 — ECO-016 の品目3分割(E-UI-BROWSE-022/E-UI-AXIS-NAV-040/E-UI-MODE-041)に伴い ui-bom が採番した変種(parent=TMP-UI-REG-0006)の定義を IR へ正規配置(UI-BOM は新規採番しない原則の回復)。"
+    },
+    {
+      "tempPartNo": "TMP-UI-REG-0006C",
+      "name": "文脈モード/ツールバー領域",
+      "screen": "TMP-UI-SCR-0002",
+      "source": [
+        "derived"
+      ],
+      "confidence": "high",
+      "derivedFrom": "TMP-UI-REG-0006",
+      "notes": "ECO-029(2026-07-03): 観測でなく設計分割 — ECO-016 の品目3分割(E-UI-BROWSE-022/E-UI-AXIS-NAV-040/E-UI-MODE-041)に伴い ui-bom が採番した変種(parent=TMP-UI-REG-0006)の定義を IR へ正規配置(UI-BOM は新規採番しない原則の回復)。"
     }
   ],
   "components": [

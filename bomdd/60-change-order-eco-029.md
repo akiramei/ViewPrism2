@@ -1,7 +1,20 @@
 # ECO-029 — trace-map/台帳の複合記法・変種品番の正規化(参照値は単一 ID+注釈は note へ)
 
+> **適用記録(2026-07-03)**: 処方を次のとおり確定して適用した。
+> - **1対多は配列で表す**(ref-v0.6 で uiIr[]/uiBom[] 配列エッジを併記 — 単純配列化は旧セレクタが黙って
+>   スキップし「検査が消える」ため、スキーマ側の配列エッジが必須と判明)。trace-map 3ファイル 76 フィールドを
+>   機械変換(` / ` 分割・短縮連番 `0061/0062/0063` 展開・unmodeled/designIntent は uiIrNote へ 24 件)。
+> - **変種品番は IR に derived 定義**(S-19 処方の第1選択): 0006A/B/C は ECO-016 の品目3分割に伴う設計分割で
+>   あり観測ではない — image-tab ui-ir に `source: [derived]`+derivedFrom 付きで正規配置(「UI-BOM は新規
+>   採番しない」原則の回復)。
+> - 30-ebom の K+パス合成値・42 の散文合成値は ID+note へ分離。
+> - 付随の真正欠陥2件を是正: ui-trace-map の ebomItemRef への K-REGEX 混在(→kbomRef へ分離)/
+>   work-tab ui-ir の作業タブモック参照が実取込先と違うパス(画像タブ/→作業タブ/)のまま ingestStatus=pending
+>   だった(→実在確認の上 ingested へ同期)。
+> - 検証: workspace lint **error 81→0**・warn 87→85(残85は全て ECO-032(b) の注釈付きパス債務)。
+
 - **type**: 台帳正規化(doc-only・記法債務の返済)
-- **status**: staged(起票のみ)
+- **status**: applied(2026-07-03)
 - **golden**: n/a
 - **baseline**: main `30f2ed9`
 - **出所**: BomDD-Plm bomdd-lint(v0.2-eco-001-accepted)workspace 遡及(2026-07-03)。S-19 裁定で

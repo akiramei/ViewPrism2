@@ -90,7 +90,8 @@ exploratory_probes:
   - id: P-08
     scenario: "decode 戦略の実 A/B。同一最終レシピ(32×32 双線形→PerceptualHash)で **decode 経路だけ**異なる 2 工場を、代表ワークロード(大判 JPEG 写真)で μ 対決。factory-A=PHashImageReader(SKBitmap.Decode フル解像度→Resize)/ factory-B=PHashImageReaderScaledDecode(SKCodec scaled-decode 早期縮小)。factory-B は別エージェント(Codex)が隔離製造=真の別工場"
     dimension: "A/B 生産技術(select/synthesize/defer/tension の実走)。μ=選択の主レバー・Cpk=安定性の番兵・固定オラクルは序列化不能を capability で序列化"
-    sweep_ref: "P-07 carryover(DecodeToWidth 早期縮小)/ capability-discipline.md §A/B / 20-spec §2.10.4"
+    sweep_ref: P-07   # ECO-029: 合成値を分離(参照欄は単一 ID・注記は note へ)
+    sweep_note: "P-07 carryover(DecodeToWidth 早期縮小)の実走。併読: capability-discipline.md §A/B・bomdd/20-spec.md#2.10.4"
     harness: "tests/ViewPrism2.Oracle/ABDecodeStrategyProbe.cs(設計者側・工場非開示)。同等性ゲート(両工場 EQ-RANK)=常時実行 / μ 対決=VP_RUN_AB=1 で明示実行(~11s)"
     correctness_gate:
       contract: "EQ-RANK(順位等価・threshold 非依存): 近傍=同一構造の JPEG 再エンコードが無関係より厳密に上位。絶対閾値メンバーシップ(threshold:70)は factory-04 固有較正=this-build なので緩め(threshold:1)て純粋順位で検査"

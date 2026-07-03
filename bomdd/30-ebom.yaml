@@ -356,7 +356,8 @@ ebom:
       part_kind: screen-surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-041, REQ-042, REQ-081]
-      external_source_ref: "K-AVALONIA + ViewPrismUI:資料/画像タブ/ViewPrism2 ファイル一覧v2 (standalone).html(ECO-025 β 列描画+ソート・権威=docs/screens/file_list.md v2 `3e820b8`)"
+      external_source_ref: K-AVALONIA   # ECO-029: 合成値を分離(参照欄は単一 ID・注記は note へ)
+      external_source_note: "モック権威: ViewPrismUI:資料/画像タブ/ViewPrism2 ファイル一覧v2 (standalone).html(ECO-025 β 列描画+ソート・CAD 権威=docs/screens/file_list.md v2 3e820b8)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       supersedes: E-UI-GRID-022
       split_by: ECO-016

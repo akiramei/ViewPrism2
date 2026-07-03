@@ -11,36 +11,298 @@
     }
   },
   "entries": [
-    { "file": "M", "locator": "ルート全体(作業タブ画面)", "uiIr": "TMP-UI-SCR-0003", "uiBom": "TMP-UI-SCR-0003", "ebomItemRef": ["E-UI-SHELL-021", "E-UI-WORKSPACE-043", "E-WORKSPACE-042", "E-UI-BROWSE-022", "E-UI-MODE-041"], "handling": "bom" },
-    { "file": "M", "locator": "ナビ『作業』タブ(第3タブ active)", "uiIr": "TMP-UI-REG-0001", "uiBom": null, "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace", "note": "ECO-α: SelectedTabIndex==2・navigation.work loc・IsWorkTabSelected/ShowWorkTabCommand を E-UI-SHELL-021 へ追加" },
-
-    { "file": "M", "locator": "作業スペース=名前付き永続画像集合(workspaces/currentWs/isDefault)", "uiIr": "TMP-UI-DOM-0025", "uiBom": "TMP-UI-DOM-0025", "ebomItemRef": ["E-WORKSPACE-042", "E-DB-010"], "handling": "bom", "note": "新規 Core+永続化。workspaces/workspace_images テーブル。INV-W1〜W5。REQ-074/075(新規)" },
-    { "file": "M", "locator": "DCLogic addWorkspace(デフォルト回転=新規空デフォルト+旧デフォルトを時刻名で降格)", "uiIr": "TMP-UI-ACT-0074", "uiBom": "TMP-UI-DOM-0025", "ebomItemRef": ["E-WORKSPACE-042"], "handling": "bom", "note": "CreateWorkspaceRotatingDefault(clock)。INV-W1(常にデフォルト1つ)" },
-    { "file": "M", "locator": "DCLogic commitRename(非デフォルトのみ・空フォールバック)", "uiIr": "TMP-UI-ACT-0076", "uiBom": "TMP-UI-INP-0021", "ebomItemRef": ["E-WORKSPACE-042", "E-UI-WORKSPACE-043"], "handling": "bom", "note": "RenameWorkspace。INV-W3(デフォルト不可)" },
-    { "file": "M", "locator": "DCLogic moveSelectedTo(現スペース除去+移動先へ和集合)", "uiIr": "TMP-UI-ACT-0077", "uiBom": "TMP-UI-CMP-0045", "ebomItemRef": ["E-WORKSPACE-042", "E-UI-MODE-041"], "handling": "phase-beta", "note": "MoveImages(Core=α・surface 結線=β 作業モード随伴)。INV-W5(原子)" },
-    { "file": "M", "locator": "DCLogic context()=現スペースの workPool 画像", "uiIr": "TMP-UI-STA-0039", "uiBom": "TMP-UI-DOM-0025", "ebomItemRef": ["E-WORKSPACE-042", "E-UI-BROWSE-022"], "handling": "bom", "note": "GetWorkspaceImages(normal のみ)。E-UI-BROWSE-022 の母集合が作業スペース" },
-
-    { "file": "M/I", "locator": "作業対象の受け渡し(画像タブ AddToWork→デフォルトスペース)", "uiIr": "TMP-UI-DOM-0026", "uiBom": "TMP-UI-DOM-0026", "ebomItemRef": ["E-WORKSPACE-042", "E-UI-MODE-041"], "handling": "rewire", "note": "ECO-017 invariant『workTargets セッション内蓄積のみ・永続化スコープ外』→ AddImagesToDefault 書き込みへ更新(ECO-α)" },
-
-    { "file": "M", "locator": "左サイドバー=作業スペースペイン(276/64 折り畳み)", "uiIr": "TMP-UI-REG-0008", "uiBom": "TMP-UI-REG-0008", "ebomItemRef": ["E-UI-WORKSPACE-043"], "handling": "bom" },
-    { "file": "M", "locator": "作業スペース行カード(アイコン+名前+既定バッジ+sub+件数+鉛筆)", "uiIr": "TMP-UI-CMP-0042", "uiBom": "TMP-UI-CMP-0042", "ebomItemRef": ["E-UI-WORKSPACE-043"], "handling": "bom" },
-    { "file": "M", "locator": "見出し『作業スペース』+＋追加+畳む", "uiIr": "TMP-UI-CMP-0043", "uiBom": "TMP-UI-CMP-0043", "ebomItemRef": ["E-UI-WORKSPACE-043"], "handling": "bom" },
-    { "file": "M", "locator": "ワークスペースヘッダ(中央上・名前+既定（自動追加先）+件数)", "uiIr": "TMP-UI-CMP-0044", "uiBom": "TMP-UI-CMP-0044", "ebomItemRef": ["E-UI-WORKSPACE-043"], "handling": "bom", "note": "E-UI-AXIS-NAV-040 パンくずを置換(作業タブは軸/パンくず非採用)" },
-    { "file": "M", "locator": "別スペースへ移動メニュー(作業モード随伴・選択数バッジ)", "uiIr": "TMP-UI-CMP-0045", "uiBom": "TMP-UI-CMP-0045", "ebomItemRef": ["E-UI-MODE-041", "E-WORKSPACE-042"], "handling": "phase-beta" },
-    { "file": "M", "locator": "空スペース empty state", "uiIr": "TMP-UI-CMP-0046", "uiBom": "TMP-UI-CMP-0046", "ebomItemRef": ["E-UI-WORKSPACE-043"], "handling": "bom" },
-    { "file": "M", "locator": "折り畳み rail(＋+スペースアイコン列)", "uiIr": "TMP-UI-OCC-0015", "uiBom": "TMP-UI-REG-0008", "ebomItemRef": ["E-UI-WORKSPACE-043"], "handling": "bom" },
-    { "file": "M", "locator": "スペース名インライン入力(autofocus・Enter/Esc/blur)", "uiIr": "TMP-UI-INP-0021", "uiBom": "TMP-UI-INP-0021", "ebomItemRef": ["E-UI-WORKSPACE-043", "E-WORKSPACE-042"], "handling": "bom" },
-
-    { "file": "M", "locator": "中央ツールバー(タグ編集/作業/⋯)・ソート・グリッド/リスト", "uiIr": "TMP-UI-REG-0006", "uiBom": null, "ebomItemRef": ["E-UI-BROWSE-022", "E-UI-MODE-041"], "handling": "reuse", "note": "image-tab 再利用。差分=軸セレクタ無し・パンくず→ワークスペースヘッダ・作業随伴=move" },
-    { "file": "M", "locator": "中央グリッドカード/リスト行・タグ絞り込みチップ", "uiIr": "TMP-UI-REG-0006", "uiBom": null, "ebomItemRef": ["E-UI-BROWSE-022"], "handling": "reuse" },
-    { "file": "M", "locator": "右ペイン タグ編集パネル(現在のタグ/タグ追加/インライン値/数値)", "uiIr": "TMP-UI-REG-0007", "uiBom": null, "ebomItemRef": ["E-UI-TAGASSIGN-029", "E-UI-MODE-041"], "handling": "reuse" },
-    { "file": "M", "locator": "ツールバー『整理』ボタン(モック未配線→決定で本配線)", "uiIr": "TMP-UI-ACT(integrate)", "uiBom": null, "ebomItemRef": ["E-UI-SIMILARITY-035", "E-UI-MERGE-036", "E-UI-MODE-041"], "handling": "phase-beta", "note": "UQ-W03 決定=出す。整理トレイを作業タブへ配線(ECO-β)" },
-    { "file": "M", "locator": "⋯メニュー(修復/削除/ゴミ箱)・削除モード", "uiIr": "TMP-UI-REG-0006", "uiBom": null, "ebomItemRef": ["E-UI-MODE-041", "E-TRASH-038"], "handling": "reuse" },
-    { "file": "M", "locator": "ゴミ箱 in-tab popup(複数選択/すべて選択/復元/完全削除/空)", "uiIr": "TMP-UI-REG-0006", "uiBom": null, "ebomItemRef": ["E-UI-REPAIR-039", "E-TRASH-038"], "handling": "reuse" },
-    { "file": "M", "locator": "ゴミ箱確認文言『元のファイルも削除され…』", "uiIr": "unmodeled", "uiBom": "notModeledFromIr", "ebomItemRef": ["E-UI-REPAIR-039"], "handling": "correct", "note": "INV-009 違反=ECO-019 T1 是正を適用(『画像ファイルは削除されません(DB から除去)』)" },
-
-    { "file": "M", "locator": "direction band/ヘッダコピー(作業タブ憲章)", "uiIr": "unmodeled", "uiBom": "notModeledFromIr", "ebomItemRef": [], "handling": "designIntent" },
-    { "file": "M", "locator": "titlebar/menu strip", "uiIr": "unmodeled", "uiBom": "notModeledFromIr", "ebomItemRef": ["E-UI-SHELL-021"], "handling": "trace" },
-    { "file": "M", "locator": "axis/breadcrumb DCLogic 残骸・seed データ", "uiIr": "unmodeled", "uiBom": "notModeledFromIr", "ebomItemRef": [], "handling": "nonBom" }
+    {
+      "file": "M",
+      "locator": "ルート全体(作業タブ画面)",
+      "uiIr": "TMP-UI-SCR-0003",
+      "uiBom": "TMP-UI-SCR-0003",
+      "ebomItemRef": [
+        "E-UI-SHELL-021",
+        "E-UI-WORKSPACE-043",
+        "E-WORKSPACE-042",
+        "E-UI-BROWSE-022",
+        "E-UI-MODE-041"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "ナビ『作業』タブ(第3タブ active)",
+      "uiIr": "TMP-UI-REG-0001",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace",
+      "note": "ECO-α: SelectedTabIndex==2・navigation.work loc・IsWorkTabSelected/ShowWorkTabCommand を E-UI-SHELL-021 へ追加"
+    },
+    {
+      "file": "M",
+      "locator": "作業スペース=名前付き永続画像集合(workspaces/currentWs/isDefault)",
+      "uiIr": "TMP-UI-DOM-0025",
+      "uiBom": "TMP-UI-DOM-0025",
+      "ebomItemRef": [
+        "E-WORKSPACE-042",
+        "E-DB-010"
+      ],
+      "handling": "bom",
+      "note": "新規 Core+永続化。workspaces/workspace_images テーブル。INV-W1〜W5。REQ-074/075(新規)"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic addWorkspace(デフォルト回転=新規空デフォルト+旧デフォルトを時刻名で降格)",
+      "uiIr": "TMP-UI-ACT-0074",
+      "uiBom": "TMP-UI-DOM-0025",
+      "ebomItemRef": [
+        "E-WORKSPACE-042"
+      ],
+      "handling": "bom",
+      "note": "CreateWorkspaceRotatingDefault(clock)。INV-W1(常にデフォルト1つ)"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic commitRename(非デフォルトのみ・空フォールバック)",
+      "uiIr": "TMP-UI-ACT-0076",
+      "uiBom": "TMP-UI-INP-0021",
+      "ebomItemRef": [
+        "E-WORKSPACE-042",
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom",
+      "note": "RenameWorkspace。INV-W3(デフォルト不可)"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic moveSelectedTo(現スペース除去+移動先へ和集合)",
+      "uiIr": "TMP-UI-ACT-0077",
+      "uiBom": "TMP-UI-CMP-0045",
+      "ebomItemRef": [
+        "E-WORKSPACE-042",
+        "E-UI-MODE-041"
+      ],
+      "handling": "phase-beta",
+      "note": "MoveImages(Core=α・surface 結線=β 作業モード随伴)。INV-W5(原子)"
+    },
+    {
+      "file": "M",
+      "locator": "DCLogic context()=現スペースの workPool 画像",
+      "uiIr": "TMP-UI-STA-0039",
+      "uiBom": "TMP-UI-DOM-0025",
+      "ebomItemRef": [
+        "E-WORKSPACE-042",
+        "E-UI-BROWSE-022"
+      ],
+      "handling": "bom",
+      "note": "GetWorkspaceImages(normal のみ)。E-UI-BROWSE-022 の母集合が作業スペース"
+    },
+    {
+      "file": "M/I",
+      "locator": "作業対象の受け渡し(画像タブ AddToWork→デフォルトスペース)",
+      "uiIr": "TMP-UI-DOM-0026",
+      "uiBom": "TMP-UI-DOM-0026",
+      "ebomItemRef": [
+        "E-WORKSPACE-042",
+        "E-UI-MODE-041"
+      ],
+      "handling": "rewire",
+      "note": "ECO-017 invariant『workTargets セッション内蓄積のみ・永続化スコープ外』→ AddImagesToDefault 書き込みへ更新(ECO-α)"
+    },
+    {
+      "file": "M",
+      "locator": "左サイドバー=作業スペースペイン(276/64 折り畳み)",
+      "uiIr": "TMP-UI-REG-0008",
+      "uiBom": "TMP-UI-REG-0008",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "作業スペース行カード(アイコン+名前+既定バッジ+sub+件数+鉛筆)",
+      "uiIr": "TMP-UI-CMP-0042",
+      "uiBom": "TMP-UI-CMP-0042",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "見出し『作業スペース』+＋追加+畳む",
+      "uiIr": "TMP-UI-CMP-0043",
+      "uiBom": "TMP-UI-CMP-0043",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "ワークスペースヘッダ(中央上・名前+既定（自動追加先）+件数)",
+      "uiIr": "TMP-UI-CMP-0044",
+      "uiBom": "TMP-UI-CMP-0044",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom",
+      "note": "E-UI-AXIS-NAV-040 パンくずを置換(作業タブは軸/パンくず非採用)"
+    },
+    {
+      "file": "M",
+      "locator": "別スペースへ移動メニュー(作業モード随伴・選択数バッジ)",
+      "uiIr": "TMP-UI-CMP-0045",
+      "uiBom": "TMP-UI-CMP-0045",
+      "ebomItemRef": [
+        "E-UI-MODE-041",
+        "E-WORKSPACE-042"
+      ],
+      "handling": "phase-beta"
+    },
+    {
+      "file": "M",
+      "locator": "空スペース empty state",
+      "uiIr": "TMP-UI-CMP-0046",
+      "uiBom": "TMP-UI-CMP-0046",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "折り畳み rail(＋+スペースアイコン列)",
+      "uiIr": "TMP-UI-OCC-0015",
+      "uiBom": "TMP-UI-REG-0008",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "スペース名インライン入力(autofocus・Enter/Esc/blur)",
+      "uiIr": "TMP-UI-INP-0021",
+      "uiBom": "TMP-UI-INP-0021",
+      "ebomItemRef": [
+        "E-UI-WORKSPACE-043",
+        "E-WORKSPACE-042"
+      ],
+      "handling": "bom"
+    },
+    {
+      "file": "M",
+      "locator": "中央ツールバー(タグ編集/作業/⋯)・ソート・グリッド/リスト",
+      "uiIr": "TMP-UI-REG-0006",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-BROWSE-022",
+        "E-UI-MODE-041"
+      ],
+      "handling": "reuse",
+      "note": "image-tab 再利用。差分=軸セレクタ無し・パンくず→ワークスペースヘッダ・作業随伴=move"
+    },
+    {
+      "file": "M",
+      "locator": "中央グリッドカード/リスト行・タグ絞り込みチップ",
+      "uiIr": "TMP-UI-REG-0006",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-BROWSE-022"
+      ],
+      "handling": "reuse"
+    },
+    {
+      "file": "M",
+      "locator": "右ペイン タグ編集パネル(現在のタグ/タグ追加/インライン値/数値)",
+      "uiIr": "TMP-UI-REG-0007",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-TAGASSIGN-029",
+        "E-UI-MODE-041"
+      ],
+      "handling": "reuse"
+    },
+    {
+      "file": "M",
+      "locator": "ツールバー『整理』ボタン(モック未配線→決定で本配線)",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SIMILARITY-035",
+        "E-UI-MERGE-036",
+        "E-UI-MODE-041"
+      ],
+      "handling": "phase-beta",
+      "note": "UQ-W03 決定=出す。整理トレイを作業タブへ配線(ECO-β)",
+      "uiIrNote": "TMP-UI-ACT(integrate)"
+    },
+    {
+      "file": "M",
+      "locator": "⋯メニュー(修復/削除/ゴミ箱)・削除モード",
+      "uiIr": "TMP-UI-REG-0006",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-MODE-041",
+        "E-TRASH-038"
+      ],
+      "handling": "reuse"
+    },
+    {
+      "file": "M",
+      "locator": "ゴミ箱 in-tab popup(複数選択/すべて選択/復元/完全削除/空)",
+      "uiIr": "TMP-UI-REG-0006",
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-REPAIR-039",
+        "E-TRASH-038"
+      ],
+      "handling": "reuse"
+    },
+    {
+      "file": "M",
+      "locator": "ゴミ箱確認文言『元のファイルも削除され…』",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-REPAIR-039"
+      ],
+      "handling": "correct",
+      "note": "INV-009 違反=ECO-019 T1 是正を適用(『画像ファイルは削除されません(DB から除去)』)",
+      "uiIrNote": "unmodeled",
+      "uiBomNote": "notModeledFromIr"
+    },
+    {
+      "file": "M",
+      "locator": "direction band/ヘッダコピー(作業タブ憲章)",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [],
+      "handling": "designIntent",
+      "uiIrNote": "unmodeled",
+      "uiBomNote": "notModeledFromIr"
+    },
+    {
+      "file": "M",
+      "locator": "titlebar/menu strip",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [
+        "E-UI-SHELL-021"
+      ],
+      "handling": "trace",
+      "uiIrNote": "unmodeled",
+      "uiBomNote": "notModeledFromIr"
+    },
+    {
+      "file": "M",
+      "locator": "axis/breadcrumb DCLogic 残骸・seed データ",
+      "uiIr": null,
+      "uiBom": null,
+      "ebomItemRef": [],
+      "handling": "nonBom",
+      "uiIrNote": "unmodeled",
+      "uiBomNote": "notModeledFromIr"
+    }
   ]
 }
