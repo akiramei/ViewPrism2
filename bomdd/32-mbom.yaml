@@ -292,7 +292,7 @@ mbom:
         - Esc/閉じるボタン/現在位置表示/端停止は全モード共通(REQ-044 継承)
         - (ECO-022)タグ制御 ON の見開き配置/送り/現在画像は E-VIEWER-TAGCTRL-044 のみ経由。マッピングモーダルは表示パリティ契約(6行×提示フィールド)を満たす
       acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-UI-G11, CP-L1-SMOKE]
-      fmea_refs: [FMEA-015, FMEA-016, FMEA-020]
+      fmea_refs: [FMEA-015, FMEA-016, FMEA-020, FMEA-037]   # FMEA-037 は ECO-030 検証時に逆参照の欠けを同期(FMEA 表の unit: M-UI-018 と整合)
 
     - id: M-UI-019
       ebom_refs: [E-UI-BROWSE-022, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
