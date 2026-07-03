@@ -284,6 +284,9 @@ control_plan:
       fixture: tests/ViewPrism2.Tests(Trait cp=CP-NFR-001、カテゴリ perf)
       oracle: Stopwatch 計測値の判定
       approver: automated
+      test_vectors:   # ECO-033(2026-07-03): CpNfr001Tests から事実転記
+        - "1,000 画像×各5タグ×3条件(シンプル/テキスト/数値)を合成シード → 評価レイテンシ中央値 ≦ 200ms"
+        - "ウォームアップ1回を計測から除外(JIT ノイズの排除)・3回計測の中央値判定(単発スパイク耐性)"
 
     - id: CP-L1-SMOKE
       characteristic: ビルド+起動+golden 対象経路のスモーク(unit 緑のまま表面全滅の盲点対策。v1.3/ECO-002 P1-6 で経路を深化)
@@ -302,6 +305,11 @@ control_plan:
       fixture: tests/ViewPrism2.Tests(グローバルハンドラへの例外注入)+ L1 スモークで実アプリ確認
       oracle: テスト判定(+L1 目視)
       approver: automated
+      test_vectors:   # ECO-033(2026-07-03): CpRobust001Tests から事実転記
+        - "例外注入 → プロセス生存+スタック全文ログ+非モーダル通知(正常系)"
+        - "通知ハンドラ自身が例外を投げても外へ漏らさない(封じ込めの再帰故障)"
+        - "ロガー未設定でも安全に処理(部分構成での縮退)"
+        - "FormatNotification 未設定時の通知文言=例外メッセージへフォールバック"
 
     - id: CP-TAGUI-013
       characteristic: タグ付与ロジック(REQ-046・FMEA-014)。ECO-024 で原典 TaggingPanelViewModel を撤去し、検証は Core(TagService 原子バッチ)+ 画像タブ インライン付与(ImageTabViewModel)へ再帰属
@@ -576,8 +584,12 @@ control_plan:
     - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G11, characteristic: "タグ制御モード(設定トグル・マッピングモーダル表示パリティ・見開きでの skip/force/spread/empty 配置・ON とマッピングの復元)(G-11・ECO-022)。**表示パリティ=提示フィールドに限らずモーダル クローム全体をモック突合**: ヘッダ(タグアイコンバッジ+タイトル+説明+X)/ 行のカード化+アクション固定色アイコンバッジ / **行順(モック順=左固定→右固定→占有→skip→左空白→右空白)** / **常時 docked フッター(補足文+既定に戻す+完了 cta)** / 全体オーバーレイ。設定ドロワーは ScrollViewer が有界でカード末尾まで到達可(GF-TAGCTRL-01)。フッター補足文が右端で切れない(GF-TAGCTRL-03)。(FMEA-037=クローム脱漏ガード・2026-07-01 追加)", classification: surface, depth: G, tolerance: "G-11 チェックリスト全項目(20-spec.md §2.6・§2.12.6 提示フィールド)+ クローム パリティ(ヘッダ/フッター/カード/行順/全体オーバーレイ)をモック(standalone.html)と視覚突合", fixture: "実アプリ+作成済みタグ(シンプル/テキスト/数値)+フィクスチャ画像(広告ページを含む見開き用コレクション)", oracle: 承認者の目視チェック(モーダル=ヘッダ/6行カードの提示フィールド/フッター/行順+ドロワースクロール+見開き配置+広告除外+物理側保持), approver: maintainer }
     - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: "TrashServiceTests(TempDb)", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)" }
-    - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: "CpUiRepairViewModelTests(TempDb)", oracle: "xunit.v3 exact" }
-    - { id: CP-DISPLAY-PARITY-022, characteristic: "(ECO-004→ECO-007 改訂)表示パリティの VM フィールド公開: RelinkCandidateViewModel.AbsolutePath/FileName(A-1)・グリッド項目 VM の SizeText(A-2)・TrashItemViewModel.SizeText(A-3)。(ECO-007/E1)ViewRowViewModel は TagCount を公開し ★(IsFavorite)を行表示しない・Description は tooltip 用に公開(A-4 改訂)。(ECO-007/E2)タグパレット行 VM は Description を行に出さない(A-5 撤回)。(ECO-007/E5/DC-TAGPREVIEW-001)タグ作成ダイアログの付与プレビュー整形ヘルパ(核側)が種別別の付与表現を返す(視覚描画は各 golden)", classification: surface, depth: unit, tolerance: "各 VM フィールド公開ベクタ全緑(ViewRow=TagCount 公開/★非表示・パレット=説明非表示・プレビュー整形)", fixture: "Cp*ViewModelTests(TempDb+seed)", oracle: "xunit.v3 exact(VM フィールド公開)" }
-    - { id: CP-REPAIR-CARD-021, characteristic: "(ECO-003)再リンク候補 VM が表示パリティの判断材料を公開する=RelinkCandidateViewModel が FileName・AbsolutePath(collection root+relative)・SizeText・ModifiedText を備える(視覚描画は CP-UI-G10/golden)", classification: surface, depth: unit, tolerance: "GF_V4_04 ベクタ(候補=ファイル名/絶対パス/サイズ/更新時刻を公開・missing 行=ファイル名公開)全緑", fixture: "CpUiRepairViewModelTests(TempDb+seed folder Path)", oracle: "xunit.v3 exact(VM フィールド公開)" }
+    - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: "CpTrash021Tests(TempDb)", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)",
+        test_vectors: ["除外: missing→Deleted(T9)・タグ/ID 不変", "missing 以外(normal/pending/deleted)→ ValidationError で対象外", "存在しない画像 ID → NotFound"] }   # ECO-033: CpTrash021Tests から事実転記(fixture 名も実ファイル名へ補正)
+    - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: "CpUiRepairViewModelTests(TempDb)", oracle: "xunit.v3 exact",
+        test_vectors: ["候補ちょうど1件の missing のみ修復し成功数を返す(CP_REPAIR_AUTOALL_023)", "自動修復可能数のカウント=候補1件の missing だけ(GF_V4_02。2件以上/0件は数えない)", "タグ付き候補の拒否はスキップして継続(一括が1件で止まらない)"] }   # ECO-033: CpUiRepairViewModelTests から事実転記
+    - { id: CP-DISPLAY-PARITY-022, characteristic: "(ECO-004→ECO-007 改訂)表示パリティの VM フィールド公開: RelinkCandidateViewModel.AbsolutePath/FileName(A-1)・グリッド項目 VM の SizeText(A-2)・TrashItemViewModel.SizeText(A-3)。(ECO-007/E1)ViewRowViewModel は TagCount を公開し ★(IsFavorite)を行表示しない・Description は tooltip 用に公開(A-4 改訂)。(ECO-007/E2)タグパレット行 VM は Description を行に出さない(A-5 撤回)。(ECO-007/E5/DC-TAGPREVIEW-001)タグ作成ダイアログの付与プレビュー整形ヘルパ(核側)が種別別の付与表現を返す(視覚描画は各 golden)", classification: surface, depth: unit, tolerance: "各 VM フィールド公開ベクタ全緑(ViewRow=TagCount 公開/★非表示・パレット=説明非表示・プレビュー整形)", fixture: "CpDisplayParity022Tests(TempDb+seed)", oracle: "xunit.v3 exact(VM フィールド公開)",
+        test_vectors: ["A1: 候補=ファイル名+サムネイル絶対パスを公開", "A2: グリッド項目 VM=サイズ文字列を公開", "A3: トラッシュ項目 VM=サイズ文字列を公開", "A4: ビュー行 VM=タグ数公開・説明は tooltip 用に公開(★は行に出さない)", "A5: タグパレット行 VM=説明を行に公開しない(撤回の固定)", "A6: リンク切れ画像行=ファイル名+絶対パスを公開"] }   # ECO-033: CpDisplayParity022Tests A1〜A6 から事実転記(fixture 名も実ファイル名へ補正)
+    - { id: CP-REPAIR-CARD-021, characteristic: "(ECO-003)再リンク候補 VM が表示パリティの判断材料を公開する=RelinkCandidateViewModel が FileName・AbsolutePath(collection root+relative)・SizeText・ModifiedText を備える(視覚描画は CP-UI-G10/golden)", classification: surface, depth: unit, tolerance: "GF_V4_04 ベクタ(候補=ファイル名/絶対パス/サイズ/更新時刻を公開・missing 行=ファイル名公開)全緑", fixture: "CpUiRepairViewModelTests(TempDb+seed folder Path)", oracle: "xunit.v3 exact(VM フィールド公開)",
+        test_vectors: ["候補カード=FileName/AbsolutePath(collection root+relative)/SizeText/ModifiedText の4フィールド公開(GF_V4_04)", "missing 行=ファイル名公開", "relink 確定=missing 側 ID 不変で status Normal(候補提示→確定の一連)"] }   # ECO-033: CpUiRepairViewModelTests から事実転記
     - { id: CP-UI-G10, characteristic: "修復ライフサイクル UI(criteria 検索・relink 候補提示/確定・**候補カードの表示パリティ=サムネイル+ファイル名+パス+サイズ+更新日時を原典 AdvancedRepairModal とフィールド単位で突合**・トラッシュ復元/完全削除・非破壊明示文言・タグ付き候補のマージ案内・復元の missing 化表示)の目視(G-10・v4.0/ECO-003 で表示パリティ項目を追加)", classification: surface, depth: G, tolerance: "G-10 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ(missing/pending を含むコレクション+deleted 画像。relink・復元・完全削除の前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }

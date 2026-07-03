@@ -724,12 +724,12 @@ changes:
   - id: ECO-033
     title: "test_vectors 欠落 6 特性への追補(CP-NFR-001/CP-ROBUST-001/CP-TRASH-021/CP-REPAIR-AUTOALL-023/CP-DISPLAY-PARITY-022/CP-REPAIR-CARD-021)"
     type: 受入補強(Control Plan 完全性 — CHEAT-005 対策の遡及適用)
-    status: staged
+    status: applied
     golden: n/a
     baseline: "main 30f2ed9"
     findings: "R-014 6所見 @ 33-control-plan(279/297/547/548/549/550 行)。CHEAT-005 予防リントの的中と S-19 裁定"
     body: 60-change-order-eco-033.md
-    notes: "vectors は被覆の宣言 — 追記したら既存 Tests と1対1に突合し、不足は unit を追加"
+    notes: "適用済み(2026-07-03): 6 CP とも既存テスト(CpNfr001/CpRobust001/CpTrash021/CpUiRepairViewModel/CpDisplayParity022 各Tests)から vectors を事実転記=全ベクタがテスト実在で1対1(不足 unit なし=台帳側だけが欠けていた)。fixture 名2件を実ファイル名へ補正。lint: R-014 6件解消(warn 136→130)"
 
   - id: ECO-034
     title: "change register のリストキーを ref-v0 セレクタへ整合(change_orders: → changes:)"
