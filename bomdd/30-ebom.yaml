@@ -441,7 +441,7 @@ ebom:
       part_kind: screen-surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-074]
-      external_source_ref: "ViewPrismUI:資料/画像タブ/ViewPrism2 作業タブ.html"
+      external_source_ref: "ViewPrismUI:資料/作業タブ/ViewPrism2 作業タブ.html"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-WORKSPACE-042, E-UI-SHELL-021, E-UI-BROWSE-022]
       interface_contracts:
