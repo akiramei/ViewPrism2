@@ -1,0 +1,7 @@
+# bomdd-lint 用 workspace 宣言(ECO 台帳の cross-repo 参照= ViewPrismUI: 形の解決に必要)。
+# pre-commit hook(bomdd/hooks)と手動 lint はこれを対象にする:
+#   node ../BomDD-Plm/packages/cli/dist/main.js bomdd-workspace.yaml
+# ViewPrismUI が隣に無い環境では実行障害(exit 2)= hook は fail-open で skip する。
+repos:
+  - { name: ViewPrism2,  path: .,               role: manufacturing }
+  - { name: ViewPrismUI, path: ../ViewPrismUI,  role: ui-cad }

@@ -36,4 +36,24 @@ fi
 if [ "$rc" -eq 2 ]; then
   echo "[bomdd] validator 実行不能(PyYAML 不在?)— skip(commit は許可)"
 fi
+
+# ─── bomdd-lint(BomDD-Plm 参照層リンタ・2026-07-03 追加)─────────────
+# workspace(自リポ+ViewPrismUI)を error ゲートで lint(warn/info は通す)。
+# 単一リポ実行だと正当な ViewPrismUI: 形 cross-repo パス参照が不解決になるため workspace が正
+# (repo: 形の repo 不在を skip にしない仕様非対称は BomDD-Plm ECO-002 候補として記録済み)。
+# fail-open: 隣接リポの CLI / ViewPrismUI が無ければ skip(exit 2)。
+PLM_CLI="../BomDD-Plm/packages/cli/dist/main.js"
+if command -v node >/dev/null 2>&1 && [ -f "$PLM_CLI" ] && [ -f bomdd-workspace.yaml ]; then
+  LINT_OUT="${TMPDIR:-/tmp}/bomdd-lint-vp2-$$"
+  node "$PLM_CLI" bomdd-workspace.yaml --fail-on error --out "$LINT_OUT" >/dev/null 2>&1
+  lrc=$?
+  rm -rf "$LINT_OUT" 2>/dev/null
+  if [ "$lrc" = "1" ]; then
+    echo "[bomdd-lint] error 所見 — commit をブロックしました。"
+    echo "             詳細: node $PLM_CLI ."
+    echo "             どうしても通す場合のみ: git commit --no-verify"
+    exit 1
+  fi
+  # exit 2(実行障害)は fail-open(コミットを wedge しない)
+fi
 exit 0
