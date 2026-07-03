@@ -694,7 +694,7 @@ changes:
   - id: ECO-030
     title: "FMEA 構造表の導入(33 へ fmea[] 新設 — FMEA-* 参照 43 件の定義サイト)"
     type: 台帳構造化(doc-only)
-    status: staged
+    status: applied   # 2026-07-03 処方変更の上で適用: 起票の前提(定義サイト不在)は誤認 — 32-mbom に fmea 表36定義が実在し参照35全解決。真因は ref-v0.3 の規定(33のみ)で、ref-v0.5(32/33両対応=実物が正・6回目)で解消。本リポの変更は FMEA-037 逆参照1行のみ。lint: FMEA 系 warn 43+孤立 info 全解消(warn 130→87)
     golden: n/a
     baseline: "main 30f2ed9"
     findings: "R-003 warn 43所見(FMEA-* が定義サイト不在)。ref-v0.3 が 33 fmea[].id を定義サイトに規定済み"
