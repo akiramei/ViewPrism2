@@ -529,6 +529,38 @@ control_plan:
         - "復元(存在/不在とも)前後でフォルダ内ファイル集合が同一(読み取り存在確認のみ・FMEA-026)"
         - "DB 上は完全削除でレコード消滅・復元で status 遷移(論理操作は起きている=空振りでない)"
 
+    # ---------- ECO-028 是正追記(2026-07-03): 検査は実在するのに台帳行が無かった 2 CP(bom_sync_gap) ----------
+    - id: CP-TRASH-022
+      characteristic: "削除モードの「ゴミ箱へ移動」(ECO-018 / TrashService.DeleteToTrashAsync)= ユーザー起点のソフト削除(normal→deleted)。normal 限定・status 更新のみ(タグ/ID/特徴量不変)・物理非破壊(INV-009)。復元(T6/T7)で戻せる入口"
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests/CpTrash022Tests.cs
+      fixture_note: "Trait cp=CP-TRASH-022。一時 SQLite+IFilePresenceProbe フェイク(ECO-032(b) の正規形: パス欄はパスのみ・注釈は note へ)"
+      oracle: 遷移後 status・タグ/ID/特徴量の不変・エラー分岐の完全一致
+      approver: automated
+      test_vectors:
+        - "normal→deleted: タグと ID 不変"
+        - "normal 以外(pending/deleted/missing)→ ValidationError で状態不変"
+        - "存在しない ID → NotFound"
+    - id: CP-WORKSPACE-028
+      characteristic: "作業スペースの Core 規律(ECO-020 / WorkspaceService)— デフォルト常に厳密1つ(INV-W1)・件数/一覧は normal のみ(INV-W2)・デフォルトはリネーム不可(INV-W3)・add/move は所属の論理操作のみで物理非破壊(INV-W4)・移動は原子(INV-W5)。受け渡し AddImagesToDefault=画像タブ作業「追加」の行き先(DOM-0026)"
+      classification: core
+      depth: unit
+      tolerance: exact
+      fixture: tests/ViewPrism2.Tests/CpWorkspace028Tests.cs
+      fixture_note: "Trait cp=CP-WORKSPACE-028。一時 SQLite+FakeClock(決定論)"
+      oracle: デフォルト回転・一覧順・リネーム/削除/移動/受け渡しの状態遷移とエラー分岐の完全一致
+      approver: automated
+      test_vectors:
+        - "EnsureDefaultExists: シードは1件・冪等"
+        - "デフォルト回転: 常にデフォルト1つ・旧は時刻名で降格"
+        - "一覧: 新しいほど上・デフォルト最上段(スタック順)"
+        - "リネーム: 非デフォルト可・デフォルト不可・空はスペースへ"
+        - "削除: 非デフォルト可(所属は外れるが画像は物理非破壊)/ デフォルト不可=ValidationError / 不在=NotFound"
+        - "受け渡し: デフォルトへ和集合・重複なし・件数/リストは normal のみ"
+        - "移動: 元から除去し移動先へ・同一スペース拒否・不在=NotFound"
+
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する

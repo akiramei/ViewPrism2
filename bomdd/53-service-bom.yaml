@@ -42,7 +42,7 @@ service_bom:
         - "ECO-002 DF-3: CompiledBindings はインデクサ Item[] の PropertyChanged 通知では再評価されない → 文言は名前付きプロパティ経由で公開(ロケール切替時に全ラベル切替を L1 スモークで確認)"
         - "ECO-002 DF-4: ClickCount(ダブルクリック判定)が環境依存 → DoubleClickDetector で補完。Avalonia 更新時はダブルクリック起動(G-4)を要再確認"
         - "調達制約: Avalonia.Diagnostics 12.0.4 は NuGet 未発行のため参照しない(Run1 CHEAT-002)。更新時に発行状況が変われば再評価"
-      affected_parts: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
+      affected_parts: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
 
     - kbom: K-MVVM
       dependency: "CommunityToolkit.Mvvm(+ Microsoft.Extensions.DependencyInjection)"
@@ -53,7 +53,7 @@ service_bom:
       known_traps:
         - "INPC 手書き・コードビハインド肥大・UI スレッドブロックは工場我流の典型(本 build は ObservableObject+RelayCommand に統一)"
         - "MS.Extensions.* は SB-F-01 裁定(2026-06-13)で 10.0.9 exact 固定 — patch 更新は意図的な劣化イベントとして本手順で処理"
-      affected_parts: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
+      affected_parts: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
 
     - kbom: K-SKIA
       dependency: "SkiaSharp"
@@ -122,7 +122,7 @@ service_bom:
       known_traps:
         - "工場が『自然な寸法・配色』を独自に埋めると golden 承認のたびに微差の指摘往復(BomDD Loop3/4 実証)。トークンは K-DESIGN に固定"
         - "V2 申し送り所見: GF-02(グリッド行背景色)/ GF-03(ホームタグ★→家アイコン)/ GF-04(パレット選択視覚の弱さ)/ GF-01(タグ作成ダイアログ高さ伸長)"
-      affected_parts: [E-DESIGN-028, E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-DETAIL-023, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
+      affected_parts: [E-DESIGN-028, E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
 
   # ── プラットフォーム横断の劣化源(個別 K-BOM に閉じない) ──
   platform_externals:
@@ -264,18 +264,9 @@ service_bom:
       ai_model_drift: "再製造時は BROWSE の選択ジェスチャを MODE が再解釈する接点を隠さないこと"
       replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
 
-    - id: SB-UI-DETAIL-023
-      part_ref: E-UI-DETAIL-023
-      classification: surface
-      external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
-        - { kbom_ref: K-MVVM, version: "8.4.2" }
-        - { kbom_ref: K-DESIGN, version: "ADR-0001" }
-      acceptance_depth: G
-      reinspect_on_change:
-        - { cp_ref: CP-UI-G3, fixture: "実アプリ — 詳細パネル全項目表示・ノート保存" }
-      ai_model_drift: ~
-      replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
+    # SB-UI-DETAIL-023(part_ref: E-UI-DETAIL-023)は ECO-028 で削除(2026-07-03)。
+    # 品目本体は ECO-023 撤回済み(REQ-043 リバース誤り)・CP-UI-G3 も同時撤回済みで、
+    # 本エントリと K-AVALONIA/K-MVVM の affected_parts 残存が ECO-023 の M4 同期漏れだった。
 
     - id: SB-UI-VIEWER-024
       part_ref: E-UI-VIEWER-024

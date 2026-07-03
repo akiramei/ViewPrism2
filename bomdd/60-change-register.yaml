@@ -674,7 +674,7 @@ changes:
   - id: ECO-028
     title: "dangling 受入参照の是正(CP-WORKSPACE-028×3・CP-TRASH-022×1 の CP 行不在+撤回済み E-UI-DETAIL-023 残存×2)"
     type: 欠陥是正(doc/BOM 同期 — bom_sync_gap)
-    status: staged
+    status: applied   # 2026-07-03 適用。lint: R-003 error 5件解消(124→119)・warn 不変。検査実在を確認し 33 へ 2 CP を事実転記(CpTrash022Tests 3本/CpWorkspace028Tests 10本)・53 の SB-UI-DETAIL-023 エントリ+affected_parts×2 を撤回
     golden: n/a
     baseline: "main 30f2ed9"
     findings: "R-003 error 6所見(30-ebom:321/456・32-mbom:326・53-service-bom:45/56 ほか)。S-19 で真正欠陥(初捕獲)と裁定"

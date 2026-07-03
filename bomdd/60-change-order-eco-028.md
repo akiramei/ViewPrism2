@@ -15,7 +15,7 @@ R-003(壊れ参照)6所見が受入トレースの穴を指している:
 |---|---|---|
 | CP-WORKSPACE-028 | 30-ebom.yaml:321(E-WORKSPACE-042)・30-ebom.yaml:456・32-mbom.yaml:326 | ECO-021 β系が acceptance_refs で参照したが **33-control-plan に行が起票されていない**(CP の起票漏れ) |
 | CP-TRASH-022 | 30-ebom.yaml | 同上(33 は CP-TRASH-020/021 まで) |
-| E-UI-DETAIL-023 | 53-service-bom.yaml:45・:56(K-AVALONIA / K-MVVM の affected_parts) | **ECO-023 で撤回済み**の品目への残存参照 = ECO-023 の M4 同期漏れ(lineage 再帰属漏れ) |
+| E-UI-DETAIL-023 | 53-service-bom.yaml:268(SB-UI-DETAIL-023 の part_ref=lint 所見)+:45/:56(affected_parts=lint 対象エッジ外だが同根) | **ECO-023 で撤回済み**の品目への残存参照 = ECO-023 の M4 同期漏れ(lineage 再帰属漏れ)。lint 実所見は5件(起票時の6件は affected_parts を過大計上 — 是正は3箇所とも実施) |
 
 含意: acceptance_refs が指す CP が存在しない=「その受入は台帳上検証不能」。撤回品目の残存参照は
 Service BOM の劣化イベント逆引き(影響部品絞り込み)を汚染する。
