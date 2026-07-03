@@ -42,7 +42,7 @@ active_scope:
     現行ハッシュへ更新済。過去 ECO 本文中の commits/baseline ハッシュは pre-rewrite のスナップショット(タグ名
     loop-v*-r* が安定アンカー)。
 
-change_orders:
+changes:
   - id: ECO-001
     title: "20-spec §2.1 スキャン手順の実行順序を明確化(文書忠実度の欠陥)"
     type: 欠陥修正(文書忠実度)
@@ -666,3 +666,77 @@ change_orders:
     body: 60-change-order-eco-027.md
     pending_sync: "完了(M4 同期済・2026-07-03): 20-spec §2.6・30-ebom E-UI-MODE-041・33-control-plan CP-TOOLBAR-RESPONSIVE-027・register golden=approved"
     notes: "採番: ECO-026 クローズ後の逐次採番で ECO-027。工程 retro=実機 golden 往復2回((1)モード中の表示列潜り込み→CAD 逸脱と診断しモード非表示化+右クラスタ回り込み /(2)極狭で『タグ編集を終了』クリップ→左クラスタも WrapPanel 内部折り返しへ)。最初にモック単一 flex-wrap の含意(全項目が独立折り返し)を左右双方へ適用すべきだった"
+
+  # ─── 2026-07-03 BomDD-Plm リンタ遡及(S-19 裁定)由来の起票群(ECO-028〜033・全件 staged) ───
+  # 出所: BomDD-Plm bomdd-lint v0.2-eco-001-accepted の workspace 遡及リント+S-19 裁定
+  # (BomDD-Plm/bomdd/plm-intake/s19-adjudication-2026-07-03.md)。件数は ECO-001(受理形/per-file)適用後の実測。
+
+  - id: ECO-028
+    title: "dangling 受入参照の是正(CP-WORKSPACE-028×3・CP-TRASH-022×1 の CP 行不在+撤回済み E-UI-DETAIL-023 残存×2)"
+    type: 欠陥是正(doc/BOM 同期 — bom_sync_gap)
+    status: staged
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "R-003 error 6所見(30-ebom:321/456・32-mbom:326・53-service-bom:45/56 ほか)。S-19 で真正欠陥(初捕獲)と裁定"
+    body: 60-change-order-eco-028.md
+    notes: "acceptance_refs が指す CP の起票漏れ(ECO-021 β系)+ECO-023 撤回の M4 同期漏れ"
+
+  - id: ECO-029
+    title: "trace-map/台帳の複合記法・変種品番の正規化(参照欄は単一 ID+注釈は note へ)"
+    type: 台帳正規化(doc-only)
+    status: staged
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "R-003 計82所見(ui-trace-map 77・ui-bom 変種 0006A/B/C 3・30-ebom 合成値 1・42 散文 1)"
+    body: 60-change-order-eco-029.md
+    notes: "変種品番は IR に定義するか ui-bom を 0006 へ寄せるかの裁定を含む"
+
+  - id: ECO-030
+    title: "FMEA 構造表の導入(33 へ fmea[] 新設 — FMEA-* 参照 43 件の定義サイト)"
+    type: 台帳構造化(doc-only)
+    status: staged
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "R-003 warn 43所見(FMEA-* が定義サイト不在)。ref-v0.3 が 33 fmea[].id を定義サイトに規定済み"
+    body: 60-change-order-eco-030.md
+    notes: "転記は記録済みの事実のみ(捏造しない)。転記元不明の ID は「未確認」行として立てる"
+
+  - id: ECO-031
+    title: "41-fixed-oracle の spec_ref 正規化(散文 38 件 → パス#節 形式)"
+    type: 台帳正規化(doc-only)
+    status: staged
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "R-004 38所見 @ 41-fixed-oracle.yaml。BomDD-Plm 自リポで同型 19 件を解消済み(同型作業)"
+    body: 60-change-order-eco-031.md
+    notes: "オラクル行の id/scenario/期待値は不変 — 典拠欄の記法のみ"
+
+  - id: ECO-032
+    title: "注釈付きパスの段階的正規化(86 件・低優先)+35 プレースホルダ残 1 件(真正・即時)"
+    type: 欠陥是正 1 件(即時)+台帳正規化(段階的)
+    status: staged
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "R-004 warn 87所見(33 fixture 欄 46・32 24・30 8・42 7・ui 1・35 placeholder 1)。35:72 の <HTML mock...> 残置は真正"
+    body: 60-change-order-eco-032.md
+    notes: "(a)placeholder は単独コミットで先行。(b)債務は機能 ECO への便乗で段階的に(ゼロ到達を完了条件にしない)"
+
+  - id: ECO-033
+    title: "test_vectors 欠落 6 特性への追補(CP-NFR-001/CP-ROBUST-001/CP-TRASH-021/CP-REPAIR-AUTOALL-023/CP-DISPLAY-PARITY-022/CP-REPAIR-CARD-021)"
+    type: 受入補強(Control Plan 完全性 — CHEAT-005 対策の遡及適用)
+    status: staged
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "R-014 6所見 @ 33-control-plan(279/297/547/548/549/550 行)。CHEAT-005 予防リントの的中と S-19 裁定"
+    body: 60-change-order-eco-033.md
+    notes: "vectors は被覆の宣言 — 追記したら既存 Tests と1対1に突合し、不足は unit を追加"
+
+  - id: ECO-034
+    title: "change register のリストキーを ref-v0 セレクタへ整合(change_orders: → changes:)"
+    type: 台帳是正(doc-only 1 行 — bom_sync_gap)
+    status: applied
+    golden: n/a
+    baseline: "main 30f2ed9"
+    findings: "register 全エントリが定義サイト不成立(candidate fallback のみ)= ledger に status 不掲載・R-051 skip。ECO-028〜033 起票時の検証で発見"
+    body: 60-change-order-eco-034.md
+    notes: "適用済み(2026-07-03)。検証: error/warn 不変・ledger eco 33 件に status 付与。裁定=スキーマ側に寄せる(キー名は合理性のない偶然の命名・移行1行)"
