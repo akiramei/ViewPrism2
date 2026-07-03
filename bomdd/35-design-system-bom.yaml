@@ -69,7 +69,12 @@ design_system_bom:
     dry_gate: "両 surface(ビュー編集モーダル α / 表示列ポップオーバー β-2)が golden 済み(2026-07-02)→ 統合完了(ECO-021 の isolate now, DRY later と同運用)"
 
   source_cad_refs:
-    ui_mock_ref: <HTML mock / screenshot / Figma ref>
+    # ECO-032(a) 2026-07-03: テンプレート起こし時のプレースホルダ残置を実出所で補正。
+    # 出所根拠: bomdd/ui/ui-ir.json meta.sources(M1/M2)+bomdd/ui/design-intent.md(M1/M2/M3 の DESIGN DIRECTION が本 BOM の基盤)。
+    # M1=タグタブ3ペイン主画面。同系: M2=タグ作成ダイアログ / M3=配置タグ設定(いずれも ViewPrismUI:資料/タグタブ/)。
+    # 注: ui-ir.json meta.sources の指す work/tag-tab/ は本リポの gitignore 対象(追跡外の作業コピー)につき、
+    # 本欄は CAD 権威リポ(ViewPrismUI)の正本を repo: 記法で参照する(ref-v0.4 受理形3・workspace lint で解決)。
+    ui_mock_ref: "ViewPrismUI:資料/タグタブ/ViewPrism2 タグ管理.dc.html"
     ui_ir_ref: bomdd/ui/ui-ir.json
     ui_bom_ref: bomdd/ui/ui-bom.json
     ui_trace_map_ref: bomdd/ui/ui-trace-map.json

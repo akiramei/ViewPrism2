@@ -719,7 +719,7 @@ changes:
     baseline: "main 30f2ed9"
     findings: "R-004 warn 87所見(33 fixture 欄 46・32 24・30 8・42 7・ui 1・35 placeholder 1)。35:72 の <HTML mock...> 残置は真正"
     body: 60-change-order-eco-032.md
-    notes: "(a)placeholder は単独コミットで先行。(b)債務は機能 ECO への便乗で段階的に(ゼロ到達を完了条件にしない)"
+    notes: "(a)適用済み(2026-07-03): ui_mock_ref を CAD 権威の正本(ViewPrismUI:資料/タグタブ/タグ管理 M1)へ repo: 記法で補正(work/ 作業コピーは gitignore 追跡外と判明したため権威側を参照)。(b)債務は機能 ECO への便乗で段階的に(ゼロ到達を完了条件にしない)。新規行の正規形は ECO-028 から適用開始済み"
 
   - id: ECO-033
     title: "test_vectors 欠落 6 特性への追補(CP-NFR-001/CP-ROBUST-001/CP-TRASH-021/CP-REPAIR-AUTOALL-023/CP-DISPLAY-PARITY-022/CP-REPAIR-CARD-021)"
