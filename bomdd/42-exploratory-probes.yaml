@@ -27,7 +27,8 @@ exploratory_probes:
   - id: P-04
     scenario: "エラー通知(不正 regex・スキャンスキップ)の表示形態を観察"
     dimension: 通知 UI の形態・文言(BOM は『非モーダル+ログ』までしか固定していない)
-    sweep_ref: "20-spec.md §2.3(通知形態の詳細は未固定)"
+    sweep_ref: "bomdd/20-spec.md#2.3"
+    sweep_note: "通知形態の詳細は未固定"
     observed:
       factory-01: ~
   # ---- v2.0 追加(loop-v2-viewer) ----

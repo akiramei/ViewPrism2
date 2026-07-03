@@ -11,7 +11,8 @@ mbom:
     - id: M-SLN-000
       ebom_refs: [E-DOMAIN-001]
       artifact:
-        path: ViewPrism2.sln / Directory.Build.props / .editorconfig
+        path: ViewPrism2.sln
+        path_note: "+ Directory.Build.props / .editorconfig"
         type: dotnet-solution
       interface_contract:
         structure: "src/ViewPrism2.Core, src/ViewPrism2.Infrastructure, src/ViewPrism2.App, tests/ViewPrism2.Tests(ADR-0002)"
@@ -27,7 +28,8 @@ mbom:
     - id: M-CORE-001
       ebom_refs: [E-DOMAIN-001, E-HASH-006]
       artifact:
-        path: src/ViewPrism2.Core(Models/, Common/)
+        path: src/ViewPrism2.Core
+        path_note: "Models/, Common/"
         type: dotnet-classlib
       interface_contract:
         entities: "ImageRecord, Tag, TagType(enum Simple/Textual/Numeric), TextualTagSettings, NumericTagSettings, ImageTag, SyncFolder, View, ViewCondition, ConditionOperator(enum Exists/Equals/Between/Regexp/In), HierarchyNode, NodeGraph 型(GraphNode, NodeKind), ImageStatus(enum Normal/Missing/Deleted/Pending), ScanSummary, AppSettings"
@@ -61,7 +63,8 @@ mbom:
     - id: M-GRAPH-003
       ebom_refs: [E-GRAPH-003]
       artifact:
-        path: src/ViewPrism2.Core/Services/NodeGraphBuilder.cs(+PathConditionConverter)
+        path: src/ViewPrism2.Core/Services/NodeGraphBuilder.cs
+        path_note: "+ PathConditionConverter"
         type: dotnet-classlib
       interface_contract:
         build: "GraphNode BuildGraph(IReadOnlyList<HierarchyNode> hierarchy, IReadOnlyDictionary<string,Tag> tags, ITagValueSource values)  // OC-2。values は status=Normal の distinct 値のみ返す契約"
@@ -90,7 +93,8 @@ mbom:
     - id: M-SCAN-005
       ebom_refs: [E-SCAN-005, E-RELINK-007]
       artifact:
-        path: src/ViewPrism2.Core/Services/ScanJudge.cs + src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + RelinkService.cs
+        path: src/ViewPrism2.Core/Services/ScanJudge.cs
+        path_note: "+ src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + RelinkService.cs"
         type: dotnet-classlib
       interface_contract:
         judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。Decision = Skip | UpdateMeta | AddNormal | AddPending(candidateId)"
@@ -107,7 +111,8 @@ mbom:
     - id: M-DB-007
       ebom_refs: [E-DB-010]
       artifact:
-        path: src/ViewPrism2.Infrastructure/Database/(Schema.sql 相当の DDL 定数, MigrationRunner.cs, *Repository.cs)
+        path: src/ViewPrism2.Infrastructure/Database
+        path_note: "Schema.sql 相当の DDL 定数, MigrationRunner.cs, *Repository.cs"
         type: dotnet-classlib
       interface_contract:
         open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
@@ -150,7 +155,8 @@ mbom:
     - id: M-SET-010
       ebom_refs: [E-SETTINGS-013]
       artifact:
-        path: src/ViewPrism2.Infrastructure/Settings/SettingsStore.cs(+Core/Models AppSettings)
+        path: src/ViewPrism2.Infrastructure/Settings/SettingsStore.cs
+        path_note: "+ Core/Models AppSettings"
         type: dotnet-classlib
       interface_contract:
         schema: >-
@@ -170,7 +176,8 @@ mbom:
     - id: M-I18N-011
       ebom_refs: [E-I18N-014, E-I18N-ASSETS-027]
       artifact:
-        path: src/ViewPrism2.Core/Services/LocalizationService.cs + src/ViewPrism2.App/Assets/i18n/{ja,en}.json
+        path: src/ViewPrism2.Core/Services/LocalizationService.cs
+        path_note: "+ src/ViewPrism2.App/Assets/i18n/{ja,en}.json"
         type: dotnet-classlib + assets
       interface_contract:
         resolve: "string T(string key, IReadOnlyDictionary<string,string>? args = null)  // OC-8。要求ロケール→ja→キー文字列"
@@ -182,7 +189,8 @@ mbom:
     - id: M-VIEWSVC-012
       ebom_refs: [E-VIEWSVC-009, E-TAGSVC-008]
       artifact:
-        path: src/ViewPrism2.Core/Services/(TagService.cs, ViewService.cs)+ Infrastructure のリポジトリ呼び出し
+        path: src/ViewPrism2.Core/Services
+        path_note: "TagService.cs, ViewService.cs + Infrastructure のリポジトリ呼び出し"
         type: dotnet-classlib
       interface_contract:
         tags: "CRUD+Validate(color 形式・名前空白・numeric 範囲・循環)+TagImageAsync(UPSERT)+TagImagesAsync(原子バッチ)+UntagImagesAsync(冪等)+GetAllWithUsageAsync(name 昇順 OrdinalIgnoreCase+使用数)"
@@ -195,7 +203,8 @@ mbom:
     - id: M-UI-013
       ebom_refs: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]  # E-UI-DETAIL-023 は ECO-023 で撤回
       artifact:
-        path: src/ViewPrism2.App/(Views/, ViewModels/)
+        path: src/ViewPrism2.App
+        path_note: "Views/, ViewModels/"
         type: avalonia-app
       interface_contract:
         trace_status: "ECO-024(M4)で as-built へ同期: シェルは薄いホスト(MainWindowViewModel=タブ切替+TagsTab/ImageTab/WorkTab 保持+ローカライズ+設定確定)。原典画像タブ Grid・harness・legacy VM(Browser/Detail/Tagging/FolderPane シェル・TreeRoots)は撤去済(ImageTabView 一本化)。画像タブの表示軸/モード/選択の逐条は E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041(+ViewPrismUI UI-IR)が権威。ECO-010〜021 の evolved design 全面 prose 同期は継続課題"
@@ -209,7 +218,8 @@ mbom:
     - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)。ECO-024 で原典 TaggingPanelViewModel を撤去し画像/作業タブのインライン実装へ実態化
       ebom_refs: [E-UI-TAGASSIGN-029]
       artifact:
-        path: "src/ViewPrism2.App/(ViewModels/ImageTabViewModel.cs=タグ編集モードのインライン付与[AddGroups/CurrentTags/ApplyTagAsync/ApplyTextValue/ApplyRating/ApplySequential/RemoveCurrentTag], ViewModels/WorkTabViewModel.cs=作業タブ再利用[ECO-021 β-2], Views/ 内グリッド右ペイン+数値値ダイアログ)"
+        path: src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs
+        path_note: "ImageTabViewModel.cs=タグ編集モードのインライン付与[AddGroups/CurrentTags/ApplyTagAsync/ApplyTextValue/ApplyRating/ApplySequential/RemoveCurrentTag], ViewModels/WorkTabViewModel.cs=作業タブ再利用[ECO-021 β-2], Views/ 内グリッド右ペイン+数値値ダイアログ"
         type: avalonia-app
       interface_contract:
         panel: "画像タブ タグ編集モード(ImageTabViewModel): CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel(独立末端 VM)は ECO-024 で撤去(インライン化)"
@@ -223,7 +233,8 @@ mbom:
     - id: M-UI-014
       ebom_refs: [E-UI-VIEWER-024]
       artifact:
-        path: src/ViewPrism2.App/(Views/ViewerWindow.axaml, ViewModels/ViewerViewModel.cs)
+        path: src/ViewPrism2.App/Views/ViewerWindow.axaml
+        path_note: "+ ViewModels/ViewerViewModel.cs"
         type: avalonia-app
       interface_contract:
         nav: "ViewerViewModel(IReadOnlyList<ImageRecord> ordered, int startIndex): Next()/Prev() は端で停止、CurrentPositionText=\"n / total\"  // unit 検査対象"
@@ -236,7 +247,8 @@ mbom:
     - id: M-VIEWERCORE-017
       ebom_refs: [E-VIEWER-CALC-030]
       artifact:
-        path: src/ViewPrism2.Core/Services/Viewer/(SpreadPairCalculator.cs, PageTurnCalculator.cs, ScrollPositionTracker.cs, SpreadHeightCalculator.cs, ViewerModeMemory.cs, ViewerSettingsModel.cs)
+        path: src/ViewPrism2.Core/Services/Viewer
+        path_note: "SpreadPairCalculator.cs, PageTurnCalculator.cs, ScrollPositionTracker.cs, SpreadHeightCalculator.cs, ViewerModeMemory.cs, ViewerSettingsModel.cs"
         type: dotnet-classlib
       interface_contract:
         pair: "SpreadPair SpreadPairCalculator.Calculate(int currentIndex, int totalCount, SpreadDirection direction, bool startWithEmptyPage)  // OC-9。SpreadPair { int? LeftIndex, int? RightIndex }(null=空白ページ)。仕様 §2.9 REQ-056 の規則を完全実装"
@@ -255,7 +267,8 @@ mbom:
     - id: M-UI-018
       ebom_refs: [E-UI-VIEWER-024]
       artifact:
-        path: src/ViewPrism2.App/(Views/ViewerWindow.axaml 拡張, ViewModels/ViewerViewModel.cs 拡張, Views/Viewer/ 各モードビュー)
+        path: src/ViewPrism2.App/Views/ViewerWindow.axaml
+        path_note: "ViewerWindow.axaml 拡張, ViewModels/ViewerViewModel.cs 拡張, Views/Viewer/ 各モードビュー"
         type: avalonia-app
       interface_contract:
         modes: "normal(既存 V1 表示を維持)/ scroll / spread-right / spread-left。モード描画の切替は ContentControl 等で行い、計算は M-VIEWERCORE-017 のみ経由"
@@ -297,7 +310,8 @@ mbom:
     - id: M-UI-019
       ebom_refs: [E-UI-BROWSE-022, E-UI-NODEGRAPH-025, E-UI-TAGS-026]
       artifact:
-        path: src/ViewPrism2.App/(Views/ 該当 axaml 改修)+ src/ViewPrism2.Core/Services/ConditionSummaryFormatter.cs
+        path: src/ViewPrism2.Core/Services/ConditionSummaryFormatter.cs
+        path_note: "+ src/ViewPrism2.App/Views/ 該当 axaml 改修"
         type: avalonia-app + dotnet-classlib
       interface_contract:
         trace_status: "ECO-016 で ebom_refs のラベルのみ旧 E-UI-GRID-022 から E-UI-BROWSE-022 へ再帰属。GF-02 の契約 prose は内容不変"
@@ -314,7 +328,8 @@ mbom:
     - id: M-UI-WORKSPACE-029   # ECO-020/021(作業タブ surface)。ECO-024/M4 で E-UI-WORKSPACE-043 の製造トレースを追加(W2 解消)
       ebom_refs: [E-UI-WORKSPACE-043]
       artifact:
-        path: src/ViewPrism2.App/(ViewModels/WorkTabViewModel.cs, Views/WorkTabView.axaml(.cs))
+        path: src/ViewPrism2.App/ViewModels/WorkTabViewModel.cs
+        path_note: "+ Views/WorkTabView.axaml(.cs)"
         type: avalonia-app
       interface_contract:
         shell: "作業タブ(第3タブ)= 左作業スペースサイドバー(一覧/選択/＋=デフォルト回転/インラインリネーム/件数/276-64 折り畳み)+ ワークスペースヘッダ(名前+既定バッジ+件数)+ 中央グリッド/リスト(フラット・表示軸/パンくずなし)+ ソート + 空状態(画像タブ作業モードへの誘導)"
@@ -329,7 +344,8 @@ mbom:
     - id: M-PHASH-020
       ebom_refs: [E-PHASH-031]
       artifact:
-        path: src/ViewPrism2.Core/Services/Similarity/(PerceptualHash.cs, HammingDistance.cs, SimilarityScore.cs)
+        path: src/ViewPrism2.Core/Services/Similarity
+        path_note: "PerceptualHash.cs, HammingDistance.cs, SimilarityScore.cs"
         type: dotnet-classlib
       interface_contract:
         phash: "string PerceptualHash.Compute(ReadOnlySpan<byte> bgra32x32) → 16hex // OC-14。入力は 32×32 にリサイズ済み BGRA バイト列。レシピは K-PHASH/仕様 §2.10.1(orthonormal 2D DCT-II 2 パス・cos 固定表・DC 除外中央値・(int)(y+0.5))。**Core 配置=BCL のみ。SkiaSharp 型を引数・戻り値・内部に一切持たない**(SKBitmap 過負荷は作らない — ADR-0002 層規律)"
@@ -347,7 +363,8 @@ mbom:
     - id: M-SIMSEARCH-021
       ebom_refs: [E-SIMSEARCH-032, E-SIMCACHE-033]
       artifact:
-        path: src/ViewPrism2.Core/Services/Similarity/SimilaritySearchService.cs(+IPHashImageReader 抽象) + src/ViewPrism2.Infrastructure/Imaging/PHashImageReader.cs + src/ViewPrism2.Infrastructure/Database/(ImageFeatureRepository.cs, ImageSimilarityRepository.cs, 新規マイグレーション)
+        path: src/ViewPrism2.Core/Services/Similarity/SimilaritySearchService.cs
+        path_note: "+ IPHashImageReader 抽象 + src/ViewPrism2.Infrastructure/Imaging/PHashImageReader.cs + src/ViewPrism2.Infrastructure/Database/(ImageFeatureRepository.cs, ImageSimilarityRepository.cs, 新規マイグレーション)"
         type: dotnet-classlib
       interface_contract:
         extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ(SkiaSharp は Infrastructure に閉じる)。失敗(壊れた画像)は null。ThumbnailService と同じ層分離"
@@ -371,7 +388,8 @@ mbom:
     - id: M-MERGE-022
       ebom_refs: [E-MERGE-034]
       artifact:
-        path: src/ViewPrism2.Core/Services/Similarity/(MergeCalculator.cs, MergeService.cs)
+        path: src/ViewPrism2.Core/Services/Similarity
+        path_note: "MergeCalculator.cs, MergeService.cs"
         type: dotnet-classlib
       interface_contract:
         calc: "MergedTags MergeCalculator.Merge(IReadOnlyList<ImageTag> targetTags, IReadOnlyList<IReadOnlyList<ImageTag>> sourcesTagsByIdAsc)  // OC-17 純粋計算。マージ先優先・NULL/空はマージ元値で補完・多元は id 昇順先勝ち・simple は存在 union"
@@ -387,7 +405,8 @@ mbom:
     - id: M-UI-SIMILARITY-023
       ebom_refs: [E-UI-SIMILARITY-035, E-UI-MERGE-036]
       artifact:
-        path: src/ViewPrism2.App/(Views/SimilarSearchWindow.axaml, Views/MergeDialog.axaml, Views/TrashView.axaml, ViewModels/{SimilarSearch,Merge,Trash}ViewModel.cs)
+        path: src/ViewPrism2.App/Views/SimilarSearchWindow.axaml
+        path_note: "+ Views/MergeDialog.axaml, Views/TrashView.axaml, ViewModels/{SimilarSearch,Merge,Trash}ViewModel.cs"
         type: avalonia-app
       interface_contract:
         search_ui: "SimilarSearchViewModel(baseImageId): Threshold(50〜100 整数・既定 70)/ SearchAsync(進捗)/ Results(Score 降順)/ 空状態フラグ。精度モード UI なし(pHash のみ)。結果整列・空状態は ViewModel で unit 検査可能に"
@@ -406,7 +425,8 @@ mbom:
     - id: M-CRITERIA-024
       ebom_refs: [E-CRITERIA-037]
       artifact:
-        path: src/ViewPrism2.Core/Services/Repair/(CriteriaMatcher.cs, CriteriaSearchService.cs)
+        path: src/ViewPrism2.Core/Services/Repair
+        path_note: "CriteriaMatcher.cs, CriteriaSearchService.cs"
         type: dotnet-classlib
       interface_contract:
         criteria: "record SearchCriteria { string? Hash, string? NameContains, string? Extension, string? MtimeFrom/MtimeTo, long? SizeMin/SizeMax }。null=未指定(その条件は無視)"
@@ -423,7 +443,8 @@ mbom:
     - id: M-RELINK-025          # 既存 RelinkService(M-SCAN-005)を criteria 候補+タグ安全へ拡張
       ebom_refs: [E-RELINK-007]
       artifact:
-        path: src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs(拡張)
+        path: src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs
+        path_note: "拡張"
         type: dotnet-classlib
       interface_contract:
         candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId, SearchCriteria? criteria = null)  // 既存 exact-hash pending に加え、criteria 指定時は M-CRITERIA-024 で status∈{Pending,Normal} を候補化。安定順(relative_path 昇順・id 昇順)。**user タグを持つ候補は除外**(タグ損失防止)"
@@ -438,7 +459,8 @@ mbom:
     - id: M-TRASH-026
       ebom_refs: [E-TRASH-038]
       artifact:
-        path: src/ViewPrism2.Core/Services/Repair/(TrashService.cs, IFilePresenceProbe.cs)+ src/ViewPrism2.Infrastructure/Imaging/FilePresenceProbe.cs + ImageRepository への永久削除/status 更新メソッド
+        path: src/ViewPrism2.Core/Services/Repair
+        path_note: "TrashService.cs, IFilePresenceProbe.cs + src/ViewPrism2.Infrastructure/Imaging/FilePresenceProbe.cs + ImageRepository への永久削除/status 更新メソッド"
         type: dotnet-classlib
       interface_contract:
         probe: "IFilePresenceProbe(Core 抽象): bool Exists(string absoluteImagePath)。実装 FilePresenceProbe(Infrastructure)=File.Exists のみ(読み取り・INV-009)。**SkiaSharp/FS アクセスは Infrastructure に閉じ、TrashService(Core)は bool を受けて遷移判断**(M-SIMSEARCH-021 の IPHashImageReader 層分離と同型)"
@@ -456,7 +478,8 @@ mbom:
     - id: M-UI-REPAIR-027
       ebom_refs: [E-UI-REPAIR-039]
       artifact:
-        path: src/ViewPrism2.App/(Views/RepairWindow.axaml, ViewModels/{Repair,Trash}ViewModel.cs 拡張)
+        path: src/ViewPrism2.App/Views/RepairWindow.axaml
+        path_note: "+ ViewModels/{Repair,Trash}ViewModel.cs 拡張"
         type: avalonia-app
       interface_contract:
         criteria_ui: "RepairViewModel: criteria 入力(hash/名前/拡張子/mtime 範囲/サイズ範囲)→ CriteriaSearchService。空条件は検索ボタン非活性。結果一覧(安定順)。ロジックは ViewModel で unit 検査可能に"
@@ -476,7 +499,8 @@ mbom:
     - id: M-TAGCTRL-028        # ECO-022 タグ制御配置核(純粋計算 Core)
       ebom_refs: [E-VIEWER-TAGCTRL-044]
       artifact:
-        path: src/ViewPrism2.Core/Services/Viewer/(TagActionResolver.cs, TagControlLayoutCalculator.cs, TagControlNavigator.cs, ViewerTagAction.cs)
+        path: src/ViewPrism2.Core/Services/Viewer
+        path_note: "TagActionResolver.cs, TagControlLayoutCalculator.cs, TagControlNavigator.cs, ViewerTagAction.cs"
         type: dotnet-classlib
       interface_contract:
         action_enum: "enum ViewerTagAction { ForceLeftPage, ForceRightPage, Spread, Skip, LeftPageEmpty, RightPageEmpty }(仕様 §2.12.1)"

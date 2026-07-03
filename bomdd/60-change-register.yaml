@@ -714,12 +714,12 @@ changes:
   - id: ECO-032
     title: "注釈付きパスの段階的正規化(86 件・低優先)+35 プレースホルダ残 1 件(真正・即時)"
     type: 欠陥是正 1 件(即時)+台帳正規化(段階的)
-    status: staged
+    status: applied
     golden: n/a
     baseline: "main 30f2ed9"
     findings: "R-004 warn 87所見(33 fixture 欄 46・32 24・30 8・42 7・ui 1・35 placeholder 1)。35:72 の <HTML mock...> 残置は真正"
     body: 60-change-order-eco-032.md
-    notes: "(a)適用済み(2026-07-03): ui_mock_ref を CAD 権威の正本(ViewPrismUI:資料/タグタブ/タグ管理 M1)へ repo: 記法で補正(work/ 作業コピーは gitignore 追跡外と判明したため権威側を参照)。(b)債務は機能 ECO への便乗で段階的に(ゼロ到達を完了条件にしない)。新規行の正規形は ECO-028 から適用開始済み"
+    notes: "(a)適用済み(2026-07-03): ui_mock_ref を CAD 権威の正本(ViewPrismUI:資料/タグタブ/タグ管理 M1)へ repo: 記法で補正(work/ 作業コピーは gitignore 追跡外と判明したため権威側を参照)。(b)一括正規化完了(2026-07-03): 残 74 件→ 0(doc-only 単独コミット= order §変更内容 2 の分離条項どおり 63 監査を汚さない)。正規形= 33:547 先例(パス欄は実在パス・注釈は fixture_note/path_note/external_source_note/sweep_note へ)。30 の原典6件は K-ORIGIN パック新設+K-I18N 参照へ。真正壊れ参照1件(E-UI-WORKSPACE-043 資料/画像タブ→作業タブ)は債務と分離して単独是正(38e205b)。以後の新規行は正規形で書く(ECO-028 から適用開始済み)"
 
   - id: ECO-033
     title: "test_vectors 欠落 6 特性への追補(CP-NFR-001/CP-ROBUST-001/CP-TRASH-021/CP-REPAIR-AUTOALL-023/CP-DISPLAY-PARITY-022/CP-REPAIR-CARD-021)"

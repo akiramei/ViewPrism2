@@ -26,7 +26,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-UTIL-005)
+      fixture: tests/ViewPrism2.Tests/CpUtil005Tests.cs
+      fixture_note: "Trait cp=CP-UTIL-005"
       oracle: 下記ベクタの完全一致
       approver: automated
       test_vectors:
@@ -41,7 +42,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-EVAL-001)
+      fixture: tests/ViewPrism2.Tests/CpEval001Tests.cs
+      fixture_note: "Trait cp=CP-EVAL-001"
       oracle: 固定フィクスチャ(画像 8 枚×タグ 4 種)に対する出力 id 集合の完全一致
       approver: automated
       test_vectors:
@@ -61,7 +63,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-GRAPH-002)
+      fixture: tests/ViewPrism2.Tests/CpGraph002Tests.cs
+      fixture_note: "Trait cp=CP-GRAPH-002"
       oracle: 期待ノード木(型・表示名・親子・順序)と期待条件列の完全一致
       approver: automated
       test_vectors:
@@ -83,7 +86,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-SORT-003)
+      fixture: tests/ViewPrism2.Tests/CpSort003Tests.cs
+      fixture_note: "Trait cp=CP-SORT-003"
       oracle: 期待 id 列との完全一致
       approver: automated
       test_vectors:
@@ -120,7 +124,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TAG-011。一時 SQLite)
+      fixture: tests/ViewPrism2.Tests/CpTag011Tests.cs
+      fixture_note: "Trait cp=CP-TAG-011。一時 SQLite"
       oracle: 操作後の DB 状態・エラーコードの完全一致
       approver: automated
       test_vectors:
@@ -141,7 +146,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-VIEW-012。一時 SQLite)
+      fixture: tests/ViewPrism2.Tests/CpView012Tests.cs
+      fixture_note: "Trait cp=CP-VIEW-012。一時 SQLite"
       oracle: DB 状態・並び順の完全一致
       approver: automated
       test_vectors:
@@ -157,7 +163,8 @@ control_plan:
       classification: surface
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-COLPICKER-025)
+      fixture: tests/ViewPrism2.Tests/CpColumnPickerViewModelTests.cs
+      fixture_note: "Trait cp=CP-COLPICKER-025"
       oracle: 追加元リスト内容/選択済み列状態/件数・上限/Changed 発火回数/書き戻し JSON の完全一致
       approver: automated
       test_vectors:
@@ -174,7 +181,8 @@ control_plan:
       classification: surface
       depth: unit
       tolerance: "評価回数・アルゴリズム計算量・資源解放の呼び出しを exact 検査(壁時計は flaky のため決定論ガード)"
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-NFR-026。ConditionEvaluator スパイ・カウンタ等)
+      fixture: tests/ViewPrism2.Tests/CpNfr026Tests.cs
+      fixture_note: "Trait cp=CP-NFR-026。ConditionEvaluator スパイ・カウンタ等"
       oracle: 評価回数/引きの計算量/Release 呼び出しの完全一致
       approver: automated
       test_vectors:
@@ -190,7 +198,8 @@ control_plan:
       classification: surface
       depth: unit
       tolerance: "しきい値(ラベル畳み<820/整理退避<640)・ヒステリシス・畳む順序・回り込み Grid 配置マッピング・表示列モードゲートを exact 検査(壁時計/実レイアウトは golden=CP-UI-G1 が担う)"
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TOOLBAR-RESPONSIVE-027。ImageTabViewModel の ReportToolbarWidth/SetToolbarWrapped)
+      fixture: tests/ViewPrism2.Tests/Img014ToolbarResponsiveTests.cs
+      fixture_note: "Trait cp=CP-TOOLBAR-RESPONSIVE-027。ImageTabViewModel の ReportToolbarWidth/SetToolbarWrapped"
       oracle: 段階フラグ/回り込み行列スパン/ShowColumnsEntry の完全一致
       approver: automated
       test_vectors:
@@ -206,7 +215,8 @@ control_plan:
       classification: core
       depth: L2
       tolerance: "スキーマ同値(テーブル・列・型・既定値・FK・索引・COLLATE)。PRAGMA 値 exact"
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-DB-006)
+      fixture: tests/ViewPrism2.Tests/CpDb006Tests.cs
+      fixture_note: "Trait cp=CP-DB-006"
       oracle: PRAGMA table_info/foreign_key_list/index_list の比較+migrations 行数検査
       approver: automated
       test_vectors:
@@ -237,7 +247,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-CACHE-008。FakeClock 注入)
+      fixture: tests/ViewPrism2.Tests/CpCache008Tests.cs
+      fixture_note: "Trait cp=CP-CACHE-008。FakeClock 注入"
       oracle: LoadCount と保持キー集合の完全一致
       approver: automated
       test_vectors:
@@ -250,7 +261,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-SET-009。一時ディレクトリ)
+      fixture: tests/ViewPrism2.Tests/CpSet009Tests.cs
+      fixture_note: "Trait cp=CP-SET-009。一時ディレクトリ"
       oracle: 保存→読込の値一致と破損時の既定値復帰
       approver: automated
       test_vectors:
@@ -268,7 +280,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-I18N-010。テスト用ミニ辞書)
+      fixture: tests/ViewPrism2.Tests/CpI18n010Tests.cs
+      fixture_note: "Trait cp=CP-I18N-010。テスト用ミニ辞書"
       oracle: 解決文字列の完全一致
       approver: automated
       test_vectors:
@@ -281,7 +294,8 @@ control_plan:
       classification: core
       depth: L3
       tolerance: "3 回計測の中央値 ≦ 200ms(Release・ウォームアップ 1 回後)"
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-NFR-001、カテゴリ perf)
+      fixture: tests/ViewPrism2.Tests/CpNfr001Tests.cs
+      fixture_note: "Trait cp=CP-NFR-001、カテゴリ perf"
       oracle: Stopwatch 計測値の判定
       approver: automated
       test_vectors:   # ECO-033(2026-07-03): CpNfr001Tests から事実転記
@@ -293,7 +307,7 @@ control_plan:
       classification: surface
       depth: L1
       tolerance: "全手順成功"
-      fixture: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示 → ダブルクリックでビューア起動 → (v2.0)モード切替 normal→scroll→spread-right(各モードで表示+ページ送り 1 回)→ ja/en 切替 → textual タグ(候補値 2 件)作成(golden 対象経路を最低 1 回ずつ踏む)"
+      fixture_note: "dotnet build -c Release / アプリ手動起動(または UI なし起動モード)+ フィクスチャフォルダ登録→スキャン→グリッド表示 → ダブルクリックでビューア起動 → (v2.0)モード切替 normal→scroll→spread-right(各モードで表示+ページ送り 1 回)→ ja/en 切替 → textual タグ(候補値 2 件)作成(golden 対象経路を最低 1 回ずつ踏む)"
       oracle: "起動してメインウィンドウが表示され、スキャン結果サマリが出てサムネイルが並び、ビューアが開き、(v2.0)3 モードが描画されてページ送りが動き、言語切替でラベル・ボタンが切り替わり、タグ作成がクラッシュなく完了すること"
       approver: factory self-acceptance(最終確認は maintainer)
 
@@ -302,7 +316,8 @@ control_plan:
       classification: core
       depth: L2
       tolerance: "テスト用の例外注入でプロセスが生存し、ログにスタック全文が記録され、非モーダル通知が出る"
-      fixture: tests/ViewPrism2.Tests(グローバルハンドラへの例外注入)+ L1 スモークで実アプリ確認
+      fixture: tests/ViewPrism2.Tests/CpRobust001Tests.cs
+      fixture_note: "Trait cp=CP-ROBUST-001。グローバルハンドラへの例外注入+ L1 スモークで実アプリ確認"
       oracle: テスト判定(+L1 目視)
       approver: automated
       test_vectors:   # ECO-033(2026-07-03): CpRobust001Tests から事実転記
@@ -334,7 +349,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-VIEWER-014)
+      fixture: tests/ViewPrism2.Tests/CpViewer014Tests.cs
+      fixture_note: "Trait cp=CP-VIEWER-014"
       oracle: OC-9〜13 の入出力ベクタの完全一致
       approver: automated
       test_vectors:
@@ -359,7 +375,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-TAGCTRL-024)
+      fixture: tests/ViewPrism2.Tests/CpTagCtrl024Tests.cs
+      fixture_note: "Trait cp=CP-TAGCTRL-024"
       oracle: OC-23/24/25 の入出力ベクタの完全一致
       approver: automated
       test_vectors:
@@ -380,7 +397,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests(Trait cp=CP-GF-015)
+      fixture: tests/ViewPrism2.Tests/CpGf015Tests.cs
+      fixture_note: "Trait cp=CP-GF-015"
       oracle: 整形文字列の完全一致(ja ロケール)
       approver: automated
       test_vectors:
@@ -414,7 +432,8 @@ control_plan:
       classification: core
       depth: "unit + L2(スキーマ)"
       tolerance: "検索結果 id 列・キャッシュ挙動 exact。スキーマ同値(列・FK・索引)"
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-SIM-017。一時 SQLite+合成 pHash 注入)"
+      fixture: tests/ViewPrism2.Tests/CpSim017Tests.cs
+      fixture_note: "Trait cp=CP-SIM-017。一時 SQLite+合成 pHash 注入"
       oracle: 検索結果列・キャッシュ再計算/連鎖無効化・PRAGMA スキーマの一致
       approver: automated
       test_vectors:
@@ -433,7 +452,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-MERGE-018。一時 SQLite)"
+      fixture: tests/ViewPrism2.Tests/CpMerge018Tests.cs
+      fixture_note: "Trait cp=CP-MERGE-018。一時 SQLite"
       oracle: 統合後タグ集合・status・エラーコード・ロールバック後 DB 状態の完全一致
       approver: automated
       test_vectors:
@@ -451,7 +471,8 @@ control_plan:
       classification: core
       depth: L3
       tolerance: "マージ前後でマージ先・マージ元の物理ファイルのバイト列(SHA-256)と LastWriteTimeUtc が完全不変。ファイルの移動・削除・新規作成が一切ない"
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-MERGE-001。一時ディレクトリに実画像ファイル+一時 SQLite。操作前後でフォルダ内全ファイルのハッシュ・mtime・一覧をスナップショット)"
+      fixture: tests/ViewPrism2.Tests/CpMerge001Tests.cs
+      fixture_note: "Trait cp=CP-MERGE-001。一時ディレクトリに実画像ファイル+一時 SQLite。操作前後でフォルダ内全ファイルのハッシュ・mtime・一覧をスナップショット"
       oracle: 操作前後のファイルシステムスナップショット(ハッシュ・mtime・ファイル集合)の完全一致
       approver: automated
       test_vectors:
@@ -464,7 +485,8 @@ control_plan:
       classification: core
       depth: "unit/L2/L3"
       tolerance: "下記ベクタの exact(値混在の不在・schema 同値)+ 相対 latency 比 ≥2×"
-      fixture: "tests/ViewPrism2.Tests(CP-SIM-017 adapter 世代交代)/ tests/ViewPrism2.Oracle(ThisBuildGoldenTests・PHashLatencyGuardTests・S-05)"
+      fixture: tests/ViewPrism2.Oracle
+      fixture_note: "tests/ViewPrism2.Tests(CP-SIM-017 adapter 世代交代)+ tests/ViewPrism2.Oracle(ThisBuildGoldenTests・PHashLatencyGuardTests・S-05)"
       oracle: "adapter 不一致→再計算・連鎖無効化 / this-build golden exact / schema 同値 / 相対速度比"
       approver: automated
       test_vectors:
@@ -481,7 +503,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-CRITERIA-019)。固定画像集合(hash/名前/拡張子/mtime/サイズ違い+status 混在)"
+      fixture: tests/ViewPrism2.Tests/CpCriteria019Tests.cs
+      fixture_note: "Trait cp=CP-CRITERIA-019。固定画像集合(hash/名前/拡張子/mtime/サイズ違い+status 混在)"
       oracle: OC-19 の出力 id 列の完全一致
       approver: automated
       test_vectors:
@@ -497,7 +520,8 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-RELINK-019)。一時 SQLite に missing+pending+normal(タグ有/無)を投入"
+      fixture: tests/ViewPrism2.Tests/CpRelink019Tests.cs
+      fixture_note: "Trait cp=CP-RELINK-019。一時 SQLite に missing+pending+normal(タグ有/無)を投入"
       oracle: 確定後 DB 状態(missing 行・候補行・タグ)の完全一致
       approver: automated
       test_vectors:
@@ -513,7 +537,8 @@ control_plan:
       classification: core
       depth: "unit/L2"
       tolerance: exact
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-TRASH-020)。一時 SQLite+IFilePresenceProbe フェイク(存在/不在を注入)"
+      fixture: tests/ViewPrism2.Tests/CpTrash020Tests.cs
+      fixture_note: "Trait cp=CP-TRASH-020。一時 SQLite+IFilePresenceProbe フェイク(存在/不在を注入)"
       oracle: 復元後 status・完全削除後の各テーブル件数の完全一致
       approver: automated
       test_vectors:
@@ -529,7 +554,8 @@ control_plan:
       classification: core
       depth: L3
       tolerance: "復元・完全削除の前後でフォルダ内ファイル集合・各ファイルの SHA-256・LastWriteTimeUtc が完全不変。移動・削除・新規作成が一切ない"
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-TRASH-001。一時ディレクトリに実画像+一時 SQLite。操作前後でフォルダ全ファイルのハッシュ・mtime・一覧をスナップショット)"
+      fixture: tests/ViewPrism2.Tests/CpTrash001Tests.cs
+      fixture_note: "Trait cp=CP-TRASH-001。一時ディレクトリに実画像+一時 SQLite。操作前後でフォルダ全ファイルのハッシュ・mtime・一覧をスナップショット"
       oracle: 操作前後のファイルシステムスナップショット(ハッシュ・mtime・ファイル集合)の完全一致
       approver: automated
       test_vectors:
@@ -572,24 +598,24 @@ control_plan:
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
-    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+画像タブ surface(E-UI-BROWSE-022 のグリッド/リスト、E-UI-AXIS-NAV-040 のFS/タグビュー軸、E-UI-MODE-041 の文脈モード入口)の描画と操作(G-1・v1.3+ECO-016)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+surface 分割後の3部品が同時に破綻しないこと", fixture: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+画像タブ surface(E-UI-BROWSE-022 のグリッド/リスト、E-UI-AXIS-NAV-040 のFS/タグビュー軸、E-UI-MODE-041 の文脈モード入口)の描画と操作(G-1・v1.3+ECO-016)", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+surface 分割後の3部品が同時に破綻しないこと", fixture_note: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     # CP-UI-G3 は ECO-023(2026-07-01)で撤回。REQ-043/E-UI-DETAIL-023 リバース誤りに伴い golden 対象から除外。
     # 旧承認(50-as-built golden_approvals 2026-06-12)は歴史記録として残すが superseded(ECO-023)。
-    - { id: CP-UI-G3, status: retired, retired_by: ECO-023, characteristic: "[撤回] 詳細パネルの全項目表示・ノート保存(G-3)", classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止・背景クリック閉じる(G-4・v1.3)", classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G11, characteristic: "タグ制御モード(設定トグル・マッピングモーダル表示パリティ・見開きでの skip/force/spread/empty 配置・ON とマッピングの復元)(G-11・ECO-022)。**表示パリティ=提示フィールドに限らずモーダル クローム全体をモック突合**: ヘッダ(タグアイコンバッジ+タイトル+説明+X)/ 行のカード化+アクション固定色アイコンバッジ / **行順(モック順=左固定→右固定→占有→skip→左空白→右空白)** / **常時 docked フッター(補足文+既定に戻す+完了 cta)** / 全体オーバーレイ。設定ドロワーは ScrollViewer が有界でカード末尾まで到達可(GF-TAGCTRL-01)。フッター補足文が右端で切れない(GF-TAGCTRL-03)。(FMEA-037=クローム脱漏ガード・2026-07-01 追加)", classification: surface, depth: G, tolerance: "G-11 チェックリスト全項目(20-spec.md §2.6・§2.12.6 提示フィールド)+ クローム パリティ(ヘッダ/フッター/カード/行順/全体オーバーレイ)をモック(standalone.html)と視覚突合", fixture: "実アプリ+作成済みタグ(シンプル/テキスト/数値)+フィクスチャ画像(広告ページを含む見開き用コレクション)", oracle: 承認者の目視チェック(モーダル=ヘッダ/6行カードの提示フィールド/フッター/行順+ドロワースクロール+見開き配置+広告除外+物理側保持), approver: maintainer }
-    - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: "CpTrash021Tests(TempDb)", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)",
+    - { id: CP-UI-G3, status: retired, retired_by: ECO-023, characteristic: "[撤回] 詳細パネルの全項目表示・ノート保存(G-3)", classification: surface, depth: G, tolerance: "G-3 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G4, characteristic: "ビューアの起動経路・フィット表示・端停止・背景クリック閉じる(G-4・v1.3)", classification: surface, depth: G, tolerance: "G-4 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G11, characteristic: "タグ制御モード(設定トグル・マッピングモーダル表示パリティ・見開きでの skip/force/spread/empty 配置・ON とマッピングの復元)(G-11・ECO-022)。**表示パリティ=提示フィールドに限らずモーダル クローム全体をモック突合**: ヘッダ(タグアイコンバッジ+タイトル+説明+X)/ 行のカード化+アクション固定色アイコンバッジ / **行順(モック順=左固定→右固定→占有→skip→左空白→右空白)** / **常時 docked フッター(補足文+既定に戻す+完了 cta)** / 全体オーバーレイ。設定ドロワーは ScrollViewer が有界でカード末尾まで到達可(GF-TAGCTRL-01)。フッター補足文が右端で切れない(GF-TAGCTRL-03)。(FMEA-037=クローム脱漏ガード・2026-07-01 追加)", classification: surface, depth: G, tolerance: "G-11 チェックリスト全項目(20-spec.md §2.6・§2.12.6 提示フィールド)+ クローム パリティ(ヘッダ/フッター/カード/行順/全体オーバーレイ)をモック(standalone.html)と視覚突合", fixture_note: "実アプリ+作成済みタグ(シンプル/テキスト/数値)+フィクスチャ画像(広告ページを含む見開き用コレクション)", oracle: 承認者の目視チェック(モーダル=ヘッダ/6行カードの提示フィールド/フッター/行順+ドロワースクロール+見開き配置+広告除外+物理側保持), approver: maintainer }
+    - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpTrash021Tests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)",
         test_vectors: ["除外: missing→Deleted(T9)・タグ/ID 不変", "missing 以外(normal/pending/deleted)→ ValidationError で対象外", "存在しない画像 ID → NotFound"] }   # ECO-033: CpTrash021Tests から事実転記(fixture 名も実ファイル名へ補正)
-    - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: "CpUiRepairViewModelTests(TempDb)", oracle: "xunit.v3 exact",
+    - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact",
         test_vectors: ["候補ちょうど1件の missing のみ修復し成功数を返す(CP_REPAIR_AUTOALL_023)", "自動修復可能数のカウント=候補1件の missing だけ(GF_V4_02。2件以上/0件は数えない)", "タグ付き候補の拒否はスキップして継続(一括が1件で止まらない)"] }   # ECO-033: CpUiRepairViewModelTests から事実転記
-    - { id: CP-DISPLAY-PARITY-022, characteristic: "(ECO-004→ECO-007 改訂)表示パリティの VM フィールド公開: RelinkCandidateViewModel.AbsolutePath/FileName(A-1)・グリッド項目 VM の SizeText(A-2)・TrashItemViewModel.SizeText(A-3)。(ECO-007/E1)ViewRowViewModel は TagCount を公開し ★(IsFavorite)を行表示しない・Description は tooltip 用に公開(A-4 改訂)。(ECO-007/E2)タグパレット行 VM は Description を行に出さない(A-5 撤回)。(ECO-007/E5/DC-TAGPREVIEW-001)タグ作成ダイアログの付与プレビュー整形ヘルパ(核側)が種別別の付与表現を返す(視覚描画は各 golden)", classification: surface, depth: unit, tolerance: "各 VM フィールド公開ベクタ全緑(ViewRow=TagCount 公開/★非表示・パレット=説明非表示・プレビュー整形)", fixture: "CpDisplayParity022Tests(TempDb+seed)", oracle: "xunit.v3 exact(VM フィールド公開)",
+    - { id: CP-DISPLAY-PARITY-022, characteristic: "(ECO-004→ECO-007 改訂)表示パリティの VM フィールド公開: RelinkCandidateViewModel.AbsolutePath/FileName(A-1)・グリッド項目 VM の SizeText(A-2)・TrashItemViewModel.SizeText(A-3)。(ECO-007/E1)ViewRowViewModel は TagCount を公開し ★(IsFavorite)を行表示しない・Description は tooltip 用に公開(A-4 改訂)。(ECO-007/E2)タグパレット行 VM は Description を行に出さない(A-5 撤回)。(ECO-007/E5/DC-TAGPREVIEW-001)タグ作成ダイアログの付与プレビュー整形ヘルパ(核側)が種別別の付与表現を返す(視覚描画は各 golden)", classification: surface, depth: unit, tolerance: "各 VM フィールド公開ベクタ全緑(ViewRow=TagCount 公開/★非表示・パレット=説明非表示・プレビュー整形)", fixture: tests/ViewPrism2.Tests/CpDisplayParity022Tests.cs, fixture_note: "TempDb+seed", oracle: "xunit.v3 exact(VM フィールド公開)",
         test_vectors: ["A1: 候補=ファイル名+サムネイル絶対パスを公開", "A2: グリッド項目 VM=サイズ文字列を公開", "A3: トラッシュ項目 VM=サイズ文字列を公開", "A4: ビュー行 VM=タグ数公開・説明は tooltip 用に公開(★は行に出さない)", "A5: タグパレット行 VM=説明を行に公開しない(撤回の固定)", "A6: リンク切れ画像行=ファイル名+絶対パスを公開"] }   # ECO-033: CpDisplayParity022Tests A1〜A6 から事実転記(fixture 名も実ファイル名へ補正)
-    - { id: CP-REPAIR-CARD-021, characteristic: "(ECO-003)再リンク候補 VM が表示パリティの判断材料を公開する=RelinkCandidateViewModel が FileName・AbsolutePath(collection root+relative)・SizeText・ModifiedText を備える(視覚描画は CP-UI-G10/golden)", classification: surface, depth: unit, tolerance: "GF_V4_04 ベクタ(候補=ファイル名/絶対パス/サイズ/更新時刻を公開・missing 行=ファイル名公開)全緑", fixture: "CpUiRepairViewModelTests(TempDb+seed folder Path)", oracle: "xunit.v3 exact(VM フィールド公開)",
+    - { id: CP-REPAIR-CARD-021, characteristic: "(ECO-003)再リンク候補 VM が表示パリティの判断材料を公開する=RelinkCandidateViewModel が FileName・AbsolutePath(collection root+relative)・SizeText・ModifiedText を備える(視覚描画は CP-UI-G10/golden)", classification: surface, depth: unit, tolerance: "GF_V4_04 ベクタ(候補=ファイル名/絶対パス/サイズ/更新時刻を公開・missing 行=ファイル名公開)全緑", fixture: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs, fixture_note: "TempDb+seed folder Path", oracle: "xunit.v3 exact(VM フィールド公開)",
         test_vectors: ["候補カード=FileName/AbsolutePath(collection root+relative)/SizeText/ModifiedText の4フィールド公開(GF_V4_04)", "missing 行=ファイル名公開", "relink 確定=missing 側 ID 不変で status Normal(候補提示→確定の一連)"] }   # ECO-033: CpUiRepairViewModelTests から事実転記
-    - { id: CP-UI-G10, characteristic: "修復ライフサイクル UI(criteria 検索・relink 候補提示/確定・**候補カードの表示パリティ=サムネイル+ファイル名+パス+サイズ+更新日時を原典 AdvancedRepairModal とフィールド単位で突合**・トラッシュ復元/完全削除・非破壊明示文言・タグ付き候補のマージ案内・復元の missing 化表示)の目視(G-10・v4.0/ECO-003 で表示パリティ項目を追加)", classification: surface, depth: G, tolerance: "G-10 チェックリスト全項目(20-spec.md §2.6)", fixture: "実アプリ+フィクスチャ(missing/pending を含むコレクション+deleted 画像。relink・復元・完全削除の前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G10, characteristic: "修復ライフサイクル UI(criteria 検索・relink 候補提示/確定・**候補カードの表示パリティ=サムネイル+ファイル名+パス+サイズ+更新日時を原典 AdvancedRepairModal とフィールド単位で突合**・トラッシュ復元/完全削除・非破壊明示文言・タグ付き候補のマージ案内・復元の missing 化表示)の目視(G-10・v4.0/ECO-003 で表示パリティ項目を追加)", classification: surface, depth: G, tolerance: "G-10 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ(missing/pending を含むコレクション+deleted 画像。relink・復元・完全削除の前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }

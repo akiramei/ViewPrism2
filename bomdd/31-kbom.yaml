@@ -150,6 +150,16 @@ kbom:
     risk_if_implicit: "キー体系・プレースホルダ構文が工場ごとに分岐し、資産変換が手作業化する。"
     source_reference: "原典 view-prism/messages/ja.json・en.json / ADR-0006"
 
+  - id: K-ORIGIN
+    category: external_source
+    subject: 原典 view-prism(v1.x/v2.x 世代)の component・仕様節の対応
+    managed_knowledge:
+      - "原典アプリ view-prism の仕様書(§番号は v1.x〜v2.x 世代の節)とソース(component 名)は本 workspace 外(リバース時の一次資料)"
+      - "E-BOM の external_source_ref が本パックを指す品目は、external_source_note に原典 component 名と仕様節を記録する(ECO-032(b) 正規形: 参照欄は単一 ID・散文は note へ)"
+      - "原典との差分は各品目の name/invariants と ECO(例 ECO-010/014/023)が正 — 原典仕様は出発点であり現行仕様ではない"
+    risk_if_implicit: "原典系譜が散文のままだと参照解決が壊れ(R-004)、リバース由来品目の出所が機械可読に辿れない。"
+    source_reference: "原典 view-prism リポジトリ(workspace 外)/ 20-spec.md §2.6(リバース仕様の節)"
+
   - id: K-WINFS
     category: external_tool_convention
     subject: Windows ファイルシステムの取り扱い

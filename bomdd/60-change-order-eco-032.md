@@ -1,7 +1,7 @@
 # ECO-032 — 注釈付きパスの段階的正規化(87 件・低優先)+35 のプレースホルダ残 1 件(真正・即時)
 
 - **type**: 欠陥是正 1 件(即時)+台帳正規化(段階的・低優先)
-- **status**: staged(起票のみ)
+- **status**: applied — (a) 2026-07-03 適用 / (b) 2026-07-03 一括正規化完了(workspace R-004 warn 74→**0**。register notes に内訳)
 - **golden**: n/a
 - **baseline**: main `30f2ed9`
 - **出所**: BomDD-Plm bomdd-lint(v0.2-eco-001-accepted)workspace 遡及(2026-07-03)。S-19 裁定で

@@ -483,7 +483,8 @@ ebom:
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-030, REQ-034, REQ-035, REQ-036, REQ-037, REQ-060]
-      external_source_ref: "原典 BaseViewHandler/TagTreeItem/HierarchyTreeView(仕様 §2.6 v1.2)"
+      external_source_ref: K-ORIGIN
+      external_source_note: "原典 BaseViewHandler/TagTreeItem/HierarchyTreeView(仕様 §2.6 v1.2)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-GRAPH-003, E-VIEWSVC-009]
       invariants:
@@ -519,7 +520,8 @@ ebom:
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-046, REQ-026, REQ-027]
-      external_source_ref: "原典 TaggingPanel/NumericTagDialog/ImageTagChip(仕様 §2.6 v1.2)。ECO-010 で固定値入力をインライン化(NumericTagDialog の固定値モードを置換)"
+      external_source_ref: K-ORIGIN
+      external_source_note: "原典 TaggingPanel/NumericTagDialog/ImageTagChip(仕様 §2.6 v1.2)。ECO-010 で固定値入力をインライン化(NumericTagDialog の固定値モードを置換)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-TAGSVC-008, E-UI-BROWSE-022]
       invariants:
@@ -535,7 +537,8 @@ ebom:
       classification: surface
       rationale_type: design-token
       requirement_refs: [REQ-050]
-      external_source_ref: "原典 view-prism messages/ja.json・en.json(変換規則は K-I18N)"
+      external_source_ref: K-I18N
+      external_source_note: "原典 view-prism messages/ja.json・en.json(変換規則は K-I18N)"
       kbom_refs: [K-I18N]
       depends_on: [E-I18N-014]
       acceptance_refs: [CP-UI-G5]
@@ -561,7 +564,8 @@ ebom:
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-065, REQ-064]
-      external_source_ref: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
+      external_source_ref: K-ORIGIN
+      external_source_note: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-SIMSEARCH-032, E-CRITERIA-037, E-UI-BROWSE-022, E-THUMB-020]
       invariants:
@@ -575,7 +579,8 @@ ebom:
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-067, REQ-066]
-      external_source_ref: "原典 ImageMergeModal/TrashModal(仕様 §2.10.5)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
+      external_source_ref: K-ORIGIN
+      external_source_note: "原典 ImageMergeModal/TrashModal(仕様 §2.10.5)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-MERGE-034, E-UI-SIMILARITY-035, E-THUMB-020]
       invariants:
@@ -592,7 +597,8 @@ ebom:
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-072, REQ-068, REQ-069, REQ-070, REQ-071]
-      external_source_ref: "原典 RepairModal/AdvancedRepairModal(候補カード)/TrashModal(仕様 §2.11.5)"
+      external_source_ref: K-ORIGIN
+      external_source_note: "原典 RepairModal/AdvancedRepairModal(候補カード)/TrashModal(仕様 §2.11.5)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-CRITERIA-037, E-RELINK-007, E-TRASH-038, E-UI-MERGE-036, E-THUMB-020]
       invariants:
