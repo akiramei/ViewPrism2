@@ -704,7 +704,7 @@ changes:
   - id: ECO-031
     title: "41-fixed-oracle の spec_ref 正規化(散文 38 件 → パス#節 形式)"
     type: 台帳正規化(doc-only)
-    status: staged
+    status: applied   # 2026-07-03 適用。§X.Y(注釈) → bomdd/20-spec.md#X.Y(注釈) の機械変換(断片は検査対象外につき注釈を無劣化で保持)。lint: R-004 error 38件解消(119→81)
     golden: n/a
     baseline: "main 30f2ed9"
     findings: "R-004 38所見 @ 41-fixed-oracle.yaml。BomDD-Plm 自リポで同型 19 件を解消済み(同型作業)"

@@ -64,73 +64,73 @@ fixed_oracle:
     - id: S-01
       scenario: "リネーム追跡 E2E: フォルダ登録→画像 3 枚スキャン→1 枚にタグ 2 種+ノート→ファイル名変更→再スキャン→候補確認→再リンク確定"
       contract_expectation: "再スキャン後: 旧行=missing+新行=pending(candidate=旧行 id)。確定後: 旧 image_id のまま relative_path 更新・status=normal・タグ 2 種とノート残存・pending 行消滅・candidate_link_id=NULL"
-      spec_ref: §2.1(規則 3a・遷移表・REQ-017)
+      spec_ref: "bomdd/20-spec.md#2.1(規則 3a・遷移表・REQ-017)"
       equivalence_ref: EQ-001
       depth: unit〜L2
     - id: S-02
       scenario: "NodeGraph 構造遷移: textual タグの distinct 値を 0→1→2 件と増やしながら 3 回構築"
       contract_expectation: "0 件=タグ名ノードのみ / 1 件=一体型『タグ名: 値』+階層子がその配下 / 2 件=値ノード 2 個に階層子が複製。値は序数昇順"
-      spec_ref: §2.4 REQ-035
+      spec_ref: "bomdd/20-spec.md#2.4 REQ-035"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-03
       scenario: "条件評価複合: 画像 6 枚(タグ未付与/simple のみ/numeric '5'/'5.0'/'abc'/textual 'Red')に [exists(simple), between(1,5), equals('red')] を個別評価"
       contract_expectation: "between: '5'と'5.0' が成立・'abc' 不成立・未付与不成立。equals('red'): 'Red' 不成立(case-sensitive)。exists: simple のみ成立"
-      spec_ref: §2.3 演算子表+エッジケース規則
+      spec_ref: "bomdd/20-spec.md#2.3 演算子表+エッジケース規則"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-04
       scenario: "ReDoS 耐性: regexp 条件にカタストロフィックパターン '(a+)+$' + 入力 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!' を 28 文字タグ値で評価"
       contract_expectation: "1 秒タイムアウト→条件不成立+警告 1 件。プロセスはハング・クラッシュしない"
-      spec_ref: §2.3(K-REGEX)
+      spec_ref: "bomdd/20-spec.md#2.3(K-REGEX)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-05
       scenario: "マイグレーション同値: 初版 DDL 相当の空 DB に全マイグレーション適用 vs 新規作成 DB"
       contract_expectation: "PRAGMA table_info/foreign_key_list/index_list が全テーブルで一致。migrations 行数一致"
-      spec_ref: §2.0・REQ-004
+      spec_ref: "bomdd/20-spec.md#2.0・REQ-004"
       equivalence_ref: EQ-001
       depth: L2
     - id: S-06
       scenario: "設定破損起動: settings.json に不正 JSON を書き込んで Load"
       contract_expectation: "既定値(ja/1200x800/列 4)で返り、例外なし。.bak 退避+正常ファイル再生成"
-      spec_ref: §2.7 REQ-052
+      spec_ref: "bomdd/20-spec.md#2.7 REQ-052"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-07
       scenario: "バッチ原子性: 3 画像へ numeric タグ(min=1,max=5)を value=3 で一括付与。うち 1 画像は事前に削除済み id を混入"
       contract_expectation: "全体ロールバック(0 件適用)+NotFound 系エラー。残り 2 画像にも付与されない"
-      spec_ref: §2.2 REQ-027
+      spec_ref: "bomdd/20-spec.md#2.2 REQ-027"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-08
       scenario: "整列安定性: 同名(大文字小文字違い)・同サイズの画像 4 枚を name asc → file_size desc → name asc の順で 3 回整列"
       contract_expectation: "各整列で同値グループ内は id 昇順。3 回目の出力は 1 回目と完全一致"
-      spec_ref: §2.3 REQ-038
+      spec_ref: "bomdd/20-spec.md#2.3 REQ-038"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-09
       scenario: "i18n フォールバック連鎖: locale=en で en 欠落キー(ja のみ存在)と両方欠落キーを解決"
       contract_expectation: "前者=ja 文言 / 後者=キー文字列。例外なし"
-      spec_ref: §2.7 REQ-050
+      spec_ref: "bomdd/20-spec.md#2.7 REQ-050"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-10
       scenario: "サムネイル境界: 100x50 png(小画像)と 256x256 ちょうどの jpg を生成"
       contract_expectation: "100x50 → 100x50 png(拡大なし)/ 256x256 → 256x256 jpg(scale=1.0)"
-      spec_ref: §2.5 REQ-040(K-SKIA 丸め規則)
+      spec_ref: "bomdd/20-spec.md#2.5 REQ-040(K-SKIA 丸め規則)"
       equivalence_ref: EQ-002
       depth: L2
     - id: S-11
       scenario: "タグ削除の波及: ビュー条件・ビュー階層・子タグ・画像付与を持つタグを削除し、当該ビューを開いて NodeGraph 構築+条件評価"
       contract_expectation: "構築・評価とも例外なし。階層から該当ノード消滅、条件は tag_id=NULL となり評価から無視(警告)、子タグはルート化"
-      spec_ref: §2.2 REQ-028・INV-008・§2.3 エッジケース
+      spec_ref: "bomdd/20-spec.md#2.2 REQ-028・INV-008・§2.3 エッジケース"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-12
       scenario: "ホームタグ参照切れ: home_tag_id が指す階層ノードを削除後にビューを開く"
       contract_expectation: "ルートから開始。エラー表示なし"
-      spec_ref: §2.4 REQ-037
+      spec_ref: "bomdd/20-spec.md#2.4 REQ-037"
       equivalence_ref: EQ-001
       depth: unit
 
@@ -138,37 +138,37 @@ fixed_oracle:
     - id: S-13
       scenario: "見開き読書 E2E(右開き・奇数枚数): total=7・index=0 から『次へ』(doublePage)を末尾まで送り、SHIFT で 1 戻す"
       contract_expectation: "ペア遷移: (R=0,L=1)→(R=2,L=3)→(R=4,L=5)→(R=6,L=空白)。末尾でさらに次へ→変化なし(停止)。SHIFT 前へ 1 → index=5 で (R=5,L=6)(偶奇ずれの維持・再アラインなし)"
-      spec_ref: §2.9 REQ-056(ペアリング)・REQ-057(送り・境界・停止)
+      spec_ref: "bomdd/20-spec.md#2.9 REQ-056(ペアリング)・REQ-057(送り・境界・停止)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-14
       scenario: "空白ページ開始の複合: total=6・startWithEmptyPage=ON・右開きで index=0 から次へ×3、左開きへ切替えて先頭から同様"
       contract_expectation: "右開き: index0=(L=0,R=空白)→次へで index=1(0→1 特殊送り)=(R=1,L=2)→index=3=(R=3,L=4)→index=5=(R=5,L=空白)。左開き: index0=(R=0,L=空白)→以後同型(L/R 鏡像)。index>0 では特殊配置なし"
-      spec_ref: §2.9 REQ-056(空白開始は index 0 のみ・進行方向側)・REQ-057(0→1 送り)
+      spec_ref: "bomdd/20-spec.md#2.9 REQ-056(空白開始は index 0 のみ・進行方向側)・REQ-057(0→1 送り)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-15
       scenario: "モード別位置記憶の操作列: 起動 index=5 → scroll で 20 へ移動 → spread-right へ切替 → 2 回送る(step2) → normal へ切替 → scroll へ戻る"
       contract_expectation: "spread 切替時=5(初期値=起動 index)→送って 9 → normal 切替時=5(normal の記憶は初期値のまま)→ scroll 復帰=20(scroll の記憶)。各モードの記憶が独立(共通 index 引き継ぎは違反)"
-      spec_ref: §2.9 REQ-054(モード別記憶・初期値=起動 index)
+      spec_ref: "bomdd/20-spec.md#2.9 REQ-054(モード別記憶・初期値=起動 index)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-16
       scenario: "スクロール中央追跡の境界: 等高画像 3 枚(gap 0)で 2 枚が表示中心から完全等距離になるオフセット+先頭・最下端"
       contract_expectation: "等距離 → 若い index を現在位置とする。先頭(offset=0)→ index 0 / 最下端 → 最終 index。負 offset・範囲外は発生しない前提(クランプは呼び出し側)"
-      spec_ref: §2.9 REQ-055(中央最近傍・同距離タイブレーク)
+      spec_ref: "bomdd/20-spec.md#2.9 REQ-055(中央最近傍・同距離タイブレーク)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-17
       scenario: "ビューア設定の永続化と破損耐性: 全 7 項目を非既定値で保存→再読込。次に settings.json の ViewerCustomGapPx を 9999・ViewerMode を 'xyz' に書き換えて再読込"
       contract_expectation: "ラウンドトリップ: 全 7 項目一致。破損後: customGapPx=0(既定)・mode='normal'(既定)へ項目単位でフォールバックし他項目は保持。例外なし。v1.3 形式(Viewer* キーなし)も全既定値で読める"
-      spec_ref: §2.9 REQ-059・§2.7 REQ-052(破損耐性)
+      spec_ref: "bomdd/20-spec.md#2.9 REQ-059・§2.7 REQ-052(破損耐性)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-18
       scenario: "条件サマリ整形(GF-05 再発防止): textual equals 値='男'・values=['男','女']・range(10,20)・range(10,なし)・不正 JSON の 5 入力を ja で整形"
       contract_expectation: "『値が一致: 男』『いずれか: 男, 女』『範囲: 10〜20』『10 以上』、不正 JSON=空文字列(例外なし)。全出力に '\\u' と '{' が含まれない(エスケープ・生 JSON 非露出)"
-      spec_ref: §2.6 REQ-060(e)(i18n テンプレート書式)
+      spec_ref: "bomdd/20-spec.md#2.6 REQ-060(e)(i18n テンプレート書式)"
       equivalence_ref: EQ-001
       depth: unit
 
@@ -180,56 +180,56 @@ fixed_oracle:
       scope: cross-factory
       scenario: "pHash の横断契約: 決定性・同一内容距離0・近傍/遠傍の分類と順序(合成 BGRA)。値レベルは S-19b へ分離"
       contract_expectation: "決定性=同一ピクセル→同一ハッシュ。同一内容→距離0。dist(近傍)<dist(遠傍)かつ score(近傍)≥70(類似分類)・score(遠傍)<50(非類似分類)。**exact 距離値・16hex は凍結しない**(実装で変わってよい)"
-      spec_ref: §2.10.1(OC-14・CPOL-103)
+      spec_ref: "bomdd/20-spec.md#2.10.1(OC-14・CPOL-103)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-19b
       scope: this-build
       scenario: "このビルドの pHash 係数レベル exact 値(A/B 横断ゲートにしない): 単色画像の縮退"
       contract_expectation: "単色=非 DC 係数 0→DC 位置のみ bit1=0x8000000000000000(当方レシピ=orthonormal DCT-II・DC 除外中央値・行優先・CHEAT-01 量子化の出力)。**このビルドの回帰専用**。factory-B 等は満たす必要なし(CPOL-103)"
-      spec_ref: §2.10.1(K-PHASH・ADR-0008)
+      spec_ref: "bomdd/20-spec.md#2.10.1(K-PHASH・ADR-0008)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-20
       scope: cross-factory
       scenario: "距離→類似度%変換: 距離 0,3,5,7,10,12,15,20,25,26,27,40,64 を変換し、閾値判定の境界を確認"
       contract_expectation: "順に 100,94,90,82,70,62,50,30,10,10,9,6,0(単調非増加)。閾値 70 ⇔ 距離 10 以内(d=10→70 を含む≧判定で類似)"
-      spec_ref: §2.10.2(OC-15)
+      spec_ref: "bomdd/20-spec.md#2.10.2(OC-15)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-21
       scope: cross-factory   # エンジン論理(候補抽出・閾値・ソート)。pHash は注入で工場非依存
       scenario: "類似検索エンジン E2E: 1 コレクションに normal 5 枚(基準に近い 2・中間 1・遠い 2)+別コレクション 1(近い)+deleted/missing/pending 各 1(近い・キャッシュ値あり)。基準=normal 1 枚・閾値 70 で検索"
       contract_expectation: "結果=同一コレクションの normal 候補のうち類似度≧70 のみ、類似度降順・同値 id 昇順。別コレクション・基準自身・deleted/missing/pending はキャッシュ値があっても除外(フィルタ先行)。類似度ちょうど 70 の候補は含む"
-      spec_ref: §2.10.4(OC-16・REQ-053)
+      spec_ref: "bomdd/20-spec.md#2.10.4(OC-16・REQ-053)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-22
       scope: cross-factory
       scenario: "特徴量・類似度キャッシュ: A,B の pHash を保存しペア類似度をキャッシュ → (1)B のファイル内容変化(hash 変化)で B 特徴量を再計算 → (2)A-B を再検索 → (3)画像 A を DB 削除"
       contract_expectation: "(1)B 再計算時に B が関与する image_similarity 行(A-B 含む)が連鎖削除。(2)A-B は再計算され新値で保存。cache_key は (A,B)=(B,A)(id1<id2 正規化)で同一キーを指す。(3)A 削除で A 関与の image_features/image_similarity 行が CASCADE 削除"
-      spec_ref: §2.10.3(OC-18)
+      spec_ref: "bomdd/20-spec.md#2.10.3(OC-18)"
       equivalence_ref: EQ-001
       depth: unit〜L2
     - id: S-23
       scope: cross-factory
       scenario: "マージ E2E(タグ集約・多元・status・原子): マージ先 T(simple s / textual t=NULL / numeric n=5)+マージ元 A(t='赤', n=3, simple u)・B(t='青', simple s)。id 昇順 A<B。T へ A,B をマージし、別途タグ集約途中失敗を注入したケースも検査"
       contract_expectation: "統合後 T のタグ: s(既存保持)・u(A から union)・t=T が NULL→A の '赤' を補完(B の '青' は上書きしない=id 昇順先勝ち)・n=T の 5 を保持(A の 3 は採用しない=マージ先優先)。A,B は status=Deleted・image_tags 残存・T は Normal。物理ファイル不変。失敗注入時=全ロールバック(T タグ・A/B status とも変化なし)"
-      spec_ref: §2.10.5(OC-17・INV-011・INV-006)
+      spec_ref: "bomdd/20-spec.md#2.10.5(OC-17・INV-011・INV-006)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-24
       scope: cross-factory
       scenario: "マージの物理非破壊(L3): 実画像ファイル 3 枚を一時フォルダに置きスキャン → 2 枚をマージ → フォルダをスナップショット比較"
       contract_expectation: "マージ前後でフォルダ内全ファイルの SHA-256・LastWriteTimeUtc・ファイル集合が完全一致(削除・移動・新規作成なし)。一方 DB 上はマージ元が Deleted・タグ集約済み(論理操作は起きている=空振りでない)"
-      spec_ref: §2.10.5(CP-MERGE-001・INV-009)
+      spec_ref: "bomdd/20-spec.md#2.10.5(CP-MERGE-001・INV-009)"
       equivalence_ref: EQ-003
       depth: L3
     - id: S-25
       scope: cross-factory   # A/B 同等性契約の中核: 実 decode 経由の順位等価(pHash 値に非依存)
       scenario: "検索順位等価(実リーダー経由): 基準+同一構造の近傍 3 枚(加算輝度シフト/JPEG q90/q80 再エンコード)+構造の異なる無関係 5 枚を実ファイルで生成。基準から閾値 70 で検索"
       contract_expectation: "近傍 3 枚がすべて結果に含まれ(membership)、上位 3 位を占める(無関係より上位=順位等価)。近傍の最小スコア > 結果内無関係の最大スコア。**pHash の 16hex 値に依存しない順位等価**であり、CPOL-103 を満たす任意の工場(factory-B=DecodeToWidth 等)が満たすべき横断ゲート"
-      spec_ref: §2.10.4(OC-16・CPOL-103)
+      spec_ref: "bomdd/20-spec.md#2.10.4(OC-16・CPOL-103)"
       equivalence_ref: EQ-RANK
       depth: unit(実 decode パイプライン)
 
@@ -238,35 +238,35 @@ fixed_oracle:
       scope: cross-factory
       scenario: "復元・完全削除の物理非破壊(L3): 実画像 3 枚を一時フォルダに置きスキャン→1 枚をマージで deleted 化し復元→別の 1 枚を deleted 化し完全削除→フォルダをスナップショット比較(INV-009 第 2 の実アクション)"
       contract_expectation: "復元・完全削除の前後でフォルダ内全ファイルの SHA-256・LastWriteTimeUtc・ファイル集合が完全一致(削除・移動・新規作成なし)。一方 DB 上は復元で status 遷移・完全削除で images 行消滅(論理操作は起きている=空振りでない)"
-      spec_ref: §2.11.3-4(CP-TRASH-001・INV-009/013/014)
+      spec_ref: "bomdd/20-spec.md#2.11.3-4(CP-TRASH-001・INV-009/013/014)"
       equivalence_ref: EQ-003
       depth: L3
     - id: S-27
       scope: cross-factory
       scenario: "criteria 条件検索: 同一コレクションに hash/名前/拡張子/mtime/サイズ違いの画像群+status 混在。(1)拡張子のみ指定 (2)名前部分一致+サイズ範囲を AND (3)全条件未指定 (4)statusTargets={Pending,Normal} で検索"
       contract_expectation: "(1)指定拡張子かつ statusTargets の画像のみ(他条件は無視) (2)両条件を満たすもののみ(OR にならない) (3)空列(全件を返さない) (4)deleted/missing を除外。結果は relative_path 昇順・同値 id 昇順。名前=OrdinalIgnoreCase 部分一致・拡張子=case-insensitive 完全一致・hash=Ordinal 完全一致"
-      spec_ref: §2.11.1(OC-19・REQ-068)
+      spec_ref: "bomdd/20-spec.md#2.11.1(OC-19・REQ-068)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-28
       scope: cross-factory
       scenario: "relink 拡張 E2E(タグ安全・ID 不変): missing 1 枚(タグ 2 種付与済み)に対し候補=同フォルダの pending(untagged・exact-hash)/ untagged-normal(criteria 一致)/ tagged-normal(criteria 一致だがタグ付き)。候補列挙と各候補での確定を試行"
       contract_expectation: "候補列挙=pending と untagged-normal のみ(tagged-normal は除外・安定順)。untagged 候補で確定→missing 行が候補のパス/メタへ更新・status=Normal・candidate_link_id=NULL・候補行削除・**missing 側 image_id 不変・タグ 2 種残存**。tagged-normal 指定の確定→ValidationError(DB 無変化=タグ損失防止)。別コレクション/deleted 候補→ValidationError"
-      spec_ref: §2.11.2(OC-20・INV-001/015・REQ-069)
+      spec_ref: "bomdd/20-spec.md#2.11.2(OC-20・INV-001/015・REQ-069)"
       equivalence_ref: EQ-001
       depth: unit〜L2
     - id: S-29
       scope: cross-factory
       scenario: "トラッシュ復元の存在分岐: deleted 画像 2 枚。一方は記録パスに物理ファイル存在・他方は不在(IFilePresenceProbe で注入)。各を復元。さらに normal 画像の復元を試行"
       contract_expectation: "存在→status=Normal(T6)/ 不在→status=Missing(T7・幽霊 normal 防止)。両者ともタグ・image_id・特徴量は不変。normal の復元→ValidationError(deleted 限定)。純粋関数 TrashTransition.ResolveRestore(true)=Normal /(false)=Missing"
-      spec_ref: §2.11.3(OC-21・INV-013・REQ-070)
+      spec_ref: "bomdd/20-spec.md#2.11.3(OC-21・INV-013・REQ-070)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-30
       scope: cross-factory
       scenario: "完全削除の CASCADE・対象限定: deleted 画像(タグ・特徴量・類似度ペアを持つ)を完全削除。さらに normal 画像の完全削除を試行"
       contract_expectation: "images 行削除→当該 image の image_tags/image_features/image_similarity 行が FK CASCADE で 0 件(孤児ゼロ)。normal の完全削除→ValidationError(deleted 限定)。物理ファイルは不変(S-26 で別途 L3 実証)"
-      spec_ref: §2.11.4(OC-22・INV-014・REQ-071)
+      spec_ref: "bomdd/20-spec.md#2.11.4(OC-22・INV-014・REQ-071)"
       equivalence_ref: EQ-001
       depth: unit〜L2
     - id: S-31
@@ -274,7 +274,7 @@ fixed_oracle:
       added_by: ECO-005
       scenario: "除外(T9): missing 画像(タグ付与あり)を ExcludeAsync。さらに normal/pending/deleted 画像の除外を試行"
       contract_expectation: "missing→status=deleted(T9。トラッシュへ・復元可)。タグ/image_id/特徴量は不変。normal/pending/deleted の除外→ValidationError(missing 限定)。物理ファイルは不変(status 更新のみ・INV-009)"
-      spec_ref: §2.11.6(REQ-073・状態機械 T9)
+      spec_ref: "bomdd/20-spec.md#2.11.6(REQ-073・状態機械 T9)"
       equivalence_ref: EQ-001
       depth: unit
 
@@ -285,7 +285,7 @@ fixed_oracle:
       added_by: ECO-022
       scenario: "アクション解決(OC-23): 1 画像のタグ ID 集合とマッピング(action→tag_id)を与え支配アクションを解決。(1){skip,spread}両方マップ (2){spread,forceLeftPage} (3){forceRightPage,leftPageEmpty} (4)マッピングに無いタグのみ (5)map にあるが画像が持たない tag_id (6)タグ無し画像"
       contract_expectation: "全順序 skip>spread>forceLeftPage>forceRightPage>leftPageEmpty>rightPageEmpty で支配 1 つ: (1)skip (2)spread (3)forceRightPage (4)無し (5)無し(画像のタグ基準=自然無視) (6)無し。Resolve はタグ存在台帳を入力に取らない(現存性濾過は UI 責務)"
-      spec_ref: §2.12.1(OC-23・REQ-076・TC-3)
+      spec_ref: "bomdd/20-spec.md#2.12.1(OC-23・REQ-076・TC-3)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-33
@@ -293,7 +293,7 @@ fixed_oracle:
       added_by: ECO-022
       scenario: "ページプラン構築 worked example(OC-24・右開き): 仕様 §2.12.3 の代表ケース。(1)idx[0:A,1:広告,2:B,3:C]・広告=skip・B=forceRightPage (2)同 idx・広告=skip・A=leftPageEmpty (3)先頭広告 idx[0:広告,1:A,2:B,3:C]・広告=skip・A=forceLeftPage (4)漫画 idx[0:表紙,1:右半,2:左半,3:p]・空白開始 ON・無アクション (5)idx[0:X,1:Y]・Y=spread・空白開始 OFF"
       contract_expectation: "(1)スロット[A,空,B,C]→見開き[(右:A,左:空),(右:B,左:C)] (2)同上 (3)スロット[空,A,B,C]→[(右:空,左:A),(右:B,左:C)] (4)スロット[空,表紙,右半,左半,p]→[(右:空,左:表紙),(右:右半,左:左半),(右:p,左:空)] (5)スロット[X,空,(Y span)]→[(右:X,左:空),(Y 見開き占有)]。skip は事前除去・padToParity・seed 抑止・span は左右両スロットを 1 枚占有"
-      spec_ref: §2.12.2-3(OC-24・REQ-076)
+      spec_ref: "bomdd/20-spec.md#2.12.2-3(OC-24・REQ-076)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-34
@@ -301,7 +301,7 @@ fixed_oracle:
       added_by: ECO-022
       scenario: "OFF-identity(回帰アンカー): 全画像アクション無しの列(例 4〜5 枚)で、右開き/左開き × 空白ページ開始 ON/OFF の各現在位置のプラン見開きを、E-VIEWER-CALC-030 の SpreadPairCalculator.Calculate と照合"
       contract_expectation: "全 4 組(方向×空白開始)・全位置でプラン見開きの (左ページ,右ページ) が SpreadPairCalculator と完全一致。タグ制御 ON でもアクション無し列はフェーズ1(§2.9 OC-9)と同一配置=enableTagControl OFF 経路の回帰保証点"
-      spec_ref: §2.12.2(OC-24 OFF-identity・OC-9)
+      spec_ref: "bomdd/20-spec.md#2.12.2(OC-24 OFF-identity・OC-9)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-35
@@ -309,7 +309,7 @@ fixed_oracle:
       added_by: ECO-022
       scenario: "seed 抑止・両面空白不在・canonical/対応: 空白開始 ON × 先頭の非 skip 画像が各配置アクション(forceRightPage/forceLeftPage/leftPageEmpty/rightPageEmpty/spread)を持つ列を右開き・左開き両方で構築。さらに各見開きの canonical 現在画像と画像→見開き index 対応を確認"
       contract_expectation: "先頭が配置アクションのとき空白開始 seed を予約しない=両面空白の見開き(両スロット空白)を一切生成しない(例: 右開き・空白開始 ON・[A=forceRightPage,B]→スロット[A,B]→[(右:A,左:B)])。各見開きの canonical 現在画像は常に一意(先読み面 S[2k] が画像ならそれ・空白なら S[2k+1]・spread は占有画像)。画像→見開き index は各非 skip 画像でちょうど 1 つ"
-      spec_ref: §2.12.2 不変条件・§2.12.4(canonical)
+      spec_ref: "bomdd/20-spec.md#2.12.2 不変条件・§2.12.4(canonical)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-36
@@ -317,7 +317,7 @@ fixed_oracle:
       added_by: ECO-022
       scenario: "タグ制御ナビゲーション(OC-25): S-33(1) のプラン[P0=(右:A,左:空),P1=(右:B,左:C)]上で 次へ/前へ・端クランプ・モード復元(画像 index→見開き)・位置/総数を確認"
       contract_expectation: "cur=0 次へ→1 / cur=1 次へ→1(クランプ・変化なし)/ cur=1 前へ→0 / cur=0 前へ→0。SHIFT/pageTurnMode 非適用(常にプラン見開き 1 つ送り)。モード復元: 画像 B(idx2)→P1。総数=非 skip 3。位置: P0=単独『1 / 3』(A=1・相方空白)/ P1=『2-3 / 3』(読み順=先読み面 B 先)"
-      spec_ref: §2.12.4(OC-25・REQ-076)
+      spec_ref: "bomdd/20-spec.md#2.12.4(OC-25・REQ-076)"
       equivalence_ref: EQ-001
       depth: unit
     - id: S-37
@@ -325,6 +325,6 @@ fixed_oracle:
       added_by: ECO-022
       scenario: "タグ制御設定の永続化(REQ-077): enableTagControl(bool)+action→tag_id 6 個を settings.json へ保存→読込。さらに enableTagControl の未知値・マッピング欄の欠損/型不正・現存しない tag_id を指すマッピングの読込"
       contract_expectation: "ラウンドトリップ: 保存値=読込値(トグル+6 マッピング)。enableTagControl 未知値→既定 OFF / マッピング欄の欠損・型不正→当該 action は未割り当て・例外なし(前方互換)。現存しない tag_id を指すマッピングは永続値を保持(読込で消さない)が解決時は未割り当て扱い(S-32(5) と整合)"
-      spec_ref: §2.12.5(REQ-077・CP-SET-009 拡張)
+      spec_ref: "bomdd/20-spec.md#2.12.5(REQ-077・CP-SET-009 拡張)"
       equivalence_ref: EQ-001
       depth: unit
