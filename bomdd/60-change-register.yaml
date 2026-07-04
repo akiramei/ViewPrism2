@@ -817,3 +817,14 @@ changes:
     impacted_bom: ["E-UI-TAGASSIGN-029(宣言補完+実装)", "E-UI-WORKSPACE-043(β-2 読み替え)", "M-UI-IMAGETAB-035", "M-UI-013", "M-UI-WORKSPACE-029"]
     body: 60-change-order-eco-041.md
     notes: "ECO-040 §7 スコープ外所見の分離起票(maintainer 裁定)。是正順=R2 上流先行: E-BOM 宣言補完 → プローブ → VM 絞り込み(決定論・unit 検査可能)→ XAML 配線(作業タブは ECO-040 整列規約で新設)。Core/DB 不変・オラクル改訂なし(R6)。再発防止候補=trace-map→E-BOM 転記監査(FMEA-037 同族)"
+
+  - id: ECO-042
+    title: "FL-001 裁定の取り込み — グリッドに列は持ち込まない(表示列はリスト専用描画面・アイコンへの露出は FL-003 の範囲まで)"
+    type: 設計確定の取り込み(CAD 裁定 5e1d32e・現状追認=実装変更ゼロ・doc-only)
+    status: applied
+    golden: n/a   # 現状追認(視覚不変・src/tests 変更ゼロ)
+    baseline: "main 8fb4999"
+    findings: "ECO-025 の残未確定 FL-001 を maintainer 裁定(2026-07-05)。現行実装(ECO-025 β golden approved)のグリッドタイル=サムネ+名前+ソート中のみソート項目(+閲覧時タグドット)は裁定に既適合=現状追認。残論点は「列」のみだった(ソート共有は FL-003 で決定済み)"
+    impacted_bom: ["E-UI-BROWSE-022(invariant 明文のみ)", "20-spec ソート節(1 文)"]
+    body: 60-change-order-eco-042.md
+    notes: "FL-002/FL-004→ECO-039 と同型の取り込み・ただし doc-only。62 不要(DB 不変)・35-dsbom 不要(surface 新設なし)・オラクル/golden 影響なし。ECO-025 系の残未確定は VE-004(空のビュー名保存)のみ"
