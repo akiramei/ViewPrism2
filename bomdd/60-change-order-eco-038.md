@@ -1,4 +1,4 @@
-# Change Order — ECO-038(起票・staged): 作業タブ 画像一覧のグリッド/リスト切替が本体表示に反映されない
+# Change Order — ECO-038(applied): 作業タブ 画像一覧のグリッド/リスト切替が本体表示に反映されない
 
 > maintainer 報告(2026-07-04)の実害是正。起票時に工程診断(mock/UI-IR/BOM/実装 — ECO-025 retro 規律)を実施済み。
 
@@ -70,3 +70,13 @@
   追随しない」という真因構造を温存するため不採用。
 - diff: WorkTabViewModel.cs の NotifyLayout 置換(実質 −4+3 行)+回帰テスト 1 件。XAML 無変更。
 - 機械受入: build 0 error・**Tests 527/527**・Oracle 100+2skip・validate_bom 0 error/0 warning。
+
+## 8. クローズ(2026-07-04 golden 合格)
+
+- maintainer 実機: グリッド⇔リスト押下で本体が即時切替(往復)+ボタン active 状態一致 OK。
+- 再発防止: **CP-UI-G1 に「作業タブ グリッド⇔リスト切替の即時反映」観点を明記**
+  (派生プロパティ通知漏れで導入時から潜伏した実績つき)。register= applied・golden approved。
+- 教訓(ECO-037 の VM 版 read-across): **派生プロパティ連鎖(computed chain)の通知漏れ** —
+  手書き通知リストは派生の追加(ShowBrowse* は検索結果導入時の派生)に追随しない。
+  切替系コマンドの通知は「XAML が実際にバインドしている名前」を基準に検査する。
+  全通知へ寄せる是正は画像タブ CR-6 と同型の先例に従う。
