@@ -133,4 +133,21 @@ public sealed class CpView012HierarchySaveTests : IDisposable
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorCode.NotFound, result.Error);
     }
+
+    /// <summary>ECO-043(VE-004 裁定 2026-07-05): ビュー名は必須 — 空白のみの名前は作成・更新とも ValidationError。</summary>
+    [Fact]
+    public async Task 空白のみのビュー名は作成も更新も拒否される()
+    {
+        // 作成: 空白のみ → ValidationError
+        var created = await _views.CreateAsync("   ");
+        Assert.False(created.IsSuccess);
+        Assert.Equal(ErrorCode.ValidationError, created.Error);
+
+        // 更新: 既存ビューの名前を空白のみへ → ValidationError・元の名前が無傷
+        var view = (await _views.CreateAsync("V")).Value!;
+        var updated = await _views.UpdateAsync(view with { Name = " " });
+        Assert.False(updated.IsSuccess);
+        Assert.Equal(ErrorCode.ValidationError, updated.Error);
+        Assert.Equal("V", (await _views.GetAsync(view.Id))!.Name);
+    }
 }

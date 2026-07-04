@@ -828,3 +828,14 @@ changes:
     impacted_bom: ["E-UI-BROWSE-022(invariant 明文のみ)", "20-spec ソート節(1 文)"]
     body: 60-change-order-eco-042.md
     notes: "FL-002/FL-004→ECO-039 と同型の取り込み・ただし doc-only。62 不要(DB 不変)・35-dsbom 不要(surface 新設なし)・オラクル/golden 影響なし。ECO-025 系の残未確定は VE-004(空のビュー名保存)のみ"
+
+  - id: ECO-043
+    title: "VE-004 裁定の取り込み — ビュー名は必須(空白のみの名前は作成・更新とも拒否)"
+    type: 設計確定の取り込み(CAD 裁定 85d1f57・現状追認=src 変更ゼロ・受入新規行のみ)
+    status: applied
+    golden: n/a   # 現状追認(視覚不変・src 変更ゼロ)
+    baseline: "main e22b508"
+    findings: "ECO-025 の残未確定 VE-004 を maintainer 裁定(2026-07-05)。Core は当初から強制済み(ViewService Create/Update の IsNullOrWhiteSpace→ValidationError)・UI は ErrorMessage 表示・spec §2.5「名前(必須)」既記載=未確定だったのは CAD 台帳の表記だけ(三者不整合の軽症版)。裁定を受入新規行(空白名の作成/更新拒否+拒否時無傷)で機械ガード化"
+    impacted_bom: ["E-VIEWSVC-009(invariant 明文のみ)", "tests/ViewPrism2.Tests/CpView012HierarchySaveTests.cs(受入 1 件追加・R6 新規行)"]
+    body: 60-change-order-eco-043.md
+    notes: "ECO-042 と同型の取り込み。62 不要・35-dsbom 不要・オラクル/golden 影響なし。**ECO-025 系の未確定はこれで全解消**(VE-001/002/003=025・FL-003=025β・FL-002/004=039・FL-001=042・VE-004=本 ECO)"

@@ -129,6 +129,7 @@ ebom:
         - (ECO-025/VE-001) columns[0] は常に name(c_name)。先頭固定・削除/移動不可(名前不在の列構成は保存不可)。両画面(ビュー編集・ファイル一覧)共通
         - (ECO-025/VE-002) 列数は 1 ≤ N ≤ 最大(標準 5・固定で先行)。名前固定により下限は常に 1 以上。DC プロップの可変レンジ(min2/max8・min3/max7)は製造仕様でない
         - (ECO-025) タグ列候補の母集合は当該ビューのタグ階層メンバーシップに限る。各列は kind∈{basic,num,text,simple}(basic=name/size/date、タグ列は タグ型→num/text/simple に射影)を持ちセル描画/ソート(E-UI-BROWSE-022)を規定する。Ver1「種類(kind)」列は廃止(列ソースは基本情報とタグのみ)
+        - since ECO-043(VE-004 裁定 2026-07-05・現状追認)= **ビュー名は必須** — 空白のみの名前は作成・更新とも ValidationError で拒否(UI はエラーメッセージ表示)。spec §2.5「名前(必須)」既記載・Core 実装済みの明文確定。権威= review_points.md VE-004/view_edit.md「バリデーション」(ViewPrismUI 85d1f57)
       acceptance_refs: [CP-VIEW-012]
 
     - id: E-DB-010
