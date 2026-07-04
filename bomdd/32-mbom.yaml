@@ -201,7 +201,7 @@ mbom:
       fmea_refs: [FMEA-002, FMEA-003]
 
     - id: M-UI-013
-      ebom_refs: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]  # E-UI-DETAIL-023 は ECO-023 で撤回
+      ebom_refs: [E-UI-SHELL-021, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-DESIGN-028]   # ECO-036 第5段: 画像タブ 3 品目(BROWSE-022/AXIS-NAV-040/MODE-041)を M-UI-IMAGETAB-035 へ再帰属(catch-all 解消= scale-01 の写像二層欠陥の是正)。ImageTabView.axaml 等の表示資材は本 unit(dir)所有のまま・品目トレースは 035 経由  # E-UI-DETAIL-023 は ECO-023 で撤回
       artifact:
         path: src/ViewPrism2.App
         path_note: "Views/, ViewModels/"
@@ -215,19 +215,32 @@ mbom:
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G6, CP-L1-SMOKE, CP-COLPICKER-025]  # ECO-023 で CP-UI-G3(詳細パネル)retired・ECO-024 で除去・ECO-025 で CP-COLPICKER-025 追加
       fmea_refs: [FMEA-013]
 
-    - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)。ECO-024 で原典 TaggingPanelViewModel を撤去し画像/作業タブのインライン実装へ実態化
-      # ECO-036 第1段(2026-07-04): ゴミ箱フィーチャを M-UI-TRASH-032 へ部分 split(ホストには後方互換委譲=テスト結合の経過措置のみ残置。系列完了時に supersede 予定 — 60-change-order-eco-036.md §2)
-      ebom_refs: [E-UI-TAGASSIGN-029]
+    - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)→ **superseded(ECO-036 第5段・2026-07-04)**
+      # M 層 lineage の初適用: god-VM(1,765 行・scale-01 のハブ)を 3 分割+残余の複合宣言へ解体。
+      # artifact.path は後継へ移譲済み(superseded unit はファイルを所有しない — 遡及採点の帰属も後継へ)。
+      status: superseded
+      split_by: [M-UI-TRASH-032, M-UI-WORK-033, M-UI-ORGANIZE-034, M-UI-IMAGETAB-035]
+      superseded_by: M-UI-IMAGETAB-035   # 残余(タグ付与+ブラウズ/軸/モード統制)の後継
+      ebom_refs: []   # 全品目を後継へ再帰属(E-UI-TAGASSIGN-029 → M-UI-IMAGETAB-035)
+      lineage_note: "解体系列= 60-change-order-eco-036.md(第1段ゴミ箱/第2段作業/第3段整理/第4段=データフロー座標型は切らない裁定 §14/第5段=本 lineage 確定)"
+
+    - id: M-UI-IMAGETAB-035    # ECO-036 第5段: M-UI-016 の後継(残余の複合 unit — 多:1 写像の明示宣言)
+      supersedes: M-UI-016
+      # 第4段裁定(order §14): ブラウズ+軸ナビ+ソート/列はデータフロー座標で不可分= 切らずに複合のまま
+      # 正直に宣言する。影響分析はこの unit を「4 品目いずれの変更でも予測に入れる」(61 §1.2/§1.4)。
+      ebom_refs: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-TAGASSIGN-029]
       artifact:
         path: src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs
-        path_note: "ImageTabViewModel.cs=タグ編集モードのインライン付与[AddGroups/CurrentTags/ApplyTagAsync/ApplyTextValue/ApplyRating/ApplySequential/RemoveCurrentTag], ViewModels/WorkTabViewModel.cs=作業タブ再利用[ECO-021 β-2], Views/ 内グリッド右ペイン+数値値ダイアログ"
+        path_note: "残余= ブラウズ(母集合/items/選択)+FS/view 軸ナビ+ソート/表示列+モード統制(排他・クリック意味論ディスパッチ)+タグ編集パネル[AddGroups/CurrentTags/ApplyTagAsync ほか]。切り出し済み子 VM= Trash(032)/Work(033)/Organize(034)を内部生成し公開契約の転送殻を持つ。WorkTabViewModel の作業タブ再利用[ECO-021 β-2]・Views/ 側は M-UI-013 所有(表示面の品目トレースは本 unit 経由)"
         type: avalonia-app
       interface_contract:
-        panel: "画像タブ タグ編集モード(ImageTabViewModel): CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel(独立末端 VM)は ECO-024 で撤去(インライン化)"
+        panel: "画像タブ タグ編集モード: CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel は ECO-024 で撤去(インライン化)"
         numeric: "NumericValueDialog: モード=固定値|連番(開始値+選択順 i・ApplySequential=UQ-I02b)。min/max/step 検証をダイアログ内で実施し範囲外は適用前に拒否"
         textual: "候補値ドロップダウン(predefined_values 順・インライン値チップ)+自由入力"
+        mode_dispatch: "文脈モード(タグ編集/整理/作業/削除)の排他とグリッドクリック意味論のディスパッチ(E-UI-MODE-041)。フィーチャ実体は子 VM(032/033/034)"
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
+        - 子 VM はホスト型を参照しない(関数注入)。通知は消費者(XAML/tests=ホスト公開契約)に対し旧実装と同一回数・同一位置(51 通知トポロジー 3 則)
       acceptance_refs: [CP-TAGUI-013, CP-UI-G7]
       fmea_refs: [FMEA-014]
 
@@ -609,7 +622,7 @@ fmea:
   - { id: FMEA-011, unit: M-SCAN-005,  failure_mode: "ロックファイル・ジャンクションでスキャン全体停止/無限再帰",   effect: "スキャン不能",                          targeted_by: CP-SCAN-004 }
   - { id: FMEA-012, unit: M-THUMB-008, failure_mode: "壊れた画像で例外伝播/小画像の拡大",                            effect: "一覧表示停止・画質劣化",                targeted_by: CP-THUMB-007 }
   - { id: FMEA-013, unit: M-UI-013,    failure_mode: "仮想化なしの素朴な ItemsControl 実装",                         effect: "1 万件で UI フリーズ",                  targeted_by: CP-UI-G1(+probe P-01) }
-  - { id: FMEA-014, unit: M-UI-016,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
+  - { id: FMEA-014, unit: M-UI-IMAGETAB-035,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
   - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }
