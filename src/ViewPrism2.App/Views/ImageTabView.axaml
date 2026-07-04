@@ -734,11 +734,11 @@
                         </StackPanel>
                       </Button>
                       <!-- ゴミ箱: 既存トラッシュモーダル(ECO-015・改名)+ deleted 件数バッジ -->
-                      <Button Classes="menuRow" Command="{Binding OpenTrashCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                      <Button Classes="menuRow" Command="{Binding Trash.OpenTrashCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <DockPanel VerticalAlignment="Center">
                           <PathIcon DockPanel.Dock="Left" Data="{StaticResource TrashIcon}" Width="16" Height="16" Margin="0,0,10,0" Foreground="{StaticResource FaintTextBrush}" />
-                          <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding HasTrash}">
-                            <TextBlock Text="{Binding TrashCount}" />
+                          <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding Trash.HasTrash}">
+                            <TextBlock Text="{Binding Trash.TrashCount}" />
                           </Border>
                           <TextBlock Text="ゴミ箱" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
                         </DockPanel>
@@ -1106,7 +1106,7 @@
   </DockPanel>
 
     <!-- ===== ゴミ箱ポップアップ(ECO-019): 画像タブ内 中央オーバーレイ ===== -->
-    <Border IsVisible="{Binding TrashOpen}" Background="#57142C2C">
+    <Border IsVisible="{Binding Trash.TrashOpen}" Background="#57142C2C">
       <Border Classes="trashPopup" Width="780" MaxWidth="780" Height="560" MaxHeight="560"
               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30">
         <DockPanel LastChildFill="True">
@@ -1114,52 +1114,52 @@
           <!-- header -->
           <Border DockPanel.Dock="Top" Classes="trashPopupHeader">
             <DockPanel VerticalAlignment="Center">
-              <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding CloseTrashCommand}" ToolTip.Tip="閉じる">
+              <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding Trash.CloseTrashCommand}" ToolTip.Tip="閉じる">
                 <PathIcon Data="{StaticResource CloseIcon}" />
               </Button>
               <Button DockPanel.Dock="Right" Classes="toolbarBtn" Height="32" MinHeight="32" Padding="11,0" Margin="0,0,8,0"
-                      IsVisible="{Binding HasTrashItems}" Command="{Binding ToggleTrashSelectAllCommand}">
+                      IsVisible="{Binding Trash.HasTrashItems}" Command="{Binding Trash.ToggleTrashSelectAllCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14" />
-                  <TextBlock Text="{Binding TrashSelectAllLabel}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Trash.TrashSelectAllLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource TrashIcon}" Width="18" Height="18" Foreground="{StaticResource FaintTextBrush}" />
                 <TextBlock Text="ゴミ箱" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <TextBlock Text="削除済み画像" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-                <Border Classes="trashCountBadge" IsVisible="{Binding HasTrashItems}">
-                  <TextBlock Text="{Binding TrashPopupCount}" />
+                <Border Classes="trashCountBadge" IsVisible="{Binding Trash.HasTrashItems}">
+                  <TextBlock Text="{Binding Trash.TrashPopupCount}" />
                 </Border>
               </StackPanel>
             </DockPanel>
           </Border>
 
           <!-- footer action bar(項目がある時のみ) -->
-          <Border DockPanel.Dock="Bottom" Classes="trashPopupFooter" IsVisible="{Binding HasTrashItems}">
+          <Border DockPanel.Dock="Bottom" Classes="trashPopupFooter" IsVisible="{Binding Trash.HasTrashItems}">
             <DockPanel VerticalAlignment="Center">
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                <Button Classes="trashRestoreBtn" Classes.ready="{Binding CanRestoreTrash}"
-                        IsEnabled="{Binding CanRestoreTrash}" Command="{Binding RestoreSelectedTrashCommand}">
+                <Button Classes="trashRestoreBtn" Classes.ready="{Binding Trash.CanRestoreTrash}"
+                        IsEnabled="{Binding Trash.CanRestoreTrash}" Command="{Binding Trash.RestoreSelectedTrashCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource RestoreIcon}" Width="16" Height="16" />
                     <TextBlock Text="復元" VerticalAlignment="Center" />
-                    <Border Classes="trashRestoreBadge" IsVisible="{Binding HasTrashSel}"><TextBlock Text="{Binding TrashSelCount}" /></Border>
+                    <Border Classes="trashRestoreBadge" IsVisible="{Binding Trash.HasTrashSel}"><TextBlock Text="{Binding Trash.TrashSelCount}" /></Border>
                   </StackPanel>
                 </Button>
-                <Button Classes="delMoveBtn" Classes.ready="{Binding CanPurgeTrash}"
-                        IsEnabled="{Binding CanPurgeTrash}" Command="{Binding PurgeSelectedTrashCommand}">
+                <Button Classes="delMoveBtn" Classes.ready="{Binding Trash.CanPurgeTrash}"
+                        IsEnabled="{Binding Trash.CanPurgeTrash}" Command="{Binding Trash.PurgeSelectedTrashCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" />
                     <TextBlock Text="完全削除" VerticalAlignment="Center" />
-                    <Border Classes="delMoveBadge" IsVisible="{Binding HasTrashSel}"><TextBlock Text="{Binding TrashSelCount}" /></Border>
+                    <Border Classes="delMoveBadge" IsVisible="{Binding Trash.HasTrashSel}"><TextBlock Text="{Binding Trash.TrashSelCount}" /></Border>
                   </StackPanel>
                 </Button>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                <TextBlock Text="{Binding TrashSelCountLabel}" FontSize="12.5" FontWeight="SemiBold"
+                <TextBlock Text="{Binding Trash.TrashSelCountLabel}" FontSize="12.5" FontWeight="SemiBold"
                            Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-                <Button Classes="trashEmptyBtn" Command="{Binding EmptyTrashCommand}">
+                <Button Classes="trashEmptyBtn" Command="{Binding Trash.EmptyTrashCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource TrashIcon}" Width="15" Height="15" />
                     <TextBlock Text="ゴミ箱を空にする" VerticalAlignment="Center" />
@@ -1171,13 +1171,13 @@
 
           <!-- body: グリッド or 空状態 -->
           <Panel>
-            <ScrollViewer IsVisible="{Binding HasTrashItems}" Padding="18" HorizontalScrollBarVisibility="Disabled">
-              <ItemsControl ItemsSource="{Binding TrashPopupItems}">
+            <ScrollViewer IsVisible="{Binding Trash.HasTrashItems}" Padding="18" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding Trash.TrashPopupItems}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:TrashPopupItemVM">
                     <Button Classes="trashCard"
-                            Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).ToggleTrashItemCommand}"
+                            Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Trash.ToggleTrashItemCommand}"
                             CommandParameter="{Binding}">
                       <StackPanel Width="150" Margin="6">
                         <Border Classes="trashThumb" Classes.selected="{Binding IsSelected}">
@@ -1198,7 +1198,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </ScrollViewer>
-            <StackPanel IsVisible="{Binding TrashPopupEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="13">
+            <StackPanel IsVisible="{Binding Trash.TrashPopupEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="13">
               <Border Width="58" Height="58" CornerRadius="15" Background="{StaticResource PanelBrush}" HorizontalAlignment="Center">
                 <PathIcon Data="{StaticResource TrashIcon}" Width="26" Height="26" Foreground="{StaticResource TextMutedBrush}"
                           HorizontalAlignment="Center" VerticalAlignment="Center" />

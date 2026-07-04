@@ -207,3 +207,16 @@ maintainer から工程上の問い:「仕様→E-BOM→M-BOM→製造 の工程
 - **是正(ECO-003・maintainer 選択 Option B=遡及 BOM 再構築・コード保持)**: REQ-072(d)+counterexample → E-039 表示 invariant → M-027 candidate_card + FMEA-031 → **CP-REPAIR-CARD-021(unit 新設)** + CP-UI-G10(視覚パリティ突合)を正しく作成。検証済みコードは「製造済み成果物」として再受入(Tests 381/Oracle 73)。**工場隔離逸脱**(設計者製コードを工場由来でないまま保持)は 60-change-order-eco-003.md §4 に明示。
 - ポーティング資料作成者はミスを認め `docs/porting-spec/` を改善済み(一次入力是正)。
 - **規律化**: 次ループ要件分解テンプレに「(c) gap は ECO で連鎖を流す/(a) のみ直接修正可」の所見トリアージを組み込む。
+
+## ECO-036 第1段(god-VM 解体・ゴミ箱切り出し)工場ずる 6 件の裁定 2026-07-04
+
+個票: bomdd/reports/eco036-stage1-cheat-report.md(fresh 工場 sonnet・移送表方式)。blocker 1 / friction 3 / minor 2。
+
+| # | 内容 | 裁定 |
+|---|---|---|
+| E36S1-001 | OpenTrash の MoreMenuOpen クローズが注入契約 4 関数に無い → closeMoreMenu 追加 | **accept** — 設計凍結の接続面 under(scale-02 採点に計上)。order §9 で契約 6 関数へ改訂 |
+| E36S1-002 | 絶対パス解決(_collectionPath)依存が注入契約に無い → resolveAbsolutePath 追加 | **accept** — 同上(接続面 under 2 件目)。「子はホスト型を参照しない」規律は維持された |
+| E36S1-003 | **既存テスト 3 ファイル 84 箇所がホストの trash 系公開契約を直接参照** — 「tests diff ゼロ」予測と「テスト無改訂」契約の構造的衝突 → 後方互換の委譲メンバーで解消(状態・ロジックの所有は子 VM・XAML は Trash.* 直結) | **accept** — 帰属= **設計者の 61 §1.2 実行不完全**(移送メンバの全参照 grep を src/ に限定し tests/ を省いた — §1.2 の「全参照」は tests を除外していない)。委譲は経過措置として妥当(除去は後続段でテスト移行と同時= test-only 変更)。method 還元候補: 61 §1.2 チェック項目に「tests/ の参照も含む」を明記 |
+| E36S1-004 | 未使用化した _trash フィールドの除去 | **accept** — 移送の必然的後始末(警告 0 維持) |
+| E36S1-005 | 32-mbom 宣言は工場範囲外と判断 | **accept** — 正しい境界判断(台帳は設計者管轄。本裁定と同時に設計者が宣言済み) |
+| E36S1-006 | 着手前から bomdd/ 2 ファイルに diff が存在(設計者の起票編集) | **accept** — 観測は正確(工場の非改変を diff で自己証明した良い規律) |

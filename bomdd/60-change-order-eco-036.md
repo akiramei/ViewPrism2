@@ -90,3 +90,123 @@
 - 着手時の最初の作業 = 第1段の実物点検(§1 表の TRASH/WORK 境界・CaptureSettings 保存形式・
   ModeCoordinator 裁定)→ 影響分析凍結 → 移送表作成 → 較正(全オラクル・golden が変更前個体で
   期待プロファイル一致することの確認)→ 製造。
+
+---
+
+## 8. 第1段 設計凍結(2026-07-04 着手 — 実物点検の結果と裁定)
+
+### 8.1 先行点検 3 件の結果
+
+| 点検 | 結果 |
+|---|---|
+| CaptureSettings 保存形式 | **問題なし** — 保存は LastCollectionId+DisplayMode のみ(§248)。trash/delete 非依存= data-preservation 次元は発生しない(移行オラクル不要) |
+| TRASH/WORK 境界 | **共有状態なし** — 作業モード(_workMode/_workTargets)とは排他リセットの相互参照のみ |
+| ModeCoordinator | **第1段では作らない(裁定)** — モード排他は E-UI-MODE-041 の中核で、対象4モード中3つが未解体のホスト内。調停の切り出しは MODE 系3段が揃う後続段で行う |
+
+### 8.2 境界の裁定(§1 表の candidate を実測で補正)
+
+- 新 unit = **M-UI-TRASH-032**(§1 の仮称 M-UI-TRASHMODE-032 から改称 — モードフラグはホスト残置のため
+  「TRASHMODE」は不正確)。実体= 新規ファイル `src/ViewPrism2.App/ViewModels/ImageTabTrashViewModel.cs`
+  (既存 TrashViewModel(ECO-015 モーダル)と別物 — 名前衝突回避)。
+- **子 VM が所有**(ゴミ箱フィーチャ): バッジ(_trashCount・RefreshTrashCountAsync・HasTrash/TrashCount)/
+  ポップアップ全状態(TrashOpen・TrashPopupItems・_trashSel)/コマンド(Open/Close/Load/ToggleItem/
+  ToggleSelectAll/RefreshSelection/RestoreSelected/PurgeSelected/EmptyTrash)/ゴミ箱移動の実行部
+  (TrashService 呼び出しループ)。依存: TrashService・IImageRepository・IWindowService(確認ダイアログ)。
+- **ホストに残す**: _deleteMode フラグ・EnterDelete/ExitDelete(排他+共有選択 _selected の変異)・
+  選択依存の公開契約(DeleteMode/HasDeleteSelection/DeleteSelCount/CanDeleteToTrash)・
+  DeleteToTrash コマンドの殻(選択 ids を子へ渡し、選択クリア+ReloadImages+Recompute の順序を保持)。
+- **接続面(子→ホスト逆参照の禁止)**: 子はホスト型を参照しない。コンストラクタで関数注入 —
+  `getCollectionId: Func<string?>`・`reloadImagesAsync: Func<Task>`・`recompute: Action`・
+  `fmtSize: Func<long,string>`(FmtSize の重複実装を避ける)。
+- TrashPopupItemVM は ImageTabSeedViewModel.cs:886 定義 — **参照のみ・移動しない**(同ファイルは diff ゼロ予測)。
+
+### 8.3 影響分析(製造前に凍結)
+
+**影響あり**:
+| ファイル | 変更 |
+|---|---|
+| src/ViewPrism2.App/ViewModels/ImageTabTrashViewModel.cs | **新設**(移送表 §8.4 の全メンバ) |
+| src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs | 移送メンバの除去+`Trash` 子 VM プロパティ+DeleteToTrash 殻+InitializeAsync/OpenRepair の RefreshTrashCount 呼び先変更 |
+| src/ViewPrism2.App/Views/ImageTabView.axaml | trash 系バインディング(実測 35 箇所)を `Trash.*` パスへ(視覚出力不変) |
+| bomdd/32-mbom.yaml | M-UI-TRASH-032 宣言+M-UI-016 註(部分 split 第1段) |
+
+**影響なし予測(反証可能)**: 上記 4 ファイル以外の**全ファイル diff ゼロ**(特に: ImageTabSeedViewModel.cs・
+TrashViewModel.cs(旧モーダル)・Core/Infrastructure 全域・他画面 VM/View・tests/)。
+**全オラクル期待値・golden・CP・テストの改訂ゼロ**。ハブ台帳(61 §1.4): M-UI-016=本 ECO の対象そのもの/
+M-UI-013=ImageTabView.axaml が対象内(宣言済み)・他の App 内ファイルは diff ゼロ/M-VIEWSVC-012=影響なし
+(根拠: UI 層内の再配置のみ・Core サービスの呼び出しシグネチャ不変)。
+
+**結果分類**: テスト/オラクルの失敗= regression(挙動保存の失敗→§5 停止条件)/ 影響 4 ファイル外への
+diff= unnecessary modification / golden 視覚差分= 停止条件(ロールバック)。
+
+### 8.4 移送表(工場入力 — メンバ→行き先の全数対応)
+
+ImageTabViewModel.cs 内の trash 系 25 メンバの行き先(行番号は変更前個体):
+- **子へ移送**: _trashCount(121)・_trashSel(126)/ HasTrash・TrashCount(641-642)/
+  TrashOpen・TrashPopupItems・TrashPopupCount・HasTrashItems・TrashPopupEmpty・HasTrashSel・
+  TrashSelCount・TrashSelCountLabel・TrashSelectAllLabel・CanRestoreTrash・CanPurgeTrash(645-656)/
+  OpenTrash(1195)・CloseTrash(1206)・LoadTrashItemsAsync(1214)・ToggleTrashItem(1231)・
+  ToggleTrashSelectAll(1239)・RefreshTrashSelection(1246)・RestoreSelectedTrash(1253)・
+  PurgeSelectedTrash(1266)・EmptyTrash(1282)・RefreshTrashCountAsync(1607)・
+  DeleteToTrash の実行ループ(1598-1599 → 子の MoveToTrashAsync(ids))
+- **ホスト残置**: _deleteMode(120)・DeleteMode/HasDeleteSelection/DeleteSelCount/CanDeleteToTrash
+  (635-639)・EnterDelete(1573)・ExitDelete(1584)・DeleteToTrash 殻(1593: ids 取得→子呼び出し→
+  選択クリア→ReloadImages→子.RefreshCount→Recompute の**順序を厳密保持**)
+- **呼び先変更**: InitializeAsync:217・OpenRepair:1330 の RefreshTrashCountAsync → Trash.RefreshCountAsync
+- 通知規律: 子は ObservableObject。ホストの Recompute の `OnPropertyChanged(string.Empty)` は子には
+  波及しないため、子は自メンバ変更時に自前で OnPropertyChanged(string.Empty) 相当を発行する
+  (現行の RefreshTrashSelection:1250 と同型 — 挙動保存の要)。
+
+### 8.5 M-BOM 宣言(第1段)
+
+M-UI-TRASH-032: ebom_refs [E-UI-MODE-041(メンテナンス入口のゴミ箱面 — 部分・複数 unit 参照は正常形)]、
+依存品目= E-TRASH-038(状態遷移の所有は M-TRASH-026 のまま)。acceptance_refs [CP-L1-SMOKE]+
+note(popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/022)で被覆 — UI 専用 CP は
+新設しない=挙動不変 ECO で検査資産を増やさない)。M-UI-016 に partial-split 註(第1段・完了時 supersede)。
+
+### 8.6 較正・受入(第1段)
+
+- 較正: 変更前個体で `dotnet test`(Tests+Oracle 全数)緑を確認してから製造(実行記録は §9)。
+- 受入: build 0 エラー・全テスト/オラクル**無改訂で**全緑・workspace lint error/warn 0・
+  diff 監査(影響 4 ファイル閉包)・**golden 再ウォークスルー(maintainer 実機・視覚不変)= 人間ゲート**
+  (機械受入全緑の後、register を implemented にし golden 待ちを明記)。
+
+## 9. 第1段 記録(2026-07-04 実施 — 機械受入完了・golden 待ち)
+
+| 測定 | 結果 |
+|---|---|
+| 較正(変更前個体) | Tests **526/526**・Oracle **100/102(skip 2 = 既知の明示実行系)** 全緑 |
+| 工場(fresh sonnet・移送表方式) | 自己受入全緑・**移送表 25 メンバ全数実施**・逸脱 2(下記) |
+| 設計者受入(独立) | build 0 エラー・Tests **526/526**・Oracle **100/102** — **期待値/テスト/golden 無改訂** |
+| diff 監査 | コード変更= 宣言 3 ファイルに閉包(ImageTabViewModel.cs 194 行 / ImageTabView.axaml 44 行 / 新 VM)。ImageTabSeedViewModel.cs・TrashViewModel.cs・Core/Infrastructure・tests/ = diff ゼロ |
+| workspace lint | error/warn 0 維持 |
+| 工場ずる | **6 件(blocker 1 / friction 3 / minor 2)** — 全裁定 accept(51 参照・個票= reports/eco036-stage1-cheat-report.md) |
+
+### scale-02 測定(第1段分)
+
+- **ファイルレベルの影響予測: 的中**(影響 4 ファイル・影響なし全域 diff ゼロ)。ただし「tests diff ゼロ」は
+  工場の blocker 対応(後方互換委譲)**によって**成立した — 予測が正しかったのではなく救済された。
+- **設計凍結レベルの under = 3 件**: ①接続面 4→6 関数(closeMoreMenu / resolveAbsolutePath — 移送対象の
+  副作用と private 依存の見落とし)②③**既存テスト 3 ファイル 84 箇所がホストの trash 公開契約に直結合**
+  (E36S1-003 blocker)。帰属= **設計者の 61 §1.2 実行不完全**(移送メンバの全参照 grep を src/ に限定し
+  tests/ を省いた。§1.2 の「全参照」は tests を除外していない= regime は正しく実行が不完全)。
+  → method 還元候補: 61 §1.2 に「参照 grep は tests/ を含む」を明記+リファクタ系 ECO では
+  「公開契約の消費者一覧(XAML/テスト/他 VM)」を移送表の必須列にする。
+- **移送表方式の工場成績**: 表で与えた範囲の裁量ゼロ実施は forward-04 同様に成立。ずるは全て
+  「表が与えなかった接続面」に集中= **移送表の完全性が品質を決める**(表の書き方が K-BOM 相当)。
+- 経過措置の債務: ホストの後方互換委譲(テスト結合専用・XAML 非使用)— 除去は後続段でテスト移行
+  (test-only 変更)と同時に行う。
+
+### 治具/環境の副観測(H 系列)
+
+- **`dotnet test`(MTP 接続)が非対話環境でハング**(50 分無進行・CPU ほぼゼロを実測)。テスト自体は
+  健全(MTP 実行ファイル直接起動なら 526 本 2.5 秒)。受入手順は**直接起動を正**とする:
+  `dotnet tests/<proj>/bin/Debug/net10.0/<proj>.dll`。残存 dotnet デーモンが直接起動も阻害する事例を
+  1 回観測(プロセス kill で解消)— 受入前に残存プロセスを確認する。
+
+### 残ゲート
+
+- **golden 再ウォークスルー(maintainer 実機・視覚不変の確認)** — 完了後に register を applied へ。
+  確認観点: ⋯メニュー(ゴミ箱バッジ件数)・ゴミ箱ポップアップ(開閉・選択・復元・完全削除・空にする・
+  確認ダイアログ)・削除モード(入る/出る/ゴミ箱へ移動)の視覚・操作が従前どおりであること。
+

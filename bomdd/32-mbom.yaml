@@ -216,6 +216,7 @@ mbom:
       fmea_refs: [FMEA-013]
 
     - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)。ECO-024 で原典 TaggingPanelViewModel を撤去し画像/作業タブのインライン実装へ実態化
+      # ECO-036 第1段(2026-07-04): ゴミ箱フィーチャを M-UI-TRASH-032 へ部分 split(ホストには後方互換委譲=テスト結合の経過措置のみ残置。系列完了時に supersede 予定 — 60-change-order-eco-036.md §2)
       ebom_refs: [E-UI-TAGASSIGN-029]
       artifact:
         path: src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs
@@ -543,6 +544,16 @@ mbom:
         path: src/ViewPrism2.Infrastructure
         type: dotnet-classlib
       artifact_note: "配下の専門 unit(M-DB-007/M-THUMB-008/M-SET-010/M-RELINK-025)が最長一致で優先。本 unit の実所有は csproj・I18n/ 等の残余"
+
+    # ---- ECO-036 第1段(2026-07-04): god-VM 解体系列 — ゴミ箱フィーチャの切り出し(order §8) ----
+    - id: M-UI-TRASH-032       # M-UI-016 からの部分 split 第1号。バッジ+ポップアップ+ゴミ箱移動実行(TrashService 呼び出し面)
+      ebom_refs: [E-UI-MODE-041]   # メンテナンス入口のゴミ箱面(部分 — モードフラグ/排他はホスト残置・複数 unit 参照は正常形)。状態遷移の所有は E-TRASH-038/M-TRASH-026 のまま
+      artifact:
+        path: src/ViewPrism2.App/ViewModels/ImageTabTrashViewModel.cs
+        path_note: "接続面= 関数注入 6(getCollectionId/reloadImagesAsync/recompute/fmtSize/closeMoreMenu/resolveAbsolutePath — 子はホスト型を参照しない)。ホスト側の後方互換委譲はテスト結合の経過措置(51 E36S1-003)"
+        type: avalonia-app
+      acceptance_refs: [CP-L1-SMOKE]
+      acceptance_note: "popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/022)で被覆 — 挙動不変 ECO につき UI 専用 CP は新設しない"
 
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
