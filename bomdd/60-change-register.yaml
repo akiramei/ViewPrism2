@@ -777,7 +777,7 @@ changes:
   - id: ECO-038
     title: "作業タブ 画像一覧のグリッド/リスト切替が本体表示に反映されない(派生プロパティ通知漏れ — 導入時から潜伏)"
     type: 欠陥是正(VM 層・view-mode 切替不能)
-    status: staged   # 2026-07-04 起票+工程診断完了(欠陥は実装層に局在と確定)。残= プローブ実測裏取り→是正→機械受入→golden(maintainer 実機)
+    status: staged   # 2026-07-04 是正実施+機械受入完了(プローブ実測で真因裏取り→NotifyLayout を string.Empty 全通知へ=CR-6 同型・Tests 527/Oracle 100+2skip/build 0/validate 0)。残= golden(maintainer 実機: 即時切替往復)
     golden: "是正後: グリッド⇔リスト押下で即時切替(往復・maintainer 実機)+作業タブ golden CP へ切替観点明記(再発防止)"
     baseline: "main 8eb3fb5(症状は 81500a8=ECO-020/021 導入時から潜伏 — git 履歴で確定)"
     findings: "XAML 本体は ShowBrowseGrid/List にバインド(WorkTabView.axaml 657/706)だが NotifyLayout()(WorkTabViewModel.cs 1223)は IsGrid/IsList/ShowGrid/ShowList のみ通知= 派生チェーン(ShowBrowse*= ShowGrid && !ShowSearchResults)が再評価されない。Recompute/モード変更経路では通知される= 再読込で遅延反映(潜伏のマスキング)。画像タブは string.Empty 全通知(CR-6)で健全= 作業タブ固有"

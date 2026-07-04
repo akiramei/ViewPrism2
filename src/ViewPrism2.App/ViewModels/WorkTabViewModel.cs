@@ -1222,10 +1222,9 @@ public sealed partial class WorkTabViewModel : ObservableObject
 
     private void NotifyLayout()
     {
-        OnPropertyChanged(nameof(IsGrid));
-        OnPropertyChanged(nameof(IsList));
-        OnPropertyChanged(nameof(ShowGrid));
-        OnPropertyChanged(nameof(ShowList));
+        // (ECO-038) XAML 本体は派生の ShowBrowseGrid/List を見る — 手書き通知リストは派生の追加に
+        // 追随できず切替が本体へ届かなかった。画像タブ SetGrid/SetList(CR-6)と同型の全通知へ寄せる。
+        OnPropertyChanged(string.Empty);
     }
 
     // ---------------- 色ヘルパ(画像タブと同流儀) ----------------

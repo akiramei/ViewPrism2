@@ -299,6 +299,36 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         Assert.True(vm.Items.Single(i => i.Id == "x").HasRealThumb); // AbsolutePath が解決(修正前は null)
     }
 
+    // ---- ECO-038 回帰: グリッド/リスト切替の即時反映 ----
+
+    [Fact]
+    public async Task グリッドリスト切替は本体表示プロパティShowBrowseへ即時通知される()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a", "b", "c" });
+        var vm = NewVm();
+        await vm.InitializeAsync();
+
+        Assert.True(vm.ShowBrowseGrid);
+        Assert.False(vm.ShowBrowseList);
+
+        var notified = new List<string?>();
+        vm.PropertyChanged += (_, e) => notified.Add(e.PropertyName);
+
+        // XAML 本体(WorkTabView.axaml 657/706)は派生の ShowBrowse* にバインド — 切替コマンドが
+        // これを通知しないとボタン active だけ替わり本体が不変になる(ECO-038 の症状)
+        vm.SetListCommand.Execute(null);
+        Assert.True(vm.ShowBrowseList);
+        Assert.False(vm.ShowBrowseGrid);
+        Assert.Contains(notified, p => string.IsNullOrEmpty(p) || p == nameof(vm.ShowBrowseList));
+
+        notified.Clear();
+        vm.SetGridCommand.Execute(null);
+        Assert.True(vm.ShowBrowseGrid);
+        Assert.Contains(notified, p => string.IsNullOrEmpty(p) || p == nameof(vm.ShowBrowseGrid));
+    }
+
     [Fact]
     public async Task CloseMenusFromDismissはその他メニューも閉じる()
     {

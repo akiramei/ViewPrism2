@@ -55,7 +55,18 @@
 
 ## 6. 残ゲート
 
-1. 是正実施(§4 の裁定→最小 diff)
-2. 機械受入: build 0 / Tests / Oracle / validate_bom 0 error
+1. ~~是正実施(§4 の裁定→最小 diff)~~ → 完了(§7)
+2. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0 error~~ → 完了(§7)
 3. golden(maintainer 実機): グリッド⇔リスト押下で**即時**切替(往復)+active 状態一致
 4. クローズ時: CP 観点明記(§4 再発防止)+register status 更新
+
+## 7. 実施記録(2026-07-04 — 機械受入完了・golden 待ち)
+
+- **実測裏取り**: 回帰テスト(CpUiG1WorkTabTests「グリッドリスト切替は本体表示プロパティ
+  ShowBrowseへ即時通知される」)を先に追加し、**是正前に不合格(527 中 1)を確認** —
+  切替時 ShowBrowse* 未通知(§3)をプローブで確定してから着手(ECO-037 と同じ規律)。
+- **裁定(§4 の 2 案)**: 全通知案を採用 — `NotifyLayout()` を `OnPropertyChanged(string.Empty)` へ
+  (画像タブ SetGrid/SetList=CR-6 と同型)。最小 2 行追加案は「手書き通知リストが派生追加に
+  追随しない」という真因構造を温存するため不採用。
+- diff: WorkTabViewModel.cs の NotifyLayout 置換(実質 −4+3 行)+回帰テスト 1 件。XAML 無変更。
+- 機械受入: build 0 error・**Tests 527/527**・Oracle 100+2skip・validate_bom 0 error/0 warning。
