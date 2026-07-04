@@ -1,4 +1,4 @@
-# Change Order — ECO-041(fixed・golden 待ち): タグ追加の検索ボックスが未配線(CAD 定義済み機能の実装欠落+E-BOM 宣言漏れ)
+# Change Order — ECO-041(applied): タグ追加の検索ボックスが未配線(CAD 定義済み機能の実装欠落+E-BOM 宣言漏れ)
 
 > ECO-040 起票時のスコープ外所見(R3・51-cheat-log 2026-07-05)の分離起票。maintainer 裁定により起票。
 
@@ -72,9 +72,8 @@ CAD(mock `資料/画像タブ/ViewPrism2 画像タブ.dc.html`・権威):
 
 1. ~~是正実施(E-BOM 宣言補完 → プローブ先行 → 実装)~~ → 完了(§7)
 2. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0 error~~ → 完了(§7)
-3. golden(maintainer 実機): タグ追加検索の絞り込み(部分一致・空グループ消滅・クリアで全復帰)
-   ×画像タブ/作業タブ
-4. クローズ時: CP 観点明記+register 更新+M4 要否判定(§5 spec)
+3. ~~golden(maintainer 実機)~~ → 合格(§8・2026-07-05 approved)
+4. ~~クローズ時: CP 観点明記+register 更新+M4 要否判定~~ → 完了(§8・M4 不要)
 
 ## 7. 実施記録(2026-07-05 — 機械受入完了・golden 待ち)
 
@@ -97,3 +96,21 @@ CAD(mock `資料/画像タブ/ViewPrism2 画像タブ.dc.html`・権威):
 - 機械受入: build 0 error/0 warning・**Tests 534/534**(プローブ 2 件合格転化・ECO-040
   headless 整列 3 件も緑)・Oracle 100+2skip・validate_bom 0/0。オラクル改訂なし(R6)。
 - Core/DB 意味論: 不変(VM 表示絞り込みのみ・タグ付与経路に変更なし)。
+
+## 8. クローズ(2026-07-05 golden 合格)
+
+- maintainer 実機: 画像/作業 両タブでタグ追加検索の絞り込み(部分一致・空グループ消滅・
+  クリア全復帰)+絞り込み後の付与正常+作業タブ新設ボックスの整列(ECO-040 規約)を確認。
+- 再発防止:
+  - **CP-UI-G7** へ「タグ追加検索の絞り込み動作」観点+**『入力系 UI は golden で必ず
+    1 回操作して結果を見る』**を潜伏実績(UI 殻のみで 18 日)つきで明記。
+  - **CP-TAGUI-013** へ検索ベクタ+fixture(CpTagUi013AddSearchTests)を明記。
+- M4 判定: **不要** — spec §2.6 は「タグを追加(全タグ一覧**+検索**)」と**既記載**
+  (=CAD だけでなく仕様にも最初からあった機能の実装欠落だったことの傍証)。E-BOM は
+  fix 時に宣言補完済み・M-BOM は unit 粒度不変・35-dsbom は surface 新設なし。
+- 教訓(一般化): **「描画された UI 殻」は機能の実装を意味しない** — golden(視覚検査)は
+  見た目で通り、固定オラクル(論理検証)は視覚を見ないため、**未配線 UI は両検査の谷間に
+  落ちる**。防止は二方向: ①抽出台帳(trace-map handling:bom)→E-BOM 宣言の転記を監査する
+  (台帳間転記断絶= ECO-022 FMEA-037「mock→UI-IR 未取込」と同族・上流版)、
+  ②golden で入力系 UI は必ず操作する(CP-UI-G7 に明記)。GF-V4-04(表示パリティ=
+  presentation manifest 欠如)とも同根 — 「宣言の網羅」が検査の網羅の上限を決める。

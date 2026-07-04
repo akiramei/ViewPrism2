@@ -810,8 +810,8 @@ changes:
   - id: ECO-041
     title: "タグ追加の検索ボックスが未配線 — CAD 定義済み機能の実装欠落(画像タブ=UI 殻のみ/作業タブ=UI ごと無し)+E-BOM 宣言漏れの二層欠陥"
     type: 欠陥是正(機能欠落 — BOM 宣言補完+VM/view 実装)
-    status: staged   # 2026-07-05 是正+機械受入完了・golden 待ち。E-BOM 宣言補完(TAGASSIGN-029 since ECO-041/WORKSPACE-043 β-2 注記)→受入テスト先行 2 件(是正前 CS1061=AddQuery 不在を実測)→両 VM に AddQuery+部分一致フィルタ・画像タブ=バインド配線・作業タブ=検索ボックス新設(ECO-040 整列規約)。Tests 534/534/Oracle 100+2skip/build 0/validate 0-0
-    golden: "タグ追加検索の絞り込み(部分一致・空グループ消滅・クリアで全復帰)×画像タブ/作業タブ"
+    status: applied   # 2026-07-05 golden 合格(maintainer 実機)。E-BOM 宣言補完(TAGASSIGN-029 since ECO-041/WORKSPACE-043 β-2 注記)→受入テスト先行 2 件(是正前 CS1061=AddQuery 不在を実測)→両 VM に AddQuery+部分一致フィルタ・画像タブ=バインド配線・作業タブ=検索ボックス新設(ECO-040 整列規約)。CP-UI-G7 に「入力系 UI は golden で必ず操作」観点・CP-TAGUI-013 に検索ベクタ明記。M4 不要(spec §2.6 は「+検索」既記載=仕様にも最初からあった機能の実装欠落)。Tests 534/534/Oracle 100+2skip/build 0/validate 0-0
+    golden: "approved(2026-07-05 maintainer 実機: 画像/作業 両タブでタグ追加検索の絞り込み=部分一致・空グループ消滅・クリア全復帰・絞り込み後付与OK。作業タブは新設ボックスの整列=ECO-040 規約も確認)"
     baseline: "main 0a6a2d6(症状は 画像=e10767b 2026-06-17 / 作業=81500a8 2026-06-29 β-2 から潜伏)"
     findings: "CAD 健全=意味論完全確定(mock: trim+case-insensitive 部分一致・グループ構造維持・空グループはグループごと非表示 filter(g=>g.tags.length>0)・作業タブ mock にも同一検索あり)。BOM=宣言漏れ(trace-map は TMP-UI-INP-0020/ACT-0060 を handling:bom で E-UI-TAGASSIGN-029 帰属済みなのに 30-ebom の name/invariants に検索なし=抽出台帳→E-BOM 転記漏れ・β-2 で作業タブへ同根転写)。実装=欠落(ImageTabViewModel.BuildAddGroups 968- に絞り込みなし・AddQuery プロパティなし・WorkTabView はボックス自体なし)。ECO-040 の整列欠陥と相互マスキング(未配線→入力機会なし→整列欠陥 18 日潜伏)"
     impacted_bom: ["E-UI-TAGASSIGN-029(宣言補完+実装)", "E-UI-WORKSPACE-043(β-2 読み替え)", "M-UI-IMAGETAB-035", "M-UI-013", "M-UI-WORKSPACE-029"]
