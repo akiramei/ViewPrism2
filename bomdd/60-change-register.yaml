@@ -773,3 +773,14 @@ changes:
     impacted_bom: ["src/ViewPrism2.App/Views/ImageTabView.axaml(右ペイン完了パネル)", "E-UI-MODE-041", "M-UI-013"]
     body: 60-change-order-eco-037.md
     notes: "ECO-036 系列(挙動不変)と独立。第4段より前の単独実施が望ましい(同一 XAML の diff 混濁回避)"
+
+  - id: ECO-038
+    title: "作業タブ 画像一覧のグリッド/リスト切替が本体表示に反映されない(派生プロパティ通知漏れ — 導入時から潜伏)"
+    type: 欠陥是正(VM 層・view-mode 切替不能)
+    status: staged   # 2026-07-04 起票+工程診断完了(欠陥は実装層に局在と確定)。残= プローブ実測裏取り→是正→機械受入→golden(maintainer 実機)
+    golden: "是正後: グリッド⇔リスト押下で即時切替(往復・maintainer 実機)+作業タブ golden CP へ切替観点明記(再発防止)"
+    baseline: "main 8eb3fb5(症状は 81500a8=ECO-020/021 導入時から潜伏 — git 履歴で確定)"
+    findings: "XAML 本体は ShowBrowseGrid/List にバインド(WorkTabView.axaml 657/706)だが NotifyLayout()(WorkTabViewModel.cs 1223)は IsGrid/IsList/ShowGrid/ShowList のみ通知= 派生チェーン(ShowBrowse*= ShowGrid && !ShowSearchResults)が再評価されない。Recompute/モード変更経路では通知される= 再読込で遅延反映(潜伏のマスキング)。画像タブは string.Empty 全通知(CR-6)で健全= 作業タブ固有"
+    impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029"]
+    body: 60-change-order-eco-038.md
+    notes: "工程診断(ECO-025 retro 規律): CAD(work_tab.md L81 グリッド/リスト切替・L14 画像タブと同一意味論)・BOM(E-UI-WORKSPACE-043)は健全= CAD/BOM 改訂不要。FL-001(列・ソート共有 未確定)とは無関係。教訓候補= 手書き通知リストは派生追加に追随しない(ECO-037 の VM 版 read-across)"
