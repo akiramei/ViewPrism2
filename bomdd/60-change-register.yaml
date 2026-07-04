@@ -766,7 +766,7 @@ changes:
   - id: ECO-037
     title: "整理モードのマージ完了パネルが実機で表示されない(既存バグ — ECO-036 第3段の A/B で確定)"
     type: 欠陥是正(view 層・実害= 整理の継続不能)
-    status: implemented   # 2026-07-04 真因確定(1d93378 の幅バインド×非終端 Dock.Left 子の自己参照= 幅0)→ Panel ラップ是正(+6行)。Tests 526/526・lint 0。golden 待ち= order §4
+    status: applied   # 2026-07-04 golden 合格(maintainer 実機: 完了パネル表示+続行→2周目マージ先OK)。真因= 1d93378 幅バインド×非終端 Dock.Left 子の自己参照(幅0)→ Panel ラップ是正(+6行)。CP-UI-G9 へ完了パネル観点を明記(再発防止)
     golden: 修正後に「マージ完了パネル」を golden 観点へ明記(再発防止)
     baseline: "main f2018ab(症状は dc990ef 以前から存在 — A/B 確定)"
     findings: "VM 健全(done=true・通知到達=プローブ実測)・XAML 条件単純 → 疑いは右ペイン DockPanel 子配置/ECO-014 以降の右ペイン改変での退行(read-across 漏れ)。詳細= 51 G-E36S3・body §2"
