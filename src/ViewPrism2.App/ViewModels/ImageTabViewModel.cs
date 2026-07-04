@@ -43,7 +43,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly CriteriaSearchService _criteriaSearch;
     private readonly IWindowService _windows;
     private readonly AppSettings _settings;
-    private readonly WorkspaceService _workspaces; // ECO-020: 作業「追加」の行き先=デフォルト作業スペース(受け渡し)
+    // ECO-036 第2段: WorkspaceService はホストで保持しない(受け渡しは Work 子 VM の所有 — E36S1-004 と同型の後始末)
     private readonly LocalizationService _localization; // ECO-025 β-2: 表示列ポップオーバーの列ピッカー生成に使用
 
     // ---- ロード済みデータ ----
@@ -106,11 +106,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     // ---- 作業モード(ECO-017: 作業対象セットの蓄積)----
     // タグ編集/整理に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能になり(inSelect=編集 or 作業・
-    // 既存の選択機構を再利用)、「追加」で選択を _workTargets へ和集合蓄積し選択をクリアする。
-    // 右ペインは開かない(追加ボタン+作業対象チップはツールバー内)。workTargets はセッション内蓄積のみ
-    // (消費先=作業タブ本体・永続化はスコープ外。モック明記)。
+    // 既存の選択機構を再利用)、「追加」で選択を作業対象へ和集合蓄積し選択をクリアする。
+    // 右ペインは開かない(追加ボタン+作業対象チップはツールバー内)。
+    // ECO-036 第2段: 蓄積ストア+受け渡しは Work 子 VM(M-UI-WORK-033)へ移送。モードフラグ・排他・
+    // 合成 UI プロパティはホスト残置(order §10.2 — XAML/tests の消費者は全てホスト公開契約)。
     private bool _workMode;
-    private readonly List<string> _workTargets = new();
+    public ImageTabWorkViewModel Work { get; }
 
     // ---- 削除モード(ECO-018: ⋯メニュー「削除」=ゴミ箱へ移動)----
     // タグ編集/整理/作業に並ぶ排他文脈モード。⋯メニューの「削除」で入る(トグル入口は持たない)。
@@ -152,7 +153,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _criteriaSearch = new CriteriaSearchService(images); // 整理トレイの条件検索(E-CRITERIA-037)。images のみ依存
         _windows = windows;
         _settings = settings;
-        _workspaces = workspaces;
+        Work = new ImageTabWorkViewModel(workspaces);
         _localization = localization;
         Trash = new ImageTabTrashViewModel(
             images,
@@ -565,8 +566,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>「追加」ボタンの活性(=選択あり)。</summary>
     public bool CanAddToWork => HasWorkSelection;
     /// <summary>作業対象が1件以上ある=「作業対象 N 枚」チップを出す。</summary>
-    public bool HasWorkTargets => _workMode && _workTargets.Count > 0;
-    public string WorkTargetLabel => $"作業対象 {_workTargets.Count} 枚";
+    public bool HasWorkTargets => _workMode && Work.Count > 0;
+    public string WorkTargetLabel => $"作業対象 {Work.Count} 枚";
 
     // ---- ツールバー モード入口の出し分け(ECO-017/018: 排他隠し統一) ----
     // 各モード入口は他モードの最中は隠れる(自モード中は「終了」として残る)。削除は ⋯ メニューから入る
@@ -1474,17 +1475,18 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>
     /// 選択中の画像を作業対象セットへ和集合追加し、選択をクリア(モック addToWork 準拠)。選択なしは無操作。
     /// ECO-020: さらにデフォルト作業スペースへ永続追加する(受け渡し DOM-0026・ECO-017 の session 蓄積=チップ表示を継続)。
+    /// ECO-036 第2段: 蓄積+受け渡しの実体は Work 子 VM。旧実装の順序(蓄積→選択クリア→マーカー通知→
+    /// await 受け渡し)を殻が厳密保持する(order §10.2 — 蓄積と受け渡しを別メソッドにした理由)。
     /// </summary>
     [RelayCommand]
     private async Task AddToWork()
     {
         if (_selected.Count == 0) return;
         var added = _selected.ToList();
-        foreach (var id in added)
-            if (!_workTargets.Contains(id)) _workTargets.Add(id); // Set 意味論(重複なし・チップ表示用)
+        Work.AddTargets(added); // Set 意味論(重複なし・チップ表示用)
         _selected.Clear();
         RefreshSelectionMarkers(); // 選択クリア+チップ更新のみ=Items を作り直さない
-        await _workspaces.AddImagesToDefaultAsync(added).ConfigureAwait(true); // 受け渡し=デフォルトスペースへ永続追加
+        await Work.HandOffAsync(added).ConfigureAwait(true); // 受け渡し=デフォルトスペースへ永続追加
     }
 
     // =====================================================================

@@ -755,7 +755,7 @@ changes:
   - id: ECO-036
     title: "god-VM 解体系列(設計)— 画像タブ ImageTabViewModel の unit 再編成・E 品目整合の段階解体(scale-02)"
     type: unit 再編成(挙動不変リファクタ系列 — M-BOM 分割 lineage の初適用)
-    status: applied   # 2026-07-04 第1段完了: 機械受入(Tests 526/526・Oracle 100/102・lint 0・diff 閉包)+golden 2回(所見2件=通知トポロジー→設計者直接修正→再確認合格・maintainer 実機)。系列は第2段(作業モード)以降が残(order §3)
+    status: applied   # 第1段完了(golden 2回・2026-07-04)。**第2段(作業モード= M-UI-WORK-033)機械受入完了・golden 待ち**: 設計者適用・Tests 526/526・Oracle 100/102・XAML/tests diff ゼロ(予測的中)・逸脱 0(order §10/§11)
     golden: 各段で再ウォークスルー(視覚不変の確認 — 期待値改訂ゼロが成功条件)
     baseline: "main 50dbc02(設計時点)"
     findings: "scale-01: M-UI-016 が 10/16 ECO で under = ハブ系統誤差の発生源。写像欠陥は二層(M-UI-016 の 1 品目宣言 vs 9 責務実装+BROWSE/AXIS/MODE の M-UI-013 catch-all 帰属)。E-BOM は正しい粒度を既有(E-UI-BROWSE-022/AXIS-NAV-040/MODE-041)= M 側再編成に閉じる"

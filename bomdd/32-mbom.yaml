@@ -555,6 +555,16 @@ mbom:
       acceptance_refs: [CP-L1-SMOKE]
       acceptance_note: "popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/022)で被覆 — 挙動不変 ECO につき UI 専用 CP は新設しない"
 
+    # ---- ECO-036 第2段(2026-07-04): 作業対象ストア+受け渡しの切り出し(order §10) ----
+    - id: M-UI-WORK-033        # M-UI-016 からの部分 split 第2号。蓄積ストア(Set 意味論)+作業スペース受け渡し(ECO-020)
+      ebom_refs: [E-UI-MODE-041]   # 作業モードのフィーチャ実体(部分 — モードフラグ/排他/合成 UI プロパティはホスト残置= order §10.2)
+      artifact:
+        path: src/ViewPrism2.App/ViewModels/ImageTabWorkViewModel.cs
+        path_note: "依存= WorkspaceService のみ。UI 直接消費者ゼロ(XAML/tests は全てホスト合成プロパティ経由)= 通知はホスト一括通知で閉じる(第1段の故障モードが構造的に発生しない設計)"
+        type: avalonia-app
+      acceptance_refs: [CP-L1-SMOKE]
+      acceptance_note: "受け渡しの受入= E-UI-WORKSPACE-043 系 CP(WorkTab 側)+golden。挙動不変 ECO につき UI 専用 CP は新設しない"
+
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
   - { package: Avalonia,                                   version: 12.0.4,  rationale: "ADR-0001 UI 基盤",            license: MIT,        substitutable: false }

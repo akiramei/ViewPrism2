@@ -224,3 +224,78 @@ note(popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/0
   確認観点: ⋯メニュー(ゴミ箱バッジ件数)・ゴミ箱ポップアップ(開閉・選択・復元・完全削除・空にする・
   確認ダイアログ)・削除モード(入る/出る/ゴミ箱へ移動)の視覚・操作が従前どおりであること。
 
+
+---
+
+## 10. 第2段 設計凍結(2026-07-04 着手 — 作業モード)
+
+### 10.1 実物点検(第1段の教訓を適用: 消費者一覧+通知トポロジーを最初から数える)
+
+- ホスト内メンバ: _workMode(112)・_workTargets(113)・合成 UI プロパティ 7(WorkMode/WorkButtonLabel/
+  HasWorkSelection/CanAddToWork/HasWorkTargets/WorkTargetLabel/ShowEditEntry 等の排他表示)・
+  ToggleWork(1466)・AddToWork(1479)。
+- **消費者一覧**: XAML 4 箇所(全てホスト合成プロパティ)/ tests= CpUiG1WorkModeTests 等が
+  vm.ToggleWorkCommand ×10・vm.WorkMode ×5 ほか**全てホスト公開契約**を参照/ 他 VM= なし
+  (WorkTab への受け渡しは WorkspaceService.AddImagesToDefaultAsync 経由・vm.Workspaces 系は WorkTab 側の別物)。
+- **第1段との構造差**: 作業モードは独立 UI(popup)を持たない — 実体は ①排他フラグ(モード統制=
+  E-UI-MODE-041 の中核・第1段裁定によりホスト管轄)②**対象蓄積ストア(Set 意味論)+
+  Workspace 受け渡し(ECO-020)**。切り出せる自己完結実体は ② のみ。
+
+### 10.2 境界の裁定
+
+- 子 = **ImageTabWorkViewModel(M-UI-WORK-033)**: _workTargets ストア(Set 意味論・Count/Contains)+
+  受け渡し HandOffAsync(WorkspaceService.AddImagesToDefaultAsync)。依存= WorkspaceService のみ。
+- ホスト残置: _workMode・ToggleWork(排他)・**合成 UI プロパティ全部**(_workTargets 参照は
+  Work.Count 経由に変更)・AddToWork 殻。
+- **通知トポロジー(必須列・第1段教訓)**: XAML/tests の全消費者はホスト合成プロパティ →
+  **ホストの既存一括通知(RefreshSelectionMarkers 内の string.Empty)がそのまま有効**。子 prop の
+  UI 消費者はゼロ(将来段に備え子も自 prop 通知は発行するが、本段の挙動はホスト通知のみで閉じる)。
+  = 第1段の故障モード(通知の分界)が**構造的に発生しない**設計。
+- **AddToWork 殻の順序保持**(挙動保存の要): 旧= 蓄積→選択クリア→マーカー(通知)→await 受け渡し。
+  新= added 取得 → **Work.AddTargets(added)(同期・蓄積のみ)** → _selected.Clear() →
+  RefreshSelectionMarkers() → **await Work.HandOffAsync(added)**。蓄積と受け渡しを子の別メソッドに
+  分けるのは順序保存のため(一発 async にすると受け渡し await がマーカー更新より先行し体感が変わる)。
+
+### 10.3 影響分析(凍結)
+
+| ファイル | 変更 |
+|---|---|
+| src/ViewPrism2.App/ViewModels/ImageTabWorkViewModel.cs | **新設**(~50 行) |
+| src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs | _workTargets 除去・合成プロパティの参照先変更・AddToWork 殻化・Work 子 VM 生成 |
+| bomdd/32-mbom.yaml | M-UI-WORK-033 宣言+M-UI-016 註更新 |
+
+**影響なし予測**: **ImageTabView.axaml diff ゼロ**(第1段との差 — 消費者が全てホスト prop)・tests/ diff ゼロ
+(委譲も不要 — 移送されるのは private 実体のみ)・他は第1段 §8.3 と同一。オラクル/golden/CP 無改訂。
+
+### 10.4 製造形態の裁定
+
+**設計者適用+全再認証**(fresh 工場は使わない)。理由: ①移送表方式×工場の測定は第1段で取得済み
+②本段は移送 ~50 行・XAML/tests 無改変・裁量次元が実質ゼロ — forward-03/ECO-004 で確立した
+「裁量ゼロの機械的変更は設計者適用」の処置形態に該当。scale-02 測定は「段の性質による製造形態の
+使い分け」自体をデータとして記録する。
+
+## 11. 第2段 記録(実施後に記入)
+(2026-07-04 実施 — 設計者適用・機械受入完了・golden 待ち)
+
+| 測定 | 結果 |
+|---|---|
+| 製造形態 | **設計者適用+全再認証**(§10.4 の裁定どおり — 裁量次元ゼロの薄い段) |
+| 機械受入 | build 0 エラー・Tests **526/526**・Oracle **100/102**(期待値/テスト/golden 無改訂) |
+| diff 監査 | **影響なし予測が完全的中**: ImageTabViewModel.cs(24 行)+新 ImageTabWorkViewModel.cs のみ。**ImageTabView.axaml diff ゼロ・tests/ diff ゼロ**(§10.3 予測どおり) |
+| workspace lint | error/warn 0 維持 |
+| 逸脱・ずる | **0 件**(§10 設計凍結からの逸脱なし — 消費者一覧+通知トポロジーを事前に数えた効果) |
+
+### scale-02 測定(第2段分)
+
+- **第1段の教訓の効果測定**: 消費者一覧・通知トポロジーを設計凍結時に数えた結果、
+  設計凍結レベル under = **0**(第1段の 4 → 0)。「合成 UI プロパティをホストに残す」境界選択により
+  XAML/tests 無改変・通知分界の故障モードを構造的に排除 — **段の性質(独立 UI の有無)が
+  切り出し方式を決める**という判断基準が得られた(popup 型= 子へ UI 契約ごと移送/ストア型= 実体のみ移送)。
+- 製造形態の使い分けデータ: 裁量ゼロの薄い段は設計者適用で十分(工場測定は第1段で取得済み)。
+
+### 残ゲート
+
+- **golden 再ウォークスルー(maintainer 実機)**: 作業モードの視覚・操作が従前どおりであること —
+  ①「作業」トグル(開始/終了・他モードとの排他)②選択→「追加」(チップ「作業対象 N 枚」の件数増加・
+  選択クリア)③追加した画像が**作業タブに現れる**(受け渡し)④モード入口の出し分け(作業中は
+  タグ編集/整理入口が隠れる)。合格で第2段クローズ(applied)。
