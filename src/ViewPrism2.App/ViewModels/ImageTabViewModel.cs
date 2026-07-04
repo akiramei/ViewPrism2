@@ -1578,7 +1578,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     {
         if (!_organizeMode || _collectionId is null) return;
         await Organize.RunSearchAsync().ConfigureAwait(true);
-        Recompute();
+        // 末尾通知は子の _recompute(注入)が旧版と同位置・同回数で発行済み — 殻では重複させない(G-E36S3)
     }
 
     /// <summary>検索結果の候補を整理対象へ追加する(マージ先が前提・モック「整理対象に追加」)。実体は Organize 子 VM。</summary>
@@ -1598,7 +1598,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     {
         if (!Organize.HasMergeTarget || !Organize.HasOrganizeTargets) return;
         await Organize.ExecuteMergeAsync().ConfigureAwait(true);
-        Recompute();
+        // 末尾通知は子の _recompute(注入)が旧版と同位置・同回数で発行済み — 殻では重複させない(G-E36S3)
     }
 
     /// <summary>別の整理を続ける: 完了状態を畳んでトレイをリセット(整理モードは維持)。</summary>

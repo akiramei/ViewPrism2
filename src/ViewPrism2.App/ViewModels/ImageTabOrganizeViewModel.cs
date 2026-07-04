@@ -225,10 +225,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _recompute();
     }
 
-    /// <summary>別の整理を続ける: 完了状態を畳んでトレイをリセット(整理モードは維持)。</summary>
-    public void ContinueOrganize()
-    {
-        ResetState();
-        _recompute();
-    }
+    /// <summary>別の整理を続ける: 完了状態を畳んでトレイをリセット(整理モードは維持)。
+    /// 通知は殻側の最終 Recompute 1 回のみ(旧版と同一回数 — golden 所見 G-E36S3 の是正: 二重 Recompute の除去)。</summary>
+    public void ContinueOrganize() => ResetState();
 }
