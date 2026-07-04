@@ -806,3 +806,14 @@ changes:
     impacted_bom: ["E-UI-TAGASSIGN-029", "M-UI-013(ImageTabView.axaml)", "M-UI-IMAGETAB-035(品目トレース)"]
     body: 60-change-order-eco-040.md
     notes: "是正はプローブ先行(headless で垂直位置実測→是正)。同型 4 箇所は同一欠陥様式なら本 ECO 内一括処置。オラクル改訂なし(視覚のみ・R6)。スコープ外所見=タグ追加検索の未配線(CAD 定義済み機能の実装欠落)を 51 へ記録済み"
+
+  - id: ECO-041
+    title: "タグ追加の検索ボックスが未配線 — CAD 定義済み機能の実装欠落(画像タブ=UI 殻のみ/作業タブ=UI ごと無し)+E-BOM 宣言漏れの二層欠陥"
+    type: 欠陥是正(機能欠落 — BOM 宣言補完+VM/view 実装)
+    status: staged
+    golden: "タグ追加検索の絞り込み(部分一致・空グループ消滅・クリアで全復帰)×画像タブ/作業タブ"
+    baseline: "main 0a6a2d6(症状は 画像=e10767b 2026-06-17 / 作業=81500a8 2026-06-29 β-2 から潜伏)"
+    findings: "CAD 健全=意味論完全確定(mock: trim+case-insensitive 部分一致・グループ構造維持・空グループはグループごと非表示 filter(g=>g.tags.length>0)・作業タブ mock にも同一検索あり)。BOM=宣言漏れ(trace-map は TMP-UI-INP-0020/ACT-0060 を handling:bom で E-UI-TAGASSIGN-029 帰属済みなのに 30-ebom の name/invariants に検索なし=抽出台帳→E-BOM 転記漏れ・β-2 で作業タブへ同根転写)。実装=欠落(ImageTabViewModel.BuildAddGroups 968- に絞り込みなし・AddQuery プロパティなし・WorkTabView はボックス自体なし)。ECO-040 の整列欠陥と相互マスキング(未配線→入力機会なし→整列欠陥 18 日潜伏)"
+    impacted_bom: ["E-UI-TAGASSIGN-029(宣言補完+実装)", "E-UI-WORKSPACE-043(β-2 読み替え)", "M-UI-IMAGETAB-035", "M-UI-013", "M-UI-WORKSPACE-029"]
+    body: 60-change-order-eco-041.md
+    notes: "ECO-040 §7 スコープ外所見の分離起票(maintainer 裁定)。是正順=R2 上流先行: E-BOM 宣言補完 → プローブ → VM 絞り込み(決定論・unit 検査可能)→ XAML 配線(作業タブは ECO-040 整列規約で新設)。Core/DB 不変・オラクル改訂なし(R6)。再発防止候補=trace-map→E-BOM 転記監査(FMEA-037 同族)"
