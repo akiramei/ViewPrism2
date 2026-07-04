@@ -61,12 +61,12 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
     }
 
-    private WorkTabViewModel NewVm() =>
+    private WorkTabViewModel NewVm(AppSettings? settings = null) =>
         new(new WorkspaceService(_db.Workspaces, _db.Clock), _db.Folders, _db.Tags,
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new TruePresenceProbe()),
-            new StubWindowService(), new ImageSorter(), new AppSettings());
+            new StubWindowService(), new ImageSorter(), settings ?? new AppSettings());
 
     [Fact]
     public async Task チップは現スペースのタグから算出_絞り込みでItemsが狭まる()
@@ -297,6 +297,47 @@ public sealed class CpUiG1WorkTabTests : IDisposable
 
         await vm.RefreshAsync(); // folderPath を再読込(folder-2 を含む)
         Assert.True(vm.Items.Single(i => i.Id == "x").HasRealThumb); // AbsolutePath が解決(修正前は null)
+    }
+
+    // ---- ECO-039(FL-004=D-b) 受入: 表示形式のタブ独立永続 ----
+
+    [Fact]
+    public async Task 表示形式は作業タブ専用キーへ保存され共通キーを汚さず再構築で復元される()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a" });
+        var settings = new AppSettings(); // DisplayMode 既定 grid・WorkTabDisplayMode 未保存
+
+        var vm = NewVm(settings);
+        await vm.InitializeAsync();
+        Assert.True(vm.IsGrid); // 初回は共通キー(grid)を初期値に読む
+
+        vm.SetListCommand.Execute(null);
+        Assert.Equal("list", settings.WorkTabDisplayMode); // 専用キーへ保存
+        Assert.Equal("grid", settings.DisplayMode);        // 共通キー(画像タブ)は汚さない=独立
+
+        var vm2 = NewVm(settings); // 再起動相当(同一 settings で再構築)
+        await vm2.InitializeAsync();
+        Assert.True(vm2.IsList);   // 専用キーから復元
+    }
+
+    [Fact]
+    public async Task 表示形式の初回は画像タブ共通設定を初期値に読み専用キーが優先される()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a" });
+
+        // 専用キー未保存 → 共通キー(list)へフォールバック(FL-004=D-b: 初回挙動不変)
+        var vm = NewVm(new AppSettings { DisplayMode = "list" });
+        await vm.InitializeAsync();
+        Assert.True(vm.IsList);
+
+        // 専用キーが共通キーに優先(以後は連動しない)
+        var vm2 = NewVm(new AppSettings { DisplayMode = "list", WorkTabDisplayMode = "grid" });
+        await vm2.InitializeAsync();
+        Assert.True(vm2.IsGrid);
     }
 
     // ---- ECO-038 回帰: グリッド/リスト切替の即時反映 ----

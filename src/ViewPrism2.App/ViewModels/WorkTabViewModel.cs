@@ -253,7 +253,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
 
         _tagById = (await _tags.GetAllAsync().ConfigureAwait(true)).ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        _layout = string.Equals(_settings.DisplayMode, "list", StringComparison.Ordinal) ? "list" : "grid";
+        // (ECO-039/FL-004=D-b) 専用キー優先。未保存(null)は画像タブの共通キーを初期値に読む(初回挙動不変)。
+        _layout = string.Equals(_settings.WorkTabDisplayMode ?? _settings.DisplayMode, "list", StringComparison.Ordinal) ? "list" : "grid";
         await _workspaces.EnsureDefaultExistsAsync().ConfigureAwait(true);
         await ReloadWorkspacesAsync(preferDefault: true).ConfigureAwait(true);
         _initialized = true;
@@ -1197,11 +1198,12 @@ public sealed partial class WorkTabViewModel : ObservableObject
         Recompute();
     }
 
+    // (ECO-039/FL-004=D-b) 切替は作業タブ専用キーへ保存(画像タブの DisplayMode とは連動しない)。
     [RelayCommand]
-    private void SetGrid() { _layout = "grid"; NotifyLayout(); }
+    private void SetGrid() { _layout = "grid"; _settings.WorkTabDisplayMode = "grid"; NotifyLayout(); }
 
     [RelayCommand]
-    private void SetList() { _layout = "list"; NotifyLayout(); }
+    private void SetList() { _layout = "list"; _settings.WorkTabDisplayMode = "list"; NotifyLayout(); }
 
     /// <summary>Popup の light-dismiss から呼ぶメニュー閉じ。</summary>
     public void CloseMenusFromDismiss()

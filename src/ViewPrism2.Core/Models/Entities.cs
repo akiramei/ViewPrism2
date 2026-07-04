@@ -252,8 +252,11 @@ public sealed record AppSettings
     [System.Text.Json.Serialization.JsonIgnore]
     public int GridColumns { get; set; } = 4;
 
-    /// <summary>表示モード(REQ-052 v1.3/CR-6): "grid" または "list"。既定 grid。</summary>
+    /// <summary>表示モード(REQ-052 v1.3/CR-6): "grid" または "list"。既定 grid。画像タブ用(FL-004=D-b でタブ独立)。</summary>
     public string DisplayMode { get; set; } = "grid";
+
+    /// <summary>作業タブの表示モード(FL-004=D-b・ECO-039): "grid"|"list"。null=未保存(初回は DisplayMode を初期値に読む)。</summary>
+    public string? WorkTabDisplayMode { get; set; }
 
     public string? LastViewId { get; set; }
 
