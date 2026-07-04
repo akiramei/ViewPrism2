@@ -182,9 +182,12 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
     public async Task RefreshCountAsync()
     {
         var collectionId = _getCollectionId();
-        if (collectionId is null) { _trashCount = 0; return; }
+        if (collectionId is null) { _trashCount = 0; OnPropertyChanged(string.Empty); return; }
         var all = await _images.GetByFolderAsync(collectionId).ConfigureAwait(true);
         _trashCount = all.Count(r => r.Status == ImageStatus.Deleted);
+        // 通知は本メソッドが自前で発行する(golden 所見 G-E36S1-1 の是正): 旧 god-VM ではホストの
+        // OnPropertyChanged(string.Empty) 一括通知が肩代わりしていたが、分割後はホスト通知は子に届かない。
+        OnPropertyChanged(string.Empty);
     }
 
     /// <summary>DeleteToTrash 殻(ホスト側)から呼ばれる実行部: 選択 ids をゴミ箱へ移動する(Core 経由)。</summary>

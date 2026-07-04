@@ -162,7 +162,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
             reloadImagesAsync: ReloadImagesAsync,
             recompute: Recompute,
             fmtSize: FmtSize,
-            closeMoreMenu: () => MoreMenuOpen = false,
+            // MoreMenuOpen は通知なし自動プロパティ — ホスト内の全変更箇所と同じく通知を伴う
+            // (golden 所見 G-E36S1-2 の是正: 通知なしラムダではメニューが視覚的に閉じない)
+            closeMoreMenu: () => { MoreMenuOpen = false; OnPropertyChanged(string.Empty); },
             resolveAbsolutePath: ResolveAbsolutePath);
     }
 
