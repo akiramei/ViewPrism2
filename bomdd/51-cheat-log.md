@@ -270,3 +270,12 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
 - 前回の是正 2 件(二重 Recompute 除去=通知回数の旧版同一化)は等価化として妥当・維持(f2018ab)。
 - 教訓: **golden は「現行版の視覚検査」であると同時に「旧版とのA/B」で初めて回帰と既存を判別できる** —
   挙動保存リファクタの golden 所見は、旧版 A/B を標準手順に含める(切り出し系列の受入設計へ追補)。
+
+## ECO-040 起票時のスコープ外所見(R3 記録)2026-07-05
+
+- **タグ追加 検索ボックスが未配線(機能欠落)**: ImageTabView.axaml:178 の検索 TextBox は
+  `Text=""` 固定で、ImageTabViewModel に AddQuery 相当のプロパティ/候補絞り込みが存在しない。
+  CAD は `addQuery / onAddSearch` による絞り込みを定義(mock 画像タブ.dc.html L387・
+  ui-trace-map TMP-UI-INP-0020/ACT-0060 handling: bom)= **CAD 定義済み機能の実装欠落**。
+  混入= `e10767b`(2026-06-17 M1+M2)から。既知記録(FL-*/VE-*/cheat-log)無し=新規。
+  起票要否は maintainer 判断(起票時は /eco-file で分離 ECO 化)。ECO-040 本文 §7 から参照。

@@ -795,3 +795,14 @@ changes:
     impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "M-SET-010"]
     body: 60-change-order-eco-039.md
     notes: "画像タブ(E-UI-BROWSE-022)は不変(S-a=現状追認・DisplayMode 意味論不変)。オラクル改訂なし(R6)。作業タブソートの v2 展開は本 ECO 範囲外(別裁定)"
+
+  - id: ECO-040
+    title: "タグ編集「タグ追加」検索ボックスの入力カレットが上寄り(垂直中央でない — Padding=0 上書き×VerticalContentAlignment 未指定)"
+    type: 欠陥是正(view 層・視覚整列 — CAD 準拠逸脱)
+    status: staged
+    golden: "タグ追加 検索ボックスのカレット・テキストがピル垂直中央(read-across 是正時は整理トレイ条件入力も同観点)"
+    baseline: "main 1abb0e3(症状は e10767b=2026-06-17 M1+M2 導入時から潜伏 — git -S で確定)"
+    findings: "CAD 健全(mock L385-387 flex/align-items:center=垂直中央が原器確定)・BOM 健全(E-UI-TAGASSIGN-029)→ 実装局在: ImageTabView.axaml:178-179 が Padding=0 でテーマ既定余白を潰し VerticalContentAlignment 未指定。マスキング=検索未配線(Text= 空固定)で入力機会が無かった(未配線は R3 分離所見=51 参照)。read-across 同型 4 箇所(ImageTab 422/426・WorkTab 387/390=整理トレイ条件入力)"
+    impacted_bom: ["E-UI-TAGASSIGN-029", "M-UI-013(ImageTabView.axaml)", "M-UI-IMAGETAB-035(品目トレース)"]
+    body: 60-change-order-eco-040.md
+    notes: "是正はプローブ先行(headless で垂直位置実測→是正)。同型 4 箇所は同一欠陥様式なら本 ECO 内一括処置。オラクル改訂なし(視覚のみ・R6)。スコープ外所見=タグ追加検索の未配線(CAD 定義済み機能の実装欠落)を 51 へ記録済み"
