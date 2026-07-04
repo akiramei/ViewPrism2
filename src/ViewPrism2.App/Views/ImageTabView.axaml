@@ -298,6 +298,11 @@
           </DockPanel>
         </Border>
 
+        <!-- ECO-037: 完了/トレイの 2 枚は Panel で包み DockPanel の最終子(残域いっぱい=幅 344 確定)にする。
+             旧構造では完了 ScrollViewer が Dock 無指定の非終端子(Dock.Left 既定)となり、中身の
+             StackPanel Width={Binding $parent[ScrollViewer].Viewport.Width}(1d93378 の幅はみ出し是正)と
+             自己参照して幅 0 に潰れ、完了パネルが表示されなかった(51 G-E36S3 追補・A/B で既存バグ確定)。 -->
+        <Panel>
         <!-- 完了状態(統合しました) -->
         <ScrollViewer IsVisible="{Binding OrganizeDone}" Margin="16,14" HorizontalScrollBarVisibility="Disabled">
           <StackPanel Width="{Binding $parent[ScrollViewer].Viewport.Width}" Spacing="14">
@@ -442,6 +447,7 @@
             </Button>
           </StackPanel>
         </ScrollViewer>
+        </Panel>
       </DockPanel>
     </Border>
 
