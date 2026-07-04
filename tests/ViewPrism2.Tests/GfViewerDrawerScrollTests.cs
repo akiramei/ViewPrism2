@@ -24,9 +24,8 @@ namespace ViewPrism2.Tests;
 public sealed class GfViewerDrawerScrollTests
 {
     // ヘッドレスセッションは App リソース(スタイル/ブラシ/アイコン)を読み込むため App を起動する。
-    // Owner/DB は不要(lifetime 無し=App の重い DI/DB 初期化はスキップされる)。プロセス内で共有。
-    private static readonly HeadlessUnitTestSession Session =
-        HeadlessUnitTestSession.StartNew(typeof(HeadlessAppEntry));
+    // ECO-040: AppBuilder.Setup のプロセス 1 回制約のため HeadlessApp.Session へ共有化(挙動不変)。
+    private static HeadlessUnitTestSession Session => HeadlessApp.Session;
 
     [Fact]
     public Task 設定ドロワーのScrollViewerは有界でありスクロール可能() =>
@@ -128,12 +127,4 @@ public sealed class GfViewerDrawerScrollTests
         return new ImageEntry(record, @"C:\img\" + name, []);
     }
 
-    /// <summary>ヘッドレスセッション用の AppBuilder エントリ(Inter フォント込み・実機と同等のテキスト計測)。</summary>
-    private static class HeadlessAppEntry
-    {
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<ViewPrism2.App.App>()
-                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = true })
-                .WithInterFont();
-    }
 }

@@ -1,4 +1,4 @@
-# Change Order — ECO-040(staged): タグ編集「タグ追加」検索ボックスの入力カレットが上寄り(垂直中央でない)
+# Change Order — ECO-040(fixed・golden 待ち): タグ編集「タグ追加」検索ボックスの入力カレットが上寄り(垂直中央でない)
 
 > maintainer 報告(2026-07-05・スクリーンショット付き)の視覚欠陥是正。起票時に工程診断
 > (mock/UI-IR/BOM/実装 — ECO-025 retro 規律)を実施済み。
@@ -64,11 +64,28 @@
 
 ## 6. 残ゲート
 
-1. 是正実施(/eco-fix eco-040 — プローブ先行)
-2. 機械受入: build 0 / Tests / Oracle / validate_bom 0 error
+1. ~~是正実施(/eco-fix eco-040 — プローブ先行)~~ → 完了(§8)
+2. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0 error~~ → 完了(§8)
 3. golden(maintainer 実機): タグ追加 検索ボックスのカレット・テキストがピル垂直中央
-   (+read-across 是正時は整理トレイ条件入力も同観点)
+   +read-across 是正済みの整理トレイ条件入力(画像/作業タブ)も同観点
 4. クローズ時: CP 観点明記(§4 再発防止)+register status 更新
+
+## 8. 実施記録(2026-07-05 — 機械受入完了・golden 待ち)
+
+- **実測裏取り(プローブ先行)**: headless 実レイアウトパスの回帰テスト 3 件を先に追加
+  (GfPillTextBoxCaretAlignTests — タグ追加検索/整理トレイ条件×画像タブ/同×作業タブ)し、
+  **是正前に 3 件とも不合格(532 中 3)を確認**。実測値= 3 テストすべて
+  **テキスト行中心がピル中心から −7.5px(上寄り・許容 ±2.0)** — §3 の read-across 同型
+  5 箇所が同一機構(数値一致)であることも実測で確定。
+- 測定方法: TextPresenter.TextLayout.HitTestTextPosition(0)(カレット位置 0 の描画矩形)の
+  垂直中心を pill Border 座標系へ変換し、pill 中心との差を検査(±2.0px)。
+- **是正**: 同型 5 箇所の TextBox へ `VerticalContentAlignment="Center"` を付与(XAML のみ・
+  各 1 属性)— ImageTabView.axaml 179/423/427・WorkTabView.axaml 387/390。
+  真因構造(Padding=0 上書き×垂直整列未指定)をその場で消す最小是正。
+- 付帯(テスト基盤): AppBuilder.Setup のプロセス 1 回制約のため、ヘッドレスセッションを
+  HeadlessApp.Session へ共有化(GfViewerDrawerScrollTests から抽出・挙動不変・既存 2 テスト緑)。
+- 機械受入: build 0 error/0 warning・**Tests 532/532**(プローブ 3 件が合格へ転化)・
+  Oracle 100+2skip・validate_bom 0 error/0 warning。オラクル改訂なし(R6)。
 
 ## 7. スコープ外所見(R3 — 51-cheat-log へ記録済み)
 
