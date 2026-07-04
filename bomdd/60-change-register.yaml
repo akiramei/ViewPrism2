@@ -755,10 +755,21 @@ changes:
   - id: ECO-036
     title: "god-VM 解体系列(設計)— 画像タブ ImageTabViewModel の unit 再編成・E 品目整合の段階解体(scale-02)"
     type: unit 再編成(挙動不変リファクタ系列 — M-BOM 分割 lineage の初適用)
-    status: applied   # 第1・2段完了。**第3段(整理= M-UI-ORGANIZE-034)機械受入完了・golden 待ち**(2026-07-04): 工場納品(工程事故あり= 51/order §13)+設計者レビューで通知脱落2箇所是正・Tests 526/526・XAML/tests diff ゼロ。残= 4(軸ナビ+列)・5(残余+lineage)
+    status: applied   # 第1・2段完了+**第3段完了(2026-07-04)**: golden 1-6 合格・7 の所見は実機 A/B で**既存バグと確定**(挙動保存成立・バグごと保存= 51 G-E36S3)→ ECO-037 へ分離起票。残= 4(軸ナビ+列)・5(残余+lineage)
     golden: 各段で再ウォークスルー(視覚不変の確認 — 期待値改訂ゼロが成功条件)
     baseline: "main 50dbc02(設計時点)"
     findings: "scale-01: M-UI-016 が 10/16 ECO で under = ハブ系統誤差の発生源。写像欠陥は二層(M-UI-016 の 1 品目宣言 vs 9 責務実装+BROWSE/AXIS/MODE の M-UI-013 catch-all 帰属)。E-BOM は正しい粒度を既有(E-UI-BROWSE-022/AXIS-NAV-040/MODE-041)= M 側再編成に閉じる"
     impacted_bom: ["32-mbom(新 unit 群+lineage split/supersede)", "30-ebom 再帰属(M-UI-013 catch-all の解消)", "E-UI-MODE-041", "E-UI-BROWSE-022", "E-UI-AXIS-NAV-040", "E-UI-TAGASSIGN-029", "M-UI-016", "M-UI-013"]
     body: 60-change-order-eco-036.md
     notes: "5 段の系列 ECO(1 モード=1 切り出し・各段で全再認証・挙動不変=オラクル/golden 無改訂)。scale-02 測定= 対策 regime 下プロスペクティブ影響採点(遡及 88% との前後比較)・移送表方式の工場 cheat・lineage 運用コスト。停止条件= golden 差分/期待値改訂の必要=挙動保存失敗でロールバック"
+
+  - id: ECO-037
+    title: "整理モードのマージ完了パネルが実機で表示されない(既存バグ — ECO-036 第3段の A/B で確定)"
+    type: 欠陥是正(view 層・実害= 整理の継続不能)
+    status: staged
+    golden: 修正後に「マージ完了パネル」を golden 観点へ明記(再発防止)
+    baseline: "main f2018ab(症状は dc990ef 以前から存在 — A/B 確定)"
+    findings: "VM 健全(done=true・通知到達=プローブ実測)・XAML 条件単純 → 疑いは右ペイン DockPanel 子配置/ECO-014 以降の右ペイン改変での退行(read-across 漏れ)。詳細= 51 G-E36S3・body §2"
+    impacted_bom: ["src/ViewPrism2.App/Views/ImageTabView.axaml(右ペイン完了パネル)", "E-UI-MODE-041", "M-UI-013"]
+    body: 60-change-order-eco-037.md
+    notes: "ECO-036 系列(挙動不変)と独立。第4段より前の単独実施が望ましい(同一 XAML の diff 混濁回避)"
