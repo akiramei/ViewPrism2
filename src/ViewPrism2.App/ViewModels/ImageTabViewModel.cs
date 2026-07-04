@@ -544,6 +544,23 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public string CurrentNote { get; private set; } = "";
     public string NoCurrentLabel { get; private set; } = "";
 
+    private string _addQuery = "";
+    /// <summary>
+    /// ECO-041: タグ追加の検索(mock addQuery 準拠)。trim・大文字小文字無視の部分一致で
+    /// 種別グループ内を絞り込む(判定は BuildAddGroups)。入力即時反映・モード切替でも保持(mock 準拠)。
+    /// </summary>
+    public string AddQuery
+    {
+        get => _addQuery;
+        set
+        {
+            if (_addQuery == value) return;
+            _addQuery = value;
+            OnPropertyChanged();
+            BuildContextPanels(new HashSet<string>(_selected)); // タグ編集パネルのみ部分再構築(Items 不変)
+        }
+    }
+
     // ---- 整理モード(ECO-014)公開契約 ----
     public bool OrganizeMode => _organizeMode;
     public string OrganizeButtonLabel => _organizeMode ? "整理を終了" : "整理";
@@ -976,10 +993,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
             (TagType.Textual, "テキスト", "候補値から選ぶ", "#2459cf", "#eaf1fe"),
             (TagType.Numeric, "数値", "値を選ぶ", "#0f8a5e", "#eafaf3"),
         };
+        string q = _addQuery.Trim().ToLowerInvariant(); // ECO-041: 検索(mock L811 — trim+大小無視の部分一致)
         foreach (var g in groups)
         {
             var rows = new List<AddRowVM>();
             foreach (var tag in _tagById.Values.Where(t => t.Type == g.Type)
+                         .Where(t => q.Length == 0 || t.Name.ToLowerInvariant().Contains(q))
                          .OrderBy(t => t.Name, StringComparer.Ordinal))
             {
                 bool added = g.Type == TagType.Simple &&

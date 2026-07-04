@@ -177,7 +177,7 @@
                   <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />
                   <!-- ECO-040: テーマ既定余白を潰すため VerticalContentAlignment を明示(上寄り防止)。
                        Padding 左右 4 はフォーカス枠へのテキスト密着防止(GF-040-01)。 -->
-                  <TextBox Text="" PlaceholderText="タグを検索…" BorderThickness="0" Background="Transparent"
+                  <TextBox Text="{Binding AddQuery}" PlaceholderText="タグを検索…" BorderThickness="0" Background="Transparent"
                            VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" Width="240" />
                 </StackPanel>
               </Border>

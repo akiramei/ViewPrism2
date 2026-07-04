@@ -229,6 +229,23 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public string CurrentNote { get; private set; } = "";
     public string NoCurrentLabel { get; private set; } = "";
 
+    private string _addQuery = "";
+    /// <summary>
+    /// ECO-041: タグ追加の検索(画像タブと同一意味論= E-UI-TAGASSIGN-029 β-2 再利用)。
+    /// trim・大文字小文字無視の部分一致(判定は BuildAddGroups)・入力即時反映。
+    /// </summary>
+    public string AddQuery
+    {
+        get => _addQuery;
+        set
+        {
+            if (_addQuery == value) return;
+            _addQuery = value;
+            OnPropertyChanged();
+            RebuildAddPanel(); // タグ追加パネルのみ部分再構築(Items 不変)
+        }
+    }
+
     // ---- ソート ----
     [ObservableProperty] private bool _sortMenuOpen;
     public string SortLabel => _sortField switch
@@ -471,10 +488,12 @@ public sealed partial class WorkTabViewModel : ObservableObject
             (TagType.Textual, "テキスト", "候補値から選ぶ", "#2459cf", "#eaf1fe"),
             (TagType.Numeric, "数値", "値を選ぶ", "#0f8a5e", "#eafaf3"),
         };
+        string q = _addQuery.Trim().ToLowerInvariant(); // ECO-041: 検索(画像タブと同一意味論)
         foreach (var g in groups)
         {
             var rows = new List<AddRowVM>();
             foreach (var tag in _tagById.Values.Where(t => t.Type == g.Type)
+                         .Where(t => q.Length == 0 || t.Name.ToLowerInvariant().Contains(q))
                          .OrderBy(t => t.Name, StringComparer.Ordinal))
             {
                 bool added = g.Type == TagType.Simple && selected.All(r => ImgTagIds(r).Contains(tag.Id));

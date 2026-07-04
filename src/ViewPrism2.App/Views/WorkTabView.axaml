@@ -179,7 +179,17 @@
 
           <!-- タグ追加 -->
           <ScrollViewer IsVisible="{Binding OnAddTab}" Padding="16,14,16,20">
-            <ItemsControl ItemsSource="{Binding AddGroups}">
+            <StackPanel>
+              <!-- ECO-041: タグ追加検索(画像タブと同一構造・mock 作業タブ準拠)。
+                   整列は ECO-040 規約(VerticalContentAlignment+Padding 4,0)。 -->
+              <Border Background="{StaticResource BadgeBg}" CornerRadius="10" Height="40" Padding="12,0" Margin="0,0,0,14">
+                <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />
+                  <TextBox Text="{Binding AddQuery}" PlaceholderText="タグを検索…" BorderThickness="0" Background="Transparent"
+                           VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" Width="240" />
+                </StackPanel>
+              </Border>
+              <ItemsControl ItemsSource="{Binding AddGroups}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AddGroupVM">
                   <StackPanel Margin="0,0,0,16">
@@ -255,7 +265,8 @@
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
-            </ItemsControl>
+              </ItemsControl>
+            </StackPanel>
           </ScrollViewer>
         </DockPanel>
       </DockPanel>

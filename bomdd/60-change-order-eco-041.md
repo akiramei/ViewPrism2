@@ -1,4 +1,4 @@
-# Change Order — ECO-041(staged): タグ追加の検索ボックスが未配線(CAD 定義済み機能の実装欠落+E-BOM 宣言漏れ)
+# Change Order — ECO-041(fixed・golden 待ち): タグ追加の検索ボックスが未配線(CAD 定義済み機能の実装欠落+E-BOM 宣言漏れ)
 
 > ECO-040 起票時のスコープ外所見(R3・51-cheat-log 2026-07-05)の分離起票。maintainer 裁定により起票。
 
@@ -70,8 +70,30 @@ CAD(mock `資料/画像タブ/ViewPrism2 画像タブ.dc.html`・権威):
 
 ## 6. 残ゲート
 
-1. 是正実施(/eco-fix eco-041 — E-BOM 宣言補完 → プローブ先行 → 実装)
-2. 機械受入: build 0 / Tests / Oracle / validate_bom 0 error
+1. ~~是正実施(E-BOM 宣言補完 → プローブ先行 → 実装)~~ → 完了(§7)
+2. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0 error~~ → 完了(§7)
 3. golden(maintainer 実機): タグ追加検索の絞り込み(部分一致・空グループ消滅・クリアで全復帰)
    ×画像タブ/作業タブ
 4. クローズ時: CP 観点明記+register 更新+M4 要否判定(§5 spec)
+
+## 7. 実施記録(2026-07-05 — 機械受入完了・golden 待ち)
+
+- **E-BOM 宣言補完(R2 上流先行)**: E-UI-TAGASSIGN-029 へ since ECO-041 invariant
+  (検索意味論の全文+転記漏れの経緯)・E-UI-WORKSPACE-043 β-2 行へ再利用範囲の補完注記。
+- **実測裏取り(プローブ先行)**: 受入テスト 2 件(CpTagUi013AddSearchTests —
+  画像タブ/作業タブ・部分一致 trim/大小無視・空グループ消滅・クリア全復帰)を先に追加し、
+  **是正前に不合格(CS1061= AddQuery が両 VM に不在)を確認** — 機能欠落の実測。
+- **是正(mock 意味論どおり・両タブ同型)**:
+  - ImageTabViewModel: `AddQuery` プロパティ(setter で BuildContextPanels 部分再構築=
+    Items 不変)+ BuildAddGroups に `q=Trim().ToLowerInvariant()` の部分一致フィルタ。
+    空グループ除去は既存(rows.Count>0 ガード)がそのまま効く。
+  - WorkTabViewModel: 同型(`AddQuery` → RebuildAddPanel 部分再構築+同フィルタ)。
+  - ImageTabView.axaml: `Text="{Binding AddQuery}"` 配線のみ(Avalonia の Text バインドは
+    キーストローク即時= mock の onInput 相当)。
+  - WorkTabView.axaml: 「タグ追加」へ検索ボックスを新設(画像タブと同一構造・
+    ECO-040 整列規約= VerticalContentAlignment+Padding 4,0 適用)。
+  - AddQuery はモード切替でリセットしない(mock toggleEdit は selected/expandTag/panelTab
+    のみリセット= mock 準拠で保持)。
+- 機械受入: build 0 error/0 warning・**Tests 534/534**(プローブ 2 件合格転化・ECO-040
+  headless 整列 3 件も緑)・Oracle 100+2skip・validate_bom 0/0。オラクル改訂なし(R6)。
+- Core/DB 意味論: 不変(VM 表示絞り込みのみ・タグ付与経路に変更なし)。
