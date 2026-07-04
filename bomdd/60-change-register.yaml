@@ -784,3 +784,14 @@ changes:
     impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029"]
     body: 60-change-order-eco-038.md
     notes: "工程診断(ECO-025 retro 規律): CAD(work_tab.md L81 グリッド/リスト切替・L14 画像タブと同一意味論)・BOM(E-UI-WORKSPACE-043)は健全= CAD/BOM 改訂不要。FL-001(列・ソート共有 未確定)とは無関係。教訓候補= 手書き通知リストは派生追加に追随しない(ECO-037 の VM 版 read-across)"
+
+  - id: ECO-039
+    title: "FL-002/FL-004 裁定の取り込み — 一覧表示状態の永続範囲(S-a ソート=画面ローカル揮発 / D-b 表示形式=タブごと独立永続)"
+    type: 設計確定の取り込み(CAD 裁定 d1f94ac・ECO-038 の R3 送付事項)
+    status: staged   # 2026-07-04 起票。S-a= コード変更なし(明文化のみ)。D-b= AppSettings.WorkTabDisplayMode 新設+作業タブ読み書き(初期値=共通 DisplayMode・以後独立)。残= 受入テスト先行→実装→機械受入→golden(maintainer 実機・再起動跨ぎ)
+    golden: "再起動跨ぎ: 作業タブ list→再起動→list 復元・画像タブ grid のまま(独立)/ 画像タブ切替が作業タブに波及しない"
+    baseline: "main 9dec0fd"
+    findings: "ECO-038 診断で作業タブの片方向依存(DisplayMode を読むが書かない)を検出し R3 で裁定送付 → ViewPrismUI docs/decisions/FL-002-004-persistence.md で maintainer 裁定(2026-07-04)。62 不要(DB 不変・nullable キー追加は欠落=既定値フォールバック)"
+    impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "M-SET-010"]
+    body: 60-change-order-eco-039.md
+    notes: "画像タブ(E-UI-BROWSE-022)は不変(S-a=現状追認・DisplayMode 意味論不変)。オラクル改訂なし(R6)。作業タブソートの v2 展開は本 ECO 範囲外(別裁定)"

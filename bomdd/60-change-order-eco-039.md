@@ -1,0 +1,47 @@
+# Change Order — ECO-039(起票・staged): FL-002/FL-004 裁定の取り込み — 一覧表示状態の永続範囲
+
+> 種別: 設計確定の取り込み(欠陥是正でない)。CAD 裁定= ViewPrismUI `docs/decisions/FL-002-004-persistence.md`
+> (maintainer 2026-07-04・CAD コミット `d1f94ac`)。発端= ECO-038 診断で検出した作業タブの片方向依存
+> (表示形式を読むが書かない)を R3 で本裁定へ送付したもの。
+
+## 1. 取り込む裁定
+
+- **FL-002 = S-a**: ソート状態(列・方向)は**画面ローカル(揮発・再起動で解除・永続しない)**。
+  現実装どおり= **コード変更なし(明文化のみ)**。ビュー切替・表示列編集による自動解除と整合。
+- **FL-004 = D-b**: 表示形式(グリッド/リスト)は**タブごとに独立永続**。
+  作業タブ専用キーを新設し、初回(専用キー未保存)は画像タブの共通設定 `DisplayMode` を
+  初期値に読む。以後は作業タブの切替を専用キーへ保存し、**画像タブとは連動しない**。
+  既存 `DisplayMode` は画像タブ用として不変(互換・移行不要)。
+
+## 2. 工程診断
+
+CAD 裁定済み(gate① 通過・`d1f94ac`)・BOM 改訂は M4 で同期・実装対象は D-b のみ。
+62(移行オラクル)不要: DB スキーマ不変。settings.json への nullable キー追加は
+欠落=既定値フォールバック(CP-SET-009 の項目単位破損耐性と同型)で移行が発生しない。
+
+## 3. 実装方針(D-b)
+
+- `AppSettings` に `WorkTabDisplayMode`(string?・null=未保存)を追加(Entities.cs)。
+- `WorkTabViewModel.InitializeAsync`: `_layout = WorkTabDisplayMode ?? DisplayMode` で初期化
+  (専用キー優先・未保存時は共通キー= 初回挙動不変)。
+- `SetGrid`/`SetList`: `_settings.WorkTabDisplayMode` へ書き込み(画像タブ CR-6 と同型の即時書込。
+  保存自体はアプリ終了時の SettingsStore.Save 一括 — 既存フロー不変)。
+- 受入テスト先行(拡張のオラクル・ファースト): 独立性(作業タブ切替が共通キーを汚さない)・
+  復元(同一 settings で再構築した VM が専用キーを復元)・初回フォールバック(未保存時は共通キー)・
+  専用キー優先、を CpUiG1WorkTabTests に追加し、**実装前に不合格を確認**してから実装する。
+
+## 4. 影響 BOM
+
+- E-UI-WORKSPACE-043(作業タブ surface・挙動仕様の追加)/ M-UI-WORKSPACE-029(WorkTabViewModel)
+- M-SET-010(AppSettings キー追加。SettingsStore のロジック変更なし)
+- 画像タブ(E-UI-BROWSE-022)は**不変**(S-a=現状追認・DisplayMode 意味論不変)
+- オラクル影響なし(UI 設定・DB 不変)。既存固定オラクル行の改訂なし(R6)
+
+## 5. 残ゲート
+
+1. 受入テスト先行(赤確認)→ D-b 実装 → 機械受入(build 0 / Tests / Oracle / validate_bom 0-0)
+2. golden(maintainer 実機・**再起動跨ぎ**):
+   - 作業タブを list へ切替 → アプリ再起動 → 作業タブは list のまま復元・**画像タブは grid のまま**(独立)
+   - 画像タブを list へ切替 → 再起動 → 画像タブ list・**作業タブは直前の作業タブ設定のまま**(連動しない)
+3. クローズ時: M4 同期(spec §2.6 の作業タブ節へ永続仕様追記・M-UI-WORKSPACE-029 as-built・
+   S-a の明文化= spec ソート節へ「画面ローカル(FL-002=S-a)」注記)+register applied 化
