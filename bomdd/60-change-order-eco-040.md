@@ -1,4 +1,4 @@
-# Change Order — ECO-040(fixed・golden 待ち): タグ編集「タグ追加」検索ボックスの入力カレットが上寄り(垂直中央でない)
+# Change Order — ECO-040(applied): タグ編集「タグ追加」検索ボックスの入力カレットが上寄り(垂直中央でない)
 
 > maintainer 報告(2026-07-05・スクリーンショット付き)の視覚欠陥是正。起票時に工程診断
 > (mock/UI-IR/BOM/実装 — ECO-025 retro 規律)を実施済み。
@@ -66,9 +66,8 @@
 
 1. ~~是正実施(/eco-fix eco-040 — プローブ先行)~~ → 完了(§8)
 2. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0 error~~ → 完了(§8)
-3. golden(maintainer 実機): タグ追加 検索ボックスのカレット・テキストがピル垂直中央
-   +read-across 是正済みの整理トレイ条件入力(画像/作業タブ)も同観点
-4. クローズ時: CP 観点明記(§4 再発防止)+register status 更新
+3. ~~golden(maintainer 実機)~~ → 合格(§10・2 巡: GF-040-01 を経て 2026-07-05 approved)
+4. ~~クローズ時: CP 観点明記+register status 更新~~ → 完了(§10)
 
 ## 8. 実施記録(2026-07-05 — 機械受入完了・golden 待ち)
 
@@ -99,6 +98,23 @@
 - 是正: 同型 5 箇所の `Padding="0"` → `Padding="4,0"`(左右 4px・上下 0 は
   VerticalContentAlignment=Center で中央維持)。
 - 機械受入(再): build 0/0・Tests 532/532・Oracle 100+2skip・validate_bom 0/0。
+
+## 10. クローズ(2026-07-05 golden 合格・2 巡)
+
+- maintainer 実機(2 巡): 1 巡目=垂直中央 OK+GF-040-01(水平左密着)→ Padding 4,0 是正 →
+  2 巡目=タグ追加 検索ボックスの垂直中央+フォーカス枠左余白 OK で合格。
+- 再発防止: **CP-UI-G7 に「ピル埋込 TextBox のテキスト/カレット整列(垂直中央+左余白)」観点を
+  潜伏実績つきで明記**。headless 回帰(GfPillTextBoxCaretAlignTests・垂直 ±2px/左余白 3〜8px)が
+  同型 5 箇所を恒久ガード。register= applied・golden approved。
+- M4 同期: 不要と判定 — XAML 視覚整列の属性付与のみで、spec §2.6 / E-BOM / M-BOM /
+  35-dsbom に as-built 乖離を生じない(ECO-038 と同型の判定)。
+- 教訓: **テーマ既定の内側余白(Padding)を「0」で潰す時は、そのテーマ既定が担っていた
+  整列責務(垂直中央・枠との間隔)を明示指定で引き継ぐ** — HTML→Avalonia 移植では
+  flex/align-items:center や input 既定余白が「テーマ既定」に相当し、打ち消すと責務ごと消える。
+  ECO-027(Avalonia 移植教訓: ResizeObserver 無→LayoutUpdated 等)と同系列の
+  「プラットフォーム移植で暗黙既定を明示化する」read-across。また本欠陥は**未配線機能
+  (検索)の上に載っていたため 18 日潜伏**した — 未配線 UI は視覚検査からも漏れる
+  (スコープ外所見 §7 の起票判断材料)。
 
 ## 7. スコープ外所見(R3 — 51-cheat-log へ記録済み)
 
