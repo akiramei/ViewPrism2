@@ -87,6 +87,19 @@
 - 機械受入: build 0 error/0 warning・**Tests 532/532**(プローブ 3 件が合格へ転化)・
   Oracle 100+2skip・validate_bom 0 error/0 warning。オラクル改訂なし(R6)。
 
+## 9. golden 所見 GF-040-01: 水平方向の左密着(2026-07-05 maintainer 実機)
+
+- 所見: 垂直中央は合格。**水平方向はテキストがフォーカス枠左端に密着し窮屈**
+  (スクリーンショット: 入力 "abc" が枠に接している)。
+- 診断: §3 と同一欠陥の水平面 — `Padding="0"` が左右の内側余白も潰しており、
+  フォーカス枠(実装判断のフォーカス視覚・mock は outline:none で枠なし)との間に
+  余白が無い。別欠陥ではないため本 ECO 内で処置(R3 非該当)。
+- **実測裏取り**: 水平プローブ(テキスト左端の枠からの距離= 3.0〜8.0px を要求)を
+  AssertCentered へ追加し、**是正前に 3 テスト不合格(実測 0.0px 密着)を確認**。
+- 是正: 同型 5 箇所の `Padding="0"` → `Padding="4,0"`(左右 4px・上下 0 は
+  VerticalContentAlignment=Center で中央維持)。
+- 機械受入(再): build 0/0・Tests 532/532・Oracle 100+2skip・validate_bom 0/0。
+
 ## 7. スコープ外所見(R3 — 51-cheat-log へ記録済み)
 
 - **タグ追加 検索ボックスが未配線**: `Text=""` 固定・VM(ImageTabViewModel)に AddQuery 相当の

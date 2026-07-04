@@ -103,11 +103,27 @@ public sealed class GfPillTextBoxCaretAlignTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// GF-040-01(golden 所見 2026-07-05): テキスト開始位置(カレット位置 0)が TextBox
+    /// (=フォーカス枠)左端から離れていること。Padding=0 の水平面= 枠にテキストが密着し窮屈。
+    /// </summary>
+    private static double TextLeftInsetFromTextBox(TextBox tb)
+    {
+        var presenter = tb.GetVisualDescendants().OfType<TextPresenter>().First();
+        var caret = presenter.TextLayout.HitTestTextPosition(0);
+        var left = presenter.TranslatePoint(new Point(caret.X, 0), tb);
+        Assert.NotNull(left);
+        return left!.Value.X;
+    }
+
     private static void AssertCentered(TextBox tb, string label)
     {
         double off = CaretCenterOffsetFromPillCenter(tb);
         Assert.True(Math.Abs(off) <= 2.0,
             $"{label}: テキスト行中心がピル中心から {off:+0.0;-0.0}px ズレ(許容 ±2.0)");
+        double inset = TextLeftInsetFromTextBox(tb);
+        Assert.True(inset is >= 3.0 and <= 8.0,
+            $"{label}: テキスト左端がフォーカス枠から {inset:0.0}px(窮屈でない余白= 3.0〜8.0 を要求)");
     }
 
     [Fact]
@@ -150,7 +166,8 @@ public sealed class GfPillTextBoxCaretAlignTests : IDisposable
             RunJobs();
 
             var boxes = window.GetVisualDescendants().OfType<TextBox>()
-                .Where(t => t.IsEffectivelyVisible && t.BorderThickness.Top == 0 && t.Padding == default)
+                .Where(t => t.IsEffectivelyVisible && t.PlaceholderText is not null &&
+                            (t.PlaceholderText.Contains("ファイル名") || t.PlaceholderText.Contains("拡張子")))
                 .ToList();
             Assert.Equal(2, boxes.Count); // ファイル名+拡張子
             AssertCentered(boxes[0], "整理トレイ 条件入力(1本目)");
@@ -191,7 +208,8 @@ public sealed class GfPillTextBoxCaretAlignTests : IDisposable
             RunJobs();
 
             var boxes = window.GetVisualDescendants().OfType<TextBox>()
-                .Where(t => t.IsEffectivelyVisible && t.BorderThickness.Top == 0 && t.Padding == default)
+                .Where(t => t.IsEffectivelyVisible && t.PlaceholderText is not null &&
+                            (t.PlaceholderText.Contains("ファイル名") || t.PlaceholderText.Contains("拡張子")))
                 .ToList();
             Assert.Equal(2, boxes.Count); // ファイル名+拡張子
             AssertCentered(boxes[0], "作業タブ 整理トレイ 条件入力(1本目)");

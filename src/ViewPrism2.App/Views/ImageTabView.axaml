@@ -175,9 +175,10 @@
               <Border Background="{StaticResource BadgeBg}" CornerRadius="10" Height="40" Padding="12,0" Margin="0,0,0,14">
                 <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />
-                  <!-- ECO-040: Padding=0 でテーマ既定余白を潰すため VerticalContentAlignment を明示(テキスト行の上寄り防止) -->
+                  <!-- ECO-040: テーマ既定余白を潰すため VerticalContentAlignment を明示(上寄り防止)。
+                       Padding 左右 4 はフォーカス枠へのテキスト密着防止(GF-040-01)。 -->
                   <TextBox Text="" PlaceholderText="タグを検索…" BorderThickness="0" Background="Transparent"
-                           VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0" Width="240" />
+                           VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" Width="240" />
                 </StackPanel>
               </Border>
               <ItemsControl ItemsSource="{Binding AddGroups}">
@@ -421,11 +422,11 @@
               <StackPanel Spacing="8" IsVisible="{Binding IsCriteriaMethod}">
                 <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
                   <TextBox Text="{Binding CriteriaName}" PlaceholderText="ファイル名を含む…" BorderThickness="0"
-                           Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0" />
+                           Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" />
                 </Border>
                 <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
                   <TextBox Text="{Binding CriteriaExt}" PlaceholderText="拡張子（例 jpg）…" BorderThickness="0"
-                           Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0" />
+                           Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" />
                 </Border>
               </StackPanel>
               <Button Classes="toolbarBtn" Height="38" MinHeight="38" HorizontalAlignment="Stretch"

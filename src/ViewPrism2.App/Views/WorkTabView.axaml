@@ -384,10 +384,10 @@
               </StackPanel>
               <StackPanel Spacing="8" IsVisible="{Binding IsCriteriaMethod}">
                 <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
-                  <TextBox Text="{Binding CriteriaName}" PlaceholderText="ファイル名を含む…" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0" />
+                  <TextBox Text="{Binding CriteriaName}" PlaceholderText="ファイル名を含む…" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" />
                 </Border>
                 <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
-                  <TextBox Text="{Binding CriteriaExt}" PlaceholderText="拡張子（例 jpg）…" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0" />
+                  <TextBox Text="{Binding CriteriaExt}" PlaceholderText="拡張子（例 jpg）…" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" />
                 </Border>
               </StackPanel>
               <Button Classes="toolbarBtn" Height="38" MinHeight="38" HorizontalAlignment="Stretch"
