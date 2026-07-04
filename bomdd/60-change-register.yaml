@@ -740,3 +740,14 @@ changes:
     findings: "register 全エントリが定義サイト不成立(candidate fallback のみ)= ledger に status 不掲載・R-051 skip。ECO-028〜033 起票時の検証で発見"
     body: 60-change-order-eco-034.md
     notes: "適用済み(2026-07-03)。検証: error/warn 不変・ledger eco 33 件に status 付与。裁定=スキーマ側に寄せる(キー名は合理性のない偶然の命名・移行1行)"
+
+  - id: ECO-035
+    title: "M-BOM 写像被覆ギャップの是正 — オラクル治具 unit(M-ORACLE-030)と Infrastructure プロジェクト級 unit(M-INFRA-031)の宣言"
+    type: 台帳是正(doc-only — scale-01 遡及採点の検出)
+    status: applied
+    golden: n/a
+    baseline: "main b1b0d79"
+    findings: "scale-01(bomdd/studies/)の unit 帰属で写像未所有 8 files を検出: tests/ViewPrism2.Oracle/*(7)= 治具の所有 unit 不在(「治具は製品と同格」の台帳反映漏れ)/ src/ViewPrism2.Infrastructure/*.csproj(1)= プロジェクト級 unit 不在(Core/App にはある非対称)"
+    impacted_bom: ["32-mbom(M-ORACLE-030/M-INFRA-031 追加宣言のみ)"]
+    body: 60-change-order-eco-035.md
+    notes: "実装変更なし(宣言のみ)。verifies は捏造しない(オラクルの検査対象は 41 の採点行が正典)。61 §1.4 ハブ台帳 regime 下の初 ECO"

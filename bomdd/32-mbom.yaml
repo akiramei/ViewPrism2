@@ -529,6 +529,21 @@ mbom:
         fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
         l2: "スキーマ同値(新規 DB vs マイグレーション適用 DB)・サムネイル出力メタデータ検査を含む"
 
+    # ---- ECO-035(2026-07-04): scale-01 遡及採点で検出した写像被覆ギャップの是正 — 台帳宣言のみ(実装変更なし) ----
+    - id: M-ORACLE-030         # 固定オラクル治具(治具は製品と同格 — M-HARNESS-015 と同種)。scale-01 まで所有 unit 不在だった
+      ebom_refs: []
+      artifact:
+        path: tests/ViewPrism2.Oracle
+        type: dotnet-test(xunit.v3)
+      artifact_note: "検査対象・期待値の正典は 41-fixed-oracle.yaml の採点行(S01〜)。verifies は行単位で 41 が持つため本 unit では宣言しない(捏造回避)"
+
+    - id: M-INFRA-031          # Infrastructure プロジェクト級(M-CORE-001/M-UI-013 と同型)。csproj 等サブ unit 外のプロジェクトファイルを所有
+      ebom_refs: []
+      artifact:
+        path: src/ViewPrism2.Infrastructure
+        type: dotnet-classlib
+      artifact_note: "配下の専門 unit(M-DB-007/M-THUMB-008/M-SET-010/M-RELINK-025)が最長一致で優先。本 unit の実所有は csproj・I18n/ 等の残余"
+
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
   - { package: Avalonia,                                   version: 12.0.4,  rationale: "ADR-0001 UI 基盤",            license: MIT,        substitutable: false }
