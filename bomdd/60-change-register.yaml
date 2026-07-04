@@ -788,8 +788,8 @@ changes:
   - id: ECO-039
     title: "FL-002/FL-004 裁定の取り込み — 一覧表示状態の永続範囲(S-a ソート=画面ローカル揮発 / D-b 表示形式=タブごと独立永続)"
     type: 設計確定の取り込み(CAD 裁定 d1f94ac・ECO-038 の R3 送付事項)
-    status: staged   # 2026-07-04 D-b 実装+機械受入完了(受入テスト先行 2 件=実装前赤確認→build 0/Tests 529/Oracle 100+2skip/validate 0-0)。残= golden(maintainer 実機・再起動跨ぎ)→M4 同期(spec §2.6)
-    golden: "再起動跨ぎ: 作業タブ list→再起動→list 復元・画像タブ grid のまま(独立)/ 画像タブ切替が作業タブに波及しない"
+    status: applied   # 2026-07-04 golden 合格(maintainer 実機・再起動跨ぎ: 作業タブ list 復元+画像タブ独立 OK)。D-b 実装(受入テスト先行 2 件・Tests 529/Oracle 100+2skip/build 0/validate 0-0)+M4 同期(spec ソート節 S-a 明文化・settings 節+M-SET-010 に WorkTabDisplayMode・M-UI-WORKSPACE-029 as-built)
+    golden: "approved(2026-07-04 maintainer 実機・再起動跨ぎ: 作業タブ list 復元+画像タブ独立・逆方向も波及なし)"
     baseline: "main 9dec0fd"
     findings: "ECO-038 診断で作業タブの片方向依存(DisplayMode を読むが書かない)を検出し R3 で裁定送付 → ViewPrismUI docs/decisions/FL-002-004-persistence.md で maintainer 裁定(2026-07-04)。62 不要(DB 不変・nullable キー追加は欠落=既定値フォールバック)"
     impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "M-SET-010"]

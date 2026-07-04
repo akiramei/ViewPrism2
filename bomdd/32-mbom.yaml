@@ -161,7 +161,7 @@ mbom:
       interface_contract:
         schema: >-
           AppSettings { Locale="ja", WindowX/Y=null(OS 既定), WindowWidth=1200/Height=800/IsMaximized=false,
-          DisplayMode="grid"(v1.3/CR-6), LastViewId=null, LastCollectionId=null(v1.3/CR-5),
+          DisplayMode="grid"(v1.3/CR-6・画像タブ用), WorkTabDisplayMode=null(ECO-039/FL-004=D-b: 作業タブ独立・null=未保存で DisplayMode へフォールバック), LastViewId=null, LastCollectionId=null(v1.3/CR-5),
           GridColumns=4([JsonIgnore]・v1.3/CR-1 廃止プロパティの互換温存) }
           — v2.0 追加(REQ-059): ViewerMode="normal"("normal"|"scroll"|"spread-right"|"spread-left"),
           ViewerResizeMode="noResize"("matchLargerHeight"|"matchSmallerHeight"|"noResize"),
@@ -339,7 +339,7 @@ mbom:
       acceptance_refs: [CP-GF-015, CP-UI-G1, CP-UI-G6]
       fmea_refs: [FMEA-019]
 
-    - id: M-UI-WORKSPACE-029   # ECO-020/021(作業タブ surface)。ECO-024/M4 で E-UI-WORKSPACE-043 の製造トレースを追加(W2 解消)
+    - id: M-UI-WORKSPACE-029   # ECO-020/021(作業タブ surface)。ECO-024/M4 で E-UI-WORKSPACE-043 の製造トレースを追加(W2 解消)。ECO-039= 表示形式のタブ独立永続(WorkTabDisplayMode 消費・FL-004=D-b)
       ebom_refs: [E-UI-WORKSPACE-043]
       artifact:
         path: src/ViewPrism2.App/ViewModels/WorkTabViewModel.cs
