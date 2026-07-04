@@ -839,3 +839,14 @@ changes:
     impacted_bom: ["E-VIEWSVC-009(invariant 明文のみ)", "tests/ViewPrism2.Tests/CpView012HierarchySaveTests.cs(受入 1 件追加・R6 新規行)"]
     body: 60-change-order-eco-043.md
     notes: "ECO-042 と同型の取り込み。62 不要・35-dsbom 不要・オラクル/golden 影響なし。**ECO-025 系の未確定はこれで全解消**(VE-001/002/003=025・FL-003=025β・FL-002/004=039・FL-001=042・VE-004=本 ECO)"
+
+  - id: ECO-044
+    title: "IMG-011 裁定の取り込み — マージ永続化ルール確定(①原子 union=現状追認 ②タグ統合トグル撤去 ③操作ログに基づく補償 Undo 新設)"
+    type: 設計確定の取り込み(CAD 裁定 49ea874・②UI 是正+③net-new — スキーマ変更 ECO の初出=62 移行オラクル初適用)
+    status: staged
+    golden: "タグ統合チェックの消滅・マージ→取り消すの往復(source 復元+タグ差分除去)・実行可能条件破れ時の不活性 ×画像タブ/作業タブ"
+    baseline: "main 0182362"
+    findings: "①原子・union・source=deleted は現状追認(MergeService/INV-009/011・オラクル S-19〜24 固定済み)。②見せかけトグル実在(ImageTab 444/WorkTab 415 の CheckBox=切替可能だが Core は常に union=OFF が機能しない誤誘導 UI・ECO-041 教訓の同族)。③マージ操作ログ無し(ApplyMergeAsync 無記録)・revision カラム無し・CanUndo=false プレースホルダ(両 VM)。MergeCalculator はマージ先優先=destination の変化は追加行+NULL 補完に限定=補償差分が決定論的"
+    impacted_bom: ["E-MERGE-034", "E-DB-010(merge_operations 新テーブル)", "E-UI-MODE-041", "M-UI-IMAGETAB-035", "M-UI-013", "E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "62-migration-oracle(初適用)"]
+    body: 60-change-order-eco-044.md
+    notes: "revision の実装写像は提案=内容指紋(status+タグ集合ハッシュ)のログ突合(revision カラム新設せず・裁定意図『変化していない』を直接検証)。物理削除=完全削除で source 行不在。是正順=E-BOM 宣言→②トグル撤去(小・先行可)→プローブ→ログ+補償 Core→UI 配線→62。R6=既存オラクル不変・新規行のみ"
