@@ -38,9 +38,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly NodeGraphBuilder _graphBuilder;
     private readonly PathConditionConverter _pathConverter;
     private readonly ConditionEvaluator _evaluator;
-    private readonly SimilaritySearchService _similar;
-    private readonly MergeService _merge;
-    private readonly CriteriaSearchService _criteriaSearch;
+    // ECO-036 第3段: SimilaritySearchService/MergeService/CriteriaSearchService はホストで保持しない
+    // (整理の実行部は Organize 子 VM の所有 — E36S1-004/E36S2 と同型の後始末)
     private readonly IWindowService _windows;
     private readonly AppSettings _settings;
     // ECO-036 第2段: WorkspaceService はホストで保持しない(受け渡しは Work 子 VM の所有 — E36S1-004 と同型の後始末)
@@ -90,19 +89,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // タグ編集モードと排他の文脈モード。マージ先(残す1枚)と整理対象(統合し削除対象)を選び、
     // 「似た画像を探す」(類似 E-SIMSEARCH-032 / 条件 E-CRITERIA-037)で候補を中央ペインに出し、
     // マージ実行(E-MERGE-034 原子・タグ union・source=deleted・物理非破壊 INV-009)で 1 枚へまとめる。
+    // ECO-036 第3段: 状態12+実行部+操作は Organize 子 VM(M-UI-ORGANIZE-034)へ移送。モードフラグ・排他・
+    // 全公開契約(転送プロパティ+コマンド殻)・Recompute のトレイ構築はホスト残置(order §12.2)。
     private bool _organizeMode;
-    private string? _mergeTargetId;
-    private readonly List<string> _organizeTargets = new();
-    private bool _includeTags = true;            // タグ統合(E-MERGE-034 は常に union=INV-011。OFF の no-union は IMG-011)
-    private string _searchMethod = "similar";    // "similar" | "criteria"
-    private int _similarThreshold = 80;
-    private string _criteriaName = "";
-    private string _criteriaExt = "";
-    private bool _searching;
-    private bool _hasSearched;
-    private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
-    private bool _organizeDone;
-    private int _doneSourceCount;
+    public ImageTabOrganizeViewModel Organize { get; }
 
     // ---- 作業モード(ECO-017: 作業対象セットの蓄積)----
     // タグ編集/整理に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能になり(inSelect=編集 or 作業・
@@ -148,9 +138,6 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _graphBuilder = graphBuilder;
         _pathConverter = pathConverter;
         _evaluator = evaluator;
-        _similar = similar;
-        _merge = merge;
-        _criteriaSearch = new CriteriaSearchService(images); // 整理トレイの条件検索(E-CRITERIA-037)。images のみ依存
         _windows = windows;
         _settings = settings;
         Work = new ImageTabWorkViewModel(workspaces);
@@ -167,6 +154,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
             // (golden 所見 G-E36S1-2 の是正: 通知なしラムダではメニューが視覚的に閉じない)
             closeMoreMenu: () => { MoreMenuOpen = false; OnPropertyChanged(string.Empty); },
             resolveAbsolutePath: ResolveAbsolutePath);
+        Organize = new ImageTabOrganizeViewModel(
+            images,
+            similar,
+            merge,
+            getCollectionId: () => _collectionId,
+            recompute: Recompute,
+            refreshSelectionMarkers: RefreshSelectionMarkers,
+            reloadImagesAsync: ReloadImagesAsync);
     }
 
     /// <summary>コレクションルート+相対パスから絶対パスを組み立てる(BuildEntry と同型・ゴミ箱子 VM へも供給)。</summary>
@@ -682,50 +677,53 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool IsTagEditContext => _editMode;
     public bool IsOrganizeContext => _organizeMode;
 
-    // マージ先(残す1枚)
-    public bool HasMergeTarget => _mergeTargetId is not null;
+    // マージ先(残す1枚)。状態(_mergeTargetId)は Organize 子 VM 所有(ECO-036 第3段)— ホストは _organizeMode との合成のみ。
+    public bool HasMergeTarget => Organize.HasMergeTarget;
     public OrganizeSlotVM? MergeTarget { get; private set; }
     /// <summary>マージ先未設定: グリッドで残したい1枚を選ぶよう促す。</summary>
-    public bool ShowMergeTargetPrompt => _organizeMode && _mergeTargetId is null;
+    public bool ShowMergeTargetPrompt => _organizeMode && !Organize.HasMergeTarget;
 
     // 整理対象(統合し削除対象)
-    public bool HasOrganizeTargets => _organizeTargets.Count > 0;
+    public bool HasOrganizeTargets => Organize.HasOrganizeTargets;
     /// <summary>マージ先はあるが整理対象が空: まとめる相手がない。</summary>
-    public bool ShowOrganizeTargetsPrompt => _organizeMode && _mergeTargetId is not null && _organizeTargets.Count == 0;
-    public string OrganizeTargetsCountLabel => $"{_organizeTargets.Count} 枚";
+    public bool ShowOrganizeTargetsPrompt => _organizeMode && Organize.HasMergeTarget && !Organize.HasOrganizeTargets;
+    public string OrganizeTargetsCountLabel => Organize.OrganizeTargetsCountLabel;
 
     // タグ統合(「マージ時にタグを含める」)。E-MERGE-034 は常にタグ union(INV-011)。OFF の no-union は IMG-011(別 ECO)。
-    public bool IncludeTags { get => _includeTags; set { _includeTags = value; OnPropertyChanged(); } }
+    // 通知トポロジー(G-E36S1 類・設計者レビューで捕捉): 旧 setter はホストの OnPropertyChanged を発行していた —
+    // XAML はホスト側プロパティを束縛するため、転送でもホスト通知を保存する(子の自通知は将来用)。
+    public bool IncludeTags { get => Organize.IncludeTags; set { Organize.IncludeTags = value; OnPropertyChanged(); } }
 
     // 似た画像を探す
-    public bool IsSimilarMethod => _searchMethod == "similar";
-    public bool IsCriteriaMethod => _searchMethod == "criteria";
+    public bool IsSimilarMethod => Organize.IsSimilarMethod;
+    public bool IsCriteriaMethod => Organize.IsCriteriaMethod;
     /// <summary>類似度しきい値(%)。1枚から探す=マージ先起点。</summary>
     public int SimilarThreshold
     {
-        get => _similarThreshold;
-        set { _similarThreshold = Math.Clamp(value, 50, 100); OnPropertyChanged(); OnPropertyChanged(nameof(SimilarThresholdLabel)); }
+        get => Organize.SimilarThreshold;
+        // 旧 setter と同一のホスト通知(自プロパティ+ラベル)を保存 — スライダー操作でラベルが追従する挙動の要
+        set { Organize.SimilarThreshold = value; OnPropertyChanged(); OnPropertyChanged(nameof(SimilarThresholdLabel)); }
     }
-    public string SimilarThresholdLabel => $"{_similarThreshold}%";
+    public string SimilarThresholdLabel => Organize.SimilarThresholdLabel;
     /// <summary>類似検索はマージ先(基準画像)が必要。</summary>
-    public bool CanRunSimilar => _mergeTargetId is not null;
-    public string CriteriaName { get => _criteriaName; set => _criteriaName = value ?? ""; }
-    public string CriteriaExt { get => _criteriaExt; set => _criteriaExt = value ?? ""; }
-    public bool Searching => _searching;
+    public bool CanRunSimilar => Organize.CanRunSimilar;
+    public string CriteriaName { get => Organize.CriteriaName; set => Organize.CriteriaName = value; }
+    public string CriteriaExt { get => Organize.CriteriaExt; set => Organize.CriteriaExt = value; }
+    public bool Searching => Organize.Searching;
     /// <summary>検索結果表示(中央ペインを候補一覧へ切替)。完了状態では出さない。</summary>
-    public bool ShowSearchResults => _organizeMode && _hasSearched && !_organizeDone;
+    public bool ShowSearchResults => _organizeMode && Organize.HasSearched && !Organize.OrganizeDone;
     public bool NoSearchResults => ShowSearchResults && SearchResults.Count == 0;
     /// <summary>検索実行可否: 条件検索は常に / 類似はマージ先(基準)が要る。</summary>
-    public bool CanRunSearch => IsCriteriaMethod || _mergeTargetId is not null;
+    public bool CanRunSearch => Organize.CanRunSearch;
     /// <summary>中央ブラウズグリッド: 検索結果表示中は譲る(整理モードでもグリッドで対象を選ぶため出す)。</summary>
     public bool ShowBrowseGrid => ShowGridPane && !ShowSearchResults;
     public bool ShowBrowseList => ShowListPane && !ShowSearchResults;
 
     // 実行・完了
-    public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
-    public string MergeButtonLabel => $"マージを実行（{_organizeTargets.Count} 枚）";
-    public bool OrganizeDone => _organizeDone;
-    public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
+    public bool CanExecuteMerge => Organize.CanExecuteMerge;
+    public string MergeButtonLabel => Organize.MergeButtonLabel;
+    public bool OrganizeDone => Organize.OrganizeDone;
+    public string DoneSummary => Organize.DoneSummary;
     /// <summary>取り消し: Undo 保持範囲は IMG-011(別 ECO)。本 ECO では affordance のみで未実装(無効)。</summary>
     public bool CanUndo => false;
 
@@ -871,8 +869,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 hasTagDots: !inSelect && tagsOf.Count > 0, tagDots: dots,
                 sizeLabel: FmtSize(e.Record.FileSize), dateLabel: FmtDate(e.Record.ModifiedDate),
                 target: null, absolutePath: e.AbsolutePath, selectionOrder: order,
-                isMergeTarget: _organizeMode && string.Equals(e.Record.Id, _mergeTargetId, StringComparison.Ordinal),
-                isOrganizeTarget: _organizeMode && _organizeTargets.Contains(e.Record.Id),
+                isMergeTarget: _organizeMode && string.Equals(e.Record.Id, Organize.MergeTargetId, StringComparison.Ordinal),
+                isOrganizeTarget: _organizeMode && Organize.Targets.Contains(e.Record.Id),
                 cells: cells,
                 sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
                 sortItemCell: sortItemCell));
@@ -906,8 +904,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             if (item.IsFolder) continue;
             bool selected = selSet.Contains(item.Id);
             int? order = selected ? _selected.IndexOf(item.Id) + 1 : null;
-            bool merge = _organizeMode && string.Equals(item.Id, _mergeTargetId, StringComparison.Ordinal);
-            bool org = _organizeMode && _organizeTargets.Contains(item.Id);
+            bool merge = _organizeMode && string.Equals(item.Id, Organize.MergeTargetId, StringComparison.Ordinal);
+            bool org = _organizeMode && Organize.Targets.Contains(item.Id);
             item.SetSelectionMarkers(selected, order, merge, org);
         }
         BuildContextPanels(selSet);
@@ -937,21 +935,22 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
         BuildAddGroups(selectedEntries);
 
-        // ---- 整理トレイ(ECO-014) ----
-        MergeTarget = _mergeTargetId is not null ? SlotFor(_mergeTargetId) : null;
+        // ---- 整理トレイ(ECO-014・状態は Organize 子 VM 所有 — ECO-036 第3段) ----
+        var mergeTargetId = Organize.MergeTargetId;
+        MergeTarget = mergeTargetId is not null ? SlotFor(mergeTargetId) : null;
         OrganizeTargets.Clear();
-        foreach (var id in _organizeTargets)
+        foreach (var id in Organize.Targets)
         {
             var slot = SlotFor(id);
             if (slot is not null) OrganizeTargets.Add(slot);
         }
         SearchResults.Clear();
-        var inTray = new HashSet<string>(_organizeTargets, StringComparer.Ordinal);
-        foreach (var (id, score, isCrit) in _searchResults)
+        var inTray = new HashSet<string>(Organize.Targets, StringComparer.Ordinal);
+        foreach (var (id, score, isCrit) in Organize.SearchResults)
         {
             var e = EntryById(id);
             if (e is null) continue; // マージ後に deleted 化した候補等は除外
-            bool added = inTray.Contains(id) || id == _mergeTargetId;
+            bool added = inTray.Contains(id) || id == mergeTargetId;
             SearchResults.Add(new OrganizeResultVM(id, e.Record.FileName, e.AbsolutePath,
                 FmtSize(e.Record.FileSize), score, isCrit, added));
         }
@@ -1263,7 +1262,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleEdit()
     {
         _editMode = !_editMode;
-        if (_editMode) { _organizeMode = false; ResetOrganizeState(); _workMode = false; _deleteMode = false; } // 整理・作業・削除と排他(ECO-014/017/018)
+        if (_editMode) { _organizeMode = false; Organize.ResetState(); _workMode = false; _deleteMode = false; } // 整理・作業・削除と排他(ECO-014/017/018)
         _selected.Clear(); _expandTag = null; _panelTab = "current";
         Recompute();
     }
@@ -1317,8 +1316,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (_organizeMode)
         {
             // 整理モード(ECO-014・モック準拠): マージ先未設定→マージ先に / 設定後→整理対象をトグル(選択ではない)
-            if (_mergeTargetId is null) SetMergeTarget(item.Id);
-            else if (item.Id != _mergeTargetId) ToggleOrganizeTarget(item.Id);
+            if (Organize.MergeTargetId is null) SetMergeTarget(item.Id);
+            else if (item.Id != Organize.MergeTargetId) ToggleOrganizeTarget(item.Id);
             return;
         }
         if (!_editMode && !_workMode && !_deleteMode)
@@ -1449,13 +1448,17 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     // =====================================================================
     //  整理モード コマンド(ECO-014: 類似+マージ統合「整理トレイ」)
+    //  ECO-036 第3段: 状態+実行部は Organize 子 VM(M-UI-ORGANIZE-034)。ホストは転送殻
+    //  (排他リセットは Organize.ResetState() 直接呼び出し・現行どおりの位置で Recompute()/
+    //  RefreshSelectionMarkers() を呼ぶ — order §12.2/§12.5)。
     // =====================================================================
     [RelayCommand]
     private void ToggleOrganize()
     {
         _organizeMode = !_organizeMode;
         if (_organizeMode) { _editMode = false; _workMode = false; _deleteMode = false; } // タグ編集・作業・削除と排他(ECO-014/017/018)
-        ResetOrganizeState();
+        Organize.ResetState();
+        _selected.Clear();
         Recompute();
     }
 
@@ -1467,7 +1470,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void ToggleWork()
     {
         _workMode = !_workMode;
-        if (_workMode) { _editMode = false; _organizeMode = false; ResetOrganizeState(); _deleteMode = false; } // 他文脈モードと排他(ECO-018)
+        if (_workMode) { _editMode = false; _organizeMode = false; Organize.ResetState(); _deleteMode = false; } // 他文脈モードと排他(ECO-018)
         _selected.Clear(); _expandTag = null;
         Recompute();
     }
@@ -1498,7 +1501,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     {
         MoreMenuOpen = false;
         _deleteMode = true;
-        _editMode = false; _organizeMode = false; ResetOrganizeState(); _workMode = false; // 排他
+        _editMode = false; _organizeMode = false; Organize.ResetState(); _workMode = false; // 排他
         _selected.Clear(); _expandTag = null;
         Recompute();
     }
@@ -1527,136 +1530,74 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
-    private void ResetOrganizeState()
-    {
-        _mergeTargetId = null;
-        _organizeTargets.Clear();
-        _includeTags = true;
-        _searchMethod = "similar";
-        _criteriaName = ""; _criteriaExt = "";
-        _searching = false; _hasSearched = false;
-        _searchResults = new();
-        _organizeDone = false; _doneSourceCount = 0;
-        _selected.Clear();
-    }
-
-    /// <summary>グリッドで残したい1枚をマージ先にする(整理対象に入っていれば外す)。</summary>
+    /// <summary>グリッドで残したい1枚をマージ先にする(整理対象に入っていれば外す)。実体は Organize 子 VM(ECO-036 第3段)。</summary>
     [RelayCommand]
     private void SetMergeTarget(string imageId)
     {
         if (!_organizeMode) return;
-        _organizeTargets.Remove(imageId);
-        _mergeTargetId = imageId;
+        Organize.SetMergeTarget(imageId);
         RefreshSelectionMarkers(); // マージ先マーカー+トレイのみ=Items を作り直さない
     }
 
     private void ToggleOrganizeTarget(string imageId)
     {
-        if (!_organizeMode || _mergeTargetId is null || imageId == _mergeTargetId) return;
-        if (!_organizeTargets.Remove(imageId)) _organizeTargets.Add(imageId);
+        if (!_organizeMode || Organize.MergeTargetId is null || imageId == Organize.MergeTargetId) return;
+        Organize.ToggleTarget(imageId);
         RefreshSelectionMarkers(); // 整理対象マーカー+トレイのみ=Items を作り直さない
     }
 
     [RelayCommand]
     private void RemoveOrganizeTarget(string imageId)
     {
-        if (_organizeTargets.Remove(imageId)) RefreshSelectionMarkers();
+        if (Organize.Targets.Contains(imageId)) { Organize.RemoveTarget(imageId); RefreshSelectionMarkers(); }
     }
 
     /// <summary>整理対象をマージ先へ昇格し、元のマージ先を整理対象へ戻す(モック「マージ先にする」)。</summary>
     [RelayCommand]
     private void PromoteToMergeTarget(string imageId)
     {
-        if (!_organizeTargets.Remove(imageId)) return;
-        if (_mergeTargetId is not null) _organizeTargets.Add(_mergeTargetId);
-        _mergeTargetId = imageId;
+        if (!Organize.Targets.Contains(imageId)) return;
+        Organize.PromoteToMergeTarget(imageId);
         RefreshSelectionMarkers();
     }
 
     [RelayCommand]
-    private void ToggleIncludeTags() { _includeTags = !_includeTags; Recompute(); }
+    private void ToggleIncludeTags() { Organize.ToggleIncludeTags(); Recompute(); }
 
     [RelayCommand]
     private void SetSearchMethod(string method)
     {
-        _searchMethod = method == "criteria" ? "criteria" : "similar";
+        Organize.SetSearchMethod(method);
         Recompute();
     }
 
-    /// <summary>似た画像を探す: 類似(E-SIMSEARCH-032)または条件(E-CRITERIA-037)。結果を中央ペインへ。</summary>
+    /// <summary>似た画像を探す: 類似(E-SIMSEARCH-032)または条件(E-CRITERIA-037)。結果を中央ペインへ。
+    /// 実行部は Organize 子 VM(RunSearchAsync)。途中の searching 表示更新は子へ注入した Recompute で現行位置を保持。</summary>
     [RelayCommand]
     private async Task RunSearch()
     {
         if (!_organizeMode || _collectionId is null) return;
-        _searching = true; Recompute();
-        var results = new List<(string ImageId, int Score, bool IsCriteria)>();
-        try
-        {
-            if (_searchMethod == "criteria")
-            {
-                var criteria = BuildCriteria();
-                if (CriteriaHasAny(criteria))
-                {
-                    var recs = await _criteriaSearch.SearchAsync(_collectionId, criteria,
-                        new HashSet<ImageStatus> { ImageStatus.Normal }, CancellationToken.None).ConfigureAwait(true);
-                    foreach (var r in recs)
-                    {
-                        if (string.Equals(r.Id, _mergeTargetId, StringComparison.Ordinal)) continue; // マージ先自身は候補に出さない
-                        results.Add((r.Id, 100, true));
-                    }
-                }
-            }
-            else if (_mergeTargetId is not null) // 類似は基準(マージ先)が必要
-            {
-                var found = await _similar.FindSimilarAsync(_mergeTargetId, _similarThreshold).ConfigureAwait(true);
-                foreach (var s in found) results.Add((s.ImageId, s.Score, false));
-            }
-        }
-        finally
-        {
-            _searching = false;
-        }
-        _searchResults = results;
-        _hasSearched = true;
+        await Organize.RunSearchAsync().ConfigureAwait(true);
         Recompute();
     }
 
-    private SearchCriteria BuildCriteria() => new()
-    {
-        NameContains = string.IsNullOrWhiteSpace(_criteriaName) ? null : _criteriaName.Trim(),
-        Extension = string.IsNullOrWhiteSpace(_criteriaExt) ? null : _criteriaExt.Trim(),
-        // hash / サイズ範囲 / 更新日範囲の入力は surface 増分(M2)で結線する。
-    };
-
-    private static bool CriteriaHasAny(SearchCriteria c) =>
-        c.Hash is not null || c.NameContains is not null || c.Extension is not null ||
-        c.MtimeFrom is not null || c.MtimeTo is not null || c.SizeMin is not null || c.SizeMax is not null;
-
-    /// <summary>検索結果の候補を整理対象へ追加する(マージ先が前提・モック「整理対象に追加」)。</summary>
+    /// <summary>検索結果の候補を整理対象へ追加する(マージ先が前提・モック「整理対象に追加」)。実体は Organize 子 VM。</summary>
     [RelayCommand]
     private void AddCandidateToTargets(string imageId)
     {
-        if (_mergeTargetId is null || string.Equals(imageId, _mergeTargetId, StringComparison.Ordinal)) return;
-        if (!_organizeTargets.Contains(imageId)) _organizeTargets.Add(imageId);
+        if (Organize.MergeTargetId is null || string.Equals(imageId, Organize.MergeTargetId, StringComparison.Ordinal)) return;
+        Organize.AddCandidate(imageId);
         Recompute();
     }
 
-    /// <summary>マージ実行: E-MERGE-034(原子・タグ union・source=deleted・物理非破壊 INV-009)。完了後にデータ再読込。</summary>
+    /// <summary>マージ実行: E-MERGE-034(原子・タグ union・source=deleted・物理非破壊 INV-009)。完了後にデータ再読込。
+    /// 実行部は Organize 子 VM(ExecuteMergeAsync・reloadImagesAsync 注入経由で ReloadImagesAsync を呼ぶ)。
+    /// ガード(マージ先/整理対象なし)は現行どおりホスト側で先に確認し、不成立なら Recompute を呼ばない。</summary>
     [RelayCommand]
     private async Task ExecuteMerge()
     {
-        if (_mergeTargetId is null || _organizeTargets.Count == 0) return;
-        var target = _mergeTargetId;
-        var sources = _organizeTargets.ToList();
-        var result = await _merge.MergeAsync(target, sources).ConfigureAwait(true);
-        if (!result.IsSuccess) return;
-        _doneSourceCount = sources.Count;
-        _organizeDone = true;
-        _mergeTargetId = null;
-        _organizeTargets.Clear();
-        _hasSearched = false;
-        _searchResults = new();
-        await ReloadImagesAsync().ConfigureAwait(true);
+        if (!Organize.HasMergeTarget || !Organize.HasOrganizeTargets) return;
+        await Organize.ExecuteMergeAsync().ConfigureAwait(true);
         Recompute();
     }
 
@@ -1664,7 +1605,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private void ContinueOrganize()
     {
-        ResetOrganizeState();
+        Organize.ContinueOrganize();
+        _selected.Clear();
         Recompute();
     }
 

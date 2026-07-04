@@ -565,6 +565,16 @@ mbom:
       acceptance_refs: [CP-L1-SMOKE]
       acceptance_note: "受け渡しの受入= E-UI-WORKSPACE-043 系 CP(WorkTab 側)+golden。挙動不変 ECO につき UI 専用 CP は新設しない"
 
+    # ---- ECO-036 第3段(2026-07-04): 整理モードの切り出し(order §12) ----
+    - id: M-UI-ORGANIZE-034    # M-UI-016 からの部分 split 第3号。整理状態 12+検索/マージ実行(サービス 3 種の所有)
+      ebom_refs: [E-UI-MODE-041]   # 整理モードのフィーチャ実体(部分)。E-UI-MERGE-036/E-SIMSEARCH/E-CRITERIA の実行面と接続(所有品目は従来どおり Core 側)
+      artifact:
+        path: src/ViewPrism2.App/ViewModels/ImageTabOrganizeViewModel.cs
+        path_note: "転送殻方式(§12.2): 全公開契約はホスト転送殻・トレイ VM 構築はホスト Recompute。接続面= 関数注入(getCollectionId/recompute/refreshSelectionMarkers[未使用=契約字面維持・cheat E36S3]/reloadImagesAsync)"
+        type: avalonia-app
+      acceptance_refs: [CP-L1-SMOKE]
+      acceptance_note: "整理挙動の受入= golden(視覚)+Core 側 CP(CP-SIM-017/CP-MERGE-018/CP-MERGE-001/CP-CRITERIA-019)で被覆 — 挙動不変 ECO につき UI 専用 CP は新設しない"
+
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
   - { package: Avalonia,                                   version: 12.0.4,  rationale: "ADR-0001 UI 基盤",            license: MIT,        substitutable: false }

@@ -304,3 +304,100 @@ note(popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/0
   ①「作業」トグル(開始/終了・他モードとの排他)②選択→「追加」(チップ「作業対象 N 枚」の件数増加・
   選択クリア)③追加した画像が**作業タブに現れる**(受け渡し)④モード入口の出し分け(作業中は
   タグ編集/整理入口が隠れる)。合格で第2段クローズ(applied)。
+
+---
+
+## 12. 第3段 設計凍結(2026-07-04 着手 — 整理モード・系列最複雑)
+
+### 12.1 実物点検
+
+- 状態: **12 フィールド**(_mergeTargetId・_organizeTargets・_includeTags・_searchMethod・_similarThreshold・
+  _criteriaName/_criteriaExt・_searching・_hasSearched・_searchResults・_organizeDone・_doneSourceCount)+
+  モードフラグ _organizeMode(ホスト管轄=第1段裁定)。
+- サービス依存: SimilaritySearchService・MergeService・CriteriaSearchService(images から生成)。
+- **消費者一覧**: XAML **40 箇所**・tests(CpUiG1OrganizeTests 中心)が vm.ToggleOrganizeCommand ×10・
+  vm.OrganizeTargets ×8 等 **全てホスト公開契約**を参照。ObservableCollection(OrganizeTargets/
+  SearchResults/MergeTarget VM)は Recompute のトレイ構築(§917-)がホストで生成。
+- HandleItemClick(グリッドクリック)が ToggleOrganizeTarget を呼ぶ= モードディスパッチ(E-UI-MODE-041)。
+
+### 12.2 境界の裁定 — 転送殻方式(第2段パターンの拡張)
+
+- 子 = **ImageTabOrganizeViewModel(M-UI-ORGANIZE-034)**: 上記 12 状態+検索/マージ実行
+  (RunSearchAsync/ExecuteMergeAsync/BuildCriteria/CriteriaHasAny)+状態操作(SetMergeTarget/
+  ToggleTarget/RemoveTarget/PromoteToMergeTarget/AddCandidate/SetSearchMethod/ToggleIncludeTags/
+  ResetState/ContinueOrganize 実体)。**サービス 3 種の所有は子へ移る**(ホストの _similar/_merge/
+  _criteriaSearch フィールドは除去 — E36S1-004 と同型の後始末)。
+- ホスト残置: _organizeMode・ToggleOrganize(排他)・**全公開契約= 転送プロパティ+コマンド殻**
+  (XAML 40 箇所・tests を無改変に保つ — 第2段の「消費者保護」の正式化)・Recompute のトレイ構築
+  (子状態を Organize.* 経由で読む)・HandleItemClick ディスパッチ。
+- **通知トポロジー(必須列)**: 全消費者はホスト prop → **ホスト一括通知で閉じる**。子状態の変更は
+  全てホスト殻コマンド経由で、殻が現行どおり Recompute()/RefreshSelectionMarkers() を呼ぶ(位置不変)。
+  子内部の途中通知(RunSearch の searching 表示更新)= recompute 注入で現行位置を保持。
+  子の自 prop 通知は将来用に発行(本段の挙動には関与しない)。
+- 接続面(関数注入・子→ホスト型参照禁止): getCollectionId・recompute・refreshSelectionMarkers・
+  reloadImagesAsync(ExecuteMerge 後)。ホスト→子の直接呼び出しは可(排他リセット時の
+  Organize.ResetState() 等)。
+
+### 12.3 影響分析(凍結)
+
+| ファイル | 変更 |
+|---|---|
+| src/ViewPrism2.App/ViewModels/ImageTabOrganizeViewModel.cs | **新設**(状態 12+実行+操作・~200 行) |
+| src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs | 整理状態/サービス/実体ロジックの除去・転送殻化・Organize 子 VM 生成・Recompute トレイ構築の参照先変更 |
+| bomdd/32-mbom.yaml | M-UI-ORGANIZE-034 宣言+M-UI-016 註更新 |
+
+**影響なし予測**: **ImageTabView.axaml diff ゼロ・tests/ diff ゼロ**(転送殻方式)・Core/Infrastructure・
+他 VM/View diff ゼロ・オラクル/golden/CP 無改訂。ハブ台帳: M-UI-013= App 内は上記 2 VM のみ/
+M-VIEWSVC-012= 影響なし(サービスの呼び出しシグネチャ不変・所有場所が変わるだけ)。
+
+### 12.4 製造形態の裁定
+
+**fresh 工場 1 体(sonnet)+移送表**。理由: 本段は厚く(~300 行変更)、**「通知トポロジー列つき移送表
+×工場」の組み合わせが未測定**(第1段= 列なし×工場・第2段= 列あり×設計者)— 列の効果が工場の
+cheat 数に出るかが scale-02 の残る測定点。
+
+### 12.5 移送表(工場入力 — 変換規則+全数列挙)
+
+機械的変換規則(この 3 規則で殻を量産する):
+- R1(読み取りプロパティ): ホストの整理系公開プロパティは**本体を子へ移し**、ホストには
+  `public X Y => Organize.Y;` 転送を残す(_organizeMode との合成プロパティは合成のままホストに残し、
+  子状態参照部分だけ Organize.* へ)。
+- R2(コマンド): [RelayCommand] 殻はホストに残し、実体を子のメソッドへ —
+  殻= `子メソッド呼び出し → (現行どおりの位置で)Recompute()/RefreshSelectionMarkers()`。
+  現行コマンド内で状態変更と通知の間に他ホスト状態(_selected 等)への操作がある場合、その順序を保持。
+- R3(双方向バインディング系: IncludeTags/SimilarThreshold/CriteriaName/CriteriaExt): ホスト転送
+  プロパティ(get/set とも Organize へ委譲・set 内の現行 OnPropertyChanged 位置を保持)。
+
+## 13. 第3段 記録(2026-07-04 実施 — 機械受入完了・golden 待ち)
+
+| 測定 | 結果 |
+|---|---|
+| 製造形態 | fresh 工場 1 体(sonnet・通知トポロジー列つき移送表 §12.5)— ただし下記工程事故を経て採用 |
+| 機械受入(設計者独立) | build 0 エラー・Tests **526/526**・Oracle **100/102**・lint 0(期待値/テスト/golden 無改訂) |
+| diff 監査 | **XAML/tests diff ゼロ(§12.3 予測的中)**。ホスト 81+/139−(god-VM 正味 −58 行)+新 VM(~230 行) |
+| 工場ずる | 2 件(blocker 1= 並行編集事故の検出・friction 1= 注入契約の字面問題)— 51 参照 |
+| 設計者レビュー捕捉 | **通知脱落 2 箇所**(R3 転送で旧 setter のホスト通知が落ちる — IncludeTags/SimilarThreshold)→ 是正済み。G-E36S1 と同一クラスを golden **前**に捕捉= 第1段教訓の学習効果 |
+| 軽微な既知残余 | RunSearch/ExecuteMerge 殻末尾の Recompute が子内部の recompute と重複(冪等・同一描画パス内= 挙動同値。次段以降の殻規則で「子が末端通知する場合は殻は呼ばない」に統一候補) |
+
+### 工程事故(nonconformance — 51 に裁定記録)
+
+工場が**入れ子バックグラウンド委譲ループ**に陥り(実作業なしの空報告 ×4 体)、全停止と判断して設計者
+実装へ切替 → 停止追跡漏れの 1 体が生存し**並行製造**が発生(設計者の子 VM 上書き ⇔ 工場の復旧が衝突)。
+最終的に生存個体が §12 準拠の完全納品(自己受入全緑・衝突の検出と復旧を cheat-report で正直報告)を
+返したため、**工場版を採用・設計者実装は破棄**。教訓 3 点(委譲禁止の明記・全数停止確認・同一ファイル
+の同時編集禁止)は 51 に記録 — method 還元候補(工場運用の隔離規律)。
+
+### scale-02 測定(第3段分)
+
+- 通知トポロジー列つき移送表×工場: 移送自体の cheat は 0(2 件はいずれも移送外= 事故検出と契約字面)。
+  R1/R2/R3 の 3 規則で 13 プロパティ転送+10 コマンド殻化+4 双方向委譲が裁量なく実施された。
+- ただし **R3 規則自体に通知保存の穴**があった(設計者レビューで捕捉)— 規則を「転送 setter は
+  旧 setter のホスト通知を保存する」へ改訂(§12.5 R3 の追補として本記録をもって凍結)。
+
+### 残ゲート
+
+- **golden 再ウォークスルー(maintainer 実機)**: 整理モードの一連 — ①「整理」トグル(開始/終了・排他)
+  ②グリッドクリックでマージ先設定→整理対象トグル ③トレイ(マージ先/整理対象チップ・外す/昇格)
+  ④「マージ時にタグを含める」チェック ⑤似た画像を探す(類似: しきい値スライダーで **% ラベルが追従
+  すること**=是正箇所/条件: 名前・拡張子)⑥候補を整理対象に追加 ⑦マージ実行→完了表示→
+  「別の整理を続ける」。合格で第3段クローズ。
