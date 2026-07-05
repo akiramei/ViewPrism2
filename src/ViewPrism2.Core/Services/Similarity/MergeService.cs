@@ -18,12 +18,15 @@ public sealed class MergeService
     private readonly IImageRepository _images;
     private readonly ITagRepository _tags;
     private readonly IMergeRepository _merge;
+    private readonly IClock _clock;
 
-    public MergeService(IImageRepository images, ITagRepository tags, IMergeRepository merge)
+    // clock は optional 拡張(ECO-044)— 既存 call site(固定オラクル含む)を壊さない(CHEAT-01 前例)。
+    public MergeService(IImageRepository images, ITagRepository tags, IMergeRepository merge, IClock? clock = null)
     {
         _images = images;
         _tags = tags;
         _merge = merge;
+        _clock = clock ?? new SystemClock();
     }
 
     /// <summary>マージを実行する(原子)。マージ先/元は Normal 前提。拒否は ValidationError。</summary>
@@ -65,6 +68,7 @@ public sealed class MergeService
         // マージ元は全て Normal 前提。id 昇順で処理(多元の決着順、§2.10.5)
         var orderedSourceIds = sourceIds.OrderBy(id => id, StringComparer.Ordinal).ToList();
         var sourcesTagsByIdAsc = new List<IReadOnlyList<ImageTag>>(orderedSourceIds.Count);
+        var sourceRecords = new List<ImageRecord>(orderedSourceIds.Count);
         foreach (var sourceId in orderedSourceIds)
         {
             var source = await _images.GetByIdAsync(sourceId).ConfigureAwait(false);
@@ -80,6 +84,7 @@ public sealed class MergeService
 
             var tags = await _tags.GetImageTagsAsync(sourceId).ConfigureAwait(false);
             sourcesTagsByIdAsc.Add(tags);
+            sourceRecords.Add(source);
         }
 
         // タグ集約(純粋計算)。マージ先の image_id を割り当てる
@@ -89,8 +94,103 @@ public sealed class MergeService
             .Select(t => new ImageTag { ImageId = targetId, TagId = t.TagId, Value = t.Value })
             .ToList();
 
-        // 原子適用(単一トランザクション・失敗時全ロールバック)。物理ファイルには触れない(INV-009)
-        await _merge.ApplyMergeAsync(targetId, mergedTags, orderedSourceIds).ConfigureAwait(false);
+        // 操作ログ(ECO-044/IMG-011 裁定③): タグ差分+マージ直後の内容指紋を記録(補償 Undo の根拠)。
+        // 指紋はマージ後の状態を事前計算する: destination= Normal+merged タグ / sources= Deleted+タグ不変。
+        var (addedTagIds, filledTags) = MergeUndoCalculator.ComputeDelta(targetTags, mergedTags);
+        var sourceFingerprints = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (int i = 0; i < orderedSourceIds.Count; i++)
+        {
+            sourceFingerprints[orderedSourceIds[i]] = MergeUndoCalculator.ComputeFingerprint(
+                ImageStatus.Deleted, sourceRecords[i].Hash, sourcesTagsByIdAsc[i]);
+        }
+        var operation = new MergeOperationRecord
+        {
+            Id = IdGenerator.NewId(),
+            TargetId = targetId,
+            SourceIds = orderedSourceIds,
+            AddedTagIds = addedTagIds,
+            FilledTags = filledTags,
+            ExecutedAt = _clock.UtcNowIso(),
+            TargetFingerprint = MergeUndoCalculator.ComputeFingerprint(
+                ImageStatus.Normal, target.Hash, mergedTags),
+            SourceFingerprints = sourceFingerprints,
+        };
+
+        // 原子適用(単一トランザクション・失敗時全ロールバック・ログ同梱)。物理ファイルには触れない(INV-009)
+        await _merge.ApplyMergeAsync(targetId, mergedTags, orderedSourceIds, operation).ConfigureAwait(false);
         return Result.Ok();
+    }
+
+    // ---- ECO-044(IMG-011 裁定③): 補償 Undo ----
+
+    /// <summary>指定 destination の最新マージ操作ログ(「取り消す」の対象)。</summary>
+    public Task<MergeOperationRecord?> GetLatestOperationAsync(string targetId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(targetId);
+        return _merge.GetLatestOperationAsync(targetId);
+    }
+
+    /// <summary>実行可能条件のみ判定する(補償は適用しない)。CanUndo の根拠。</summary>
+    public async Task<Result> EvaluateUndoAsync(string operationId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(operationId);
+        var op = await _merge.GetOperationAsync(operationId).ConfigureAwait(false);
+        if (op is null)
+        {
+            return Result.Fail(ErrorCode.NotFound, "取り消し対象のマージ操作が見つかりません。");
+        }
+
+        return await EvaluateAsync(op).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 補償 Undo: 実行可能条件(未取り消し・destination/sources 現存かつ指紋一致)を再判定してから
+    /// 原子適用する(追加タグ行の削除+補完値の元値復帰+sources deleted→normal+undone_at)。
+    /// </summary>
+    public async Task<Result> UndoMergeAsync(string operationId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(operationId);
+        var op = await _merge.GetOperationAsync(operationId).ConfigureAwait(false);
+        if (op is null)
+        {
+            return Result.Fail(ErrorCode.NotFound, "取り消し対象のマージ操作が見つかりません。");
+        }
+
+        var eligible = await EvaluateAsync(op).ConfigureAwait(false);
+        if (!eligible.IsSuccess)
+        {
+            return eligible;
+        }
+
+        await _merge.ApplyUndoAsync(op, _clock.UtcNowIso()).ConfigureAwait(false);
+        return Result.Ok();
+    }
+
+    /// <summary>現在の destination/sources から内容指紋を再計算し、決定論判定へ渡す。</summary>
+    private async Task<Result> EvaluateAsync(MergeOperationRecord op)
+    {
+        string? targetFingerprint = null;
+        var target = await _images.GetByIdAsync(op.TargetId).ConfigureAwait(false);
+        if (target is not null)
+        {
+            var targetTags = await _tags.GetImageTagsAsync(op.TargetId).ConfigureAwait(false);
+            targetFingerprint = MergeUndoCalculator.ComputeFingerprint(target.Status, target.Hash, targetTags);
+        }
+
+        var sourceFingerprints = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var sourceId in op.SourceIds)
+        {
+            var source = await _images.GetByIdAsync(sourceId).ConfigureAwait(false);
+            if (source is null)
+            {
+                sourceFingerprints[sourceId] = null; // 完全削除= 行不在
+                continue;
+            }
+
+            var tags = await _tags.GetImageTagsAsync(sourceId).ConfigureAwait(false);
+            sourceFingerprints[sourceId] = MergeUndoCalculator.ComputeFingerprint(source.Status, source.Hash, tags);
+        }
+
+        return MergeUndoCalculator.Evaluate(op, targetFingerprint, sourceFingerprints);
     }
 }

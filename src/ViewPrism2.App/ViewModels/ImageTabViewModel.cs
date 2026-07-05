@@ -706,10 +706,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool ShowOrganizeTargetsPrompt => _organizeMode && Organize.HasMergeTarget && !Organize.HasOrganizeTargets;
     public string OrganizeTargetsCountLabel => Organize.OrganizeTargetsCountLabel;
 
-    // タグ統合(「マージ時にタグを含める」)。E-MERGE-034 は常にタグ union(INV-011)。OFF の no-union は IMG-011(別 ECO)。
-    // 通知トポロジー(G-E36S1 類・設計者レビューで捕捉): 旧 setter はホストの OnPropertyChanged を発行していた —
-    // XAML はホスト側プロパティを束縛するため、転送でもホスト通知を保存する(子の自通知は将来用)。
-    public bool IncludeTags { get => Organize.IncludeTags; set { Organize.IncludeTags = value; OnPropertyChanged(); } }
+    // タグ統合トグルは ECO-044(IMG-011 裁定②)で撤去 — タグ union は常時 ON(選択肢ではない)。
 
     // 似た画像を探す
     public bool IsSimilarMethod => Organize.IsSimilarMethod;
@@ -741,8 +738,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public string MergeButtonLabel => Organize.MergeButtonLabel;
     public bool OrganizeDone => Organize.OrganizeDone;
     public string DoneSummary => Organize.DoneSummary;
-    /// <summary>取り消し: Undo 保持範囲は IMG-011(別 ECO)。本 ECO では affordance のみで未実装(無効)。</summary>
-    public bool CanUndo => false;
+    /// <summary>取り消し(ECO-044/IMG-011 裁定③): ログに基づく補償 Undo の実行可否。</summary>
+    public bool CanUndo => Organize.CanUndo;
+    /// <summary>取り消し不可時の理由(完了パネルに表示)。</summary>
+    public string? UndoNote => Organize.UndoNote;
+    public bool HasUndoNote => Organize.HasUndoNote;
 
     // =====================================================================
     //  Recompute
@@ -1581,9 +1581,6 @@ public sealed partial class ImageTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleIncludeTags() { Organize.ToggleIncludeTags(); Recompute(); }
-
-    [RelayCommand]
     private void SetSearchMethod(string method)
     {
         Organize.SetSearchMethod(method);
@@ -1618,6 +1615,15 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (!Organize.HasMergeTarget || !Organize.HasOrganizeTargets) return;
         await Organize.ExecuteMergeAsync().ConfigureAwait(true);
         // 末尾通知は子の _recompute(注入)が旧版と同位置・同回数で発行済み — 殻では重複させない(G-E36S3)
+    }
+
+    /// <summary>取り消す(ECO-044/IMG-011 裁定③): ログに基づく補償 Undo。実体は Organize 子 VM。</summary>
+    [RelayCommand]
+    private async Task UndoMerge()
+    {
+        if (!Organize.OrganizeDone) return;
+        await Organize.UndoMergeAsync().ConfigureAwait(true);
+        // 末尾通知は子の _recompute(注入)が発行済み — 殻では重複させない(G-E36S3)
     }
 
     /// <summary>別の整理を続ける: 完了状態を畳んでトレイをリセット(整理モードは維持)。</summary>

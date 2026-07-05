@@ -142,6 +142,19 @@ public static class DatabaseSchema
             PRIMARY KEY (workspace_id, image_id)
         );
         CREATE INDEX idx_workspace_images_image ON workspace_images(image_id);
+
+        CREATE TABLE merge_operations (
+            id                  TEXT NOT NULL PRIMARY KEY,
+            target_id           TEXT NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+            source_ids          TEXT NOT NULL,
+            added_tag_ids       TEXT NOT NULL DEFAULT '[]',
+            filled_tags         TEXT NOT NULL DEFAULT '{}',
+            executed_at         TEXT NOT NULL,
+            target_fingerprint  TEXT NOT NULL,
+            source_fingerprints TEXT NOT NULL,
+            undone_at           TEXT NULL
+        );
+        CREATE INDEX idx_merge_operations_target ON merge_operations(target_id);
         """;
 
     /// <summary>
@@ -208,6 +221,25 @@ public static class DatabaseSchema
                 PRIMARY KEY (workspace_id, image_id)
             );
             CREATE INDEX idx_workspace_images_image ON workspace_images(image_id);
+            """),
+
+        // ECO-044(IMG-011 裁定③): マージ操作ログ merge_operations。補償 Undo の根拠。
+        // target_id FK→images CASCADE(destination 完全削除でログ消滅=自然に取り消し不可)。
+        // source_ids は JSON(FK なし — sources の完全削除は Undo 時の行不在で検出)。
+        // LatestDdl 末尾と列順・索引名を揃えスキーマ同値を保つ(CP-DB-006・ECO-020 前例)。
+        new("005-merge-operations", """
+            CREATE TABLE merge_operations (
+                id                  TEXT NOT NULL PRIMARY KEY,
+                target_id           TEXT NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+                source_ids          TEXT NOT NULL,
+                added_tag_ids       TEXT NOT NULL DEFAULT '[]',
+                filled_tags         TEXT NOT NULL DEFAULT '{}',
+                executed_at         TEXT NOT NULL,
+                target_fingerprint  TEXT NOT NULL,
+                source_fingerprints TEXT NOT NULL,
+                undone_at           TEXT NULL
+            );
+            CREATE INDEX idx_merge_operations_target ON merge_operations(target_id);
             """),
     ];
 }

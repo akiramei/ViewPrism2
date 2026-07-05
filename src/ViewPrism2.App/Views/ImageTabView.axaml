@@ -321,10 +321,15 @@
                 <TextBlock Text="{Binding DoneSummary}" FontSize="12.5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
               </StackPanel>
             </Border>
+            <!-- ECO-044(IMG-011 裁定③): ログに基づく補償 Undo。条件破れ時は不活性+理由表示 -->
             <Button Classes="toolbarBtn" Height="40" MinHeight="40" IsEnabled="{Binding CanUndo}"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="取り消しは今後対応(IMG-011)">
+                    Command="{Binding UndoMergeCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    ToolTip.Tip="直前のマージを取り消す（マージ後に変更が無い場合のみ）">
               <TextBlock Text="取り消す" VerticalAlignment="Center" />
             </Button>
+            <TextBlock IsVisible="{Binding HasUndoNote}" Text="{Binding UndoNote}" FontSize="11.5"
+                       Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap" TextAlignment="Center" />
             <Button Classes="primaryAction" Command="{Binding ContinueOrganizeCommand}">
               <TextBlock Text="別の整理を続ける" />
             </Button>
@@ -440,8 +445,7 @@
 
             <Border Height="1" Background="{StaticResource CardBorderBrush}" />
 
-            <!-- タグ統合 -->
-            <CheckBox IsChecked="{Binding IncludeTags}" Content="マージ時にタグを含める" FontSize="12.5" />
+            <!-- タグ統合トグルは ECO-044(IMG-011 裁定②)で撤去 — タグ union は常時 ON -->
 
             <!-- マージを実行 -->
             <Button Classes="primaryAction" IsEnabled="{Binding CanExecuteMerge}" Command="{Binding ExecuteMergeCommand}">

@@ -148,6 +148,7 @@ ebom:
         - 接続ごとに PRAGMA journal_mode=WAL・foreign_keys=ON を明示発行
         - (ECO-020) マイグレーション 004-workspaces で workspaces / workspace_images を追加。is_default の部分 UNIQUE 索引でデフォルト高々 1 件を担保(INV-W1)。両 FK→CASCADE(workspace 削除・画像の完全削除で所属消滅)。LatestDdl 末尾と列順・索引名を揃えスキーマ同値(CP-DB-006)を保つ
         - (ECO-025・現状追認) 表示列 display_columns は既存 views.display_columns TEXT(JSON)へ格納=**マイグレーション不要**(ECO-020 の workspaces 追加と対照)。ECO-025 の進化モデル(順序・kind・名前固定・最大5)は同一 TEXT 列へ前方互換に直列化する。スキーマ同値(CP-DB-006)不変
+        - since ECO-044: マイグレーション 005-merge-operations で merge_operations(マージ操作ログ・IMG-011 裁定③)を追加。target_id FK→images CASCADE(destination 完全削除でログ消滅=自然に取り消し不可)。source_ids はログ内 JSON(FK なし — sources の完全削除は Undo 時の行不在で検出)。LatestDdl 末尾と列順・索引名を揃えスキーマ同値(CP-DB-006)を保つ(ECO-020 前例)
       acceptance_refs: [CP-DB-006]
 
     - id: E-CACHE-011
@@ -266,6 +267,8 @@ ebom:
         - INV-011 タグ union・衝突=マージ先優先(マージ先 NULL/空ならマージ元値)・多元 id 昇順先勝ち・simple は存在 union
         - マージ元 status=deleted の論理操作のみ。image_tags は削除しない。全工程は原子(失敗時全ロールバック・INV-006)
         - INV-009 物理画像ファイルを移動・削除・変更しない(L3 物理差分 CP-MERGE-001 で実証)
+        - since ECO-044(IMG-011 裁定①②)= タグ統合は**常時 ON**(v1 に OFF 選択肢は無い — UI にトグルを置かない)。裁定①は本 unit の従来意味論(union・原子・deleted)の追認
+        - since ECO-044(IMG-011 裁定③)= マージは**操作ログ**(merge_operations 1 行/マージ= sources・タグ差分=追加行+NULL補完行・実行時刻・destination/sources の**内容指紋**=status+hash+タグ集合)をマージと同一トランザクションで記録する。「取り消す」=ログに基づく**補償操作**(原子= 追加タグ行の削除+補完値のNULL復帰+sources deleted→normal+undone_at マーク)。実行可能条件= sources 行が全て存在(完全削除で不在なら不可)かつ destination/sources の現在指紋がログ指紋と一致(=マージ直後から不変)かつ未取り消し。条件判定・指紋計算・タグ差分計算は描画から独立した決定論ロジックとして unit 検査可能にする。revision カラムは新設しない(指紋突合が「変化していない」を直接検証)
       acceptance_refs: [CP-MERGE-018, CP-MERGE-001]
 
     # ---------- v4.0 核(loop-v4-repair-lifecycle) ----------

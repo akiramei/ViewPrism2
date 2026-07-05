@@ -384,4 +384,36 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         vm.CloseMenusFromDismiss(); // light-dismiss 経路
         Assert.False(vm.MoreMenuOpen);
     }
+
+    /// <summary>ECO-044(IMG-011 裁定③): 作業タブでも取り消す= 補償 Undo が画像タブと同一意味論。</summary>
+    [Fact]
+    public async Task 整理マージの取り消しで整理対象が現スペースへ戻る()
+    {
+        await _db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = @"C:\f" });
+        foreach (var id in new[] { "dup_a", "dup_b" })
+            await _db.Images.AddAsync(new ImageRecord
+            {
+                Id = id, SyncFolderId = Folder, RelativePath = $"{id}.jpg", FileName = $"{id}.jpg",
+                FileSize = 100, Hash = "h", Status = ImageStatus.Normal,
+                CreatedDate = "2026-01-01T00:00:00.000Z", ModifiedDate = "2026-01-01T00:00:00.000Z",
+            });
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "dup_a", "dup_b" });
+        var vm = NewVm();
+        await vm.InitializeAsync();
+
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "dup_a"), ctrl: false, shift: false); // マージ先
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "dup_b"), ctrl: false, shift: false); // 整理対象
+        await vm.ExecuteMergeCommand.ExecuteAsync(null);
+        Assert.True(vm.OrganizeDone);
+        Assert.True(vm.CanUndo); // マージ直後は取り消し可能
+
+        await vm.UndoMergeCommand.ExecuteAsync(null);
+
+        Assert.False(vm.OrganizeDone);   // 完了状態を畳んでトレイへ戻る
+        Assert.True(vm.OrganizeMode);    // 整理モードは維持
+        Assert.Equal(ImageStatus.Normal, (await _db.Images.GetByIdAsync("dup_b"))!.Status); // source 復元
+        Assert.Contains(vm.Items, i => i.Id == "dup_b"); // 現スペースの一覧へ戻る
+    }
 }

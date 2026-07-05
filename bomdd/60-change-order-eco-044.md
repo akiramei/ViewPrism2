@@ -1,4 +1,4 @@
-# Change Order — ECO-044(staged): IMG-011 裁定の取り込み — マージ永続化ルール確定(タグ統合トグル撤去+補償 Undo 新設)
+# Change Order — ECO-044(fixed・golden 待ち): IMG-011 裁定の取り込み — マージ永続化ルール確定(タグ統合トグル撤去+補償 Undo 新設)
 
 > ECO-025 系とは別系統の残未確定 IMG-011 の maintainer 裁定(2026-07-05・CAD `49ea874`)の取り込み。
 > 裁定 3 点のうち ①=現状追認 / ②=見せかけ UI の是正 / ③=**net-new(スキーマ変更 ECO の初出**=
@@ -26,8 +26,13 @@
   先勝ち・simple union)→ マージが destination に及ぼす変化は「**新規タグ行の追加+NULL 値の
   補完**」に限られる= 補償対象の差分が小さく決定論的。
 - 「物理削除」= ゴミ箱の完全削除のみ(INV-009。マージ自体は物理ファイルに触れない)。
-- DB スキーマ変更を伴う ECO は本 ECO が初(ECO-001〜043 でゼロ)= 62-migration-oracle.md
-  (未採用テンプレ)の初実施になる。
+- ~~DB スキーマ変更を伴う ECO は本 ECO が初~~ **【起票時の事実誤認・是正時訂正(2026-07-05)】**:
+  スキーマ変更は初ではない — Migrations 001〜004 が既存(001 views.description / 002 類似テーブル /
+  003 hash_adapter / **004 workspaces=ECO-020**)。確立済みの前例= **増分マイグレーション+
+  LatestDdl 併記+CP-DB-006(新規 DB とマイグレーション適用 DB のスキーマ同値検査)**。
+  62-migration-oracle.md の「皆無」注記は ECO-001〜015 時点の記述が未更新だったもの。
+  本 ECO は **ECO-020 前例に従う**(追加テーブルのみ・既存データ無変換= 62 の重装備
+  [fixture 凍結・較正]でなく CP-DB-006 スキーマ同値+マイグレーション適用検査で受ける)。
 - CAD 反映済み(`49ea874`): image_tab.md 整理トレイ(タグ統合=チェック UI なし・取り消す=
   補償操作+実行可能条件)。作業タブ整理トレイは同一意味論の読み替え。
 
@@ -58,9 +63,9 @@
 7. **プローブ(R5)**: 受入テスト先行 — 補償の往復(マージ→Undo→タグ/status が元どおり)・
    条件破れ(destination へタグ追加後は不可/source 完全削除後は不可)・二重 Undo 拒否。
    是正前不合格(API 不在)を確認してから実装。
-8. **62 移行オラクル(初適用)**: 旧スキーマ DB(baseline 個体)で新ビルドが起動し(M01)
-   既存データ無傷(M02)+新テーブルが空で作成され新規マージがログされる(M03)。
-   fixture 凍結+較正(negative control)の規律は 62 テンプレどおり。
+8. **移行検査(ECO-020 前例)**: migration 005 を Migrations へ追加し LatestDdl へ併記。
+   CP-DB-006 のスキーマ同値検査(新規 DB=マイグレーション適用 DB)が両経路の同値を機械検査。
+   既存データ無変換(追加テーブルのみ)につき 62 の重装備は不採用(§3 の訂正参照)。
 
 ## 5. 影響 BOM
 
@@ -73,8 +78,41 @@
 
 ## 6. 残ゲート
 
-1. 是正実施(/eco-fix eco-044 — §4 の順序で。②は独立に小さく先行可)
-2. 機械受入: build 0 / Tests / Oracle / validate_bom 0-0 + **62 移行オラクル(初適用)**
+1. ~~是正実施(§4 の順序で)~~ → 完了(§7)
+2. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0-0 + 移行検査~~ → 完了(§7)
 3. golden(maintainer 実機): タグ統合チェックの消滅・マージ→取り消すの往復(復元+タグ差分除去)・
    条件破れ時の不活性 ×画像タブ/作業タブ
 4. クローズ時: CP 観点明記+register 更新+M4 同期(spec §2.10.5)
+
+## 7. 実施記録(2026-07-05 — 機械受入完了・golden 待ち)
+
+- **順序**: R2 上流先行どおり — E-BOM 宣言(E-MERGE-034 裁定②③ invariant / E-DB-010
+  migration 005 宣言)→ プローブ → Core/Infra → UI 配線+トグル撤去。
+- **実測裏取り(プローブ先行)**: 受入テスト 6 件(CpMerge044UndoTests — ログ記録/補償往復/
+  destination 変化後拒否/source 完全削除後拒否/二重 Undo 拒否/後続マージで先行ログ失効)を
+  先に追加し、**是正前に不合格(CS1061= GetLatestOperationAsync/EvaluateUndoAsync/
+  UndoMergeAsync が MergeService に不在)を確認**。
+- **実装(裁定③・net-new)**:
+  - `merge_operations` 新テーブル= migration 005+LatestDdl 併記(ECO-020 前例・
+    CP-DB-006 スキーマ同値検査が両経路の同値を機械検査=緑)。
+  - `MergeOperationRecord`(Core モデル)+ `MergeUndoCalculator`(決定論: 内容指紋=
+    status+hash+タグ集合の SHA-256・タグ差分=追加行+NULL/空補完行と元値・実行可能条件判定)。
+  - IMergeRepository を **default interface method で optional 拡張**(CHEAT-02 前例=
+    既存スタブ無改変)・MergeRepository がログ同梱 ApplyMerge/取得/補償 ApplyUndo を実装
+    (いずれも単一トランザクション)。GetLatest は executed_at+rowid 降順(固定時計のタイ決着)。
+  - MergeService: **ctor へ optional IClock(CHEAT-01 前例= 固定オラクルの 3 引数構築を
+    無改変で維持)**・MergeAsync がログを同一トランザクションで記録(戻り値 Result は不変=
+    既存 call site 無改変)・GetLatestOperationAsync/EvaluateUndoAsync/UndoMergeAsync 新設。
+  - UI: 両 VM に CanUndo(マージ直後に初期評価)+UndoMerge コマンド(失敗= 理由を
+    UndoNote 表示+不活性化 / 成功= トレイを畳んで再読込= sources が一覧へ復帰)。
+    「取り消す」ボタンへ Command 配線+ToolTip を条件説明へ差し替え+UndoNote TextBlock 追加。
+- **実装(裁定②)**: 見せかけトグル撤去 — 両 XAML の CheckBox・両 VM の IncludeTags/
+  ToggleIncludeTags・Organize 子 VM の _includeTags を削除(Core は元々常に union=挙動不変)。
+- **既存テストの更新(意図した挙動変更)**: CpUiG1OrganizeTests の
+  `Assert.False(vm.CanUndo) // 取り消しは IMG-011(別 ECO)` → `Assert.True`(裁定③の本実装)。
+  UI 受入 3 件追加(画像タブ: Undo 往復/条件破れ不活性+理由表示・作業タブ: Undo 往復)。
+- **§3 事実訂正**: 「スキーマ変更初」は誤り(Migrations 001〜004 既存)→ ECO-020 前例に従う
+  (増分マイグレーション+LatestDdl 併記+CP-DB-006 同値検査。62 の重装備は不採用)。
+- 機械受入: build 0 error/0 warning・**Tests 544/544**(プローブ 6+UI 受入 3 が合格転化/追加)・
+  Oracle 100+2skip(既存行無改変= R6。optional 拡張により構築シグネチャも不変)・
+  validate_bom 0/0。

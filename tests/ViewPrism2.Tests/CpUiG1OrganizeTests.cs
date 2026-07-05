@@ -203,7 +203,7 @@ public sealed class CpUiG1OrganizeTests : IDisposable
 
         Assert.True(vm.OrganizeDone);
         Assert.Equal("2 枚を 1 枚へまとめ、1 枚を削除しました。", vm.DoneSummary);
-        Assert.False(vm.CanUndo); // 取り消しは IMG-011(別 ECO)
+        Assert.True(vm.CanUndo); // ECO-044(IMG-011 裁定③): マージ直後は取り消し可能(条件を満たす)
 
         // source=drop は deleted 化し母集合から外れる(物理非破壊・論理操作)
         var normals = (await _db.Images.GetAllNormalAsync()).Select(r => r.Id).ToHashSet(StringComparer.Ordinal);
@@ -234,5 +234,51 @@ public sealed class CpUiG1OrganizeTests : IDisposable
         Assert.False(vm.HasMergeTarget);         // トレイは空に戻る
         Assert.Empty(vm.OrganizeTargets);
         Assert.True(vm.ShowMergeTargetPrompt);
+    }
+
+    /// <summary>ECO-044(IMG-011 裁定③): 取り消す= 補償 Undo の UI 配線(往復+条件破れの不活性)。</summary>
+    [Fact]
+    public async Task 取り消すでマージが補償され整理対象が一覧へ戻る()
+    {
+        var vm = await NewVmAsync("keep.jpg", "drop.jpg");
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "keep.jpg"), false, false);
+        vm.HandleItemClick(Item(vm, "drop.jpg"), false, false);
+        await vm.ExecuteMergeCommand.ExecuteAsync(null);
+        Assert.True(vm.OrganizeDone);
+        Assert.True(vm.CanUndo);
+
+        await vm.UndoMergeCommand.ExecuteAsync(null);
+
+        Assert.False(vm.OrganizeDone);           // 完了状態を畳んでトレイへ戻る
+        Assert.True(vm.OrganizeMode);            // 整理モードは維持
+        Assert.Contains(vm.Items, i => i.Name == "drop.jpg"); // source が normal 復元され一覧へ戻る
+        var normals = (await _db.Images.GetAllNormalAsync()).Select(r => r.Id).ToHashSet(StringComparer.Ordinal);
+        Assert.Contains(Id("drop.jpg"), normals);
+    }
+
+    /// <summary>ECO-044: マージ後に destination のタグを変更すると取り消しは拒否され理由が出る。</summary>
+    [Fact]
+    public async Task マージ後にマージ先が変更されると取り消しは拒否される()
+    {
+        var vm = await NewVmAsync("keep.jpg", "drop.jpg");
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "keep.jpg"), false, false);
+        vm.HandleItemClick(Item(vm, "drop.jpg"), false, false);
+        await vm.ExecuteMergeCommand.ExecuteAsync(null);
+        Assert.True(vm.CanUndo);
+
+        // マージ後に destination のタグを変更(revision 変化)
+        var tagService = new TagService(_db.Tags);
+        var tag = await tagService.CreateAsync("後入れ", TagType.Simple);
+        Assert.True((await tagService.TagImageAsync(Id("keep.jpg"), tag.Value!.Id, null)).IsSuccess);
+
+        await vm.UndoMergeCommand.ExecuteAsync(null);
+
+        Assert.True(vm.OrganizeDone);            // 補償は適用されない(完了状態のまま)
+        Assert.False(vm.CanUndo);                // 不活性化
+        Assert.True(vm.HasUndoNote);             // 理由を表示
+        var normals = (await _db.Images.GetAllNormalAsync()).Select(r => r.Id).ToHashSet(StringComparer.Ordinal);
+        Assert.DoesNotContain(Id("drop.jpg"), normals); // source は deleted のまま
     }
 }

@@ -26,10 +26,9 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private readonly Action _refreshSelectionMarkers;
     private readonly Func<Task> _reloadImagesAsync;
 
-    // ---- 整理モード状態(12 フィールド・order §12.1) ----
+    // ---- 整理モード状態(order §12.1。ECO-044: タグ統合トグル _includeTags は撤去=常時 ON が確定・IMG-011 裁定②) ----
     private string? _mergeTargetId;
     private readonly List<string> _organizeTargets = new();
-    private bool _includeTags = true;            // タグ統合(E-MERGE-034 は常に union=INV-011。OFF の no-union は IMG-011)
     private string _searchMethod = "similar";    // "similar" | "criteria"
     private int _similarThreshold = 80;
     private string _criteriaName = "";
@@ -39,6 +38,10 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
     private bool _organizeDone;
     private int _doneSourceCount;
+    // ECO-044(IMG-011 裁定③): 直近マージの操作ログ id と取り消し可否・不可理由
+    private string? _undoOperationId;
+    private bool _canUndo;
+    private string? _undoNote;
 
     public ImageTabOrganizeViewModel(
         IImageRepository images,
@@ -67,8 +70,6 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     public bool HasOrganizeTargets => _organizeTargets.Count > 0;
     public string OrganizeTargetsCountLabel => $"{_organizeTargets.Count} 枚";
 
-    public bool IncludeTags { get => _includeTags; set { _includeTags = value; OnPropertyChanged(); } }
-
     public bool IsSimilarMethod => _searchMethod == "similar";
     public bool IsCriteriaMethod => _searchMethod == "criteria";
 
@@ -93,17 +94,23 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
 
+    // ---- ECO-044(IMG-011 裁定③): ログに基づく補償 Undo ----
+    public bool CanUndo => _canUndo;
+    /// <summary>取り消し不可時の理由(完了パネルに表示)。null=非表示。</summary>
+    public string? UndoNote => _undoNote;
+    public bool HasUndoNote => _undoNote is not null;
+
     /// <summary>整理モード開始/再開時の状態リセット(旧 ResetOrganizeState と同型)。ホストの ToggleOrganize/EnterDelete/ToggleWork 等の排他リセットから直接呼ばれる。</summary>
     public void ResetState()
     {
         _mergeTargetId = null;
         _organizeTargets.Clear();
-        _includeTags = true;
         _searchMethod = "similar";
         _criteriaName = ""; _criteriaExt = "";
         _searching = false; _hasSearched = false;
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
+        _undoOperationId = null; _canUndo = false; _undoNote = null; // ECO-044
         OnPropertyChanged(string.Empty); // 将来用(本段の挙動はホスト一括通知で閉じる・order §12.2)
     }
 
@@ -134,12 +141,6 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         if (!_organizeTargets.Remove(imageId)) return;
         if (_mergeTargetId is not null) _organizeTargets.Add(_mergeTargetId);
         _mergeTargetId = imageId;
-        OnPropertyChanged(string.Empty);
-    }
-
-    public void ToggleIncludeTags()
-    {
-        _includeTags = !_includeTags;
         OnPropertyChanged(string.Empty);
     }
 
@@ -221,6 +222,32 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _organizeTargets.Clear();
         _hasSearched = false;
         _searchResults = new();
+        // ECO-044: 直近マージの操作ログを「取り消す」の対象として保持(実行可能条件も初期評価)
+        var op = await _merge.GetLatestOperationAsync(target).ConfigureAwait(true);
+        _undoOperationId = op?.Id;
+        _canUndo = op is not null && (await _merge.EvaluateUndoAsync(op.Id).ConfigureAwait(true)).IsSuccess;
+        _undoNote = null;
+        await _reloadImagesAsync().ConfigureAwait(true);
+        _recompute();
+    }
+
+    /// <summary>
+    /// 取り消す(ECO-044/IMG-011 裁定③): ログに基づく補償 Undo。実行可能条件はサービス側で
+    /// 再判定される(破れていれば失敗理由を UndoNote に出しボタンを不活性化)。
+    /// 成功時は完了状態を畳んでトレイをリセットし、データ再読込(sources が一覧へ戻る)。
+    /// </summary>
+    public async Task UndoMergeAsync()
+    {
+        if (_undoOperationId is null) return;
+        var result = await _merge.UndoMergeAsync(_undoOperationId).ConfigureAwait(true);
+        if (!result.IsSuccess)
+        {
+            _canUndo = false;
+            _undoNote = result.Message ?? "取り消しできません。";
+            _recompute();
+            return;
+        }
+        ResetState(); // 完了状態を畳んでトレイ初期化(整理モードは維持・_undoOperationId も消える)
         await _reloadImagesAsync().ConfigureAwait(true);
         _recompute();
     }

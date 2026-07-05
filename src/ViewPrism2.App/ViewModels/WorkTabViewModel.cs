@@ -67,7 +67,10 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private bool _organizeMode;
     private string? _mergeTargetId;
     private readonly List<string> _organizeTargets = new();
-    private bool _includeTags = true;
+    // ECO-044(IMG-011 裁定③): 直近マージの操作ログ id と取り消し可否・不可理由
+    private string? _undoOperationId;
+    private bool _canUndo;
+    private string? _undoNote;
     private string _searchMethod = "similar";
     private int _similarThreshold = 90;
     private string _criteriaName = "";
@@ -191,7 +194,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public bool HasOrganizeTargets => _organizeTargets.Count > 0;
     public bool ShowOrganizeTargetsPrompt => _organizeMode && _mergeTargetId is not null && _organizeTargets.Count == 0;
     public string OrganizeTargetsCountLabel => $"{_organizeTargets.Count} 枚";
-    public bool IncludeTags { get => _includeTags; set { _includeTags = value; OnPropertyChanged(); } }
+    // タグ統合トグルは ECO-044(IMG-011 裁定②)で撤去 — タグ union は常時 ON(選択肢ではない)。
     public bool IsSimilarMethod => _searchMethod == "similar";
     public bool IsCriteriaMethod => _searchMethod == "criteria";
     public int SimilarThreshold
@@ -210,7 +213,10 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public string MergeButtonLabel => $"マージを実行（{_organizeTargets.Count} 枚）";
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
-    public bool CanUndo => false; // 取り消し(IMG-011)は別 ECO
+    // ECO-044(IMG-011 裁定③): ログに基づく補償 Undo(画像タブと同型)
+    public bool CanUndo => _canUndo;
+    public string? UndoNote => _undoNote;
+    public bool HasUndoNote => _undoNote is not null;
     // 中央ブラウズグリッド/リストは検索結果表示中は譲る
     public bool ShowBrowseGrid => ShowGrid && !ShowSearchResults;
     public bool ShowBrowseList => ShowList && !ShowSearchResults;
@@ -830,12 +836,12 @@ public sealed partial class WorkTabViewModel : ObservableObject
     {
         _mergeTargetId = null;
         _organizeTargets.Clear();
-        _includeTags = true;
         _searchMethod = "similar";
         _criteriaName = ""; _criteriaExt = "";
         _searching = false; _hasSearched = false;
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
+        _undoOperationId = null; _canUndo = false; _undoNote = null; // ECO-044
         _selected.Clear();
     }
 
@@ -870,9 +876,6 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _mergeTargetId = imageId;
         RefreshSelectionMarkers();
     }
-
-    [RelayCommand]
-    private void ToggleIncludeTags() { _includeTags = !_includeTags; OnPropertyChanged(nameof(IncludeTags)); }
 
     [RelayCommand]
     private void SetSearchMethod(string method)
@@ -957,10 +960,41 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _organizeTargets.Clear();
         _hasSearched = false;
         _searchResults = new();
+        // ECO-044: 直近マージの操作ログを「取り消す」の対象として保持(実行可能条件も初期評価)
+        var op = await _merge.GetLatestOperationAsync(target).ConfigureAwait(true);
+        _undoOperationId = op?.Id;
+        _canUndo = op is not null && (await _merge.EvaluateUndoAsync(op.Id).ConfigureAwait(true)).IsSuccess;
+        _undoNote = null;
         await ReloadWorkspacesAsync(preferDefault: false).ConfigureAwait(true); // source は deleted=現スペースから外れる
         NotifyModeChanged();
         OnPropertyChanged(nameof(OrganizeDone));
         OnPropertyChanged(nameof(DoneSummary));
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(UndoNote));
+        OnPropertyChanged(nameof(HasUndoNote));
+    }
+
+    /// <summary>取り消す(ECO-044/IMG-011 裁定③): ログに基づく補償 Undo(画像タブと同型)。
+    /// 条件破れは失敗理由を UndoNote に出しボタンを不活性化。成功時はトレイを畳んで再読込(sources が一覧へ戻る)。</summary>
+    [RelayCommand]
+    private async Task UndoMerge()
+    {
+        if (!_organizeDone || _undoOperationId is null) return;
+        var result = await _merge.UndoMergeAsync(_undoOperationId).ConfigureAwait(true);
+        if (!result.IsSuccess)
+        {
+            _canUndo = false;
+            _undoNote = result.Message ?? "取り消しできません。";
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(UndoNote));
+            OnPropertyChanged(nameof(HasUndoNote));
+            return;
+        }
+        ResetOrganizeState();
+        await ReloadWorkspacesAsync(preferDefault: false).ConfigureAwait(true); // sources が normal へ戻り一覧復帰
+        Recompute();
+        NotifyModeChanged();
+        OnPropertyChanged(nameof(OrganizeDone));
     }
 
     /// <summary>別の整理を続ける: 完了状態を畳んでトレイをリセット(整理モードは維持)。</summary>
