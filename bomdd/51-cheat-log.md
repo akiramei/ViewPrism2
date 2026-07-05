@@ -295,3 +295,19 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   起票要否は maintainer 判断(タグ定義階層を UI に出すか・出すなら CAD 先行)。ECO-045 本文 §7 から参照。
   **→ 解決(2026-07-05)**: maintainer 裁定 TAG-009「タグ定義階層 UI は提供しない」(CAD `7ffd423`)。
   取り込み= ECO-047(現状追認・doc-only)。
+
+## ECO-048 golden 準備時のスコープ外所見(R3 記録)2026-07-06
+
+- **EXIF Orientation が全デコード経路で非反映**: maintainer が golden 準備で orientation_fixture_06.jpg を
+  回転ツールで 90° 回転 → アプリ表示が元のまま(再スキャン・コレクション再追加でも不変)。
+  実測= ピクセル 1194×834 無変更・**EXIF Orientation=6 のみ書き換わるタグ方式の回転**で、
+  ViewPrism2 のデコード(SkiaSharp: ThumbnailService / ビューア / PHashImageReader 系)は
+  EXIF Orientation を適用しない(SKBitmap.Decode / SKCodec.GetPixels は orientation 非自動適用)。
+  影響: ①スマホ撮影画像(EXIF=6 等)がサムネ・ビューアで横倒しに表示される
+  ②EXIF タグ方式の回転はピクセル不変のため hash/pHash も不変=再スキャンで変化なし(正しい挙動だが
+  ユーザー期待と乖離)。ECO-048(pHash 変種)とは独立の欠陥様式=表示系の EXIF 適用漏れ。
+  参考: SimilarPic は ExifOrientation.cs で適用済み(読み込み時に正規化)。
+  起票要否は maintainer 判断(起票時は /eco-file で分離 ECO 化。表示系のみか pHash 入力正規化まで
+  含めるかは工程診断で切る — pHash まで正規化すると adapter 世代交代= P-09 発動になる点に注意)。
+  golden 手順への影響は解消済み: ピクセル実回転の複製(orientation_fixture_06_rot90.jpg / orientation_fixture_06_mirror.jpg)を
+  生成して手当て。ECO-048 本文 §7 から参照。
