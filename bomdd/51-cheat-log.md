@@ -279,3 +279,17 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   ui-trace-map TMP-UI-INP-0020/ACT-0060 handling: bom)= **CAD 定義済み機能の実装欠落**。
   混入= `e10767b`(2026-06-17 M1+M2)から。既知記録(FL-*/VE-*/cheat-log)無し=新規。
   起票要否は maintainer 判断(起票時は /eco-file で分離 ECO 化)。ECO-040 本文 §7 から参照。
+
+## ECO-045 golden 準備時のスコープ外所見(R3 記録)2026-07-05
+
+- **タグ定義の階層(tags.parent_id)を編集する UI が存在しない**: Core は REQ-022(単一親・
+  循環拒否・親削除で子ルート化)を実装済みだが、タグエディタ(TagEditorViewModel/Window)に
+  親指定フィールドが無く、App 層で tags.parent_id を書く経路もゼロ(実測 grep。
+  HierarchyEditorViewModel の parentId はビュー階層 view_tag_hierarchies=別概念)。
+  CAD(tag_tab.md)にもタグ定義自体の親子編集は未定義= ECO-041 型(CAD 定義済みの実装欠落)
+  ではなく **CAD 未設計+V1 原典由来 Core 概念の UI 露出なし**(V1 原典の UI 有無は未検証)。
+  発見経緯= maintainer 質問「タグパレットで階層化できない気がする」→ 実測で確認。
+  影響: ECO-045 golden 基準 4(子タグを持つ親の削除)は実機到達不能 → 基準から除外し
+  S-38/CP-TAG-011(機械受入)で担保。裁定 4a(子タグの親は「使用」でない)の妥当性は不変
+  (Core 意味論として存続・将来 UI が露出したときに効く)。
+  起票要否は maintainer 判断(タグ定義階層を UI に出すか・出すなら CAD 先行)。ECO-045 本文 §7 から参照。
