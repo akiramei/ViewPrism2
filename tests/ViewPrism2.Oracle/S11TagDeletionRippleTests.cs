@@ -55,8 +55,10 @@ public sealed class S11TagDeletionRippleTests
         var otherNode = (await views.AddNodeAsync(view.Id, other.Id, parentId: doomedNode.Id, position: 0)).Value!;
 
         // --- タグ削除(カスケードは FK、REQ-028) ---
-        var deleted = await new TagService(db.Tags).DeleteAsync(doomed.Id);
-        Assert.True(deleted.IsSuccess);
+        // ECO-045(O-a 裁定): 使用中タグはサービス層で削除拒否(REQ-082)になったため、削除入口を
+        // repository 直呼びへ変更。本オラクルの契約(参照切れ後の FK 波及+読み取り耐性 INV-008)は
+        // 不変 — 旧 DB・異常系で参照切れは起こり得るため検査意図は存続する。
+        await db.Tags.DeleteAsync(doomed.Id);
 
         // --- 当該ビューを開く: NodeGraph 構築(例外が出ればテスト失敗として記録される) ---
         var hierarchy = await views.GetHierarchyAsync(view.Id);

@@ -1028,3 +1028,19 @@ requirements:
       - "アイコン表示に名前/更新日/サイズの固定ソートメニューが残る(v2 で廃止=表示列に統一のはず)"
       - "リストでソートしてアイコンへ切替えるとソートが失われる(表示形式間で共有のはず)"
       - "アイコンで評価ソート中なのにタイルにソート項目値が出ない(v2 net-new の脱漏)"
+
+  - id: REQ-082
+    statement: "使用中(画像への値付与 image_tags・ビュー階層への配置 view_tag_hierarchies・ビュー条件からの参照 view_conditions のいずれかがある)のタグ定義の削除は TagInUse エラーで拒否し、タグ定義と参照を無傷に保つ。子タグの親であること(tags.parent_id)は「使用」ではなく削除を妨げない(子はルート化 SET NULL)。UI は拒否理由を提示する。無効化/非推奨化は削除とは別操作とし、本要求では導入しない"
+    rationale: |
+      TAG-008 裁定(maintainer 2026-07-05・ViewPrismUI `63d09bc` docs/decisions/TAG-008-tag-definition-deletion.md)。
+      ECO-045 で導入。従来は未確定仕様の仮置き=無条件削除+FK カスケードだった。
+      REQ-028(カスケード)は「削除が実行された場合の DB 整合性規則」=防御層として存続
+      (削除可否はサービス層 TagService.DeleteAsync の責務)。
+      受入: 3 参照種別の拒否+無傷・子のみ/未使用の削除成功を unit exact(S-38・CP-TAG-011)。UI 拒否表示は golden。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "ViewPrismUI docs/decisions/TAG-008-tag-definition-deletion.md(`63d09bc`)/ docs/screens/tag_tab.md タグパレット節"
+    counterexamples:
+      - "使用中タグを削除でき、画像の付与値が黙って消滅する(TAG-008 裁定違反)"
+      - "拒否時にタグ定義または参照の一部が変異する(無傷性の破れ)"
+      - "子タグを持つだけの未使用タグが削除できない(4a 裁定の範囲逸脱)"

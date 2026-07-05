@@ -137,6 +137,7 @@
   "error.ioError": "File I/O failed",
   "error.notFound": "Target not found",
   "error.scanInProgress": "A scan is already in progress",
+  "error.tagInUse": "This tag is in use and cannot be deleted. Remove it from images and views first",
   "error.unhandled": "An unexpected error occurred. See the application log for details.",
   "error.validationError": "Invalid input",
   "file.modifiedDate": "Modified Date",

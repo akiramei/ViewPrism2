@@ -241,12 +241,85 @@ public sealed class CpTag011Tests : IDisposable
             Id = "node-1", ViewId = view.Id, TagId = parent.Id, Position = 0,
         });
 
-        Assert.True((await _service.DeleteAsync(parent.Id)).IsSuccess);
+        // ECO-045(O-a 裁定): 使用中タグはサービス層で削除拒否(REQ-082)になったため repository 直呼び。
+        // 本テストの契約(FK カスケード規則 REQ-028)は削除が実行された場合の防御層として不変。
+        await _db.Tags.DeleteAsync(parent.Id);
 
         Assert.Empty(await _db.Tags.GetImageTagsAsync(image.Id));                  // image_tags 消滅
         Assert.Null((await _db.Views.GetConditionByIdAsync("cond-1"))!.TagId);     // 条件は SET NULL
         Assert.Empty(await _db.Views.GetHierarchyAsync(view.Id));                  // 階層ノード消滅
         Assert.Null((await _db.Tags.GetByIdAsync(child.Id))!.ParentId);            // 子 parent_id NULL
+    }
+
+    // ---- 使用中タグ定義の削除拒否(REQ-082 / TAG-008 裁定 / ECO-045) ----
+
+    [Fact]
+    public async Task 画像に付与済みのタグ定義は削除拒否され無傷()
+    {
+        var image = await SeedImageAsync();
+        var tag = (await _service.CreateAsync("in-use", TagType.Textual)).Value!;
+        await _service.TagImageAsync(image.Id, tag.Id, "v");
+
+        var result = await _service.DeleteAsync(tag.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorCode.TagInUse, result.Error);
+        Assert.NotNull(await _db.Tags.GetByIdAsync(tag.Id));                       // 定義無傷
+        Assert.Single(await _db.Tags.GetImageTagsAsync(image.Id));                 // 付与無傷
+    }
+
+    [Fact]
+    public async Task ビュー階層に配置済みのタグ定義は削除拒否()
+    {
+        var tag = (await _service.CreateAsync("placed", TagType.Simple)).Value!;
+        var view = new View { Id = "view-p", Name = "v", ModifiedAt = _db.Clock.UtcNowIso() };
+        await _db.Views.AddAsync(view);
+        await _db.Views.AddNodeAsync(new HierarchyNode
+        {
+            Id = "node-p", ViewId = view.Id, TagId = tag.Id, Position = 0,
+        });
+
+        var result = await _service.DeleteAsync(tag.Id);
+
+        Assert.Equal(ErrorCode.TagInUse, result.Error);
+        Assert.Single(await _db.Views.GetHierarchyAsync(view.Id));                 // 配置無傷
+    }
+
+    [Fact]
+    public async Task ビュー条件から参照されるタグ定義は削除拒否()
+    {
+        var tag = (await _service.CreateAsync("referenced", TagType.Simple)).Value!;
+        var view = new View { Id = "view-c", Name = "v", ModifiedAt = _db.Clock.UtcNowIso() };
+        await _db.Views.AddAsync(view);
+        await _db.Views.AddConditionAsync(new ViewCondition
+        {
+            Id = "cond-c", ViewId = view.Id, TagId = tag.Id, Operator = ConditionOperator.Exists,
+        });
+
+        var result = await _service.DeleteAsync(tag.Id);
+
+        Assert.Equal(ErrorCode.TagInUse, result.Error);
+        Assert.Equal(tag.Id, (await _db.Views.GetConditionByIdAsync("cond-c"))!.TagId); // 参照無傷
+    }
+
+    [Fact]
+    public async Task 子タグのみを持つタグ定義は削除でき子はルート化()
+    {
+        var parent = (await _service.CreateAsync("only-parent", TagType.Simple)).Value!;
+        var child = (await _service.CreateAsync("only-child", TagType.Simple, parentId: parent.Id)).Value!;
+
+        // 子タグの親は「使用」でない(4a 裁定: 定義側の階層編成。ルート化 SET NULL 存続)
+        Assert.True((await _service.DeleteAsync(parent.Id)).IsSuccess);
+        Assert.Null((await _db.Tags.GetByIdAsync(child.Id))!.ParentId);
+    }
+
+    [Fact]
+    public async Task 未使用のタグ定義は削除できる()
+    {
+        var tag = (await _service.CreateAsync("unused", TagType.Simple)).Value!;
+
+        Assert.True((await _service.DeleteAsync(tag.Id)).IsSuccess);
+        Assert.Null(await _db.Tags.GetByIdAsync(tag.Id));
     }
 
     // ---- 付与値の型規則(REQ-020) ----

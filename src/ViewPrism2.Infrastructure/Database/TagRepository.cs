@@ -287,6 +287,24 @@ public sealed class TagRepository : ITagRepository
         });
     }
 
+    public Task<TagUsageRefs> GetUsageRefsAsync(string tagId)
+    {
+        // REQ-082(TAG-008 裁定): 削除可否判定用の被参照集計。子タグ(tags.parent_id)は
+        // 「使用」でないため数えない(4a 裁定: ルート化 SET NULL 存続)。
+        // dynamic 読み+Convert は GetUsageCountsAsync と同じ防御(ECO-002 DF-2 の型親和性の罠)。
+        return _db.RunAsync<TagUsageRefs>(async conn =>
+        {
+            var row = await conn.QuerySingleAsync(
+                "SELECT (SELECT COUNT(*) FROM image_tags WHERE tag_id = @TagId) AS ImageTagCount, (SELECT COUNT(*) FROM view_tag_hierarchies WHERE tag_id = @TagId) AS HierarchyNodeCount, (SELECT COUNT(*) FROM view_conditions WHERE tag_id = @TagId) AS ConditionCount",
+                new { TagId = tagId }).ConfigureAwait(false);
+            var dict = (IDictionary<string, object?>)row;
+            return new TagUsageRefs(
+                Convert.ToInt32(dict["ImageTagCount"], CultureInfo.InvariantCulture),
+                Convert.ToInt32(dict["HierarchyNodeCount"], CultureInfo.InvariantCulture),
+                Convert.ToInt32(dict["ConditionCount"], CultureInfo.InvariantCulture));
+        });
+    }
+
     private sealed record Row(
         string Id, string Name, string Type, string? ParentId, string? Color, string? Description);
 

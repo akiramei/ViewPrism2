@@ -91,12 +91,23 @@ public sealed class TagService
         return Result<Tag>.Ok(tag);
     }
 
-    /// <summary>タグ削除。カスケードは FK(REQ-028): image_tags/階層ノード消滅・条件 SET NULL・子 parent_id NULL。</summary>
+    /// <summary>
+    /// タグ削除。使用中(画像への値付与・ビュー階層への配置・ビュー条件からの参照)は
+    /// TagInUse で拒否する(REQ-082 / TAG-008 裁定・ECO-045)。子タグの親は「使用」でない
+    /// (4a 裁定: ルート化 SET NULL 存続)。削除が通った場合のカスケードは FK(REQ-028)が
+    /// 防御層として存続: image_tags/階層ノード消滅・条件 SET NULL・子 parent_id NULL。
+    /// </summary>
     public async Task<Result> DeleteAsync(string id)
     {
         if (await _tags.GetByIdAsync(id).ConfigureAwait(false) is null)
         {
             return Result.Fail(ErrorCode.NotFound, "タグが存在しません。");
+        }
+
+        var usage = await _tags.GetUsageRefsAsync(id).ConfigureAwait(false);
+        if (usage.InUse)
+        {
+            return Result.Fail(ErrorCode.TagInUse, "使用中のタグ定義は削除できません。画像への付与またはビューでの使用を解除してから削除してください。");
         }
 
         await _tags.DeleteAsync(id).ConfigureAwait(false);

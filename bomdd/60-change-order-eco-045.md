@@ -1,4 +1,4 @@
-# Change Order — ECO-045(staged): TAG-008 裁定の取り込み — 使用中タグ定義の削除は拒否(無効化/非推奨化は別操作)
+# Change Order — ECO-045(implemented・golden 待ち): TAG-008 裁定の取り込み — 使用中タグ定義の削除は拒否(無効化/非推奨化は別操作)
 
 > CAD review_points TAG-008(risk: high・未確定)の maintainer 裁定(2026-07-05・CAD `63d09bc`)の取り込み。
 > ECO-042/043/044 と同型の「設計確定の取り込み」だが、本件は**現状実装(無条件削除+FK カスケード)と
@@ -94,6 +94,53 @@ golden: UI 拒否挙動(使用中タグで削除 → 拒否理由表示・タグ
 
 ## 6. 残ゲート
 
-- **gate①(裁定・残 2 点)**: §4a「使用中」の範囲の確認+§4b S-11 折り合い方式の裁定
-  (推奨= 4a 提案どおり+O-a)。
-- gate②(golden): 是正後の実機確認(使用中拒否+未使用削除成功)。
+- ~~gate①(裁定・残 2 点)~~ → **受領(maintainer 2026-07-05): 4a=提案どおり・4b=O-a**。
+- **gate②(golden)**: 是正後の実機確認(使用中拒否+未使用削除成功)— §7 の合格基準参照。
+
+## 7. 実施記録(2026-07-05・/eco-fix)
+
+### 裁定確定(gate①)
+
+- **4a「使用中」の範囲=提案どおり**: 付与(image_tags)・配置(view_tag_hierarchies)・
+  条件参照(view_conditions)は拒否対象。子タグの親(tags.parent_id)は対象外(ルート化 SET NULL 存続)。
+- **4b= O-a(オラクル入口変更)**: Core に強制・S-11/CP カスケードテストの削除入口のみ
+  repository 直呼び化。41 yaml の S-11 契約行は無改変(INV-008 読み取り耐性の検査意図は存続)。
+
+### プローブ(R5・是正前実測)
+
+- CpTag011Tests へ受入 5 件を先置きし実行 → **拒否系 3 件が不合格**
+  (`画像に付与済み…`= IsSuccess が True / `ビュー階層に配置済み…`・`ビュー条件から参照…`= Error が
+  TagInUse でなく null)・境界 2 件(子ルート化・未使用削除)は合格 = 真因「TagService.DeleteAsync に
+  ガード不在」を実測で裏取り。Tests 549 中 546 合格・3 不合格(是正前)。
+
+### 是正内容(diff)
+
+| 層 | ファイル | 内容 |
+|---|---|---|
+| Core | ErrorCode.cs | `TagInUse` 追加(enum のみ・挙動不変) |
+| Core | ITagRepository.cs | `GetUsageRefsAsync(tagId)`+`TagUsageRefs`(3 参照カウント・InUse)追加 |
+| Infrastructure | TagRepository.cs | 3 スカラーサブクエリ 1 発の実装(dynamic 読み+Convert= ECO-002 DF-2 と同じ型親和性防御) |
+| Core | TagService.cs:DeleteAsync | 使用中ガード(InUse → TagInUse 拒否)。カスケード注記を防御層へ改記 |
+| App | ErrorMessages.cs / i18n ja+en | `error.tagInUse` 追加(UI 拒否理由表示は既存 StatusMessage 経路) |
+| tests | CpTag011Tests.cs | 受入 5 件追加+既存カスケードテストの削除入口を repository 直呼び化(O-a) |
+| Oracle | S11TagDeletionRippleTests.cs | 削除入口 1 行のみ repository 直呼び化(O-a・契約/期待値は無改変) |
+| Oracle | S38TagInUseDeletionGuardTests.cs | S-38 新設(3 種拒否+無傷・子ルート化・未使用削除成功) |
+| BOM | 10-requirements / 41-fixed-oracle / 30-ebom / 20-spec | REQ-082 新設・S-38 行追加・E-TAGSVC-008 invariant+refs・§2.2 明文 |
+
+UI の確認ダイアログ(「取り消せません」)は未使用タグ限定の到達になり文言整合(変更なし)。
+DB スキーマ変更なし・62 不要・35-dsbom 不要。
+
+### 機械受入(4 点・全緑)
+
+- `dotnet build`: 0 error / 0 warning
+- `dotnet test tests/ViewPrism2.Tests`: **549/549**(プローブ 3 件が合格に転化)
+- `dotnet test tests/ViewPrism2.Oracle`: **101 合格+2 skip(既知)**(S-38 追加で 100→101。S-01〜37 回帰ゼロ)
+- `python bomdd/validate_bom.py`: 0 error / 0 warning
+
+### golden 合格基準(gate②・maintainer 実機)
+
+1. タグタブのタグパレットで、**画像に付与済みのタグ**の削除を実行(確認ダイアログ → 削除)
+   → 削除されず、拒否理由「使用中のタグは削除できません…」が表示される。タグ・付与とも無傷。
+2. **ビューの階層に配置しただけのタグ**(付与なし)で同様 → 拒否・配置無傷。
+3. **未使用のタグ**で同様 → 削除成功(一覧から消える)。
+4. 子タグを持つだけの未使用親タグで同様 → 削除成功・子がルート化されてパレットに残る。

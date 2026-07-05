@@ -105,15 +105,16 @@ ebom:
       acceptance_refs: [CP-SCAN-004, CP-RELINK-019]
 
     - id: E-TAGSVC-008
-      name: タグ管理サービス(CRUD・UPSERT 付与・バッチ・カスケード・バリデーション)
+      name: タグ管理サービス(CRUD・UPSERT 付与・バッチ・カスケード・バリデーション・使用中削除ガード)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-020, REQ-021, REQ-022, REQ-023, REQ-024, REQ-025, REQ-026, REQ-027, REQ-028, REQ-029]
+      requirement_refs: [REQ-020, REQ-021, REQ-022, REQ-023, REQ-024, REQ-025, REQ-026, REQ-027, REQ-028, REQ-029, REQ-082]
       depends_on: [E-DOMAIN-001, E-DB-010]
       invariants:
         - INV-003 (image_id, tag_id) は高々 1 行
         - INV-004 タグ階層に循環なし
         - INV-006 バッチは全適用か無適用
+        - since ECO-045(TAG-008 裁定 2026-07-05)= **使用中タグ定義の削除は拒否**(REQ-082) — 付与(image_tags)・配置(view_tag_hierarchies)・条件参照(view_conditions)のいずれかがあれば TagInUse・定義と参照は無傷。子タグの親は削除可(ルート化)。REQ-028 カスケードは削除実行時の防御層として存続。無効化/非推奨化は別操作(未導入)。権威= review_points.md TAG-008/tag_tab.md(ViewPrismUI 63d09bc)
       acceptance_refs: [CP-TAG-011]
 
     - id: E-VIEWSVC-009

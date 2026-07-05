@@ -52,4 +52,18 @@ public interface ITagRepository
 
     /// <summary>タグ id → 使用数(COUNT(DISTINCT image_id)、REQ-029)。</summary>
     Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync();
+
+    /// <summary>
+    /// タグの被参照集計(REQ-082 / TAG-008 裁定: 削除可否判定用)。
+    /// 子タグ(tags.parent_id)は「使用」でないため含めない(4a 裁定: ルート化 SET NULL 存続)。
+    /// </summary>
+    Task<TagUsageRefs> GetUsageRefsAsync(string tagId);
+}
+
+/// <summary>
+/// タグの被参照集計(REQ-082 / TAG-008 裁定)。いずれかが正なら「使用中」=削除拒否。
+/// </summary>
+public sealed record TagUsageRefs(int ImageTagCount, int HierarchyNodeCount, int ConditionCount)
+{
+    public bool InUse => ImageTagCount > 0 || HierarchyNodeCount > 0 || ConditionCount > 0;
 }

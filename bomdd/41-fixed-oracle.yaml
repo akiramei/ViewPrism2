@@ -328,3 +328,11 @@ fixed_oracle:
       spec_ref: "bomdd/20-spec.md#2.12.5(REQ-077・CP-SET-009 拡張)"
       equivalence_ref: EQ-001
       depth: unit
+    - id: S-38
+      scope: cross-factory
+      added_by: ECO-045
+      scenario: "使用中タグ定義の削除拒否(REQ-082 / TAG-008 裁定): 画像付与のみ・ビュー階層配置のみ・ビュー条件参照のみを持つ 3 タグの削除と、子タグのみを持つタグ・未使用タグの削除"
+      contract_expectation: "付与/配置/条件参照のいずれかを持つタグ=TagInUse で拒否・タグ定義と参照(付与行・階層ノード・条件 tag_id)は無傷。子タグのみを持つタグ=削除成功・子はルート化(parent_id NULL)。未使用タグ=削除成功。拒否はサービス層(TagService.DeleteAsync)の責務・FK カスケード(REQ-028/S-11)は削除が実行された場合の防御層として不変"
+      spec_ref: "bomdd/20-spec.md#2.2 REQ-082(TAG-008 裁定・ECO-045)"
+      equivalence_ref: EQ-001
+      depth: unit

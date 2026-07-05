@@ -25,6 +25,7 @@ public static class ErrorMessages
         ErrorCode.IoError => "error.ioError",
         ErrorCode.InvalidRegex => "error.invalidRegex",
         ErrorCode.Database => "error.database",
+        ErrorCode.TagInUse => "error.tagInUse",
         _ => "error.validationError",
     };
 }
