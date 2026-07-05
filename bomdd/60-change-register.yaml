@@ -871,4 +871,15 @@ changes:
     findings: "再現(maintainer 実機 2026-07-05): ビュー階層エディタにタグ X を配置(未保存)→ パレットから X 削除=成功(DB 未使用のため ECO-045 ガードは仕様どおり通す)→ 保存で error.unhandled。実装 2 層: ①TagsTabViewModel.OnTagsChangedAsync:304 が dirty 時は意図的に非リロード(編集保護)=削除済みタグのノードがメモリ残置 ②ViewService.SaveHierarchyAsync:280-328 が tag_id 存在を検証せず(view/重複/親/循環のみ)ReplaceHierarchyAsync の INSERT が FK 違反(view_tag_hierarchies.tag_id REFERENCES tags)→ 例外が Result 化されず伝播。ECO-045 起因でない(保存経路・dirty ガードとも 045 無改変。045 以前は保存済み配置つきタグも削除可=事故面はより広かった)。INV-008 は読み取り耐性のみ=書き込み経路の参照切れは無規定"
     impacted_bom: ["E-VIEWSVC-009", "E-UI-NODEGRAPH-025", "E-UI-TAGS-026", "E-TAGSVC-008(U-a の場合)", "41-fixed-oracle(新規行)", "20-spec(書き込み経路の参照切れ規定)"]
     body: 60-change-order-eco-046.md
-    notes: "U-a 実装= Palette.IsTagInUnsavedEdit フック(ホスト配線: Editor.IsDirty && ContainsTag)で確認前拒否+ViewService へ ITagRepository optional 注入(V4 CHEAT-01 前例・production DI 必須)で SaveHierarchyAsync が参照切れを NotFound Result 化。非 dirty の保存済み配置は DB ガード(ECO-045 TagInUse)へ委譲(受入で境界固定)。R6=既存オラクル無改変・S-39 新規行のみ。残= gate② golden(再現手順の再走=確認前拒否・キャンセル後は削除可・保存後は TagInUse・保存回帰)"
+    notes: "U-a 実装= Palette.IsTagInUnsavedEdit フック(ホスト配線: Editor.IsDirty && ContainsTag)で確認前拒否+ViewService へ ITagRepository optional 注入(V4 CHEAT-01 前例・production DI 必須)で SaveHierarchyAsync が参照切れを NotFound Result 化。非 dirty の保存済み配置は DB ガード(ECO-045 TagInUse)へ委譲(受入で境界固定)。R6=既存オラクル無改変・S-39 新規行のみ"
+
+  - id: ECO-047
+    title: "TAG-009 裁定の取り込み — タグ定義階層 UI は提供しない(階層分類はビュー階層・意味情報は将来の辞書タグ属性の方向・tags.parent_id は Core 制約維持で UI 非露出)"
+    type: 設計確定の取り込み(CAD 裁定 7ffd423・現状追認=実装変更ゼロ・doc-only)
+    status: applied
+    golden: n/a   # 現状追認(視覚不変・src/tests 変更ゼロ)
+    baseline: "main 61c84c1"
+    findings: "ECO-045 golden 準備時の 51 R3 所見(タグ定義階層 tags.parent_id の編集 UI 不在)を maintainer 裁定(2026-07-05): UI は提供しない=現リリースの製品概念として不採用。実測= App 層で ParentId を扱うのはビュー階層エディタ(view_tag_hierarchies)のみ・Tag.ParentId の露出 UI ゼロ=既適合(現状追認)。Core 制約(REQ-022)と既存オラクル(S-11 子ルート化・S-38 子の親は削除可)は裁定どおり不変。「辞書タグの属性」は将来方向の宣言(現リリース未定義・製造仕様でない)"
+    impacted_bom: ["E-TAGSVC-008(invariant 明文のみ)", "20-spec §2.2(TAG-009 の 1 項)", "51-cheat-log(R3 所見の解決注記)"]
+    body: 60-change-order-eco-047.md
+    notes: "ECO-042/043 と同型の doc-only 取り込み。62 不要・35-dsbom 不要・オラクル/golden 影響なし。ECO-045 発の未決事項は全解消。将来項目(未起票のまま保留)= 無効化/非推奨化の別操作(TAG-008)・辞書タグの属性(TAG-009 方向づけ)"

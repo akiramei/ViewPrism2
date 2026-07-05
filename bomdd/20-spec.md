@@ -116,6 +116,11 @@ missing → pending の直接遷移は存在しない(pending は新規発見フ
   numeric は value に数値の不変文字列表現(InvariantCulture、比較は数値として行う)
 - タグ名はシステム全体で一意・case-sensitive・空白のみは拒否 (REQ-021)。重複は DuplicateTagName エラー
 - 階層 (REQ-022): 単一親。親削除→子の parent_id=NULL。循環(自己・子孫を親に指定)は拒否
+- タグ定義階層の UI 非露出 (TAG-009 裁定・ECO-047): tags.parent_id は Core 制約(REQ-022)として
+  維持するが、現リリースの製品概念として採用せず UI には露出しない(編集・表示とも)。
+  画像管理上の階層分類はビュー階層(§2.3)で表現する。意味情報(性別・職業・所属・種別など)は
+  タグ定義階層でなく将来の「辞書タグの属性」の方向で表現し、tags.parent_id を意味分類の
+  主要モデルとはしない
 - color は `^#[0-9A-Fa-f]{6}$` のみ受理、NULL 可 (REQ-023)。description は自由記述、NULL 可
 - textual の predefined_values は順序保持の文字列配列。付与値はリスト外も許可(入力補助のみ) (REQ-024)
 - numeric の min/max/step/unit は NULL 可。min/max 設定時は範囲外の付与を拒否(両端は含む) (REQ-025)
