@@ -181,6 +181,10 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     /// <summary>バッチ保存が完了した(modified_at が更新されたためビュー一覧の再読込が必要)。</summary>
     public event EventHandler? Saved;
 
+    /// <summary>編集中ツリー(未保存の配置を含む)に指定タグがあるか(REQ-083/ECO-046 U-a: 削除ガード判定)。</summary>
+    public bool ContainsTag(string tagId)
+        => Flatten().Any(n => string.Equals(n.TagId, tagId, StringComparison.Ordinal));
+
     /// <summary>編集対象ビューの読込(view=null は未選択)。ダーティはリセットされる。</summary>
     public async Task LoadAsync(View? view, IReadOnlyDictionary<string, Tag> tagById)
     {

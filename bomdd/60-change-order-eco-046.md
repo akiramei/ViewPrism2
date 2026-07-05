@@ -1,4 +1,4 @@
-# Change Order — ECO-046(staged): タグ削除×未保存ビュー階層編集の谷間 — 保存が FK 違反の未処理例外(「予期しないエラー」)
+# Change Order — ECO-046(implemented・golden 待ち): タグ削除×未保存ビュー階層編集の谷間 — 保存が FK 違反の未処理例外(「予期しないエラー」)
 
 > ECO-045 golden ウォークスルー中に maintainer が発見した**別欠陥**(R3 分離起票)。
 > ECO-045(使用中タグ定義の削除拒否)のガードは**保存済み参照(DB)**のみを見るため、
@@ -62,6 +62,48 @@
 
 ## 6. 残ゲート
 
-- **gate①(裁定)**: §4 の UX 案選択(推奨= U-a)+TAG-008 裁定資料への「未保存編集状態」の
-  扱いの追記(CAD 反映)。
-- gate②(golden): 是正後、§1 の再現手順が選択案の挙動になること。
+- ~~gate①(裁定)~~ → **受領(maintainer 2026-07-05): U-a 採用**。CAD 反映済み= TAG-008 裁定資料 §2 表へ
+  「未保存の編集状態=対象」行追加+§4 裁定記録追補+tag_tab.md 明文(ViewPrismUI `d386471`)。
+- **gate②(golden)**: §7 の合格基準参照。
+
+## 7. 実施記録(2026-07-05・/eco-fix)
+
+### プローブ(R5・是正前実測)
+
+- **プローブ B(U-a 挙動)**: CpUiG6HierarchyEditorTests へ受入 2 件先置き →
+  「未保存の階層編集に載っているタグの削除は拒否される」が **Assert.NotNull(GetByIdAsync)=null で不合格
+  = 削除が成功してしまう**ことを実測(Tests 551 中 550 合格・1 不合格)。境界テスト
+  (保存済み・非 dirty → DB ガード TagInUse)は是正前から合格= ECO-045 ガードの正常動作を確認。
+- **プローブ A(Core 防御)**: CpView012HierarchySaveTests へ受入 1 件先置き →
+  **CS1729(ViewService に ITagRepository 注入口が無い)を実測**(ECO-041/044 前例の API 不在プローブ)。
+
+### 是正内容(U-a+Core 防御・diff)
+
+| 層 | ファイル | 内容 |
+|---|---|---|
+| Core | ViewService.cs | ctor へ `ITagRepository? tags = null` optional 注入(V4 CHEAT-01 前例・既存 20+呼び出し互換)。SaveHierarchyAsync に参照切れ検証: 不存在 tag_id を含むと NotFound の Result(FK 例外の未処理伝播を根絶)・既存階層無傷 |
+| App | HierarchyEditorViewModel.cs | `ContainsTag(tagId)` 公開(編集中ツリーの走査) |
+| App | TagPaletteViewModel.cs | `IsTagInUnsavedEdit` フック+DeleteAsync 先頭で確認前拒否(error.tagInUnsavedEdit) |
+| App | TagsTabViewModel.cs | 配線: `Palette.IsTagInUnsavedEdit = tagId => Editor.IsDirty && Editor.ContainsTag(tagId)` |
+| App | App.axaml.cs / i18n ja+en | ViewService へ ITagRepository を DI 注入(production 必須)・拒否文言追加 |
+| tests | CpUiG6HierarchyEditorTests / CpView012HierarchySaveTests | 受入 3 件(U-a 拒否+非 dirty 委譲+Core 防御) |
+| Oracle | S39StaleTagHierarchySaveTests.cs | S-39 新設(参照切れ保存の拒否+無傷+現存のみ成功) |
+| BOM | 10-requirements / 41 / 30-ebom / 20-spec | REQ-083 新設・S-39 行・E-VIEWSVC-009/E-UI-TAGS-026 invariant・§2.2 明文 |
+
+DB スキーマ変更なし・62 不要・35-dsbom 不要。既存オラクル行無改変(R6・新規行のみ)。
+
+### 機械受入(4 点・全緑)
+
+- `dotnet build`: 0 error / 0 warning
+- `dotnet test tests/ViewPrism2.Tests`: **552/552**(プローブ合格転化)
+- `dotnet test tests/ViewPrism2.Oracle`: **102 合格+2 skip(既知)**(S-39 追加で 101→102。回帰ゼロ)
+- `python bomdd/validate_bom.py`: 0 error / 0 warning
+
+### golden 合格基準(gate②・maintainer 実機)
+
+1. **§1 の再現手順の再走**: ビューにタグ X を配置(未保存)→ パレットから X を削除
+   → **削除されず**「編集中のビュー階層に配置されているタグは削除できません。配置を外すか、
+   編集をキャンセルしてください」が表示される(確認ダイアログは出ない)。ツリーの配置は無傷。
+2. 続けて編集を**キャンセル**(配置を破棄)→ X を削除 → 削除成功。
+3. 逆に配置を**保存**してから X を削除 → ECO-045 の拒否(「使用中のタグは削除できません…」)。
+4. 回帰: タグを配置して保存 → 正常に保存できる(「保存しました」)。

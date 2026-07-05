@@ -1044,3 +1044,21 @@ requirements:
       - "使用中タグを削除でき、画像の付与値が黙って消滅する(TAG-008 裁定違反)"
       - "拒否時にタグ定義または参照の一部が変異する(無傷性の破れ)"
       - "子タグを持つだけの未使用タグが削除できない(4a 裁定の範囲逸脱)"
+
+  - id: REQ-083
+    statement: "「使用中」は未保存の編集状態も含む(TAG-008 U-a 裁定): ①UI 層= 未保存(dirty)のビュー階層編集ツリーに配置されているタグの定義削除は、確認ダイアログの前に拒否し理由を提示する(タグ・編集ツリーとも無傷)。②Core 防御層= ビュー階層の一括保存(SaveHierarchyAsync)は存在しないタグ(削除済み)を参照するノードを含む場合、FK 例外の未処理伝播でなく NotFound の Result で拒否し、既存階層を無傷に保つ(書き込み経路の参照切れ耐性= INV-008 の書き込み版)"
+    rationale: |
+      TAG-008 U-a 裁定(maintainer 2026-07-05・ViewPrismUI `d386471` 追補)。ECO-046 で導入。
+      発端= ECO-045 golden 中の所見: 未保存配置→削除成功→保存で FK 違反の未処理例外(「予期しないエラー」)。
+      DB 参照ガード(REQ-082)は未コミットの編集状態を関知できない — 谷間を UI 層判定(エディタ状態)で塞ぎ、
+      Core 保存経路は最後の防御層として参照切れを Result 化する(ViewService への ITagRepository は
+      optional 注入= V4 CHEAT-01 前例・production DI は必ず注入)。
+      受入: UI 拒否+無傷・非 dirty は DB ガード委譲を unit(CP-UI-G6 unit 部)、Core 防御を unit exact(S-39・CP-VIEW-012)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "ViewPrismUI docs/decisions/TAG-008-tag-definition-deletion.md(`d386471` U-a 追補)/ docs/screens/tag_tab.md"
+    counterexamples:
+      - "未保存ツリーに配置したタグを削除でき、保存で未処理例外になる(ECO-046 の症状そのもの)"
+      - "拒否が確認ダイアログの後に出る(無駄な確認・理由不明の失敗体験)"
+      - "参照切れノードの保存が既存階層を部分的に置換してから失敗する(無傷性の破れ)"
+      - "保存済み配置のみのタグ削除まで UI 層で拒否する(REQ-082 の DB ガードとの二重判定で理由文言が不正確)"

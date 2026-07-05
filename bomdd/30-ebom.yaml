@@ -121,7 +121,7 @@ ebom:
       name: ビュー管理サービス(CRUD・modified_at 規則・お気に入り/最近・階層ノード管理・表示列 display_columns 所有)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-030, REQ-032, REQ-033, REQ-034, REQ-079]
+      requirement_refs: [REQ-030, REQ-032, REQ-033, REQ-034, REQ-079, REQ-083]
       depends_on: [E-DOMAIN-001, E-DB-010]
       invariants:
         - INV-002 modified_at はビュー本体・条件・階層の変更で更新、閲覧では不変
@@ -131,6 +131,7 @@ ebom:
         - (ECO-025/VE-002) 列数は 1 ≤ N ≤ 最大(標準 5・固定で先行)。名前固定により下限は常に 1 以上。DC プロップの可変レンジ(min2/max8・min3/max7)は製造仕様でない
         - (ECO-025) タグ列候補の母集合は当該ビューのタグ階層メンバーシップに限る。各列は kind∈{basic,num,text,simple}(basic=name/size/date、タグ列は タグ型→num/text/simple に射影)を持ちセル描画/ソート(E-UI-BROWSE-022)を規定する。Ver1「種類(kind)」列は廃止(列ソースは基本情報とタグのみ)
         - since ECO-043(VE-004 裁定 2026-07-05・現状追認)= **ビュー名は必須** — 空白のみの名前は作成・更新とも ValidationError で拒否(UI はエラーメッセージ表示)。spec §2.5「名前(必須)」既記載・Core 実装済みの明文確定。権威= review_points.md VE-004/view_edit.md「バリデーション」(ViewPrismUI 85d1f57)
+        - since ECO-046(TAG-008 U-a 裁定 2026-07-05)= **階層一括保存の参照切れ耐性**(REQ-083) — SaveHierarchyAsync は不存在 tag_id を含むノード集合を NotFound の Result で拒否(FK 例外の未処理伝播にしない)・既存階層は無傷。検証用 ITagRepository は optional 注入(V4 CHEAT-01 前例・production DI は必ず注入。未注入は FK が最後の砦=旧テスト互換の縮退)。権威= docs/decisions/TAG-008-tag-definition-deletion.md U-a 追補(ViewPrismUI d386471)
       acceptance_refs: [CP-VIEW-012]
 
     - id: E-DB-010
@@ -504,7 +505,7 @@ ebom:
       name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)+ ビュー編集モーダル(表示列構成)— v1.2 改訂+v2.0 GF-01/04 是正+ECO-025(α)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030, REQ-060, REQ-079, REQ-080]
+      requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030, REQ-060, REQ-079, REQ-080, REQ-083]
       external_source_ref: "原典 TagManagementPanel/ViewManagementPanel(仕様 §2.6 v1.2)+ ViewPrismUI:資料/タグタブ/ViewPrism2 ビュー編集 (standalone).html(ECO-025 表示列構成モーダル)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-TAGSVC-008, E-VIEWSVC-009]
@@ -517,6 +518,7 @@ ebom:
         - (ECO-007/E6) タグ作成ダイアログの種別セレクタはセグメント(3タブ: シンプル/テキスト/数値)で表示する(従来 ComboBox)
         - (ECO-007/E7) タグ色プリセットは E-DESIGN-028 の9色(Radix 系)。色は自由 hex 継続(プリセットは入力ショートカット)
         - (ECO-008) タグ種別は作成時に確定し作成後は変更不可(ライブ仕様 §2.6 L233 と整合・現状追認)
+        - since ECO-046(TAG-008 U-a 裁定 2026-07-05)= **未保存の階層編集に載っているタグの削除は確認前に拒否**(REQ-083) — パレット削除は Editor.IsDirty かつ編集ツリーに当該タグの配置があるとき、確認ダイアログを出さず理由(error.tagInUnsavedEdit)を提示して中止。判定はホスト(TagsTabViewModel)が Palette.IsTagInUnsavedEdit へ配線(DB 参照ガード= ECO-045 が関知できない未コミット編集の谷間を UI 層で塞ぐ)。非 dirty の保存済み配置は DB ガード(TagInUse)へ委譲
         - (ECO-025/α/REQ-080) ビュー管理の行から「ビューを編集」モーダルを開き、ビュー名・説明・**表示列**(display_columns・E-VIEWSVC-009 所有)を編集する。表示列エディタ=**列ピッカー**: 選択済み列を順序表示(各行に上下移動/削除・ソースチップ[基本=グレー/タグ=青]・タグ列は色ドット)、追加元カード(基本情報=破線/ビュー内タグ=実線+種別チップ+色ドット)クリックで末尾追加(上限/重複は無視)、件数バッジ「合計 N 列 / 最大 M」は上限到達で青→アンバー+追加元カード不活性(not-allowed・淡色)。名前(c_name)は先頭固定・移動/削除不可・「固定」バッジ(VE-001=モックの通常列扱いをロックへ是正)。空状態(追加元に基本情報/タグ無し)は各セクションに案内・端の列で上下矢印を不活性。保存で display_columns をビュー定義へ書き戻し(VE-003)ファイル一覧へ即反映。列ピッカーは E-UI-BROWSE-022 の「表示列」ポップオーバーと同一モデル(**両 surface golden 後に SC-COLUMN-PICKER-001=ColumnPickerViewModel へ DRY 統合済**。ViewEditDialogViewModel は名前/説明/お気に入り/保存のみ担い列部は Columns[ColumnPickerViewModel]を合成消費。α は追加元 2 カラム[BasicSources チップ無し/TagSources チップ有り]・保存で反映=β-2 のライブ編集/単一マージとは同一 VM の別射影・視覚は golden 承認レイアウト維持)
         - (ECO-025/α・レイアウト不変条件=**モーダル/全画面型**・権威=ViewPrismUI docs/screens/view_edit.md「レイアウト不変条件」節) モーダルは サーフェス単一スクロール/ヘッダ固定/フッター(キャンセル・保存)は下部 docked で常時可視(タグ候補が増えても押下可)/領域内部スクロールを持たない(可変数のタグ候補がフッターを押し出さない=GF-V1)。お気に入りは非搭載(廃止仕様)。Fluent オーバーレイ縦スクロールバー分の inset は内容 Margin で確保(K-AVALONIA・ScrollViewer.Padding は Extent 非算入=ECO-013 教訓)。GF-1〜5 是正済(as-built)
       acceptance_refs: [CP-UI-G6, CP-DISPLAY-PARITY-022, CP-VIEW-012, CP-COLPICKER-025]

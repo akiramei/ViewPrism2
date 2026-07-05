@@ -13,11 +13,18 @@ public sealed class ViewService
 {
     private readonly IViewRepository _views;
     private readonly IClock _clock;
+    private readonly ITagRepository? _tags;
 
-    public ViewService(IViewRepository views, IClock clock)
+    /// <summary>
+    /// tags は階層保存の参照切れ検証用(REQ-083/ECO-046)。optional 注入は既存テスト互換のため
+    /// (V4 CHEAT-01 前例)— production DI は必ず注入する。null 時は保存前検証をスキップし
+    /// FK が最後の砦になる(未処理例外に戻る)ため、新規呼び出しは注入すること。
+    /// </summary>
+    public ViewService(IViewRepository views, IClock clock, ITagRepository? tags = null)
     {
         _views = views;
         _clock = clock;
+        _tags = tags;
     }
 
     // ---- ビュー本体(REQ-030/032) ----
@@ -319,6 +326,18 @@ public sealed class ViewService
                 }
 
                 cursor = byId[cursor].ParentId;
+            }
+        }
+
+        // 参照切れタグの配置は FK 例外でなく Result で拒否(REQ-083/ECO-046: 書き込み経路の
+        // 参照切れ耐性= INV-008 の書き込み版。未保存編集中にタグ定義が消えた場合の最後の防御層)
+        if (_tags is not null && nodes.Count > 0)
+        {
+            var known = (await _tags.GetAllAsync().ConfigureAwait(false))
+                .Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+            if (nodes.Any(n => !known.Contains(n.TagId)))
+            {
+                return Result.Fail(ErrorCode.NotFound, "削除済みタグの配置が含まれています。");
             }
         }
 

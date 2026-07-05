@@ -78,6 +78,8 @@ public sealed partial class TagsTabViewModel : ObservableObject
         Palette = new TagPaletteViewModel(tagService, localization, windows);
 
         Editor.Saved += (_, _) => DataChanged?.Invoke(this, EventArgs.Empty);
+        // ECO-046(U-a): DB ガード(ECO-045)が関知できない未保存編集中の配置を削除から保護
+        Palette.IsTagInUnsavedEdit = tagId => Editor.IsDirty && Editor.ContainsTag(tagId);
         Palette.TagsChanged += async (_, _) => await OnTagsChangedAsync();
         Palette.PropertyChanged += (_, e) =>
         {

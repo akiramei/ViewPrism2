@@ -151,6 +151,13 @@ public sealed partial class TagPaletteViewModel : ObservableObject
     /// <summary>タグの作成・編集・削除があった(シェル・エディタの再読込用)。</summary>
     public event EventHandler? TagsChanged;
 
+    /// <summary>
+    /// 未保存の階層編集に載っているタグか(REQ-083/ECO-046 U-a)。ホスト(TagsTabViewModel)が
+    /// エディタ状態への判定を配線する。DB 参照ガード(TagService=ECO-045)は未コミットの
+    /// 編集状態を関知できないため、この UI 層判定が谷間を塞ぐ。
+    /// </summary>
+    public Func<string, bool>? IsTagInUnsavedEdit { get; set; }
+
     public async Task LoadAsync()
     {
         // 一覧は name 昇順(REQ-029)。ECO-009: 候補値/数値範囲を含めて取得しパレット行に提示
@@ -181,6 +188,13 @@ public sealed partial class TagPaletteViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteAsync(TagPaletteRowViewModel row)
     {
+        // ECO-046(U-a 裁定): 未保存の階層編集に載っているタグは確認ダイアログの前に拒否(TAG-008 の外延)
+        if (IsTagInUnsavedEdit?.Invoke(row.Tag.Id) == true)
+        {
+            StatusMessage = _localization.T("error.tagInUnsavedEdit");
+            return;
+        }
+
         var message = _localization.T("tag.deleteTagConfirmation", new Dictionary<string, string>
         {
             ["tagName"] = row.Tag.Name,

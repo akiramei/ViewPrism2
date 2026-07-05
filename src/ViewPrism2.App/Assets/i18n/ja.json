@@ -137,6 +137,7 @@
   "error.ioError": "ファイルの読み書きに失敗しました",
   "error.notFound": "対象が見つかりません",
   "error.scanInProgress": "スキャン実行中です",
+  "error.tagInUnsavedEdit": "編集中のビュー階層に配置されているタグは削除できません。配置を外すか、編集をキャンセルしてください",
   "error.tagInUse": "使用中のタグは削除できません。画像への付与またはビューでの使用を解除してから削除してください",
   "error.unhandled": "予期しないエラーが発生しました。詳細はログを確認してください。",
   "error.validationError": "入力が無効です",

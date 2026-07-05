@@ -137,6 +137,7 @@
   "error.ioError": "File I/O failed",
   "error.notFound": "Target not found",
   "error.scanInProgress": "A scan is already in progress",
+  "error.tagInUnsavedEdit": "This tag is placed in the view hierarchy being edited and cannot be deleted. Remove the placement or cancel the edit first",
   "error.tagInUse": "This tag is in use and cannot be deleted. Remove it from images and views first",
   "error.unhandled": "An unexpected error occurred. See the application log for details.",
   "error.validationError": "Invalid input",

@@ -42,6 +42,51 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    // ---- 未保存編集に載っているタグの削除拒否(REQ-083 / ECO-046・TAG-008 U-a 裁定) ----
+
+    [Fact]
+    public async Task 未保存の階層編集に載っているタグの削除は拒否される()
+    {
+        // ECO-046(U-a): DB 参照ガード(ECO-045)は未コミットの編集状態を関知できない谷間の掃射。
+        // 是正前は削除が成功し、保存時に FK 違反の未処理例外になっていた(maintainer 実機 2026-07-05)
+        var tag = (await _tagService.CreateAsync("placed-unsaved", TagType.Simple)).Value!;
+        var view = (await _views.CreateAsync("V")).Value!;
+
+        var tab = new TagsTabViewModel(_views, _tagService, _db.Tags, _localization, _windows);
+        await tab.Editor.LoadAsync(view, new Dictionary<string, Tag>(StringComparer.Ordinal) { [tag.Id] = tag });
+        tab.Editor.AddNode(tag, null);
+        Assert.True(tab.Editor.IsDirty);
+
+        await tab.Palette.LoadAsync();
+        var row = Assert.Single(tab.Palette.Tags, r => r.Tag.Id == tag.Id);
+        await tab.Palette.DeleteCommand.ExecuteAsync(row);
+
+        Assert.NotNull(await _db.Tags.GetByIdAsync(tag.Id));   // 定義無傷(削除されない)
+        Assert.Equal(0, _windows.ConfirmCount);                // 確認ダイアログの前に拒否
+        Assert.NotNull(tab.Palette.StatusMessage);             // 理由提示
+        Assert.True(tab.Editor.IsDirty);                       // 編集ツリー無傷
+    }
+
+    [Fact]
+    public async Task 保存済みで編集がダーティでない配置タグの削除はDBガードに委ねる()
+    {
+        // U-a の判定は「dirty な編集ツリー」限定 — 保存済み配置は ECO-045 の DB ガード(TagInUse)が拒否する
+        var tag = (await _tagService.CreateAsync("placed-saved", TagType.Simple)).Value!;
+        var view = (await _views.CreateAsync("V")).Value!;
+        Assert.True((await _views.AddNodeAsync(view.Id, tag.Id, null, 0)).IsSuccess);
+
+        var tab = new TagsTabViewModel(_views, _tagService, _db.Tags, _localization, _windows);
+        await tab.Editor.LoadAsync(view, new Dictionary<string, Tag>(StringComparer.Ordinal) { [tag.Id] = tag });
+        Assert.False(tab.Editor.IsDirty);
+
+        await tab.Palette.LoadAsync();
+        var row = Assert.Single(tab.Palette.Tags, r => r.Tag.Id == tag.Id);
+        await tab.Palette.DeleteCommand.ExecuteAsync(row);
+
+        Assert.NotNull(await _db.Tags.GetByIdAsync(tag.Id));   // TagInUse(DB ガード)で無傷
+        Assert.Equal(1, _windows.ConfirmCount);                // 確認は出る(拒否は Core から)
+    }
+
     private sealed class StubWindows : IWindowService
     {
         public bool ConfirmResult { get; set; } = true;

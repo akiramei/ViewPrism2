@@ -336,3 +336,11 @@ fixed_oracle:
       spec_ref: "bomdd/20-spec.md#2.2 REQ-082(TAG-008 裁定・ECO-045)"
       equivalence_ref: EQ-001
       depth: unit
+    - id: S-39
+      scope: cross-factory
+      added_by: ECO-046
+      scenario: "参照切れタグを含むビュー階層保存の拒否(REQ-083 / TAG-008 U-a 裁定の Core 防御層): 現存タグ 1+不存在 tag_id 1 のノード集合で SaveHierarchyAsync(ITagRepository 注入版)"
+      contract_expectation: "NotFound の Result で拒否(FK 違反の未処理例外にしない)。既存階層は無傷(部分適用なし)。現存タグのみの保存は成功(回帰)"
+      spec_ref: "bomdd/20-spec.md#2.2 REQ-083(TAG-008 U-a・ECO-046)"
+      equivalence_ref: EQ-001
+      depth: unit

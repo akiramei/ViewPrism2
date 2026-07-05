@@ -40,6 +40,29 @@ public sealed class CpView012HierarchySaveTests : IDisposable
             Position = position,
         };
 
+    // ---- 参照切れタグの保存拒否(REQ-083 / ECO-046・TAG-008 U-a 裁定の Core 防御層) ----
+
+    [Fact]
+    public async Task 削除済みタグの配置を含む保存はNotFoundで拒否されDBは無傷()
+    {
+        // ECO-046 プローブ: 是正前は view_tag_hierarchies.tag_id の FK 違反が未処理例外で伝播していた
+        // (是正前実測= ViewService に ITagRepository 注入口が無い CS1729)
+        var viewsGuarded = new ViewService(_db.Views, _clock, _db.Tags);
+        var view = (await viewsGuarded.CreateAsync("V")).Value!;
+        var live = await NewTagAsync("live");
+        var nodes = new[]
+        {
+            NewNode(view.Id, live.Id, position: 0),
+            NewNode(view.Id, "ghost-tag-id", position: 1),   // 存在しないタグ(削除済み相当)
+        };
+
+        var result = await viewsGuarded.SaveHierarchyAsync(view.Id, nodes, null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorCode.NotFound, result.Error);
+        Assert.Empty(await _views.GetHierarchyAsync(view.Id));   // 部分適用なし(無傷)
+    }
+
     [Fact]
     public async Task descriptionは作成更新でラウンドトリップする()
     {

@@ -146,7 +146,7 @@ public partial class App : Application
         services.AddSingleton<ImageSorter>();
         services.AddSingleton(sp => new ImageMemoryCache(sp.GetRequiredService<IClock>()));
         services.AddSingleton(sp => new TagService(sp.GetRequiredService<ITagRepository>()));
-        services.AddSingleton(sp => new ViewService(sp.GetRequiredService<IViewRepository>(), sp.GetRequiredService<IClock>()));
+        services.AddSingleton(sp => new ViewService(sp.GetRequiredService<IViewRepository>(), sp.GetRequiredService<IClock>(), sp.GetRequiredService<ITagRepository>())); // tags= 階層保存の参照切れ検証(ECO-046・production は必ず注入)
         services.AddSingleton(sp => new WorkspaceService(sp.GetRequiredService<IWorkspaceRepository>(), sp.GetRequiredService<IClock>())); // ECO-020
 
         // v3.0 類似検索・マージ(M-PHASH-020 / M-SIMSEARCH-021 / M-MERGE-022)。
