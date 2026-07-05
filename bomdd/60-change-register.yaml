@@ -860,4 +860,14 @@ changes:
     findings: "CAD review_points TAG-008(risk: high)を maintainer 裁定(2026-07-05): 使用中タグ定義の削除は拒否・無効化/非推奨化は別操作。現行は未確定仕様の仮置き=無条件削除+FK カスケード(TagService.DeleteAsync:95 ガードなし・UI は確認ダイアログのみ)。固定オラクル S-11 のテスト実装(S11TagDeletionRippleTests.cs:58)が使用中タグの service 層削除成功を前提としており折り合い方式(推奨=O-a: 入口 1 行を repository 直呼び化・41 yaml 契約行=INV-008 読み取り耐性は無改変)の裁定が必要。使用中判定は image_tags(既存 GetUsageCountsAsync)+view_tag_hierarchies/view_conditions(クエリ新設)。子タグ parent_id は対象外提案(ルート化存続)"
     impacted_bom: ["E-TAGSVC-008", "10-requirements(削除可否 REQ)", "41-fixed-oracle(新規行)", "M-UI-013", "20-spec §2.2/§2.6"]
     body: 60-change-order-eco-045.md
-    notes: "ECO-042/043/044 と同型の裁定取り込みだが現状追認ではなく挙動変更。62 不要(DB 不変)・35-dsbom 不要。REQ-028 カスケードは防御層として存続(削除可否はサービス層責務)。gate①受領済み(2026-07-05 maintainer: 4a=提案どおり[子タグの親は対象外]・4b=O-a)。S-11/CP カスケードテストは削除入口 1 行のみ repository 直呼び化(41 yaml 契約行・期待値は無改変=INV-008 検査意図存続)。残= gate② golden(使用中拒否×付与/配置+未使用削除成功+子ルート化の実機)"
+    notes: "ECO-042/043/044 と同型の裁定取り込みだが現状追認ではなく挙動変更。62 不要(DB 不変)・35-dsbom 不要。REQ-028 カスケードは防御層として存続(削除可否はサービス層責務)。gate①受領済み(2026-07-05 maintainer: 4a=提案どおり[子タグの親は対象外]・4b=O-a)。S-11/CP カスケードテストは削除入口 1 行のみ repository 直呼び化(41 yaml 契約行・期待値は無改変=INV-008 検査意図存続)。golden 基準 4(子ルート化)は実機対象外へ修正(タグ定義階層の編集 UI 不在=51 R3 記録・機械受入 S-38 で担保)。golden 実機 1-3 合格(2026-07-05 maintainer)。ウォークスルー中の別所見(未保存編集×削除→保存の未処理例外)は ECO-046 へ分離"
+
+  - id: ECO-046
+    title: "タグ削除×未保存ビュー階層編集の谷間 — 保存が FK 違反の未処理例外(「予期しないエラー」)"
+    type: 欠陥是正(潜伏欠陥の顕在化 — ECO-045 golden 中の別所見・R3 分離起票。CAD 未定義につき UX 裁定要)
+    status: staged
+    baseline: "main 803e9cb"
+    findings: "再現(maintainer 実機 2026-07-05): ビュー階層エディタにタグ X を配置(未保存)→ パレットから X 削除=成功(DB 未使用のため ECO-045 ガードは仕様どおり通す)→ 保存で error.unhandled。実装 2 層: ①TagsTabViewModel.OnTagsChangedAsync:304 が dirty 時は意図的に非リロード(編集保護)=削除済みタグのノードがメモリ残置 ②ViewService.SaveHierarchyAsync:280-328 が tag_id 存在を検証せず(view/重複/親/循環のみ)ReplaceHierarchyAsync の INSERT が FK 違反(view_tag_hierarchies.tag_id REFERENCES tags)→ 例外が Result 化されず伝播。ECO-045 起因でない(保存経路・dirty ガードとも 045 無改変。045 以前は保存済み配置つきタグも削除可=事故面はより広かった)。INV-008 は読み取り耐性のみ=書き込み経路の参照切れは無規定"
+    impacted_bom: ["E-VIEWSVC-009", "E-UI-NODEGRAPH-025", "E-UI-TAGS-026", "E-TAGSVC-008(U-a の場合)", "41-fixed-oracle(新規行)", "20-spec(書き込み経路の参照切れ規定)"]
+    body: 60-change-order-eco-046.md
+    notes: "全案共通= Core 防御(SaveHierarchyAsync に tag_id 存在検証・不存在は Result 化=未処理例外の根絶)。UX 裁定分岐: U-a(推奨)=削除ガードを未保存編集状態へ外延(TAG-008 の精神)/ U-b=TagsChanged で dirty エディタからも除去 / U-c=保存時 ValidationError のみ。gate①= UX 案裁定+TAG-008 裁定資料へ未保存編集状態の扱い追記(CAD 反映)"
