@@ -850,3 +850,13 @@ changes:
     impacted_bom: ["E-MERGE-034", "E-DB-010(merge_operations 新テーブル)", "E-UI-MODE-041", "M-UI-IMAGETAB-035", "M-UI-013", "E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "62-migration-oracle(初適用)"]
     body: 60-change-order-eco-044.md
     notes: "revision の実装写像は提案=内容指紋(status+タグ集合ハッシュ)のログ突合(revision カラム新設せず・裁定意図『変化していない』を直接検証)。物理削除=完全削除で source 行不在。是正順=E-BOM 宣言→②トグル撤去(小・先行可)→プローブ→ログ+補償 Core→UI 配線→62。R6=既存オラクル不変・新規行のみ"
+
+  - id: ECO-045
+    title: "TAG-008 裁定の取り込み — 使用中タグ定義の削除は拒否(無効化/非推奨化は削除とは別操作・本 ECO では導入しない)"
+    type: 設計確定の取り込み(CAD 裁定 63d09bc・挙動変更 — Core ガード+UI 拒否表示。S-11 交差につき R6 折り合い裁定が残る)
+    status: staged
+    baseline: "main 9443e48"
+    findings: "CAD review_points TAG-008(risk: high)を maintainer 裁定(2026-07-05): 使用中タグ定義の削除は拒否・無効化/非推奨化は別操作。現行は未確定仕様の仮置き=無条件削除+FK カスケード(TagService.DeleteAsync:95 ガードなし・UI は確認ダイアログのみ)。固定オラクル S-11 のテスト実装(S11TagDeletionRippleTests.cs:58)が使用中タグの service 層削除成功を前提としており折り合い方式(推奨=O-a: 入口 1 行を repository 直呼び化・41 yaml 契約行=INV-008 読み取り耐性は無改変)の裁定が必要。使用中判定は image_tags(既存 GetUsageCountsAsync)+view_tag_hierarchies/view_conditions(クエリ新設)。子タグ parent_id は対象外提案(ルート化存続)"
+    impacted_bom: ["E-TAGSVC-008", "10-requirements(削除可否 REQ)", "41-fixed-oracle(新規行)", "M-UI-013", "20-spec §2.2/§2.6"]
+    body: 60-change-order-eco-045.md
+    notes: "ECO-042/043/044 と同型の裁定取り込みだが現状追認ではなく挙動変更。62 不要(DB 不変)・35-dsbom 不要。REQ-028 カスケードは防御層として存続(削除可否はサービス層責務)。残 gate①=§4a 使用中の範囲確認+§4b S-11 折り合い(O-a/O-b/O-c)。gate②=golden(使用中拒否+未使用削除成功の実機)"
