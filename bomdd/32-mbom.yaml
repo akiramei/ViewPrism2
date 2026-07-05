@@ -193,7 +193,7 @@ mbom:
         path_note: "TagService.cs, ViewService.cs + Infrastructure のリポジトリ呼び出し"
         type: dotnet-classlib
       interface_contract:
-        tags: "CRUD+Validate(color 形式・名前空白・numeric 範囲・循環)+TagImageAsync(UPSERT)+TagImagesAsync(原子バッチ)+UntagImagesAsync(冪等)+GetAllWithUsageAsync(name 昇順 OrdinalIgnoreCase+使用数)"
+        tags: "CRUD+Validate(color 形式・名前空白・numeric 範囲・循環)+TagImageAsync(UPSERT)+TagImagesAsync(原子バッチ)+UntagImagesAsync(冪等)+GetAllWithUsageAsync(name 昇順 OrdinalIgnoreCase+使用数)。Delete は使用中(付与 image_tags/配置 view_tag_hierarchies/条件参照 view_conditions のいずれか= GetUsageRefsAsync)を TagInUse で拒否・子タグの親は削除可=ルート化(REQ-082/ECO-045。カスケード REQ-028 は削除実行時の防御層)"
         views: "CRUD+条件/階層ノード CRUD+MoveNode(循環拒否)+TouchModified(本体・条件・階層の変更で modified_at 更新)+GetFavorites/GetRecent(limit=10 既定・同値 id 昇順)"
       invariants:
         - INV-003 / INV-004 / INV-006

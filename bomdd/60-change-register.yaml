@@ -854,8 +854,8 @@ changes:
   - id: ECO-045
     title: "TAG-008 裁定の取り込み — 使用中タグ定義の削除は拒否(無効化/非推奨化は削除とは別操作・本 ECO では導入しない)"
     type: 設計確定の取り込み(CAD 裁定 63d09bc・挙動変更 — Core ガード+UI 拒否表示。S-11 交差は O-a 裁定=入口 1 行 repository 直呼び化で契約無改変)
-    status: implemented   # 2026-07-05 是正+機械受入完了・golden 待ち。gate①受領(4a=提案どおり・4b=O-a)。プローブ先行(拒否系 3 件不合格→合格転化)。REQ-082 新設・S-38 追加(Oracle 100→101)。Tests 549/549/build 0/validate 0-0
-    golden: pending
+    status: applied   # 2026-07-05 golden 合格(maintainer 実機)でクローズ。gate①受領(4a=提案どおり・4b=O-a)→プローブ先行(拒否系 3 件不合格→合格転化)→是正→機械受入全緑。REQ-082 新設・S-38 追加(Oracle 100→101)。CP-UI-G6/CP-TAG-011 観点明記+M4(spec §2.2/M-VIEWSVC-012)。Tests 549/549/build 0/validate 0-0
+    golden: "approved(2026-07-05 maintainer 実機: ①付与済みタグの削除=拒否理由表示・無傷 ②ビュー配置のみのタグ=拒否・配置無傷 ③未使用タグ=削除成功。基準 4=子ルート化は実機対象外[タグ定義階層の編集 UI 不在=51 R3 記録]で S-38+CP-TAG-011 機械担保。ウォークスルー中の別所見=未保存編集×削除→保存の未処理例外は ECO-046 へ分離)"
     baseline: "main 9443e48"
     findings: "CAD review_points TAG-008(risk: high)を maintainer 裁定(2026-07-05): 使用中タグ定義の削除は拒否・無効化/非推奨化は別操作。現行は未確定仕様の仮置き=無条件削除+FK カスケード(TagService.DeleteAsync:95 ガードなし・UI は確認ダイアログのみ)。固定オラクル S-11 のテスト実装(S11TagDeletionRippleTests.cs:58)が使用中タグの service 層削除成功を前提としており折り合い方式(推奨=O-a: 入口 1 行を repository 直呼び化・41 yaml 契約行=INV-008 読み取り耐性は無改変)の裁定が必要。使用中判定は image_tags(既存 GetUsageCountsAsync)+view_tag_hierarchies/view_conditions(クエリ新設)。子タグ parent_id は対象外提案(ルート化存続)"
     impacted_bom: ["E-TAGSVC-008", "10-requirements(削除可否 REQ)", "41-fixed-oracle(新規行)", "M-UI-013", "20-spec §2.2/§2.6"]
