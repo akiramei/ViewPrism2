@@ -311,3 +311,15 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   含めるかは工程診断で切る — pHash まで正規化すると adapter 世代交代= P-09 発動になる点に注意)。
   golden 手順への影響は解消済み: ピクセル実回転の複製(orientation_fixture_06_rot90.jpg / orientation_fixture_06_mirror.jpg)を
   生成して手当て。ECO-048 本文 §7 から参照。
+
+## ECO-048 golden 実施時のスコープ外所見(R3 記録)2026-07-06
+
+- **類似しきい値の既定値が surface 間で三者三様(仕様と不整合)**: 仕様 REQ-064/065・§2.10.4 は
+  「既定 70・範囲 50〜100」。実測= 類似検索モーダル(SimilarSearchViewModel:98)= **70(仕様どおり)**・
+  画像タブ整理トレイ(ImageTabOrganizeViewModel:33)= **80**・作業タブ(WorkTabViewModel:75)= **90**。
+  CAD(ViewPrismUI)はしきい値スライダーの存在のみ定義し数値既定は未規定(grep 実測)。
+  コードに裁定痕跡なし(bare literal)= 実装時の仮置きが仕様と突合されないまま潜伏の疑い。
+  発見経緯= ECO-048 golden で maintainer が整理トレイの既定 80 を「規定値」と認識(仕様 70 との乖離が
+  ユーザー認知にも到達)。影響= rot90 級(スコア 70〜79 帯)の検出が既定のままだと漏れる surface がある。
+  起票要否は maintainer 判断(選択肢: a=仕様 70 へ統一 / b=用途別既定を CAD/spec に正式化(整理=高精度 80・
+  作業=最厳 90 の意図があるなら)/ c=現状維持)。ECO-048 本文 §7 から参照。
