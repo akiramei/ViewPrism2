@@ -843,8 +843,8 @@ changes:
   - id: ECO-044
     title: "IMG-011 裁定の取り込み — マージ永続化ルール確定(①原子 union=現状追認 ②タグ統合トグル撤去 ③操作ログに基づく補償 Undo 新設)"
     type: 設計確定の取り込み(CAD 裁定 49ea874・②UI 是正+③net-new — merge_operations 新テーブル=migration 005・ECO-020 前例)
-    status: staged   # 2026-07-05 是正+機械受入完了・golden 待ち。プローブ先行(是正前 CS1061=Undo API 不在を実測)→migration 005+MergeUndoCalculator(指紋/差分/条件の決定論)+ログ同梱 ApplyMerge/補償 ApplyUndo(単一トランザクション)+両 VM 配線(CanUndo/UndoNote)+トグル撤去。optional 拡張(CHEAT-01/02 前例)で Oracle 無改変。起票の「スキーマ変更初・62 初適用」は事実誤認と判明し訂正(Migrations 001-004 既存→ECO-020 前例=CP-DB-006 同値検査)。Tests 544/544/Oracle 100+2skip/build 0/validate 0-0
-    golden: "タグ統合チェックの消滅・マージ→取り消すの往復(source 復元+タグ差分除去)・実行可能条件破れ時の不活性 ×画像タブ/作業タブ"
+    status: applied   # 2026-07-05 golden 合格(maintainer 実機)。プローブ先行(是正前 CS1061=Undo API 不在を実測)→migration 005+MergeUndoCalculator(指紋/差分/条件の決定論)+ログ同梱 ApplyMerge/補償 ApplyUndo(単一トランザクション)+両 VM 配線(CanUndo/UndoNote)+トグル撤去。optional 拡張(CHEAT-01/02 前例)で Oracle 無改変。M4 同期(spec §2.10.5 as-built)+CP-UI-G9/CP-MERGE-018 観点明記。起票の「スキーマ変更初・62 初適用」は事実誤認と判明し訂正(Migrations 001-004 既存→ECO-020 前例=CP-DB-006 同値検査)。Tests 544/544/Oracle 100+2skip/build 0/validate 0-0
+    golden: "approved(2026-07-05 maintainer 実機: タグ統合チェックの消滅・マージ→取り消すの往復=source 一覧復帰+タグ復元・完了パネル表示正常 ×画像タブ/作業タブ。条件破れの不活性+理由表示は機械受入=CpMerge044UndoTests/CpUiG1OrganizeTests で担保)"
     baseline: "main 0182362"
     findings: "①原子・union・source=deleted は現状追認(MergeService/INV-009/011・オラクル S-19〜24 固定済み)。②見せかけトグル実在(ImageTab 444/WorkTab 415 の CheckBox=切替可能だが Core は常に union=OFF が機能しない誤誘導 UI・ECO-041 教訓の同族)。③マージ操作ログ無し(ApplyMergeAsync 無記録)・revision カラム無し・CanUndo=false プレースホルダ(両 VM)。MergeCalculator はマージ先優先=destination の変化は追加行+NULL 補完に限定=補償差分が決定論的"
     impacted_bom: ["E-MERGE-034", "E-DB-010(merge_operations 新テーブル)", "E-UI-MODE-041", "M-UI-IMAGETAB-035", "M-UI-013", "E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "62-migration-oracle(初適用)"]

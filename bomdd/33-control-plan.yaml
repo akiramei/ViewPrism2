@@ -453,7 +453,7 @@ control_plan:
       classification: core
       depth: unit
       tolerance: exact
-      fixture: tests/ViewPrism2.Tests/CpMerge018Tests.cs
+      fixture: "tests/ViewPrism2.Tests/CpMerge018Tests.cs + CpMerge044UndoTests.cs(ECO-044 補償 Undo)"
       fixture_note: "Trait cp=CP-MERGE-018。一時 SQLite"
       oracle: 統合後タグ集合・status・エラーコード・ロールバック後 DB 状態の完全一致
       approver: automated
@@ -466,6 +466,9 @@ control_plan:
         - "status: マージ元 → Deleted。マージ元の image_tags は残存(削除しない)。マージ先は Normal のまま"
         - "原子性: タグ集約の途中失敗 → 全ロールバック(マージ先タグ・マージ元 status とも変化なし)"
         - "拒否: マージ先=マージ元 / マージ元重複 / 非 normal 指定 → ValidationError"
+        - "(ECO-044) 操作ログ: マージと同一トランザクションで sources/タグ差分(追加行+NULL補完行と元値)/内容指紋を記録"
+        - "(ECO-044) 補償 Undo 往復: source 復元(deleted→normal)・追加タグ行削除・補完値の元値復帰・既存タグ不変"
+        - "(ECO-044) 実行可能条件: destination 変化後は拒否(指紋不一致)/ source 完全削除後は拒否 / 二重 Undo 拒否 / 後続マージで先行ログ失効"
 
     - id: CP-MERGE-001
       characteristic: "マージの物理非破壊 — 操作前後でユーザー画像ファイルが不変(INV-009 実アクション初適用・L3 物理差分)"
@@ -610,7 +613,7 @@ control_plan:
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)+**ピル埋込 TextBox(タグ追加検索等)のテキスト/カレット整列= 垂直中央+フォーカス枠に密着しない左余白(ECO-040 再発防止: Padding=0 上書き×VerticalContentAlignment 未指定で −7.5px 上寄り+0px 左密着が製造時から潜伏・検索未配線で入力機会が無くマスキングされた実績。同型の整理トレイ条件入力×画像/作業タブも同観点= headless 回帰 GfPillTextBoxCaretAlignTests が恒久ガード)**+**タグ追加検索の絞り込み動作= 部分一致(trim/大小無視)・空グループ消滅・クリア全復帰・絞り込み後の付与が正常(ECO-041 再発防止: UI 殻だけ描画され機能が未配線でも視覚検査は通ってしまう実績= 18 日潜伏。入力系 UI は golden で必ず 1 回操作して結果を見る)**", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G11, characteristic: "タグ制御モード(設定トグル・マッピングモーダル表示パリティ・見開きでの skip/force/spread/empty 配置・ON とマッピングの復元)(G-11・ECO-022)。**表示パリティ=提示フィールドに限らずモーダル クローム全体をモック突合**: ヘッダ(タグアイコンバッジ+タイトル+説明+X)/ 行のカード化+アクション固定色アイコンバッジ / **行順(モック順=左固定→右固定→占有→skip→左空白→右空白)** / **常時 docked フッター(補足文+既定に戻す+完了 cta)** / 全体オーバーレイ。設定ドロワーは ScrollViewer が有界でカード末尾まで到達可(GF-TAGCTRL-01)。フッター補足文が右端で切れない(GF-TAGCTRL-03)。(FMEA-037=クローム脱漏ガード・2026-07-01 追加)", classification: surface, depth: G, tolerance: "G-11 チェックリスト全項目(20-spec.md §2.6・§2.12.6 提示フィールド)+ クローム パリティ(ヘッダ/フッター/カード/行順/全体オーバーレイ)をモック(standalone.html)と視覚突合", fixture_note: "実アプリ+作成済みタグ(シンプル/テキスト/数値)+フィクスチャ画像(広告ページを含む見開き用コレクション)", oracle: 承認者の目視チェック(モーダル=ヘッダ/6行カードの提示フィールド/フッター/行順+ドロワースクロール+見開き配置+広告除外+物理側保持), approver: maintainer }
-    - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+**マージ完了パネル(統合しました+DoneSummary+続行 — ECO-037 再発防止: 導入後の右ペイン改変で幅自己参照により不可視化した実績)**+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+**マージ完了パネル(統合しました+DoneSummary+続行 — ECO-037 再発防止: 導入後の右ペイン改変で幅自己参照により不可視化した実績)**+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)+**(ECO-044/IMG-011)タグ統合チェック非搭載=常時 union(見せかけトグル=切替可能だが Core は常に union が導入時から存在した実績・ECO-041『未配線 UI』同族)・「取り消す」=ログに基づく補償 Undo の往復(source 一覧復帰+タグ復元)と条件破れ時の不活性+理由表示。作業タブの整理トレイも同観点(CP-UI-G1 側から参照)**", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpTrash021Tests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)",
         test_vectors: ["除外: missing→Deleted(T9)・タグ/ID 不変", "missing 以外(normal/pending/deleted)→ ValidationError で対象外", "存在しない画像 ID → NotFound"] }   # ECO-033: CpTrash021Tests から事実転記(fixture 名も実ファイル名へ補正)
     - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact",
