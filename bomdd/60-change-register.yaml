@@ -865,8 +865,8 @@ changes:
   - id: ECO-046
     title: "タグ削除×未保存ビュー階層編集の谷間 — 保存が FK 違反の未処理例外(「予期しないエラー」)"
     type: 欠陥是正(潜伏欠陥の顕在化 — ECO-045 golden 中の別所見・R3 分離起票。U-a 裁定=削除ガードの未保存編集状態への外延+Core 防御)
-    status: implemented   # 2026-07-05 是正+機械受入完了・golden 待ち。gate①受領(U-a・CAD 追補 d386471)。プローブ先行(B=未保存配置タグの削除成功を実測不合格→合格転化 / A=CS1729 注入口不在)。REQ-083 新設・S-39 追加(Oracle 101→102)。Tests 552/552/build 0/validate 0-0
-    golden: pending
+    status: applied   # 2026-07-05 golden 合格(maintainer 実機・1-4 全 OK)でクローズ。gate①受領(U-a・CAD 追補 d386471)→プローブ先行(B=未保存配置タグの削除成功を実測不合格→合格転化 / A=CS1729 注入口不在)→是正→機械受入全緑。REQ-083 新設・S-39 追加(Oracle 101→102)。CP-UI-G6/CP-VIEW-012 観点明記+M4(M-VIEWSVC-012)。Tests 552/552/build 0/validate 0-0
+    golden: "approved(2026-07-05 maintainer 実機・1-4 全 OK: ①再現手順の再走=未保存配置タグの削除が確認前に拒否・理由表示・配置無傷 ②編集キャンセル後は削除成功 ③保存後は TagInUse=ECO-045 の DB ガード ④配置→保存の回帰正常)"
     baseline: "main 803e9cb"
     findings: "再現(maintainer 実機 2026-07-05): ビュー階層エディタにタグ X を配置(未保存)→ パレットから X 削除=成功(DB 未使用のため ECO-045 ガードは仕様どおり通す)→ 保存で error.unhandled。実装 2 層: ①TagsTabViewModel.OnTagsChangedAsync:304 が dirty 時は意図的に非リロード(編集保護)=削除済みタグのノードがメモリ残置 ②ViewService.SaveHierarchyAsync:280-328 が tag_id 存在を検証せず(view/重複/親/循環のみ)ReplaceHierarchyAsync の INSERT が FK 違反(view_tag_hierarchies.tag_id REFERENCES tags)→ 例外が Result 化されず伝播。ECO-045 起因でない(保存経路・dirty ガードとも 045 無改変。045 以前は保存済み配置つきタグも削除可=事故面はより広かった)。INV-008 は読み取り耐性のみ=書き込み経路の参照切れは無規定"
     impacted_bom: ["E-VIEWSVC-009", "E-UI-NODEGRAPH-025", "E-UI-TAGS-026", "E-TAGSVC-008(U-a の場合)", "41-fixed-oracle(新規行)", "20-spec(書き込み経路の参照切れ規定)"]
