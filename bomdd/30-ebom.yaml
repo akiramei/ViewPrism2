@@ -217,36 +217,38 @@ ebom:
 
     # ---------- v3.0 核(loop-v3-similarity) ----------
     - id: E-PHASH-031
-      name: pHash 計算核(DCT 知覚ハッシュ・ハミング距離・類似度%変換)— v3.0 新設
+      name: pHash 計算核(DCT 知覚ハッシュ・ハミング距離・類似度%変換・8 オリエンテーション変種)— v3.0 新設
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-061, REQ-062]
+      requirement_refs: [REQ-061, REQ-062, REQ-084]
       kbom_refs: [K-PHASH, K-SKIA]
       depends_on: [E-DOMAIN-001]
       invariants:
         - INV-012 同一ピクセル内容→同一 pHash(決定的)。距離→類似度%は単調非増加・spec 固定
         - 純粋計算(ピクセル取得後は I/O・UI・DB 依存なし)。OC-14/OC-15 として直接呼べる公開 API
         - レシピは仕様 §2.10.1/ADR-0008 のみ(orthonormal DCT-II・DC 除外中央値・双線形・(int)(y+0.5))
+        - since ECO-048(REQ-084) 8 オリエンテーション変種は 32×32 格子の添字置換のみ(D4・順序 §2.10.1a 固定)。[0]=identity はレシピ pHash と一致(S-40)
       acceptance_refs: [CP-PHASH-016]
 
     - id: E-SIMSEARCH-032
       name: 類似検索エンジン(候補=normal 限定・閾値・降順安定・キャッシュ協調)— v3.0 新設
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-064]
+      requirement_refs: [REQ-064, REQ-084]
       kbom_refs: []
       depends_on: [E-PHASH-031, E-SIMCACHE-033, E-DOMAIN-001]
       invariants:
         - 候補は status=normal のみ(基準画像・他 status を除外)。フィルタはキャッシュ参照に先行(仕様 §2.10.4)
         - 同一コレクション内(REQ-053)。閾値以上(≧)を類似度降順・同値 id 昇順で安定
         - 検索は UI をブロックしない(非同期・進捗通知可)
+        - since ECO-048(REQ-084) ペア距離=小 id の identity × 大 id の全変種の最小(対称・決定的・単調拡張)。変種なし特徴量とは identity 同士のみ(後方互換)
       acceptance_refs: [CP-SIM-017]
 
     - id: E-SIMCACHE-033
       name: 特徴量・類似度の永続化と無効化(image_features / image_similarity)— v3.0 新設
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-063]
+      requirement_refs: [REQ-063, REQ-084]
       kbom_refs: [K-SQLITE]
       depends_on: [E-DB-010, E-PHASH-031]
       graph_edges:
@@ -254,9 +256,10 @@ ebom:
         consumers: [E-SIMSEARCH-032, E-MERGE-034]
       invariants:
         - ペアは id1<id2 正規化・cache_key={id1}-{id2}(モード接尾辞なし)。(A,B)=(B,A)
-        - 無効化は内容ベースのみ(file_size/modified_date/hash 変化で再計算)。時間失効は不採用
+        - 無効化は内容ベース(file_size/modified_date/hash)+adapter 世代(P-09)+変種欠落(since ECO-048/REQ-084 — 現行 reader が変種対応で phash_variants NULL は stale)。時間失効は不採用
         - 特徴量再計算時はその画像が関与する image_similarity 行を連鎖削除する
         - 画像削除時は FK CASCADE で両テーブルの関連行を削除
+        - since ECO-048(REQ-084) phash_variants 列(migration 006)= 8 変種 pHash の ',' 連結 TEXT・NULL=旧レコード。hash_adapter は世代交代しない(identity 値不変)
       acceptance_refs: [CP-SIM-017, CP-DB-006]
 
     - id: E-MERGE-034

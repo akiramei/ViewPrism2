@@ -20,17 +20,39 @@ public sealed class PHashImageReader : IPHashImageReader
         _logger = logger;
     }
 
-    /// <summary>full-decode 世代の adapter 識別子(P-09)。scaled-decode(早期縮小)とは pHash 値が異なる。</summary>
+    /// <summary>
+    /// full-decode 世代の adapter 識別子(P-09)。scaled-decode(早期縮小)とは pHash 値が異なる。
+    /// 8 変種の追加(ECO-048)は identity pHash の絶対値を動かさないため世代交代しない(仕様 §2.10.3)。
+    /// </summary>
     public string AdapterId => "skia-full-decode-v1";
+
+    /// <summary>8 オリエンテーション変種に対応する(REQ-084 / ECO-048)。</summary>
+    public bool SupportsOrientationVariants => true;
 
     /// <summary>絶対パスの画像から 16hex pHash を計算する。壊れた画像・読み取り失敗は null。</summary>
     public Task<string?> ComputePHashAsync(string absoluteImagePath)
     {
         ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
-        return Task.Run(() => Compute(absoluteImagePath));
+        return Task.Run(() =>
+        {
+            var pixels = DecodePixels(absoluteImagePath);
+            return pixels is null ? null : PerceptualHash.Compute(pixels);
+        });
     }
 
-    private string? Compute(string absoluteImagePath)
+    /// <summary>8 オリエンテーション変種の pHash(仕様 §2.10.1a・[0]=identity)。失敗は null。</summary>
+    public Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(string absoluteImagePath)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
+        return Task.Run(() =>
+        {
+            var pixels = DecodePixels(absoluteImagePath);
+            return pixels is null ? null : (IReadOnlyList<string>?)PHashOrientations.ComputeAll(pixels);
+        });
+    }
+
+    /// <summary>画像を 32×32 BGRA へデコード・縮小したピクセル列を返す。壊れた画像・読み取り失敗は null。</summary>
+    private byte[]? DecodePixels(string absoluteImagePath)
     {
         try
         {
@@ -57,8 +79,7 @@ public sealed class PHashImageReader : IPHashImageReader
             }
 
             // GetPixelSpan() で BGRA 各バイトを一括取得(GetPixel ループは遅い)。アルファは無視
-            var pixels = resized.GetPixelSpan();
-            return PerceptualHash.Compute(pixels);
+            return resized.GetPixelSpan().ToArray();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

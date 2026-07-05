@@ -9,7 +9,8 @@ namespace ViewPrism2.Core.Services.Similarity;
 /// 基準画像 1 枚に対し、同一コレクション内(REQ-053)の status=Normal 画像のみを候補とし
 /// (基準自身は除外)、各候補との pHash 類似度を算出して閾値以上(≧)を Score 降順・同値 id 昇順で返す。
 /// 候補の status フィルタ(Normal 限定)はキャッシュ参照より先に適用する(仕様 §2.10.4)。
-/// 無効化は内容ベースのみ(file_size/modified_date/hash 変化で再計算)+特徴量再計算で関与ペア連鎖削除。
+/// 無効化は内容ベース(file_size/modified_date/hash)+adapter 世代(P-09)+変種欠落(REQ-084)で再計算
+/// +特徴量再計算で関与ペア連鎖削除。ペア距離は小 id の identity × 大 id の全変種の最小(REQ-084/ECO-048)。
 /// </summary>
 public sealed class SimilaritySearchService
 {
@@ -72,9 +73,9 @@ public sealed class SimilaritySearchService
             return [];
         }
 
-        // 基準画像の pHash(特徴量を取得・必要なら再計算)
-        var basePhash = await GetOrComputePhashAsync(baseImage, folder.Path, ct).ConfigureAwait(false);
-        if (basePhash is null)
+        // 基準画像の特徴量(取得・必要なら再計算)
+        var baseFeature = await GetOrComputeFeatureAsync(baseImage, folder.Path, ct).ConfigureAwait(false);
+        if (baseFeature is null)
         {
             return []; // 基準の pHash が取れない(壊れた画像)→ 候補なし
         }
@@ -87,7 +88,7 @@ public sealed class SimilaritySearchService
             ct.ThrowIfCancellationRequested();
 
             var score = await ComputePairScoreAsync(
-                baseImage, basePhash, candidate, folder.Path, ct).ConfigureAwait(false);
+                baseImage, baseFeature, candidate, folder.Path, ct).ConfigureAwait(false);
             if (score is { } s && s >= threshold)
             {
                 results.Add(new SimilarResult { ImageId = candidate.Id, Score = s });
@@ -106,7 +107,7 @@ public sealed class SimilaritySearchService
 
     /// <summary>基準と候補のペア類似度。キャッシュ参照→無ければ計算し保存(フィルタは呼び出し側で適用済み)。</summary>
     private async Task<int?> ComputePairScoreAsync(
-        ImageRecord baseImage, string basePhash, ImageRecord candidate, string folderPath, CancellationToken ct)
+        ImageRecord baseImage, ImageFeature baseFeature, ImageRecord candidate, string folderPath, CancellationToken ct)
     {
         // キャッシュヒット: 同一ペアの 2 回目は再計算しない
         var cached = await _similarities.GetAsync(baseImage.Id, candidate.Id).ConfigureAwait(false);
@@ -115,13 +116,18 @@ public sealed class SimilaritySearchService
             return cached.SimilarityScore;
         }
 
-        var candidatePhash = await GetOrComputePhashAsync(candidate, folderPath, ct).ConfigureAwait(false);
-        if (candidatePhash is null)
+        var candidateFeature = await GetOrComputeFeatureAsync(candidate, folderPath, ct).ConfigureAwait(false);
+        if (candidateFeature is null)
         {
             return null; // 候補の pHash が取れない(壊れた画像)→ スキップ
         }
 
-        var distance = HammingDistance.Between(basePhash, candidatePhash);
+        // ペア距離(REQ-084・仕様 §2.10.4): 序数比較で小さい id の identity pHash × 大きい id の
+        // 全変種の最小距離。役割が id 順で決まるため探索方向によらず対称=ペア正規化キャッシュと整合。
+        var (lo, hi) = string.CompareOrdinal(baseImage.Id, candidate.Id) <= 0
+            ? (baseFeature, candidateFeature)
+            : (candidateFeature, baseFeature);
+        var distance = PairDistance(lo.PHash, hi);
         var score = SimilarityScore.FromDistance(distance);
         await _similarities.UpsertAsync(baseImage.Id, candidate.Id, score, _clock.UtcNowIso())
             .ConfigureAwait(false);
@@ -129,27 +135,65 @@ public sealed class SimilaritySearchService
     }
 
     /// <summary>
-    /// 画像の pHash を取得する。特徴量が無い、または内容(file_size/modified_date/hash)が
-    /// 記録と異なる場合は再計算→Upsert→関与する類似度ペアを連鎖削除する(内容ベース無効化、OC-18)。
+    /// identity pHash と相手特徴量の全変種(なければ identity)の最小ハミング距離(REQ-084)。
+    /// 変種 [0]=identity を含むため identity 同士の距離を上回らない(単調拡張=既存検出の純増)。
     /// </summary>
-    private async Task<string?> GetOrComputePhashAsync(ImageRecord image, string folderPath, CancellationToken ct)
+    private static int PairDistance(string loPhash, ImageFeature hi)
+    {
+        var best = HammingDistance.Between(loPhash, hi.PHash);
+        if (hi.PhashVariants is { Length: > 0 } joined)
+        {
+            foreach (var variant in joined.Split(','))
+            {
+                if (variant.Length == 16)
+                {
+                    best = Math.Min(best, HammingDistance.Between(loPhash, variant));
+                }
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// 画像の特徴量を取得する。特徴量が無い、または stale(内容変化/adapter 世代不一致/変種欠落 —
+    /// 仕様 §2.10.3)の場合は再計算→Upsert→関与する類似度ペアを連鎖削除する(OC-18)。
+    /// </summary>
+    private async Task<ImageFeature?> GetOrComputeFeatureAsync(ImageRecord image, string folderPath, CancellationToken ct)
     {
         var feature = await _features.GetAsync(image.Id).ConfigureAwait(false);
         if (feature is not null && IsFresh(feature, image))
         {
-            return feature.PHash;
+            return feature;
         }
 
         ct.ThrowIfCancellationRequested();
 
         var absolutePath = ToAbsolutePath(folderPath, image.RelativePath);
-        var phash = await _reader.ComputePHashAsync(absolutePath).ConfigureAwait(false);
-        if (phash is null)
+        string? phash;
+        string? variantsJoined = null;
+        if (_reader.SupportsOrientationVariants)
         {
-            return null;
+            // 変種対応 reader: 1 回のデコードで 8 変種([0]=identity)を得る(REQ-084)
+            var variants = await _reader.ComputePHashVariantsAsync(absolutePath).ConfigureAwait(false);
+            if (variants is null || variants.Count == 0)
+            {
+                return null;
+            }
+
+            phash = variants[0];
+            variantsJoined = string.Join(',', variants);
+        }
+        else
+        {
+            phash = await _reader.ComputePHashAsync(absolutePath).ConfigureAwait(false);
+            if (phash is null)
+            {
+                return null;
+            }
         }
 
-        await _features.UpsertAsync(new ImageFeature
+        var refreshed = new ImageFeature
         {
             ImageId = image.Id,
             PHash = phash,
@@ -158,24 +202,28 @@ public sealed class SimilaritySearchService
             ModifiedDate = image.ModifiedDate,
             Hash = image.Hash,
             LastCalculated = _clock.UtcNowIso(),
-        }).ConfigureAwait(false);
+            PhashVariants = variantsJoined,
+        };
+        await _features.UpsertAsync(refreshed).ConfigureAwait(false);
 
         // 連鎖無効化: 再計算した画像が関与する古い類似度を削除(次回検索で再計算・再保存)
         await _similarities.DeleteInvolvingAsync(image.Id).ConfigureAwait(false);
 
-        return phash;
+        return refreshed;
     }
 
     /// <summary>
     /// 記録された特徴量が再利用可能か。①内容ベース(file_size/modified_date/hash・仕様 §2.10.3)に加え、
     /// ②adapter 世代一致(P-09)を要求する。現行 reader と異なる adapter で計算された pHash は
     /// 内容が同じでも stale 扱い=再計算し、adapter をまたいだ値の混在を防ぐ(旧 DB の空 adapter も再計算)。
+    /// ③現行 reader が変種対応の場合は変種の存在も要求する(REQ-084 — 旧レコードの自動アップグレード)。
     /// </summary>
     private bool IsFresh(ImageFeature feature, ImageRecord image)
         => string.Equals(feature.HashAdapter, _reader.AdapterId, StringComparison.Ordinal)
             && feature.FileSize == image.FileSize
             && string.Equals(feature.ModifiedDate, image.ModifiedDate, StringComparison.Ordinal)
-            && string.Equals(feature.Hash, image.Hash, StringComparison.Ordinal);
+            && string.Equals(feature.Hash, image.Hash, StringComparison.Ordinal)
+            && (!_reader.SupportsOrientationVariants || feature.PhashVariants is not null);
 
     private static string ToAbsolutePath(string folderPath, string relativePath)
         => Path.Combine(folderPath, relativePath.Replace('/', Path.DirectorySeparatorChar));

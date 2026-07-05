@@ -619,6 +619,17 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
   明確に異なる画像=大距離。16hex の網羅ベクタは手書きせず(b)(c)の性質ベースで凍結する
   (固定オラクル S-19 系 — 41-fixed-oracle で実装・本書外で閉じる)
 
+**2.10.1a 8 オリエンテーション変種 (REQ-084 / ECO-048) — v4.1 追補**
+
+- pHash 計算時に、32×32 格子(2.10.1 手順 1 の出力)の **8 オリエンテーション変種**の pHash を併せて算出する。
+  変種は格子の**添字置換のみ**(再デコード・再リサイズなし)で決定的(INV-012)。順序は本書で固定:
+  **[0]=identity [1]=rotate90(時計回り) [2]=rotate180 [3]=rotate270 [4]=flipH(左右反転)
+  [5]=flipV(上下反転) [6]=transpose(主対角転置) [7]=transverse(反対角転置)**(二面体群 D4)
+- 変種 [0](identity)は 2.10.1 レシピの pHash と**常に一致**する(既存 OC-14 契約は不変)
+- 検出契約(S-40): 8 変換のいずれかを施した同一格子の pHash は、元格子の 8 変種のいずれかと距離 0
+- 変種の計算は reader(adapter)の能力とする。変種非対応の reader(旧実装・テスト用 fake)では
+  identity のみで動作する(後方互換 — 2.10.4 のフォールバック)
+
 **2.10.2 距離と類似度 (REQ-062, OC-15)**
 
 - 距離 = 2 つの pHash の**ハミング距離**(64bit XOR の立ちビット数、0〜64)。popcount で算出
@@ -635,16 +646,22 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
 
 **2.10.3 特徴量・類似度の永続化とキャッシュ無効化 (REQ-063, OC-18)**
 
-- **image_features**(列: image_id PK、phash、file_size、modified_date、hash、last_calculated、**hash_adapter**(P-09))。
+- **image_features**(列: image_id PK、phash、file_size、modified_date、hash、last_calculated、**hash_adapter**(P-09)、
+  **phash_variants**(REQ-084/ECO-048 — migration 006))。
   pHash 等の特徴量を画像ごとに保存。ORB 列(orb_descriptors/orb_keypoints)は**本ループでは作らない**(ORB defer)。
   **hash_adapter**(P-09)= pHash を計算した adapter 世代の識別子。decode 経路/レシピ/SkiaSharp 版が pHash の
-  絶対値を動かす変更をしたら新 id を採番する(production 現行 = `skia-scaled-decode-v1`)
+  絶対値を動かす変更をしたら新 id を採番する(production 現行 = `skia-scaled-decode-v1`。8 変種の追加は
+  identity pHash の絶対値を動かさないため世代交代に**該当しない** — ECO-048)
+  **phash_variants**(REQ-084)= 8 オリエンテーション変種の pHash(2.10.1a の順序)を `,` で連結した TEXT。
+  NULL = 変種なし(旧レコード/変種非対応 reader)
 - **image_similarity**(列: cache_key PK、image_id1、image_id2、similarity_score、last_compared)。
   画像ペアの類似度キャッシュ。**ペアは文字列比較で小さい方を image_id1・大きい方を image_id2 に正規化**し、
   **cache_key = `{image_id1}-{image_id2}`**(本ループは pHash 単一モードのためモード識別子は付けない。
   ORB 導入時に `-{mode}` 接尾辞を追加する将来拡張余地のみ残す)。(A,B) と (B,A) は同一キャッシュ
-- **無効化は内容ベース + adapter 世代**: 対象画像の file_size / modified_date / hash のいずれかが image_features
-  記録と異なれば、**または記録の hash_adapter が現行 adapter と異なれば**(P-09)、特徴量を無効として再計算する。
+- **無効化は内容ベース + adapter 世代 + 変種欠落**: 対象画像の file_size / modified_date / hash のいずれかが
+  image_features 記録と異なれば、**または記録の hash_adapter が現行 adapter と異なれば**(P-09)、
+  **または現行 reader が変種対応で記録に phash_variants が無ければ**(REQ-084 — 旧レコードの自動アップグレード)、
+  特徴量を無効として再計算する。
   後者は adapter 世代交代(例 full-decode→scaled-decode)時に**旧 adapter 由来の pHash 値を自動的に無効化**し、
   連鎖無効化で旧類似度キャッシュも purge する(adapter をまたいだ値の混在=ランキング破壊を防ぐ)。
   旧 DB(P-09 以前)の hash_adapter は NULL=空で、現行 adapter と必ず不一致のため初回検索で再計算される。
@@ -664,6 +681,11 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
   **候補の status フィルタ(normal のみ)はキャッシュ参照より先に適用**し、非候補(deleted/missing/pending)は
   キャッシュ値があっても結果に含めない。フィルタ後の候補について特徴量・ペア類似度をキャッシュ(2.10.3)で
   参照し、無ければ計算して保存する。検索は UI をブロックしない(非同期実行・進捗通知が可能)
+  - **ペア距離(REQ-084 / ECO-048)**: ペアの距離は **序数比較で小さい id の identity pHash × 大きい id の
+    全 8 変種(2.10.1a)のハミング距離の最小値**とする(役割が id 順で決まるため対称・決定的 —
+    ペア正規化キャッシュ(2.10.3)と整合)。変種 [0]=identity を含むため距離は identity 同士の距離を
+    **上回らない**(スコアは従来値以上 = 既存検出の単調拡張・検出漏れの純減)。
+    大きい id 側の特徴量に変種が無い(旧レコード/変種非対応 reader)場合は identity 同士の距離のみ(後方互換)
   - **候補を normal に限定する根拠(v3.0 — G2 補正)**: V3 のユースケースは「重複 normal 画像を見つけて統合」。
     missing は物理ファイルが無く pHash を新規計算できない。pending/missing を候補にする検索は relink 修復の
     用途であり後続ループ(V4)へ defer(§6)。これにより INV-010(既定の表示・抽出は normal のみ)とも整合する

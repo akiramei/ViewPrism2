@@ -1,4 +1,4 @@
-# Change Order — ECO-048(staged): 類似検索の回転・鏡像・クロップ耐性 — SimilarPic 検証済みアルゴリズムの BCL 移植を候補とする機能拡張
+# Change Order — ECO-048(fixed): 類似検索の回転・鏡像・クロップ耐性 — SimilarPic 検証済みアルゴリズムの BCL 移植を候補とする機能拡張
 
 > maintainer 要求(2026-07-06)。別リポ `../SimilarPic` で実装・検証した類似画像判定ライブラリの
 > 知見を ViewPrism2 の類似検索(Loop V3)へ還流する機能拡張。起票時に工程診断を実施済み。
@@ -86,7 +86,49 @@
 
 ## 6. 残ゲート
 
-1. **gate①(裁定・human)**: 案 A/B/C/D の選択(§4)。C を選ぶ場合は charter-v3 裁定記録 2 の再裁定を兼ねる。
-2. 裁定後: /eco-fix eco-048 — プローブ先行(回転画像ペアが現行で閾値未達=不合格となる回帰テストを先に追加し実測)→ 新 REQ 採番→是正→機械受入。
-3. golden(maintainer 実機): 回転/鏡像した重複画像が類似検索で検出される(案 B なら+クロップ/色調ケース)。
-4. クローズ時: CP 観点明記+register applied+SimilarPic 側知見の出典記録。
+1. ~~**gate①(裁定・human)**: 案 A/B/C/D の選択(§4)~~ → **受領: 案 A**(maintainer 2026-07-06)
+2. ~~裁定後: /eco-fix eco-048 — プローブ先行→新 REQ 採番→是正→機械受入~~ → 完了(§7)
+3. **golden(maintainer 実機)**: 回転・鏡像した重複画像が類似検索で検出される(§7 末尾の基準)。
+4. クローズ時: CP 観点明記+register applied+教訓。
+
+## 7. 実施記録(2026-07-06 — 案 A 実装・機械受入完了・golden 待ち)
+
+- **gate① 裁定**: 案 A(8 オリエンテーション pHash — 回転・鏡像の最小移植。クロップ・多特徴量・ORB は対象外のまま)。
+- **プローブ先行(R5・実測裏取り)**: CpSim048OrientationTests に実 decode 経路(production reader
+  PHashImageReaderScaledDecode)+一時 PNG の E2E 回帰テストを是正前に追加し実行 —
+  **回転 90°=不合格(検索結果 空)・鏡像=不合格(検索結果 空)・対照(同一複製)=合格(score 100)**。
+  既存 552 テストは全緑。単一オリエンテーション pHash では原理的に検出不能(§3)を実測で固定してから着手。
+- **是正の裁定(折り合い 2 点 — 起票時想定からの変更)**:
+  - **adapter 世代は bump しない**: 起票時は「新 adapter 世代」を想定したが、Oracle の
+    ThisBuildGoldenTests が production AdapterId(`skia-scaled-decode-v1`)と pHash golden 値を凍結
+    しており bump は R6 抵触。8 変種の追加は identity pHash の絶対値を動かさない= P-09 の
+    世代交代発動条件に該当しないため、旧レコードの自動アップグレードは**変種欠落= stale** の
+    無効化条件追加(IsFresh の第 3 条件)で実現(仕様 §2.10.3 追補)。
+  - **インターフェース非破壊**: Oracle S-21/S-22 が IPHashImageReader を private fake で実装しており
+    メソッド追加は Oracle 改変を強制する。**default interface method**(SupportsOrientationVariants=false
+    既定+ComputePHashVariantsAsync=null 既定)で既存実装・fake を無改変に保つ
+    (ECO-046 optional 注入= V4 CHEAT-01 と同系の折り合い)。
+- **実装(上流→下流)**:
+  - 台帳: REQ-084 新設・spec §2.10.1a(変種 8 種の順序固定=D4)/§2.10.3(phash_variants 列+無効化第 3 条件)/
+    §2.10.4(ペア距離規則)追補・S-40 追加(41)・E-BOM 宣言補完(E-PHASH-031/E-SIMSEARCH-032/E-SIMCACHE-033)。
+  - Core: PHashOrientations 新設(32×32 格子の添字置換のみ= BCL・決定的・[0]=identity はレシピ pHash と一致)。
+    SimilaritySearchService — ペア距離=**序数比較で小さい id の identity × 大きい id の全変種の最小**
+    (役割が id 順で決まるため対称=ペア正規化キャッシュと整合・変種[0]を含むため単調拡張)。
+    変種なし特徴量とは identity 同士のみ(後方互換)。
+  - Infrastructure: 両 reader(full/scaled)にデコード共通化+ComputePHashVariantsAsync 実装。
+    migration 006(image_features.phash_variants TEXT NULL)+ LatestDdl 同値(CP-DB-006 前例踏襲)。
+  - UI・CAD: 無変更(検索 UI の裏側の変化のみ)。
+- **機械受入(4 点全緑)**: build 0 error/0 warning・**Tests 559/559**(552+7 新規: E2E 回転/鏡像/対照・
+  対称性・stale アップグレード・後方互換・L2 列)— **プローブ 2 件は合格に転化**・
+  **Oracle 104+2skip**(102+S-40 2 件・凍結オラクル回帰ゼロ= S-21/S-22/S-25 順位等価/ThisBuildGolden 全緑)・
+  validate_bom 0 error/0 warning。
+- diff: Core 3 ファイル(+1 新設)・Infrastructure 3・Tests 2(+1 新設)・Oracle +1 新設(S-40)・bomdd 5。
+
+### golden 合格基準(gate② — maintainer 実機)
+
+1. 画像タブで任意の画像を 1 枚選び類似検索 → **その画像を 90° 回転して保存した複製**(ペイント等で回転)が
+   既定閾値 70 で結果に出る(高スコア)。
+2. 同様に**左右反転した複製**が結果に出る。
+3. 回帰: 従来検出できていた「同一/再エンコードの複製」が引き続き検出される(スコア低下なし)。
+4. 回帰: 無関係な画像が新たに紛れ込まない(結果の妥当性が体感で崩れていない)。
+※ 既存 DB の特徴量は初回検索時に自動で再計算される(変種欠落= stale)。初回のみ計算時間が延びる。

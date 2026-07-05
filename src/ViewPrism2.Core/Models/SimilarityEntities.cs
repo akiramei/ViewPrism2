@@ -31,6 +31,13 @@ public sealed record ImageFeature
 
     /// <summary>特徴量の最終計算日時(ISO 8601 UTC)。</summary>
     public required string LastCalculated { get; init; }
+
+    /// <summary>
+    /// 8 オリエンテーション変種の pHash を ',' で連結した文字列(REQ-084 / ECO-048・仕様 §2.10.1a の順序・
+    /// [0]=identity)。NULL = 変種なし(migration 006 以前の旧レコード/変種非対応 reader)。
+    /// 現行 reader が変種対応(SupportsOrientationVariants)の場合、NULL は stale 扱い=再計算される。
+    /// </summary>
+    public string? PhashVariants { get; init; }
 }
 
 /// <summary>

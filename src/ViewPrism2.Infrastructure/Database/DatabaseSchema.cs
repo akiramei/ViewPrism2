@@ -113,7 +113,8 @@ public static class DatabaseSchema
             modified_date   TEXT    NULL,
             hash            TEXT    NULL,
             last_calculated TEXT    NULL,
-            hash_adapter    TEXT    NULL
+            hash_adapter    TEXT    NULL,
+            phash_variants  TEXT    NULL
         );
 
         CREATE TABLE image_similarity (
@@ -241,5 +242,12 @@ public static class DatabaseSchema
             );
             CREATE INDEX idx_merge_operations_target ON merge_operations(target_id);
             """),
+
+        // ECO-048(REQ-084): 8 オリエンテーション pHash 変種。image_features に phash_variants を追加。
+        // 既存行は NULL のまま=変種対応 reader の下で stale 扱い → 次回検索で再計算・連鎖無効化される
+        // (hash_adapter は不変: identity pHash の絶対値を動かす変更ではないため P-09 世代交代に該当しない)。
+        // ALTER ADD COLUMN は末尾に列を足す。LatestDdl も image_features 末尾へ同じ列を定義しスキーマ同値を保つ(CP-DB-006)。
+        new("006-image-features-phash-variants",
+            "ALTER TABLE image_features ADD COLUMN phash_variants TEXT NULL;"),
     ];
 }

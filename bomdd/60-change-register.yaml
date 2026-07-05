@@ -887,7 +887,7 @@ changes:
   - id: ECO-048
     title: "類似検索の回転・鏡像・クロップ耐性 — SimilarPic 検証済みアルゴリズムの BCL 移植を候補とする機能拡張"
     type: 機能拡張(要求新設 — 現行は REQ-061〜067/charter-v3 裁定 2 に完全適合=欠陥でない。上流=要求台帳から)
-    status: staged   # gate①(裁定)待ち: 案 A(8 オリエンテーション pHash=最小・推奨)/B(多特徴量合成・ORB 除く)/C(B+ORB=charter-v3 裁定 2 の再裁定要)/D(見送り)
+    status: staged   # gate① 受領=案 A(maintainer 2026-07-06)。是正+機械受入完了(fix 済み)・golden(gate②)待ち: 回転90°/左右反転の複製が閾値70で検出+同一複製/無関係画像の回帰。REQ-084 新設・S-40 追加(Oracle 102→104)・migration 006。折り合い2点=adapter 世代 bump せず(ThisBuildGolden 凍結・変種欠落=stale で自動アップグレード)/IPHashImageReader は default interface method で非破壊拡張(Oracle fake 無改変=R6)。プローブ実測=回転・鏡像とも是正前不合格→合格転化・対照(複製)は前後とも合格。Tests 559/559・build 0/0・validate 0-0
     baseline: "main 7014697"
     findings: "工程診断=要求が存在しない(REQ-061〜067 に回転/鏡像/クロップ耐性なし・charter-v3 裁定記録 2 で ORB/detailed 明示 defer)・CAD/BOM/実装いずれも健全=仕様どおり。現行は単一オリエンテーション pHash 1 本(PerceptualHash.Compute 32×32 行優先 DCT・SimilaritySearchService は保存済み phash のハミング距離のみ)= DCT-pHash の既知特性として回転/鏡像/クロップは原理的に検出不能。移植候補 ../SimilarPic(2026-07-06・git 未初期化)= pHash+dHash+Edge+Tile+stats 重み合成+8 オリエンテーション+ORB 二段(Possible 帯のみ)・検証 112 ケース全パス。うち OpenCV 依存は ORB のみ=案 A/B は BCL で完結し裁定 2 を覆さない。ライブラリ参照は不可(net10.0-windows+System.Drawing+OpenCvSharp win=クロスプラットフォーム/ADR-0002 衝突・永続化/単体テストなし)=活用形態はアルゴリズム移植一択"
     impacted_bom: ["E-PHASH-031", "E-SIMSEARCH-032", "E-SIMCACHE-033", "E-DB-010(image_features 拡張=migration・62 適用)", "M-PHASH-020", "M-SIMSEARCH-021", "10-requirements(新 REQ-084〜 見込み)", "20-spec §2.10", "41-fixed-oracle(新規行)"]

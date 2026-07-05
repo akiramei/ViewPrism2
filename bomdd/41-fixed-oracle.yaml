@@ -344,3 +344,11 @@ fixed_oracle:
       spec_ref: "bomdd/20-spec.md#2.2 REQ-083(TAG-008 U-a・ECO-046)"
       equivalence_ref: EQ-001
       depth: unit
+    - id: S-40
+      scope: cross-factory
+      added_by: ECO-048
+      scenario: "8 オリエンテーション pHash 変種(REQ-084 / ECO-048 案 A): 固定の非対称 32×32 格子に対する変種計算と、8 変換(D4・テスト側独立実装)を施した格子の照合"
+      contract_expectation: "ComputeAll は順序固定の 8 変種([0]=identity [1]=rotate90 [2]=rotate180 [3]=rotate270 [4]=flipH [5]=flipV [6]=transpose [7]=transverse)を返し、[0] は単体 pHash(OC-14 レシピ)と完全一致・決定的(再計算で同値)。各変換 k(独立実装)を施した格子の単体 pHash = 変種 [k](したがって任意の回転・鏡像は元格子の変種のいずれかと距離 0 で検出される)"
+      spec_ref: "bomdd/20-spec.md#2.10.1a REQ-084(ECO-048)"
+      equivalence_ref: EQ-001
+      depth: unit

@@ -402,21 +402,41 @@ public sealed class CpSim017Tests
     }
 }
 
-/// <summary>合成 pHash 注入用のフェイク reader(CP-SIM-017)。絶対パス→pHash の対応表+計算回数。</summary>
+/// <summary>
+/// 合成 pHash 注入用のフェイク reader(CP-SIM-017)。絶対パス→pHash の対応表+計算回数。
+/// 既定は変種非対応(SupportsOrientationVariants=false)= ECO-048 以前と同じ identity のみの挙動。
+/// SetVariants で変種を注入すると変種対応 reader として振る舞う(REQ-084 のペア規則検査用)。
+/// </summary>
 internal sealed class FakePHashImageReader(string adapterId = "skia-scaled-decode-v1") : IPHashImageReader
 {
     private readonly Dictionary<string, string?> _byPath = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IReadOnlyList<string>?> _variantsByPath = new(StringComparer.Ordinal);
 
     /// <summary>adapter 世代(P-09)。既定は production と同じ scaled-decode。世代交代検査では別 id を渡す。</summary>
     public string AdapterId { get; } = adapterId;
+
+    public bool SupportsOrientationVariants { get; set; }
 
     public int ComputeCount { get; private set; }
 
     public void SetPHash(string absolutePath, string? phash) => _byPath[absolutePath] = phash;
 
+    /// <summary>変種([0]=identity)を注入し、変種対応 reader として振る舞わせる(REQ-084)。</summary>
+    public void SetVariants(string absolutePath, IReadOnlyList<string>? variants)
+    {
+        _variantsByPath[absolutePath] = variants;
+        SupportsOrientationVariants = true;
+    }
+
     public Task<string?> ComputePHashAsync(string absoluteImagePath)
     {
         ComputeCount++;
         return Task.FromResult(_byPath.TryGetValue(absoluteImagePath, out var phash) ? phash : null);
+    }
+
+    public Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(string absoluteImagePath)
+    {
+        ComputeCount++;
+        return Task.FromResult(_variantsByPath.TryGetValue(absoluteImagePath, out var variants) ? variants : null);
     }
 }

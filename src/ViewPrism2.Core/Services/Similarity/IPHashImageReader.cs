@@ -18,4 +18,19 @@ public interface IPHashImageReader
 
     /// <summary>絶対パスの画像から 16hex pHash を計算する。失敗(壊れた画像)は null。</summary>
     Task<string?> ComputePHashAsync(string absoluteImagePath);
+
+    /// <summary>
+    /// この reader が 8 オリエンテーション変種(REQ-084 / ECO-048)を計算できるか。
+    /// 既定 false(default interface method — 既存実装・テスト用 fake を無改変に保つ後方互換。
+    /// R6: 固定オラクル側の fake 実装に手を入れないための折り合い。ECO-046 optional 注入と同系)。
+    /// true の場合、変種欠落の永続特徴量は stale 扱いで再計算される(仕様 §2.10.3)。
+    /// </summary>
+    bool SupportsOrientationVariants => false;
+
+    /// <summary>
+    /// 8 オリエンテーション変種の pHash(仕様 §2.10.1a の順序・[0]=identity)を計算する。
+    /// 失敗(壊れた画像)は null。既定実装は null(変種非対応 — 呼び出し側は identity にフォールバック)。
+    /// </summary>
+    Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(string absoluteImagePath)
+        => Task.FromResult<IReadOnlyList<string>?>(null);
 }
