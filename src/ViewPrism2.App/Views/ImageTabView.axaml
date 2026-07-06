@@ -425,14 +425,15 @@
               </StackPanel>
               <!-- 条件 -->
               <StackPanel Spacing="8" IsVisible="{Binding IsCriteriaMethod}">
-                <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
-                  <TextBox Text="{Binding CriteriaName}" PlaceholderText="ファイル名を含む…" BorderThickness="0"
-                           Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" />
-                </Border>
-                <Border Background="{StaticResource BadgeBg}" CornerRadius="9" Height="38" Padding="11,0">
-                  <TextBox Text="{Binding CriteriaExt}" PlaceholderText="拡張子（例 jpg）…" BorderThickness="0"
-                           Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" />
-                </Border>
+                <!-- ECO-055: 条件検索= マージ先との属性一致トグル(CAD condDefs 順・自由入力 2 欄は撤去) -->
+                <TextBlock Text="マージ先と一致を判定する条件" FontSize="12" Foreground="{StaticResource FaintTextBrush}" />
+                <WrapPanel>
+                  <ToggleButton IsChecked="{Binding CondHash}" Content="ハッシュ値" FontSize="12" Padding="10,5" Margin="0,0,6,6" />
+                  <ToggleButton IsChecked="{Binding CondExt}" Content="拡張子" FontSize="12" Padding="10,5" Margin="0,0,6,6" />
+                  <ToggleButton IsChecked="{Binding CondSize}" Content="サイズ" FontSize="12" Padding="10,5" Margin="0,0,6,6" />
+                  <ToggleButton IsChecked="{Binding CondName}" Content="ファイル名" FontSize="12" Padding="10,5" Margin="0,0,6,6" />
+                  <ToggleButton IsChecked="{Binding CondDate}" Content="更新日" FontSize="12" Padding="10,5" Margin="0,0,6,6" />
+                </WrapPanel>
               </StackPanel>
               <Button Classes="toolbarBtn" Height="38" MinHeight="38" HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Center" IsEnabled="{Binding CanRunSearch}" Command="{Binding RunSearchCommand}">

@@ -163,25 +163,27 @@ public sealed class CpUiG1OrganizeTests : IDisposable
     [Fact]
     public async Task 条件検索はマージ先を除いた候補を一致表示で返す()
     {
-        var vm = await NewVmAsync("dup1.jpg", "dup2.jpg", "dup3.jpg", "other.jpg");
+        // ECO-055: 条件検索= マージ先との属性一致(ファイル名= dest 名本体の部分一致)。
+        // dest「IMG_9.jpg」の本体 IMG_9 を含む複製 2 枚が一致し、other は不一致
+        var vm = await NewVmAsync("IMG_9.jpg", "IMG_9 (1).jpg", "IMG_9 (2).jpg", "other.jpg");
         vm.ToggleOrganizeCommand.Execute(null);
-        vm.HandleItemClick(Item(vm, "dup1.jpg"), false, false); // マージ先 dup1
+        vm.HandleItemClick(Item(vm, "IMG_9.jpg"), false, false); // マージ先
 
         vm.SetSearchMethodCommand.Execute("criteria");
         Assert.True(vm.IsCriteriaMethod);
-        vm.CriteriaName = "dup";
+        vm.CondName = true;
         await vm.RunSearchCommand.ExecuteAsync(null);
 
         Assert.True(vm.ShowSearchResults);
         var names = vm.SearchResults.Select(r => r.Name).OrderBy(n => n).ToList();
-        Assert.Equal(["dup2.jpg", "dup3.jpg"], names); // dup1(マージ先)と other は出ない
+        Assert.Equal(["IMG_9 (1).jpg", "IMG_9 (2).jpg"], names); // マージ先自身と other は出ない
         Assert.All(vm.SearchResults, r => Assert.Equal("条件一致", r.ScoreText));
 
         // 候補を整理対象へ追加
-        vm.AddCandidateToTargetsCommand.Execute(Id("dup2.jpg"));
+        vm.AddCandidateToTargetsCommand.Execute(Id("IMG_9 (1).jpg"));
         Assert.Single(vm.OrganizeTargets);
-        Assert.Equal("dup2.jpg", vm.OrganizeTargets[0].Name);
-        Assert.True(vm.SearchResults.Single(r => r.Name == "dup2.jpg").Added);
+        Assert.Equal("IMG_9 (1).jpg", vm.OrganizeTargets[0].Name);
+        Assert.True(vm.SearchResults.Single(r => r.Name == "IMG_9 (1).jpg").Added);
     }
 
     [Fact]

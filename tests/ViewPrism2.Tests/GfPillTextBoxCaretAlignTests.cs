@@ -151,71 +151,8 @@ public sealed class GfPillTextBoxCaretAlignTests : IDisposable
         }, CancellationToken.None);
     }
 
-    [Fact]
-    public async Task 整理トレイ条件入力のテキスト行はピル垂直中央_画像タブ()
-    {
-        var vm = await NewImageTabVmAsync();
-        vm.ToggleOrganizeCommand.Execute(null);            // 整理モード(右ペイン=整理トレイ)
-        vm.SetSearchMethodCommand.Execute("criteria");     // 条件検索= 条件入力 2 本が可視
-        Assert.True(vm.IsCriteriaMethod);
-
-        await HeadlessApp.Session.Dispatch(() =>
-        {
-            var window = new Window { Content = new ImageTabView { DataContext = vm }, Width = 1366, Height = 768 };
-            window.Show();
-            RunJobs();
-
-            var boxes = window.GetVisualDescendants().OfType<TextBox>()
-                .Where(t => t.IsEffectivelyVisible && t.PlaceholderText is not null &&
-                            (t.PlaceholderText.Contains("ファイル名") || t.PlaceholderText.Contains("拡張子")))
-                .ToList();
-            Assert.Equal(2, boxes.Count); // ファイル名+拡張子
-            AssertCentered(boxes[0], "整理トレイ 条件入力(1本目)");
-            AssertCentered(boxes[1], "整理トレイ 条件入力(2本目)");
-
-            window.Close();
-        }, CancellationToken.None);
-    }
-
-    [Fact]
-    public async Task 整理トレイ条件入力のテキスト行はピル垂直中央_作業タブ()
-    {
-        // 作業スペースに画像 1 枚を seed(整理トレイは整理モード時のみ可視)
-        await _db.Folders.AddAsync(new SyncFolder { Id = "f1", Name = "F", Path = @"C:\f" });
-        await _db.Images.AddAsync(new ImageRecord
-        {
-            Id = "a", SyncFolderId = "f1", RelativePath = "a.jpg", FileName = "a.jpg",
-            FileSize = 10, Hash = new string('0', 64), Status = ImageStatus.Normal,
-            CreatedDate = "2026-06-11T00:00:00.000Z", ModifiedDate = "2026-06-11T00:00:00.000Z",
-        });
-        var workspaces = new WorkspaceService(_db.Workspaces, _db.Clock);
-        await workspaces.AddImagesToDefaultAsync(new[] { "a" });
-        var vm = new WorkTabViewModel(
-            workspaces, _db.Folders, _db.Tags,
-            new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
-            new MergeService(_db.Images, _db.Tags, _db.Merges),
-            new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new ImageSorter(), new AppSettings());
-        await vm.InitializeAsync();
-        vm.ToggleOrganizeCommand.Execute(null);
-        vm.SetSearchMethodCommand.Execute("criteria");
-        Assert.True(vm.OrganizeMode && vm.IsCriteriaMethod);
-
-        await HeadlessApp.Session.Dispatch(() =>
-        {
-            var window = new Window { Content = new WorkTabView { DataContext = vm }, Width = 1366, Height = 768 };
-            window.Show();
-            RunJobs();
-
-            var boxes = window.GetVisualDescendants().OfType<TextBox>()
-                .Where(t => t.IsEffectivelyVisible && t.PlaceholderText is not null &&
-                            (t.PlaceholderText.Contains("ファイル名") || t.PlaceholderText.Contains("拡張子")))
-                .ToList();
-            Assert.Equal(2, boxes.Count); // ファイル名+拡張子
-            AssertCentered(boxes[0], "作業タブ 整理トレイ 条件入力(1本目)");
-            AssertCentered(boxes[1], "作業タブ 整理トレイ 条件入力(2本目)");
-
-            window.Close();
-        }, CancellationToken.None);
-    }
+    // ECO-055(裁定②a): 「整理トレイ条件入力のテキスト行はピル垂直中央」×2(画像/作業タブ)は退役 —
+    // 検査対象の自由入力 TextBox 2 本が CAD 意味論(マージ先との属性一致トグル)への置換で消滅した。
+    // ECO-040 の観点(ピル埋込 TextBox の垂直中央)はタグ追加検索ボックスの fact が引き続き担う。
+    // トグルチップの視覚は golden(G-9/G-1)+次の v2 追随 ECO のレイアウト検査で担保する。
 }

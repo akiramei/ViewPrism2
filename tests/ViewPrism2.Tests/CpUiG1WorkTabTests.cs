@@ -157,11 +157,12 @@ public sealed class CpUiG1WorkTabTests : IDisposable
     public async Task 整理モードでマージ先を選び条件検索でまとめてマージ()
     {
         await _db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = @"C:\f" });
-        foreach (var id in new[] { "dup_a", "dup_b", "other" })
+        // ECO-055: 条件検索= マージ先との属性一致。dup_a/dup_b は同一ハッシュ(=完全重複)・other は別ハッシュ
+        foreach (var (id, hash) in new[] { ("dup_a", "h"), ("dup_b", "h"), ("other", "h2") })
             await _db.Images.AddAsync(new ImageRecord
             {
                 Id = id, SyncFolderId = Folder, RelativePath = $"{id}.jpg", FileName = $"{id}.jpg",
-                FileSize = 100, Hash = "h", Status = ImageStatus.Normal,
+                FileSize = 100, Hash = hash, Status = ImageStatus.Normal,
                 CreatedDate = "2026-01-01T00:00:00.000Z", ModifiedDate = "2026-01-01T00:00:00.000Z",
             });
         var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
@@ -179,9 +180,9 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         Assert.True(vm.HasMergeTarget);
         Assert.Equal("dup_a.jpg", vm.MergeTarget!.Name);
 
-        // 条件検索「dup」→ dup_b(マージ先 dup_a は除外・現スペース内に限定)
+        // 条件検索(ECO-055: マージ先とハッシュ一致)→ dup_b(マージ先 dup_a は除外・other は別ハッシュで不一致)
         vm.SetSearchMethodCommand.Execute("criteria");
-        vm.CriteriaName = "dup";
+        vm.CondHash = true;
         await vm.RunSearchCommand.ExecuteAsync(null);
         Assert.True(vm.ShowSearchResults);
         Assert.Equal(new[] { "dup_b" }, vm.SearchResults.Select(r => r.Id).ToArray());

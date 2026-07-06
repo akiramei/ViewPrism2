@@ -721,8 +721,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public string SimilarThresholdLabel => Organize.SimilarThresholdLabel;
     /// <summary>類似検索はマージ先(基準画像)が必要。</summary>
     public bool CanRunSimilar => Organize.CanRunSimilar;
-    public string CriteriaName { get => Organize.CriteriaName; set => Organize.CriteriaName = value; }
-    public string CriteriaExt { get => Organize.CriteriaExt; set => Organize.CriteriaExt = value; }
+    // ECO-055: 条件検索=マージ先との属性一致トグル(自由入力 2 欄は撤去・裁定②a)
+    public bool CondHash { get => Organize.CondHash; set => Organize.CondHash = value; }
+    public bool CondExt { get => Organize.CondExt; set => Organize.CondExt = value; }
+    public bool CondSize { get => Organize.CondSize; set => Organize.CondSize = value; }
+    public bool CondName { get => Organize.CondName; set => Organize.CondName = value; }
+    public bool CondDate { get => Organize.CondDate; set => Organize.CondDate = value; }
     public bool Searching => Organize.Searching;
     /// <summary>検索結果表示(中央ペインを候補一覧へ切替)。完了状態では出さない。</summary>
     public bool ShowSearchResults => _organizeMode && Organize.HasSearched && !Organize.OrganizeDone;

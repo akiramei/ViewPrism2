@@ -73,8 +73,12 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private string? _undoNote;
     private string _searchMethod = "similar";
     private int _similarThreshold = 70; // 既定は仕様値 70(REQ-064/065・ECO-050 — 90 は転写ドリフトの逸脱だった)
-    private string _criteriaName = "";
-    private string _criteriaExt = "";
+    // ECO-055: 条件検索= CAD 意味論(マージ先との属性一致トグル 5 種)。自由入力 2 欄は撤去(裁定②a)
+    private bool _condHash;
+    private bool _condExt;
+    private bool _condSize;
+    private bool _condName;
+    private bool _condDate;
     private bool _searching;
     private bool _hasSearched;
     private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
@@ -203,12 +207,18 @@ public sealed partial class WorkTabViewModel : ObservableObject
         set { _similarThreshold = Math.Clamp(value, 50, 100); OnPropertyChanged(); OnPropertyChanged(nameof(SimilarThresholdLabel)); }
     }
     public string SimilarThresholdLabel => $"{_similarThreshold}%";
-    public string CriteriaName { get => _criteriaName; set => _criteriaName = value ?? ""; }
-    public string CriteriaExt { get => _criteriaExt; set => _criteriaExt = value ?? ""; }
+    // ECO-055: マージ先との属性一致トグル(順序はモック condDefs: hash/ext/size/name/date)
+    public bool CondHash { get => _condHash; set { _condHash = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
+    public bool CondExt { get => _condExt; set { _condExt = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
+    public bool CondSize { get => _condSize; set { _condSize = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
+    public bool CondName { get => _condName; set { _condName = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
+    public bool CondDate { get => _condDate; set { _condDate = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
+    private bool HasAnyCond => _condHash || _condExt || _condSize || _condName || _condDate;
     public bool Searching => _searching;
     public bool ShowSearchResults => _organizeMode && _hasSearched && !_organizeDone;
     public bool NoSearchResults => ShowSearchResults && SearchResults.Count == 0;
-    public bool CanRunSearch => IsCriteriaMethod || _mergeTargetId is not null;
+    /// <summary>検索実行可否(ECO-055 裁定③): 条件検索もマージ先必須+条件 1 つ以上。類似は従来どおり。</summary>
+    public bool CanRunSearch => _mergeTargetId is not null && (!IsCriteriaMethod || HasAnyCond);
     public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
     public string MergeButtonLabel => $"マージを実行（{_organizeTargets.Count} 枚）";
     public bool OrganizeDone => _organizeDone;
@@ -837,7 +847,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _mergeTargetId = null;
         _organizeTargets.Clear();
         _searchMethod = "similar";
-        _criteriaName = ""; _criteriaExt = "";
+        _condHash = false; _condExt = false; _condSize = false; _condName = false; _condDate = false; // ECO-055
         _searching = false; _hasSearched = false;
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
@@ -901,9 +911,14 @@ public sealed partial class WorkTabViewModel : ObservableObject
         {
             if (_searchMethod == "criteria")
             {
-                var criteria = BuildCriteria();
-                if (CriteriaHasAny(criteria))
+                // ECO-055: マージ先(dest)との属性一致検索(CAD 意味論)。dest 必須(裁定③)・空条件非実行
+                var dest = _mergeTargetId is null
+                    ? null
+                    : _sourceImages.FirstOrDefault(i => string.Equals(i.Id, _mergeTargetId, StringComparison.Ordinal));
+                if (dest is not null && HasAnyCond)
                 {
+                    var criteria = OrganizeCriteria.FromMergeTarget(
+                        dest, _condHash, _condExt, _condSize, _condName, _condDate);
                     var ids = CriteriaMatcher.Match(_sourceImages, criteria,
                         new HashSet<ImageStatus> { ImageStatus.Normal });
                     foreach (var id in ids)
@@ -925,16 +940,6 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _hasSearched = true;
         Recompute();
     }
-
-    private SearchCriteria BuildCriteria() => new()
-    {
-        NameContains = string.IsNullOrWhiteSpace(_criteriaName) ? null : _criteriaName.Trim(),
-        Extension = string.IsNullOrWhiteSpace(_criteriaExt) ? null : _criteriaExt.Trim(),
-    };
-
-    private static bool CriteriaHasAny(SearchCriteria c) =>
-        c.Hash is not null || c.NameContains is not null || c.Extension is not null ||
-        c.MtimeFrom is not null || c.MtimeTo is not null || c.SizeMin is not null || c.SizeMax is not null;
 
     /// <summary>検索結果の候補を整理対象へ追加する(マージ先が前提)。</summary>
     [RelayCommand]

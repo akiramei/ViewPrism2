@@ -31,8 +31,12 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private readonly List<string> _organizeTargets = new();
     private string _searchMethod = "similar";    // "similar" | "criteria"
     private int _similarThreshold = 70; // 既定は仕様値 70(REQ-064/065・ECO-050 — 80 は工場仮置きの逸脱だった)
-    private string _criteriaName = "";
-    private string _criteriaExt = "";
+    // ECO-055: 条件検索= CAD 意味論(マージ先との属性一致トグル 5 種)。自由入力 2 欄は撤去(裁定②a)
+    private bool _condHash;
+    private bool _condExt;
+    private bool _condSize;
+    private bool _condName;
+    private bool _condDate;
     private bool _searching;
     private bool _hasSearched;
     private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
@@ -42,6 +46,8 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private string? _undoOperationId;
     private bool _canUndo;
     private string? _undoNote;
+
+    private readonly IImageRepository _images; // ECO-055: マージ先レコードの属性解決(条件検索の基準)
 
     public ImageTabOrganizeViewModel(
         IImageRepository images,
@@ -55,6 +61,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _similar = similar;
         _merge = merge;
         _criteriaSearch = new CriteriaSearchService(images); // 整理トレイの条件検索(E-CRITERIA-037)。images のみ依存
+        _images = images; // ECO-055
         _getCollectionId = getCollectionId;
         _recompute = recompute;
         _refreshSelectionMarkers = refreshSelectionMarkers;
@@ -82,12 +89,19 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     public string SimilarThresholdLabel => $"{_similarThreshold}%";
     /// <summary>類似検索はマージ先(基準画像)が必要。</summary>
     public bool CanRunSimilar => _mergeTargetId is not null;
-    public string CriteriaName { get => _criteriaName; set => _criteriaName = value ?? ""; }
-    public string CriteriaExt { get => _criteriaExt; set => _criteriaExt = value ?? ""; }
+    // ECO-055: マージ先との属性一致トグル(順序はモック condDefs: hash/ext/size/name/date)。
+    // 通知は全通知(ECO-038 CR-6 同型 — CanRunSearch の派生を漏らさない)
+    public bool CondHash { get => _condHash; set { _condHash = value; OnPropertyChanged(string.Empty); } }
+    public bool CondExt { get => _condExt; set { _condExt = value; OnPropertyChanged(string.Empty); } }
+    public bool CondSize { get => _condSize; set { _condSize = value; OnPropertyChanged(string.Empty); } }
+    public bool CondName { get => _condName; set { _condName = value; OnPropertyChanged(string.Empty); } }
+    public bool CondDate { get => _condDate; set { _condDate = value; OnPropertyChanged(string.Empty); } }
+    private bool HasAnyCond => _condHash || _condExt || _condSize || _condName || _condDate;
     public bool Searching => _searching;
     public bool HasSearched => _hasSearched;
-    /// <summary>検索実行可否: 条件検索は常に / 類似はマージ先(基準)が要る。</summary>
-    public bool CanRunSearch => IsCriteriaMethod || _mergeTargetId is not null;
+    /// <summary>検索実行可否(ECO-055 裁定③): 条件検索もマージ先が必須(dest と比べる意味論)+
+    /// 条件 1 つ以上(空条件非実行= REQ-068)。類似は従来どおりマージ先必須。</summary>
+    public bool CanRunSearch => _mergeTargetId is not null && (!IsCriteriaMethod || HasAnyCond);
 
     public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
     public string MergeButtonLabel => $"マージを実行（{_organizeTargets.Count} 枚）";
@@ -106,7 +120,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _mergeTargetId = null;
         _organizeTargets.Clear();
         _searchMethod = "similar";
-        _criteriaName = ""; _criteriaExt = "";
+        _condHash = false; _condExt = false; _condSize = false; _condName = false; _condDate = false; // ECO-055
         _searching = false; _hasSearched = false;
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
@@ -158,17 +172,6 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         OnPropertyChanged(string.Empty);
     }
 
-    private SearchCriteria BuildCriteria() => new()
-    {
-        NameContains = string.IsNullOrWhiteSpace(_criteriaName) ? null : _criteriaName.Trim(),
-        Extension = string.IsNullOrWhiteSpace(_criteriaExt) ? null : _criteriaExt.Trim(),
-        // hash / サイズ範囲 / 更新日範囲の入力は surface 増分(M2)で結線する。
-    };
-
-    private static bool CriteriaHasAny(SearchCriteria c) =>
-        c.Hash is not null || c.NameContains is not null || c.Extension is not null ||
-        c.MtimeFrom is not null || c.MtimeTo is not null || c.SizeMin is not null || c.SizeMax is not null;
-
     /// <summary>似た画像を探す: 類似(E-SIMSEARCH-032)または条件(E-CRITERIA-037)。結果を中央ペインへ。
     /// 途中通知(searching 表示更新)は recompute 注入で現行位置を保持する(order §12.2)。</summary>
     public async Task RunSearchAsync()
@@ -181,15 +184,21 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         {
             if (_searchMethod == "criteria")
             {
-                var criteria = BuildCriteria();
-                if (CriteriaHasAny(criteria))
+                // ECO-055: マージ先(dest)との属性一致検索(CAD 意味論)。dest 必須(裁定③)・空条件非実行
+                if (_mergeTargetId is not null && HasAnyCond)
                 {
-                    var recs = await _criteriaSearch.SearchAsync(collectionId, criteria,
-                        new HashSet<ImageStatus> { ImageStatus.Normal }, CancellationToken.None).ConfigureAwait(true);
-                    foreach (var r in recs)
+                    var dest = await _images.GetByIdAsync(_mergeTargetId).ConfigureAwait(true);
+                    if (dest is not null)
                     {
-                        if (string.Equals(r.Id, _mergeTargetId, StringComparison.Ordinal)) continue; // マージ先自身は候補に出さない
-                        results.Add((r.Id, 100, true));
+                        var criteria = OrganizeCriteria.FromMergeTarget(
+                            dest, _condHash, _condExt, _condSize, _condName, _condDate);
+                        var recs = await _criteriaSearch.SearchAsync(collectionId, criteria,
+                            new HashSet<ImageStatus> { ImageStatus.Normal }, CancellationToken.None).ConfigureAwait(true);
+                        foreach (var r in recs)
+                        {
+                            if (string.Equals(r.Id, _mergeTargetId, StringComparison.Ordinal)) continue; // マージ先自身は候補に出さない
+                            results.Add((r.Id, 100, true));
+                        }
                     }
                 }
             }
