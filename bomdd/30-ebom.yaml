@@ -260,6 +260,7 @@ ebom:
         - 特徴量再計算時はその画像が関与する image_similarity 行を連鎖削除する
         - 画像削除時は FK CASCADE で両テーブルの関連行を削除
         - since ECO-048(REQ-084) phash_variants 列(migration 006)= 8 変種 pHash の ',' 連結 TEXT・NULL=旧レコード。hash_adapter は世代交代しない(identity 値不変)
+        - since ECO-054 production adapter= skia-scaled-decode-v2(経路一貫性= K-SKIA v4.1 の一様中間段。世代交代は P-09 の正規伝搬=旧特徴量の自動再計算・連鎖無効化・this-build golden 再凍結手続き)
       acceptance_refs: [CP-SIM-017, CP-DB-006]
 
     - id: E-MERGE-034
