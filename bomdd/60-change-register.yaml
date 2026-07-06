@@ -960,3 +960,14 @@ changes:
     impacted_bom: ["M-SIMSEARCH-021(PHashImageReaderScaledDecode)", "E-SIMSEARCH-032", "E-SIMCACHE-033", "31-kbom K-SKIA v3.1 追補(経路一貫性)", "20-spec §2.10 注記", "33 CP-PHASH-ADAPTER-019(v2 表記)", "41(新規行 S-42=フォーマット間経路一貫性)", "tests/ViewPrism2.Oracle/ThisBuildGoldenTests.cs(AdapterId 定数 1 行=ライセンス済み再凍結手続き)"]
     body: 60-change-order-eco-054.md
     notes: "プローブ= 合成 png/jpg 複製ペアが現行 reader でスコア 70 台の不合格テストを是正前実測→対称化後 90 台へ転化。教訓 3(数値は値を pin)適用= 再凍結は値の同一性を実測記録してから。golden 基準= orientation_fixture_06.png×jpg が 90 点台+既存検出の回帰なし+初回検索の再計算所要を明記"
+
+  - id: ECO-055
+    title: "整理トレイの条件検索が CAD/E-BOM 定義の 5 条件中 2 条件しか配線されていない(名前・拡張子のみ — ハッシュ値/サイズ/更新日が欠落)"
+    type: 欠陥是正(ECO-041 型=CAD 定義済み機能の実装欠落・部分版。整理マージ v2 モック受入 Phase 0 の三者差分で発見・maintainer 裁定=v2 追随 ECO と分離し順序実施=本 ECO 先行)
+    status: staged   # 工程診断=実装欠落で裁定不要・/eco-fix 着手可
+    golden: pending
+    baseline: "main fc17f7d"
+    findings: "CAD=v1 モックから condDefs 5 条件(hash/ext/size/name/date・v2 も完全同一=「増えた」の正体は既存欠落の顕在化)・散文も 5 条件明記。E-BOM=E-UI-SIMILARITY-035 ECO-014 invariant に 5 条件明記。order(ECO-014 L25)=5 条件指定・縮退記録なし。エンジン=SearchCriteria(Hash/NameContains/Extension/MtimeFrom・To/サイズ範囲)+CriteriaMatcher は 5 条件対応済み(REQ-068・S-27 凍結)=Core 無改変で足りる。実装=両タブとも CriteriaName/CriteriaExt の 2 欄のみ(ImageTabOrganizeViewModel:85-86/BuildCriteria:161・WorkTabViewModel:929・XAML 各 2 欄)。混入=0cf44ba(整理モード製造①=ECO-050 しきい値 80 と同一コミット・同族様式)→81500a8 転写。マスキング=G-9/G-1 に条件全数の観点なし+CP unit も name/ext 経由のみ=「全数がどの検査面にもない」(ECO-050/052 同族)"
+    impacted_bom: ["M-UI-ORGANIZE-034", "M-UI-IMAGETAB-035", "M-UI-WORKSPACE-029", "CP-UI-G9/CP-UI-G1(クローズ時観点明記)"]
+    body: 60-change-order-eco-055.md
+    notes: "是正=両タブ VM に 3 条件のプロパティ+BuildCriteria 充填+XAML 入力欄(入力形状は v2 モック=CAD 権威に従う。ただし配置は現行レイアウト内に最小追加 — 3 ゾーン化は次の v2 追随 ECO の仕事=diff 混濁回避)。プローブ=欠落 3 条件で検索不能の実測。受入=条件全数 pin テスト(BuildCriteria が 5 条件を写像)で「全数がどの検査面にもない」様式を封止。エンジン・オラクル(S-27)無改変"
