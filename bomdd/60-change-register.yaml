@@ -916,3 +916,13 @@ changes:
     impacted_bom: ["M-UI-IMAGETAB-035(ImageTabOrganizeViewModel)", "M-UI-WORKSPACE-029(WorkTabViewModel)", "CP-UI-G9/CP-UI-G1(クローズ時観点明記)"]
     body: 60-change-order-eco-050.md
     notes: "是正=最小(literal 2 箇所を 70 へ)+既定値 pin の受入テスト(潜伏様式「既定値がどの検査面にもない」を直接塞ぐ)。プローブ=pin テストが是正前 80/90 で不合格の実測。台帳改訂なし・オラクル影響なし・DB 不変。教訓候補=spec の数値既定は unit で pin する(存在・意味論だけでなく値も検査面に載せる)"
+
+  - id: ECO-051
+    title: "V3 旧 UI(SimilarSearchWindow/MergeDialog/TrashView)一式の撤去 — ECO-024 原典撤去の撤去漏れ残骸"
+    type: 残骸撤去(挙動不変・視覚不変 — ECO-024 同型。ECO-050 診断中の R3 所見から昇格・診断で範囲がモーダル 1 つ→ WindowService 経由の V3 旧 UI 一式に拡大確定)
+    status: staged   # 工程診断=残骸撤去で裁定不要(ECO-024 裁定「テスト移行を確認してから削除」を前例踏襲)・/eco-fix 着手可
+    baseline: "main 7ce3ec3"
+    findings: "到達不能の連鎖(grep 全数): ShowSimilarSearchAsync=呼び出し元ゼロ・ShowMergeAsync=唯一の呼び出し元が死者自身(SimilarSearchViewModel:188)・ShowTrashAsync=呼び出し元ゼロ → 死者一式= 3 Window(SimilarSearchWindow/MergeDialog/TrashView)+3 VM+IF 3 メンバ+実装 3 つ。生存者と区別: トラッシュ表示の実体は ImageTabTrashViewModel(インペイン・別物)・トレイのマージは MergeService 直呼び(ECO-044)。残骸化= 8a34c43(ECO-024 原典撤去)で legacy Grid=最後の呼び出し元が消滅。IWindowService 間接参照のため ECO-024 の依存検証から漏れた。M-BOM as-built 乖離= M-UI-SIMILARITY-023 が死んだ artifact を指したまま(生きた実体は M-UI-ORGANIZE-034 等に既存)。テスト依存= CpUiSimilarityViewModelTests(死者の unit)+stub 3 メンバ×15 箇所前後(Tests のみ・Oracle 非参照)"
+    impacted_bom: ["M-UI-SIMILARITY-023(retire)", "M-UI-013(IWindowService/WindowService)", "tests/ViewPrism2.Tests(stub 3 メンバ+CpUiSimilarityViewModelTests 対応表→移行/削除)"]
+    body: 60-change-order-eco-051.md
+    notes: "是正手順= ①死者テストの受入観点対応表(生存側 CpUiG1OrganizeTests/CpMerge044UndoTests/CpUiG1TrashPopupTests 等とのカバー突合・不足のみ移行) ②撤去 ③M4(M-UI-SIMILARITY-023 retire=ECO-024 方式)。プローブ非該当(削除系)— 代替裏取り= 到達不能 grep 全数証拠+機械受入+L1 スモーク。golden 影響なし(視覚不変)・gate② は軽量確認(起動+主要画面一巡)の要否を maintainer 判断。i18n キーは専用と証明できた分のみ削除(疑わしければ残置)"
