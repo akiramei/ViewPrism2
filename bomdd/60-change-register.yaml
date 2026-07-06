@@ -971,3 +971,14 @@ changes:
     impacted_bom: ["M-UI-ORGANIZE-034", "M-UI-IMAGETAB-035", "M-UI-WORKSPACE-029", "CP-UI-G9/CP-UI-G1(クローズ時観点明記)"]
     body: 60-change-order-eco-055.md
     notes: "是正=両タブ VM に 3 条件のプロパティ+BuildCriteria 充填+XAML 入力欄(入力形状は v2 モック=CAD 権威に従う。ただし配置は現行レイアウト内に最小追加 — 3 ゾーン化は次の v2 追随 ECO の仕事=diff 混濁回避)。プローブ=欠落 3 条件で検索不能の実測。受入=条件全数 pin テスト(BuildCriteria が 5 条件を写像)で「全数がどの検査面にもない」様式を封止。エンジン・オラクル(S-27)無改変"
+
+  - id: ECO-056
+    title: "整理トレイの v2 CAD 追随(3 ゾーン+マージ先解除+REQ-067 追記)+v1 以来の CAD 視覚/導線逸脱 6 点の是正"
+    type: v2 追随+欠陥是正(ECO-055 golden 再確認時の maintainer 実機×v2 モック突合 8 所見。v2 新設 2 点=A-1/A-2 裁定済み・v1 定義への実装逸脱 6 点=ECO-014 ロット混入。同一 surface・同一 golden 由来につき 1 ECO — ECO-055 分離裁定の「順序実施」は満了)
+    status: staged
+    golden: pending
+    baseline: "main 6c59f37"
+    findings: "CAD=全 8 所見で健全・定義済み(是正不要)。v2 新設(228081d)= ①マージ先解除 clearDest+散文 L222/L353(A-2=REQ-067 追記へ) ②3 ゾーン固定(散文 L206-209・右ペイン共通クローム原則の実体化)。v1 から定義済み(v2 同一)= ③検索ボタン「探す」 ④条件 2 列グリッド ⑤チェックボックス行意匠 ⑥タブ「条件検索」「類似画像検索」の順・名称 ⑦検索結果ヘッダ backToGrid「グリッドへ」 ⑧タイル=selected チェック+isDest バッジ(マージ先は両方)。実装= トレイ全体が単一 ScrollViewer(実行ボタンごとスクロールアウト)・ClearDest 不在・タブ「類似画像」「条件」逆順短縮・「似た画像を探す」・WrapPanel+素 ToggleButton・検索結果に戻る導線なし(ShowSearchResults=organizeMode&&HasSearched&&!Done で HasSearched を戻す経路が存在しない=戻る手段は整理終了のみ)・マージ先=ラベルのみ/対象=チェックのみ排他。両タブ同型(CAD が同一部品と明記)。混入= 51ad8ee(整理モード製造②・ECO-014 ロット=ECO-050/055 と同族様式)。マスキング= G-9/G-1 観点が機能中心でモック詳細突合(文言/順序/意匠/導線)が不在=歴代 golden は外観大づかみで approved・v2 モック受入 Phase 0/1 を経た並置突合で一括顕在化"
+    impacted_bom: ["M-UI-ORGANIZE-034(ClearDest)", "M-UI-IMAGETAB-035(トレイ 3 ゾーン+検索結果ヘッダ+タイル)", "M-UI-WORKSPACE-029(同型)", "10-requirements(REQ-067 追記=A-2 裁定済み)", "CP-UI-G9/CP-UI-G1(クローズ時観点明記)"]
+    body: 60-change-order-eco-056.md
+    notes: "裁定不要(A-1/A-2 裁定済み・逸脱 6 点は CAD 権威確定)=/eco-fix 可。是正= トレイ DockPanel 化(上=マージ先ピン・下=アクションピン・対象のみ内部スクロール)+ClearDest(全通知=GF-055-01 教訓先回り)+視覚適合(タブ/文言/2 列 Grid/チェック行意匠/タイル チェック+バッジ)+「グリッドへ」導線。プローブ= ①解除手段の不在 ②戻る経路の不在 を是正前不合格で固定(視覚系は golden 管轄・fact 化は着手時判断=ECO-040 基盤)。未検証 3 点(タイル重畳の細部・戻り後の結果保持・結果ヘッダ構成)は v2 モック実測で fix 時確定。ECO-055 golden 基準 1 とは独立"
