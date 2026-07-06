@@ -721,12 +721,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public string SimilarThresholdLabel => Organize.SimilarThresholdLabel;
     /// <summary>類似検索はマージ先(基準画像)が必要。</summary>
     public bool CanRunSimilar => Organize.CanRunSimilar;
-    // ECO-055: 条件検索=マージ先との属性一致トグル(自由入力 2 欄は撤去・裁定②a)
-    public bool CondHash { get => Organize.CondHash; set => Organize.CondHash = value; }
-    public bool CondExt { get => Organize.CondExt; set => Organize.CondExt = value; }
-    public bool CondSize { get => Organize.CondSize; set => Organize.CondSize = value; }
-    public bool CondName { get => Organize.CondName; set => Organize.CondName = value; }
-    public bool CondDate { get => Organize.CondDate; set => Organize.CondDate = value; }
+    // ECO-055: 条件検索=マージ先との属性一致トグル(自由入力 2 欄は撤去・裁定②a)。
+    // 転送セッターはホスト側で全通知する(GF-055-01: 子 VM の通知はホストにバインドされた XAML へ
+    // 届かず CanRunSearch が固まる — ECO-038「転送殻の通知漏れ」同型。CR-6 全通知の先例に従う)
+    public bool CondHash { get => Organize.CondHash; set { Organize.CondHash = value; OnPropertyChanged(string.Empty); } }
+    public bool CondExt { get => Organize.CondExt; set { Organize.CondExt = value; OnPropertyChanged(string.Empty); } }
+    public bool CondSize { get => Organize.CondSize; set { Organize.CondSize = value; OnPropertyChanged(string.Empty); } }
+    public bool CondName { get => Organize.CondName; set { Organize.CondName = value; OnPropertyChanged(string.Empty); } }
+    public bool CondDate { get => Organize.CondDate; set { Organize.CondDate = value; OnPropertyChanged(string.Empty); } }
     public bool Searching => Organize.Searching;
     /// <summary>検索結果表示(中央ペインを候補一覧へ切替)。完了状態では出さない。</summary>
     public bool ShowSearchResults => _organizeMode && Organize.HasSearched && !Organize.OrganizeDone;

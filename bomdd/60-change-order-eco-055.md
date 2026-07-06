@@ -104,7 +104,15 @@
   **Oracle 109+2skip**(無改変)・validate_bom 0-0・selftest OK。
 - diff: src 5(共有写像新設+両 VM+XAML 2)・tests 3(新設 1+移行 2+退役)。
 
-### golden 合格基準(gate② — maintainer 実機)
+- **GF-055-01(golden 所見 2026-07-06 → 是正済み 2026-07-07)**: マージ先+条件 ON でも「似た画像を
+  探す」が押せず、類似タブ往復で直る。真因= ホスト転送セッター(CondX)が子 VM へ値を渡すだけで
+  **ホスト自身の PropertyChanged を発火しない**(XAML はホストにバインド・タブ往復で直るのは
+  SetSearchMethodCommand のホスト一括通知のため。**ECO-038「転送殻の通知漏れ」の同型を本 ECO の
+  実装自身が再発させた**)。是正= 転送セッターの全通知化(CR-6 先例)+回帰プローブ(ホスト経由の
+  トグル変更で PropertyChanged 発火+CanRunSearch 即時反映 — 是正前不合格を実測)。作業タブは
+  VM 直バインドのため非該当。機械受入再走= Tests 565/565・Oracle 109+2skip・validate 0-0。
+
+### golden 合格基準(gate② — maintainer 実機・GF-055-01 是正後の再確認)
 
 1. 整理モード → マージ先を 1 枚選ぶ → 条件検索タブ → **トグル 5 種(ハッシュ値/拡張子/サイズ/
    ファイル名/更新日)**が表示される(自由入力 2 欄は無い)。

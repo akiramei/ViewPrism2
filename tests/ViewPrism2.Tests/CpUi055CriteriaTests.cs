@@ -137,6 +137,26 @@ public sealed class CpUi055CriteriaTests : IDisposable
         Assert.False(vm.CanRunSearch); // マージ先なし → 不可(裁定③)
     }
 
+    [Fact]
+    public async Task トグル変更はホストの通知を発火しCanRunSearchが即時反映される()
+    {
+        // GF-055-01(golden 所見 2026-07-06): マージ先+条件 ON でもボタンが押せず、タブ往復で直る。
+        // 真因= ホスト転送セッターが子 VM へ値を渡すだけでホスト自身の PropertyChanged を発火しない
+        // (ECO-038「転送殻の通知漏れ」の同型 — XAML はホストにバインドしている)。
+        var vm = await NewVmAsync(("a.jpg", "h1", 10, "2026-06-11T00:00:00.000Z"));
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "a.jpg"), false, false); // マージ先あり
+        vm.SetSearchMethodCommand.Execute("criteria");
+        Assert.False(vm.CanRunSearch); // トグル全 OFF
+
+        var raised = false;
+        vm.PropertyChanged += (_, _) => raised = true;
+        vm.CondHash = true; // XAML と同じ「ホスト経由」で設定
+
+        Assert.True(raised, "ホストの PropertyChanged が発火していない(GF-055-01)");
+        Assert.True(vm.CanRunSearch);
+    }
+
     // ---- ヘルパ ----
 
     private async Task<ImageTabViewModel> NewVmAsync(
