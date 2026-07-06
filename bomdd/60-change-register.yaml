@@ -938,3 +938,13 @@ changes:
     impacted_bom: ["10-requirements(REQ-067)", "20-spec §2.6 G-9(as-built 同期は全案共通)+§2.10.5", "30-ebom E-UI-MERGE-036(invariant 矛盾解消)", "(a/c)ViewPrismUI CAD 先行+M-UI-ORGANIZE-034/M-UI-IMAGETAB-035/M-UI-WORKSPACE-029", "(a/c)CP-UI-G9/G1"]
     body: 60-change-order-eco-052.md
     notes: "a/c は CAD 是正(ViewPrismUI)が先(R2 上流優先)。どの案でも G-9 チェックリストのトレイ as-built 同期を実施(旧モーダル操作手順の書き替え — ECO-014 の M4 漏れの是正)。未検証参考= 原典 ImageMergeModal のプレビュー/注記有無(原典リバースで確認可・裁定必須ではない)"
+
+  - id: ECO-053
+    title: "validate_bom の検査器欠陥 2 件 — YAML 重複キー無検査+register 検査(E9/E10/E11)の空回り"
+    type: 検査器是正(bomdd 工具 — 製品 src/tests・台帳データ無関係。ECO-050 起票時所見から昇格・診断で第 2 欠陥を発見)
+    status: staged   # 工程診断=検査器欠陥で裁定不要・/eco-fix 着手可
+    baseline: "main 2c7bc22"
+    findings: "欠陥1= load_yaml が yaml.safe_load(validate_bom.py:62-63)= PyYAML は重複キーを警告なく後勝ちマージ → ECO-049 の register 誤挿入(同一マッピングに baseline 等が二重化・parsed 値が化けた)を 0-0 素通し(修復 da155ad・発見は人手)。欠陥2= reg.get(\"change_orders\")(:148)が ECO-034(2026-07-03)のキー改名 change_orders:→changes: に未追随 → cos=[] で E9/E10/E11 が 3 日間 no-op。マスキング= ECO-034 検証の「error/warn 不変」は検査停止による不変だった。付随= E10 復活時に GOLDEN_VOCAB(素値)と現運用(approved(日付…) 長文=ECO-022 以降)の乖離が露呈 → prefix 一致へ意味論追随(E9 status は素値運用で衝突なし)。重複キーの実害面は register に限らず全 YAML 台帳(誤挿入事故様式は台帳共通)"
+    impacted_bom: ["bomdd/validate_bom.py(検査器・M-BOM 外の bomdd 工具)"]
+    body: 60-change-order-eco-053.md
+    notes: "是正= ①重複キー拒否ローダ(SafeLoader 派生・新コード E13=ファイル+キー+行)②changes: へ追随 ③E10 prefix 一致化 ④プローブ=da155ad 直前の壊れた register(git show)と故意の語彙違反の 2 態で現行 0-0 素通しを実測→是正後に E13/E9 発火へ転化 ⑤--selftest 内蔵は着手時判断。復活検査が既存データの実欠陥を出したら R3。golden n/a 見込み(検査器のみ)"
