@@ -909,7 +909,7 @@ changes:
   - id: ECO-050
     title: "類似しきい値の既定値が仕様と不一致 — 整理トレイ 80/作業タブ 90(仕様既定 70)。工場仮置きの無検査潜伏"
     type: 欠陥是正(実装逸脱 — 仕様/E-BOM/CAD 健全。ECO-048 golden の R3 所見から昇格)
-    status: staged   # 工程診断=実装逸脱で裁定不要・/eco-fix 着手可(例外: 作業タブ 90 に裁定記憶があれば gate 申告→spec 改訂案件に転換)
+    status: staged   # 是正+機械受入完了(fix 済み)・golden(gate②)待ち: 両タブのスライダー初期値 70+既定のまま回転複製(70 台)が検出+可動域回帰。プローブ実測= pin テストが是正前 80/90 で不合格→合格転化。最小 diff= literal 2 箇所+pin テスト新設(潜伏様式「既定値がどの検査面にもない」を恒久封止)。Tests 567/567・Oracle 107+2skip 不変・build 0/0・validate 0-0
     baseline: "main 7f2aaed"
     findings: "仕様 REQ-064/065・§2.10.4=既定 70(健全・明確)・CAD=数値既定なし(数値は spec 管轄)・E-BOM=E-UI-SIMILARITY-035 が REQ-065/064 参照(健全)。実装=三者三様: 独立モーダル 70(仕様どおり)/整理トレイ ImageTabOrganizeViewModel:33=80/作業タブ WorkTabViewModel:75=90(いずれも bare literal・裁定痕跡なし)。混入= 80 は 0cf44ba(ECO-014 整理モード製造①・order に数値指定なし=工場仮置き)→ 729039c(ECO-036)で移設温存・90 は 81500a8(ECO-020/021 β)で転写時にさらにドリフト。マスキング=既定値が CP unit(明示閾値で検査)にも golden 明示観点にもない=どの検査面にも載らず潜伏。実害= 既定 80 で回転複製(70 台・ECO-048)/異フォーマット複製(78 点・経路系統誤差)が既定で漏れる。追加所見(R3)=仕様適合 70 の独立モーダルは呼び出し元ゼロの到達不能コード(ECO-014 置換の残骸疑い・51 記録・本 ECO に混ぜない)"
     impacted_bom: ["M-UI-IMAGETAB-035(ImageTabOrganizeViewModel)", "M-UI-WORKSPACE-029(WorkTabViewModel)", "CP-UI-G9/CP-UI-G1(クローズ時観点明記)"]

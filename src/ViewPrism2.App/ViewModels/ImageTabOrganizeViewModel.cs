@@ -30,7 +30,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private string? _mergeTargetId;
     private readonly List<string> _organizeTargets = new();
     private string _searchMethod = "similar";    // "similar" | "criteria"
-    private int _similarThreshold = 80;
+    private int _similarThreshold = 70; // 既定は仕様値 70(REQ-064/065・ECO-050 — 80 は工場仮置きの逸脱だった)
     private string _criteriaName = "";
     private string _criteriaExt = "";
     private bool _searching;

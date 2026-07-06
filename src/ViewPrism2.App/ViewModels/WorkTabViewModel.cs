@@ -72,7 +72,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private bool _canUndo;
     private string? _undoNote;
     private string _searchMethod = "similar";
-    private int _similarThreshold = 90;
+    private int _similarThreshold = 70; // 既定は仕様値 70(REQ-064/065・ECO-050 — 90 は転写ドリフトの逸脱だった)
     private string _criteriaName = "";
     private string _criteriaExt = "";
     private bool _searching;
