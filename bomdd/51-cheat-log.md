@@ -341,3 +341,11 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   是正案(起票時の工程診断用メモ): PNG 側にも中間縮小段(長辺 ~64 への双線形)を挟み経路を対称化する
   — ただし pHash 絶対値が動く= **adapter 世代交代(P-09 発動・ThisBuildGolden 再凍結・全特徴量再計算)**。
   起票要否は maintainer 判断。ECO-048 本文 §7 から参照。
+
+## ECO-050 起票時のスコープ外所見(R3 記録)2026-07-06
+
+- **独立モーダル SimilarSearchWindow/SimilarSearchViewModel は到達不能コード**:
+  WindowService.ShowSimilarSearchAsync(WindowService.cs:266)の呼び出し元がゼロ(grep 実測 —
+  IWindowService 宣言と実装のみ)。ECO-014(モーダル→整理トレイ置換)の残骸疑い。
+  皮肉にも仕様適合の既定 70 を持つ唯一の実装がこの死んだモーダルだった(ECO-050 §3)。
+  撤去は ECO-024(原典撤去)型の別件 — 起票要否は maintainer 判断。ECO-050 本文 §3 から参照。
