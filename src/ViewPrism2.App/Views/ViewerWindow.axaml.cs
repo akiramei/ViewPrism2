@@ -280,8 +280,9 @@ public partial class ViewerWindow : Window
 
         try
         {
-            // フルサイズ表示キャッシュ(REQ-045): メモリ LRU 50 枚・TTL 3 分
-            var bitmap = await _cache.GetOrAddAsync(path, () => Task.Run(() => new Bitmap(path)));
+            // フルサイズ表示キャッシュ(REQ-045): メモリ LRU 50 枚・TTL 3 分。
+            // ECO-049(REQ-085): EXIF Orientation を適用した正立読込(TopLeft は従来の直読)
+            var bitmap = await _cache.GetOrAddAsync(path, () => Task.Run(() => Controls.OrientedBitmaps.Load(path)));
             if (string.Equals(_viewModel?.CurrentImagePath, path, StringComparison.Ordinal))
             {
                 // Fit 用とスクロール(Width/One)用の両 host に同じ Bitmap を割り当てる(切替で再ロードしない)

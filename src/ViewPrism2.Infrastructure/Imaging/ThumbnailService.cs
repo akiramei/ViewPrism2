@@ -6,9 +6,12 @@ using SkiaSharp;
 namespace ViewPrism2.Infrastructure.Imaging;
 
 /// <summary>
-/// サムネイル生成サービス(M-THUMB-008、REQ-040、K-SKIA)。
+/// サムネイル生成サービス(M-THUMB-008、REQ-040/REQ-085、K-SKIA)。
 /// 長辺 256px へ縮小(アスペクト比保持・拡大しない)。PNG 入力→PNG、その他→JPEG 品質 80。
-/// キャッシュキー = MD5(画像絶対パスの小文字) hex。存在すれば再生成しない。
+/// ECO-049(REQ-085): EXIF Orientation を適用し正立で生成する(正立化は縮小後の小画像に適用 —
+/// アスペクト比保持=一様スケールは D4 変換と可換・仕様 §2.5)。寸法取得も実効寸法を返す。
+/// キャッシュキー = MD5(画像絶対パスの小文字) hex + 生成規則世代サフィックス(-v2 = EXIF 適用世代。
+/// 旧 {md5}.{ext} は参照されない孤児=無害)。存在すれば再生成しない。
 /// 生成失敗(壊れた画像)は null を返しキャッシュへ記録しない(次回表示時に再試行、FMEA-012)。
 /// 読み取り不能なキャッシュファイルは削除して再生成する。元画像へは一切書き込まない(INV-009)。
 /// </summary>
@@ -44,7 +47,10 @@ public sealed class ThumbnailService
         return Task.Run(() => GetOrCreate(absoluteImagePath));
     }
 
-    /// <summary>解像度取得(REQ-043)。SKCodec によるヘッダ読みのみ(フルデコードなし)。失敗時 null。</summary>
+    /// <summary>
+    /// 解像度取得。SKCodec によるヘッダ読みのみ(フルデコードなし)。失敗時 null。
+    /// ECO-049(REQ-085): EXIF Orientation 5〜8 は W/H を入替えた実効寸法を返す。
+    /// </summary>
     public Task<(int Width, int Height)?> GetDimensionsAsync(string absoluteImagePath)
     {
         ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
@@ -54,7 +60,10 @@ public sealed class ThumbnailService
             {
                 using var stream = OpenRead(absoluteImagePath);
                 using var codec = SKCodec.Create(stream);
-                return codec is null ? null : (codec.Info.Width, codec.Info.Height);
+                return codec is null
+                    ? null
+                    : ExifOrientationTransform.ToEffectiveDimensions(
+                        codec.Info.Width, codec.Info.Height, codec.EncodedOrigin);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -64,12 +73,15 @@ public sealed class ThumbnailService
         });
     }
 
-    /// <summary>キャッシュファイルパス(MD5(小文字絶対パス).{png|jpg})。</summary>
+    /// <summary>
+    /// キャッシュファイルパス(MD5(小文字絶対パス)-v2.{png|jpg})。
+    /// -v2 は生成規則の世代サフィックス(ECO-049: EXIF 適用世代 — 旧 {md5}.{ext} を参照しない)。
+    /// </summary>
     public string GetCachePath(string absoluteImagePath)
     {
         var key = Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(absoluteImagePath.ToLowerInvariant())));
         var extension = IsPng(absoluteImagePath) ? ".png" : ".jpg";
-        return Path.Combine(_cacheDirectory, key + extension);
+        return Path.Combine(_cacheDirectory, key + "-v2" + extension);
     }
 
     private string? GetOrCreate(string absoluteImagePath)
@@ -101,9 +113,18 @@ public sealed class ThumbnailService
 
     private string? Generate(string sourcePath, string cachePath)
     {
-        // K-SKIA: SKBitmap.Decode が null を返したら「壊れた画像」(例外を投げない)
+        // K-SKIA: SKCodec.Create / SKBitmap.Decode が null を返したら「壊れた画像」(例外を投げない)。
+        // ECO-049: EXIF Orientation を読むため codec 経由でデコードする(origin はヘッダから取得)
         using var stream = OpenRead(sourcePath);
-        using var bitmap = SKBitmap.Decode(stream);
+        using var codec = SKCodec.Create(stream);
+        if (codec is null)
+        {
+            _logger?.LogWarning("壊れた画像のためサムネイルを生成できません: {Path}", sourcePath);
+            return null;
+        }
+
+        var origin = codec.EncodedOrigin;
+        using var bitmap = SKBitmap.Decode(codec);
         if (bitmap is null)
         {
             _logger?.LogWarning("壊れた画像のためサムネイルを生成できません: {Path}", sourcePath);
@@ -115,6 +136,7 @@ public sealed class ThumbnailService
             (double)MaxDimension / bitmap.Width, (double)MaxDimension / bitmap.Height));
 
         SKBitmap? resized = null;
+        SKBitmap? upright = null;
         try
         {
             var target = bitmap;
@@ -135,6 +157,17 @@ public sealed class ThumbnailService
                 target = resized;
             }
 
+            // ECO-049(REQ-085): EXIF 正立化は縮小後の小画像に適用(一様スケールは D4 と可換 — 仕様 §2.5)。
+            // 正規化コピー失敗(null)は未変換で継続(表示劣化に留め、生成は止めない)
+            if (ExifOrientationTransform.RequiresTransform(origin))
+            {
+                upright = ExifOrientationTransform.ToUpright(target, origin);
+                if (upright is not null)
+                {
+                    target = upright;
+                }
+            }
+
             using var image = SKImage.FromBitmap(target);
             using var data = IsPng(sourcePath)
                 ? image.Encode(SKEncodedImageFormat.Png, 100)
@@ -152,6 +185,7 @@ public sealed class ThumbnailService
         }
         finally
         {
+            upright?.Dispose();
             resized?.Dispose();
         }
     }

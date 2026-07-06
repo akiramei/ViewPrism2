@@ -352,3 +352,11 @@ fixed_oracle:
       spec_ref: "bomdd/20-spec.md#2.10.1a REQ-084(ECO-048)"
       equivalence_ref: EQ-001
       depth: unit
+    - id: S-41
+      scope: cross-factory
+      added_by: ECO-049
+      scenario: "EXIF Orientation の表示系適用(REQ-085 / ECO-049 案 B): 8 方位(orientation 2〜8・独立実装との突合)の正立変換契約・実効寸法(5〜8 は W/H 入替)・orientation=6 の合成 JPEG(APP1 手書き挿入)のサムネイル E2E"
+      contract_expectation: "正立変換は orientation 2〜8 の各入力について独立実装の画素置換と完全一致・決定的(再計算で同値)。実効寸法は 5〜8 で W/H 入替・1〜4 で不変。orientation=6 の合成 JPEG のサムネイルは実効縦横比(正立)で生成される。EXIF なし(TopLeft)の出力は従来と同一(回帰・S-10 と整合)"
+      spec_ref: "bomdd/20-spec.md#2.5 REQ-085(ECO-049)"
+      equivalence_ref: EQ-002
+      depth: unit

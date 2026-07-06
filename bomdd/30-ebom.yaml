@@ -332,16 +332,17 @@ ebom:
 
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
-      name: サムネイル生成サービス
+      name: サムネイル生成サービス(+EXIF Orientation 正立化・実効寸法 — ECO-049)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-040]
+      requirement_refs: [REQ-040, REQ-085]
       external_source_ref: K-SKIA
       kbom_refs: [K-SKIA]
       depends_on: [E-HASH-006]
       invariants:
         - INV-009 元画像へ書き込まない
         - 失敗時もスキャン・一覧を停止させない
+        - since ECO-049(REQ-085) サムネは EXIF 正立で生成・寸法は実効値(5〜8 で W/H 入替)。キャッシュファイル名は生成規則の世代サフィックス付き(-v2)=旧世代を参照しない
       acceptance_refs: [CP-THUMB-007]
 
     - id: E-UI-SHELL-021
@@ -476,12 +477,13 @@ ebom:
       name: "画像ビューア(normal フィット表示+v2.0 拡張: scroll/spread-right/spread-left・コントロールバー(モード切替+表示設定)・設定永続化結線・モード別位置記憶)+ ECO-022 タグ制御(設定トグル+マッピングモーダル+プラン描画結線)"
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-078]
+      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-078, REQ-085]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
-      depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-VIEWER-TAGCTRL-044, E-SETTINGS-013, E-TAGSVC-008]
+      depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-VIEWER-TAGCTRL-044, E-SETTINGS-013, E-TAGSVC-008, E-THUMB-020]
       invariants:
         - ナビゲーション(端で停止・現在位置)は描画から独立した決定論的ロジックとして unit 検査可能にする
+        - since ECO-049(REQ-085) 原本フルサイズの読込は EXIF 正立ローダ経由(Orientation=TopLeft は従来の直読=高速経路・挙動不変。SkiaSharp は Infrastructure に閉じ App はピクセル列を受ける — ADR-0002)
         - ペアリング・送り・追跡・高さ統一・位置記憶の判断は E-VIEWER-CALC-030 のみ経由(UI 側で再実装しない)
         - タグ制御 ON の見開き配置・送り・現在画像は E-VIEWER-TAGCTRL-044(OC-23/24/25)のみ経由(UI 側で再実装しない)
         - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り — 仕様 §2.9)

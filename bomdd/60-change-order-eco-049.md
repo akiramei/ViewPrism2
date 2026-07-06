@@ -80,9 +80,43 @@
 
 ## 6. 残ゲート
 
-1. **gate①(裁定・human)**: 案 A/B/C/D の選択(§4・推奨 B)。V1 裁定「適用しない」の解除を兼ねる。
-2. 裁定後: /eco-fix eco-049 — プローブ先行(EXIF=6 フィクスチャのサムネ/ビューア読込が横倒し
-   (=変換後ピクセルが正立と不一致)となる回帰テストを先に実測)→ 是正 → 機械受入。
-3. golden(maintainer 実機): EXIF=6 の実画像(orientation_fixture_06.jpg)がサムネ・ビューアとも正立表示+
-   既存(EXIF なし)画像の表示回帰なし+(案 B)詳細の解像度が実効寸法。
+1. ~~**gate①(裁定・human)**: 案 A/B/C/D の選択~~ → **受領: 案 B**(maintainer 2026-07-06。V1 裁定の解除を兼ねる)
+2. ~~裁定後: /eco-fix eco-049 — プローブ先行 → 是正 → 機械受入~~ → 完了(§7)
+3. **golden(maintainer 実機)**: §7 末尾の基準。
 4. クローズ時: CP 観点明記+register applied+教訓。
+
+## 7. 実施記録(2026-07-06 — 案 B 実装・機械受入完了・golden 待ち)
+
+- **gate① 裁定**: 案 B(表示系の EXIF 適用=サムネ+ビューア+キャッシュ世代移行+実効寸法。
+  pHash 入力は非適用のまま= P-09 非発動)。
+- **プローブ先行(R5・実測裏取り)**: CpThumb049ExifTests — EXIF Orientation=6 の JPEG フィクスチャを
+  テスト側で合成(SkiaSharp エンコード後、SOI 直後へ APP1(Exif/TIFF/IFD0: 0x0112=6)を手書き挿入 —
+  独立実装)し是正前に実行: **サムネ正立=不合格(横倒しのまま)・実効寸法=不合格(生ピクセル寸法)**。
+  対照(EXIF なし)+前提較正(SKCodec.EncodedOrigin=RightTop 読取)=合格 → 真因を実測固定。
+- **実装(上流→下流)**:
+  - 台帳: REQ-085 新設・spec §2.5 追補(EXIF 表示系適用+キャッシュ名 `-v2` 世代)+§4 沈黙次元表更新・
+    31-kbom K-SKIA 宣言差替(v4.1)・S-41 追加(41)・E-BOM(E-THUMB-020/E-UI-VIEWER-024)宣言補完。
+  - Infrastructure: **ExifOrientationTransform** 新設(D4 添字置換・変換表は ToUprightBgra に一本化・
+    実効寸法)+ **OrientedImageLoader** 新設(TopLeft は null=従来直読の高速経路・正立時のみ
+    BGRA ピクセル列を返す — SkiaSharp は Infrastructure に閉じる=ADR-0002)。
+    ThumbnailService= codec 経由デコードで origin 取得→**縮小後の小画像に正立化適用**(一様スケールと
+    D4 は可換=仕様 §2.5)+キャッシュ名 `-v2` 世代サフィックス+ GetDimensionsAsync 実効寸法。
+  - App: **OrientedBitmaps**(正立ピクセル→ WriteableBitmap・TopLeft は従来 `new Bitmap(path)`)を
+    ViewerImage:214 / ViewerWindow:284 の 2 箇所(原本直読の全数)へ配線。例外面は従来と同一
+    (呼び出し側 catch 節無変更)。
+- **機械受入(4 点全緑)**: build 0 error/0 warning・**Tests 565/565**(562+3: 世代移行=旧キャッシュ
+  非参照・正立ローダ内容検査・TopLeft null)— **プローブ 2 件は合格に転化**・**Oracle 107+2skip**
+  (104+S-41 3 件: 8 方位×独立実装 exact・実効寸法・E2E。凍結オラクル回帰ゼロ= S-10 含む)・
+  validate_bom 0 error/0 warning。
+- diff: Infrastructure 3(+2 新設)・App 3(+1 新設)・Tests 1 新設・Oracle 1 新設(S-41)・bomdd 6。
+
+### golden 合格基準(gate② — maintainer 実機)
+
+1. **EXIF=6 の実画像(orientation_fixture_06.jpg)が正立表示になる**: コレクション再スキャン後(または初回表示で
+   新世代サムネが自動生成される — 旧サムネキャッシュは参照されない)、①一覧のサムネイルが正立
+   ②ビューア(クリックで開くフルサイズ)が正立。
+2. 詳細パネルの解像度が**実効寸法(834×1194)**になる(元は 1194×834+Orientation=6)。
+3. 回帰: EXIF なしの既存画像のサムネ・ビューア表示が従来どおり(向き・画質の劣化なし)。
+   ※ 全画像のサムネが世代移行で再生成されるため、初回表示のみ生成時間がかかる。
+4. 回帰: ビューアの見開き・スクロール・タグ制御モードの表示が正常(読込経路の差し替えが
+   全モードに波及するため — ECO-037 教訓の裏面検査)。

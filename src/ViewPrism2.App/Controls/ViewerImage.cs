@@ -211,7 +211,8 @@ public sealed class ViewerImage : ContentControl
         try
         {
             // UI スレッド外でデコード(K-AVALONIA)。完了後に対象が変わっていれば破棄する。
-            var bitmap = await Task.Run(() => new Bitmap(path), token).ConfigureAwait(true);
+            // ECO-049(REQ-085): EXIF Orientation を適用した正立読込(TopLeft は従来の直読)
+            var bitmap = await Task.Run(() => OrientedBitmaps.Load(path), token).ConfigureAwait(true);
 
             // この間にリサイクル/別パスへ差し替わっていたら、描画に載せず破棄(仮想化/リサイクル)
             if (token.IsCancellationRequested || !string.Equals(SourcePath, path, StringComparison.Ordinal))

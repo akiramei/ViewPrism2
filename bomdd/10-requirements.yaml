@@ -1080,3 +1080,22 @@ requirements:
       - "変種比較の役割が非対称で (A,B) と (B,A) の類似度が食い違い、ペア正規化キャッシュ(REQ-063)と矛盾する"
       - "変種導入で identity 同士の既存スコアが下がる(単調拡張の破れ)"
       - "変種なしの旧レコードとの比較で例外・誤スコアが出る(後方互換の破れ)"
+
+  - id: REQ-085
+    statement: "表示系は EXIF Orientation(1〜8)を適用して画像を正立で扱う: ①サムネイルは正立化した画像から生成する ②ビューアのフルサイズ表示は正立化した画像を表示する ③解像度メタデータ(GetDimensions)は Orientation 5〜8 で幅・高さを入替えた実効寸法を返す。適用は表示系に限り、pHash 入力・SHA-256・スキャンは従来どおり非適用とする(向き耐性は REQ-084 の 8 変種が担う — adapter 世代交代 P-09 を誘発しない)。サムネイルキャッシュは生成規則の世代を識別できる形(キャッシュファイル名の世代サフィックス)とし、EXIF 適用世代への移行後は旧世代キャッシュを参照しない(旧ファイルは孤児として無害・掃除は別途)"
+    rationale: |
+      ECO-049 裁定=案 B(maintainer 2026-07-06)。V1 沈黙次元裁定(spec §4「適用しない・後続ループ候補」)の解除。
+      症状= EXIF Orientation=6 のスマホ撮影画像がサムネ・ビューアで横倒し(ECO-048 golden 準備中の実機所見)。
+      V1 裁定の根拠「原典も未適用」はコード上の意(exifreader 未利用)で、原典 Electron は Chromium の
+      image-orientation: from-image 既定により表示は正立だった可能性が高い(移植等価性の隠れ回帰の疑い)。
+      実装は SkiaSharp の SKCodec.EncodedOrigin(新規依存なし)+ D4 の 8 方位変換(REQ-084 と同じ変換族)。
+      サムネの正立化は縮小後の小画像に適用してよい(アスペクト比保持=一様スケールは D4 変換と可換)。
+      受入: 8 方位の正立変換契約と実効寸法= S-41 unit exact・サムネ/寸法 E2E= CP-THUMB-007・ビューア= golden。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "EXIF 2.32 Orientation(tag 0x0112)/ SkiaSharp SKCodec.EncodedOrigin / ../SimilarPic ExifOrientation.cs(8 方位マップの知見のみ — System.Drawing 依存のため直接移植せず)"
+    counterexamples:
+      - "EXIF=6 のスマホ画像がサムネ・ビューアで横倒しに表示される(ECO-049 の症状そのもの)"
+      - "旧世代サムネキャッシュが参照され続け、EXIF 画像だけ横倒しのまま残る(世代移行漏れ — キーがパス MD5 のみで内容・規則の世代を含まない既知制約)"
+      - "pHash 入力まで正立化して adapter 世代交代(P-09)が意図せず発動し、全特徴量再計算と ThisBuildGolden 再凍結を誘発する"
+      - "Orientation 5〜8 の画像で解像度表示が W/H 逆のまま(実効寸法でない)"

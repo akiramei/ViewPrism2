@@ -33,7 +33,7 @@ kbom:
       - "リサイズ: bitmap.Resize(new SKImageInfo(newW, newH), SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))。newW/newH は Round half away from zero で整数化し最小 1px"
       - "エンコード: SKImage.FromBitmap(...).Encode(SKEncodedImageFormat.Png, 100) / (SKEncodedImageFormat.Jpeg, 80)"
       - "GIF/WebP/BMP も SKBitmap.Decode で先頭フレームがデコードされる。アニメーション対応は不要"
-      - "EXIF Orientation は適用しない(仕様 §4 で宣言済み。SKCodec の origin を無視してよい)"
+      - "(v4.1/ECO-049) EXIF Orientation は**表示系のみ適用**(REQ-085・仕様 §2.5): SKCodec.EncodedOrigin(TopLeft=1〜LeftBottom=8・EXIF 値と同番号)を読み、正立化は D4 の添字置換(サムネは縮小後の小画像に適用可=一様スケールと可換)。Orientation 5〜8 は実効寸法 W/H 入替。**pHash 入力は従来どおり非適用**(origin 不読 — adapter 世代 P-09 を発動させない。向き耐性は REQ-084 変種)。SKBitmap.Decode 単体は origin を自動適用しない(だからこそ全経路で明示判断)"
       - "SKBitmap/SKImage/SKData は IDisposable。using で確実に破棄(ネイティブメモリ)"
       # ---- v3.0 追補(pHash のピクセル取得) ----
       - "(v3.0) pHash 用ピクセル取得: 32×32 への縮小は bitmap.Resize(new SKImageInfo(32,32, SKColorType.Bgra8888, SKAlphaType.Unpremul), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None))。**SKFilterMode.Linear(双線形)を明示**(決定性 — ADR-0008)。Mipmap は使わない(品質揺れ回避)"
