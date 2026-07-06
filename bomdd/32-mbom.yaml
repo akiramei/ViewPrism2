@@ -359,12 +359,13 @@ mbom:
       ebom_refs: [E-PHASH-031]
       artifact:
         path: src/ViewPrism2.Core/Services/Similarity
-        path_note: "PerceptualHash.cs, HammingDistance.cs, SimilarityScore.cs"
+        path_note: "PerceptualHash.cs, HammingDistance.cs, SimilarityScore.cs, PHashOrientations.cs(ECO-048)"
         type: dotnet-classlib
       interface_contract:
         phash: "string PerceptualHash.Compute(ReadOnlySpan<byte> bgra32x32) → 16hex // OC-14。入力は 32×32 にリサイズ済み BGRA バイト列。レシピは K-PHASH/仕様 §2.10.1(orthonormal 2D DCT-II 2 パス・cos 固定表・DC 除外中央値・(int)(y+0.5))。**Core 配置=BCL のみ。SkiaSharp 型を引数・戻り値・内部に一切持たない**(SKBitmap 過負荷は作らない — ADR-0002 層規律)"
         distance: "int HammingDistance.Between(ulong h1, ulong h2) / Between(string hex1, string hex2)  // BitOperations.PopCount。0〜64"
         score: "int SimilarityScore.FromDistance(int hamming) → 0〜100  // OC-15。仕様 §2.10.2 の区分線形+Floor(raw+0.5)+クランプ。期待値ベクタは K-PHASH"
+        orientations: "IReadOnlyList<string> PHashOrientations.ComputeAll(ReadOnlySpan<byte> bgra32x32) → 16hex×8  // (ECO-048/REQ-084・S-40)。32×32 格子の添字置換(D4)で 8 変種の pHash。順序=仕様 §2.10.1a 固定([0]=identity は Compute と完全一致)。BCL のみ・決定的"
         extractor: "**SkiaSharp による 32×32 BGRA 取得は Infrastructure 側(M-SIMSEARCH-021 の PHashImageReader 等)に置く**(K-SKIA v3.0 の双線形縮小・GetPixelSpan)。Core の PerceptualHash はそのバイト列を受け取るだけ — ThumbnailService(Infrastructure)と同じ層分離"
         purity: "全クラス純粋計算(DB・UI・SkiaSharp 非依存)。固定オラクル S-19/S-20 が BGRA バイト列を合成して直接呼べる"
       invariants:
@@ -381,9 +382,9 @@ mbom:
         path_note: "+ IPHashImageReader 抽象 + src/ViewPrism2.Infrastructure/Imaging/PHashImageReader.cs + src/ViewPrism2.Infrastructure/Database/(ImageFeatureRepository.cs, ImageSimilarityRepository.cs, 新規マイグレーション)"
         type: dotnet-classlib
       interface_contract:
-        extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ(SkiaSharp は Infrastructure に閉じる)。失敗(壊れた画像)は null。ThumbnailService と同じ層分離"
-        search: "Task<IReadOnlyList<SimilarResult>> FindSimilarAsync(string baseImageId, int threshold, IProgress<int>? progress, CancellationToken ct)  // OC-16。SimilarResult { string ImageId, int Score }。候補=同一コレクション内 status=Normal(基準自身除外)。フィルタ先行→キャッシュ参照→無ければ IPHashImageReader で計算し保存。閾値以上(≧)を Score 降順・同値 id 昇順"
-        features_repo: "IImageFeatureRepository: GetAsync(imageId)/UpsertAsync(feature)/DeleteByImageAsync。feature 取得時 file_size/modified_date/hash が現行と異なれば呼び出し側が再計算→Upsert→関与 similarity 行を連鎖削除"
+        extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ(SkiaSharp は Infrastructure に閉じる)。失敗(壊れた画像)は null。ThumbnailService と同じ層分離。**(ECO-048)default interface method で非破壊拡張**: bool SupportsOrientationVariants(既定 false)+ Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(既定 null)— 既存 fake・固定オラクル実装を無改変に保つ(R6 折り合い・CHEAT-01 同系)。production 両 reader は true+8 変種を実装"
+        search: "Task<IReadOnlyList<SimilarResult>> FindSimilarAsync(string baseImageId, int threshold, IProgress<int>? progress, CancellationToken ct)  // OC-16。SimilarResult { string ImageId, int Score }。候補=同一コレクション内 status=Normal(基準自身除外)。フィルタ先行→キャッシュ参照→無ければ IPHashImageReader で計算し保存。閾値以上(≧)を Score 降順・同値 id 昇順。**(ECO-048/REQ-084)ペア距離=序数比較で小さい id の identity pHash × 大きい id の全 8 変種の最小ハミング距離**(対称・決定的・変種[0]=identity を含むため単調拡張。変種なし特徴量とは identity 同士のみ=後方互換)"
+        features_repo: "IImageFeatureRepository: GetAsync(imageId)/UpsertAsync(feature)/DeleteByImageAsync。feature 取得時 file_size/modified_date/hash が現行と異なれば呼び出し側が再計算→Upsert→関与 similarity 行を連鎖削除。(ECO-048)ImageFeature.PhashVariants(8 変種の ',' 連結・NULL=旧レコード)を保存/取得"
         similarity_repo: "IImageSimilarityRepository: GetAsync(id1,id2)(正規化して照会)/UpsertAsync/DeleteInvolvingAsync(imageId)。cache_key={min}-{max}(文字列比較で正規化)"
         schema: >-
           新規マイグレーション(既存の続き番号)で 2 テーブル作成:
@@ -391,10 +392,11 @@ mbom:
           FOREIGN KEY(image_id) REFERENCES images(id) ON DELETE CASCADE)、
           image_similarity(cache_key TEXT PK, image_id1 TEXT, image_id2 TEXT, similarity_score INTEGER, last_compared TEXT,
           FOREIGN KEY(image_id1) REFERENCES images(id) ON DELETE CASCADE, FOREIGN KEY(image_id2) REFERENCES images(id) ON DELETE CASCADE)。
-          索引: idx_image_similarity_image_id1/image_id2。ORB 列(orb_descriptors/orb_keypoints)は作らない(ORB defer)
+          索引: idx_image_similarity_image_id1/image_id2。ORB 列(orb_descriptors/orb_keypoints)は作らない(ORB defer)。
+          (ECO-048)migration 006 で image_features に phash_variants TEXT NULL を追加(LatestDdl 同値=CP-DB-006)
       invariants:
         - 候補=Normal 限定・フィルタ先行(仕様 §2.10.4)。コレクション境界(REQ-053)
-        - 無効化は内容ベースのみ(時間失効なし)+特徴量再計算で関与ペア連鎖削除
+        - 無効化は内容ベース(時間失効なし)+adapter 世代(P-09)+変種欠落(since ECO-048/REQ-084)+特徴量再計算で関与ペア連鎖削除
         - 非同期で UI をブロックしない。OC-16/OC-18 を公開 API に
       acceptance_refs: [CP-SIM-017, CP-DB-006]
       fmea_refs: [FMEA-022, FMEA-025]
@@ -678,7 +680,7 @@ silence_sweep:
   - { dimension: DCT-II 正規化・符号・cos 計算,     decision: specified,  where: "K-PHASH / 仕様 §2.10.1",            note: "orthonormal・行→列 2 パス・cos 事前計算固定表。DC[0,0] は中央値計算から除外しビットには残す" }
   - { dimension: pHash の原典ビット一致,           decision: specified,  where: "ADR-0008 / CPOL-103",              note: "不要(adapter)。当方レシピを S-19 系で凍結。16hex exact は実装/ADR で本書外に閉じる" }
   - { dimension: 類似度%変換の丸め・境界,           decision: specified,  where: "K-PHASH / 仕様 §2.10.2",            note: "区分線形+Floor(raw+0.5)+[0,100]クランプ。閾値は ≧・整数刻み" }
-  - { dimension: 特徴量キャッシュ無効化方式,        decision: specified,  where: "M-SIMSEARCH-021 / 仕様 §2.10.3",     note: "内容ベース(size/mtime/hash)のみ。時間失効なし。特徴量再計算で関与ペア連鎖削除" }
+  - { dimension: 特徴量キャッシュ無効化方式,        decision: specified,  where: "M-SIMSEARCH-021 / 仕様 §2.10.3",     note: "内容ベース(size/mtime/hash)+adapter 世代(P-09)+変種欠落(ECO-048/REQ-084)。時間失効なし。特徴量再計算で関与ペア連鎖削除" }
   - { dimension: ペアキャッシュ正規化(cache_key),  decision: specified,  where: M-SIMSEARCH-021,                    note: "id1<id2 正規化・cache_key={id1}-{id2}・モード接尾辞なし(pHash 単一)" }
   - { dimension: マージの値タグ衝突・多元決着,      decision: specified,  where: "M-MERGE-022 / 仕様 §2.10.5",        note: "マージ先優先・NULL 補完・多元は id 昇順先勝ち・simple は存在 union" }
   - { dimension: マージの物理非破壊検証,           decision: specified,  where: "CP-MERGE-001(L3)",                note: "前後でファイルのバイト・mtime 不変を L3 物理差分で実証(INV-009 実アクション初適用)" }
