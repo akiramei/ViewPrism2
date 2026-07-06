@@ -889,6 +889,16 @@ changes:
     type: 機能拡張(要求新設 — 現行は REQ-061〜067/charter-v3 裁定 2 に完全適合=欠陥でない。上流=要求台帳から)
     status: applied   # 2026-07-06 golden 合格(maintainer 実機)でクローズ。gate①=案 A → プローブ先行(回転・鏡像=是正前不合格の実測→合格転化)→ 是正 → 機械受入全緑 → golden。REQ-084 新設・S-40 追加(Oracle 102→104)・migration 006(phash_variants)。折り合い2点=adapter 世代 bump せず(ThisBuildGolden 凍結・変種欠落=stale で自動アップグレード)/IPHashImageReader は default interface method で非破壊拡張(Oracle fake 無改変=R6)。CP 観点明記=CP-PHASH-016(S-40 変種)/CP-SIM-017(回転鏡像 E2E・対称性・後方互換)/CP-UI-G9(ピクセル実変換入力・確認閾値70)。M4=M-PHASH-020/M-SIMSEARCH-021/沈黙次元(無効化方式)。golden 中の R3 所見 3 件は 51 へ分離(EXIF 非反映/しきい値既定 70-80-90 不整合/scaled-decode フォーマット間系統誤差)。Tests 559/559・build 0/0・validate 0-0
     golden: "approved(2026-07-06 maintainer 実機: ①90° 回転複製=閾値 70 で検出 ②左右反転複製=検出(既定 80 でも) ③png→jpg 変換複製 78 点=閾値 70 で検出・スコアの内訳は経路系統誤差 8bit と実測切り分け(知覚的実距離は 2=96 点・full-decode 実測) ④無関係画像の混入なし。golden 入力は EXIF タグ回転がピクセル不変と判明したためピクセル実変換の複製で実施)"
+
+  - id: ECO-049
+    title: "EXIF Orientation の表示系適用 — V1 裁定済み沈黙次元(defer)の解除(スマホ撮影画像の横倒し表示)"
+    type: 機能拡張(裁定済み defer の解除 — 現行は spec §4 沈黙次元表「適用しない・後続ループ候補」+K-SKIA 宣言どおり=欠陥でない。上流=仕様の沈黙次元表から)
+    status: staged   # gate①(裁定)待ち: 案 A(表示系のみ=サムネ+ビューア)/B(A+実効寸法=推奨)/C(+pHash 正規化=非推奨・P-09 発動で利得なし)/D(見送り=V1 裁定維持)
+    baseline: "main abca4af"
+    findings: "ECO-048 golden 準備中の R3 所見(51 記録)から昇格起票。実測= EXIF Orientation=6 の JPEG がサムネ・ビューアとも横倒し。工程診断=仕様どおり(spec §4 L974 で V1 裁定済み defer・31-kbom K-SKIA L36 で宣言・実装逸脱なし)。非適用面 4 系統: ①サムネ生成(ThumbnailService:106 SKBitmap.Decode=origin 不読)②ビューア(ViewerImage:214/ViewerWindow:284 の Avalonia Bitmap 原本直読)③寸法メタ(GetDimensionsAsync=生ピクセル寸法・Orientation5-8 で実効と食い違い)④pHash 入力 — ただし④は ECO-048 変種で実害解消済み(EXIF 違い複製=ピクセル同一距離 0)。設計上の要点= サムネキャッシュキーが MD5(小文字パス)のみ+存在すれば再生成しない → EXIF 適用してもキャッシュ世代移行なしでは旧横倒しサムネが恒久残存。裁定前提への疑義(未検証)= V1 裁定の「原典も未適用」はコード無しの意で、原典 Electron は Chromium の image-orientation:from-image 既定により表示は正立だった可能性が高い=移植等価性の隠れ回帰の疑い。SimilarPic ExifOrientation.cs は System.Drawing 依存で直接移植不可 — SKCodec.EncodedOrigin(新規依存なし)で実装し 8 方位マップの知見のみ借用"
+    impacted_bom: ["M-THUMB-008", "E-THUMB-020", "M-VIEWERCORE-017/M-UI-019 系(ビューア読込経路)", "E-UI-VIEWER-024", "10-requirements(新 REQ-085 見込み)", "20-spec §4 沈黙次元表", "31-kbom K-SKIA", "41-fixed-oracle(新規行)"]
+    body: 60-change-order-eco-049.md
+    notes: "推奨=案 B(表示系+実効寸法)。C(pHash 正規化)は明確に切り離す(ECO-048 変種で向き耐性済み・P-09 世代交代のコストに利得が見合わない)。R6=既存オラクル行不変・EXIF 付きフィクスチャの新規行のみ。プローブ計画= EXIF=6 合成フィクスチャのサムネ生成物/ビューア読込ピクセルが正立期待と不一致になる回帰テストを是正前実測"
     baseline: "main 7014697"
     findings: "工程診断=要求が存在しない(REQ-061〜067 に回転/鏡像/クロップ耐性なし・charter-v3 裁定記録 2 で ORB/detailed 明示 defer)・CAD/BOM/実装いずれも健全=仕様どおり。現行は単一オリエンテーション pHash 1 本(PerceptualHash.Compute 32×32 行優先 DCT・SimilaritySearchService は保存済み phash のハミング距離のみ)= DCT-pHash の既知特性として回転/鏡像/クロップは原理的に検出不能。移植候補 ../SimilarPic(2026-07-06・git 未初期化)= pHash+dHash+Edge+Tile+stats 重み合成+8 オリエンテーション+ORB 二段(Possible 帯のみ)・検証 112 ケース全パス。うち OpenCV 依存は ORB のみ=案 A/B は BCL で完結し裁定 2 を覆さない。ライブラリ参照は不可(net10.0-windows+System.Drawing+OpenCvSharp win=クロスプラットフォーム/ADR-0002 衝突・永続化/単体テストなし)=活用形態はアルゴリズム移植一択"
     impacted_bom: ["E-PHASH-031", "E-SIMSEARCH-032", "E-SIMCACHE-033", "E-DB-010(image_features 拡張=migration・62 適用)", "M-PHASH-020", "M-SIMSEARCH-021", "10-requirements(新 REQ-084〜 見込み)", "20-spec §2.10", "41-fixed-oracle(新規行)"]
