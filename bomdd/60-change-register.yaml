@@ -931,7 +931,8 @@ changes:
   - id: ECO-052
     title: "REQ-067「実行前の統合後タグプレビュー+物理非破壊の明示」が生存 UI に不在 — トレイ置換(ECO-014)時の要素脱落と三層不整合"
     type: 要求-CAD-実装の不整合裁定(ECO-051 R3 所見から昇格。要求/G-9/E-BOM invariant は要求する・CAD/実装には無い — どちらが正かの裁定案件)
-    status: staged   # gate①(裁定)待ち: a=完全充足(CAD 先行+両トレイ実装・golden あり)/b=as-built 追認(REQ-067 改訂+G-9/E-BOM 同期・doc-only)/c=非破壊明示のみ(G-10 裁定済み文言をトレイへ一文・プレビューは Undo 代替で撤回)
+    status: applied   # 2026-07-06 gate①=裁定 b(maintainer: ViewPrism2 は全機能が物理 FS 非破壊=個別通知の必要性は低い)→ doc-only 取り込みでクローズ(golden n/a・視覚不変)。取り込み 5 箇所= REQ-067 改訂(撤回+例外明文化: ゴミ箱完全削除の確認は不可逆警告として存続)・spec §2.10.5・**G-9 チェックリストのトレイ as-built 全面同期(ECO-014 M4 漏れの是正)**・E-UI-MERGE-036 invariant 矛盾解消・CP-UI-G9 as-built 化。教訓=安全性の「実証」と「通知」は別要求として裁定(woven 保証の機能別通知はノイズ・通知が要るのは不可逆警告)+surface 置換の M4 は golden チェックリストまで同期対象。build 0/0・Tests 558/558・Oracle 107+2skip・validate 0-0
+    golden: n/a   # doc-only(視覚不変・src/tests 変更ゼロ)
     baseline: "main 8c8d3b8"
     findings: "三層不整合: 要求 REQ-067+golden 器 G-9(spec §2.6 L453-454 の明示チェック項目)+E-UI-MERGE-036 冒頭 invariant は「実行前プレビュー+非破壊明示」を要求 — CAD(image_tab/work_tab の整理トレイ節)は未定義・実装(両トレイ)は不在(Preview 系メンバなし・非破壊文言なし・実行前確認なし=即実行)。E-UI-MERGE-036 は項目内でも矛盾(冒頭 invariant vs ECO-014 invariant のトレイ構成)。混入= ECO-014 トレイ置換(0cf44ba〜)で脱落・マスキング= ①死者 MergeDialog に実装残存で grep 上「実装あり」に見えた ②G-9 チェックリストが旧モーダル手順のまま as-built 未同期でトレイ読み替え時に暗黙スキップ(歴代 golden は外観 approved)。裁定材料: プレビューの保護価値は ECO-044 補償 Undo の登場で相対低下(見比べ表示+実行前サムネイル+事後 Undo が代替)・非破壊明示はゴミ箱完全削除に裁定済み文言の前例(G-10)・機械側は L3 CP-MERGE-001(非破壊実証)と OC-17(統合意味論)で全案共通に担保済み=争点は「ユーザーへの明示」のみ"
     impacted_bom: ["10-requirements(REQ-067)", "20-spec §2.6 G-9(as-built 同期は全案共通)+§2.10.5", "30-ebom E-UI-MERGE-036(invariant 矛盾解消)", "(a/c)ViewPrismUI CAD 先行+M-UI-ORGANIZE-034/M-UI-IMAGETAB-035/M-UI-WORKSPACE-029", "(a/c)CP-UI-G9/G1"]
