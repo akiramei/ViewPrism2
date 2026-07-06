@@ -170,20 +170,32 @@ public sealed class CpDisplayParity022Tests
         Assert.Equal("1 KB", item.SizeLabel);                          // 新 surface FmtSize(1024 → "1 KB")
     }
 
-    // ---- A-3: TrashItemViewModel.SizeText ----
+    // ---- A-3: トラッシュ項目 VM の SizeText ----
 
     [Fact]
     public async Task A3_トラッシュ項目VMはサイズ文字列を公開する()
     {
+        // ECO-051: 旧 TrashViewModel(到達不能な V3 モーダル)撤去に伴い、A-3(トラッシュ項目 VM が
+        // サイズ文字列を公開)の検査を生存 surface=インペイン ポップアップ(TrashPopupItemVM.SizeLabel)へ
+        // 移行する(ECO-024 の A-2 移行と同型)。
         using var db = new TempDb();
-        await db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = "C:/coll" });
+        var col = new SyncFolder { Id = Folder, Name = "C", Path = @"C:\col" };
+        await db.Folders.AddAsync(col);
         await db.Images.AddAsync(Image("d1", "d1.jpg", ImageStatus.Deleted, size: 1048576));
 
-        var vm = new TrashViewModel(Folder, db.Images, db.Folders, CreateLoc());
-        await vm.LoadAsync();
+        var vm = new ImageTabViewModel(
+            db.Folders, db.Images, db.Tags, new ImageSorter(),
+            new ViewService(db.Views, db.Clock), new NodeGraphBuilder(),
+            new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(db.Folders, db.Images, db.Features, db.Similarities, new FakePHashImageReader(), db.Clock),
+            new MergeService(db.Images, db.Tags, db.Merges),
+            new TrashService(db.Images, db.Folders, new FilePresenceProbe()),
+            new NoopWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), TestLoc.Empty());
+        await vm.InitializeAsync(col.Id);
+        await vm.OpenTrashCommand.ExecuteAsync(null);
 
-        var item = Assert.Single(vm.Items);
-        Assert.Equal("1.0 MB", item.SizeText);                         // A-3: ByteSizeFormatter(1048576 → 1.0 MB)
+        var item = Assert.Single(vm.TrashPopupItems);
+        Assert.Equal("1.0 MB", item.SizeLabel);                        // A-3: 共有整形器(1048576 → 1.0 MB)
     }
 
     // ---- A-4(ECO-007/E1 改訂): ViewRowViewModel は TagCount 公開・★は行非表示・Description は tooltip ----

@@ -422,23 +422,21 @@ mbom:
       acceptance_refs: [CP-MERGE-018, CP-MERGE-001]
       fmea_refs: [FMEA-023, FMEA-024]
 
-    - id: M-UI-SIMILARITY-023
+    - id: M-UI-SIMILARITY-023   # retired(ECO-051)— V3 旧 UI(独立モーダル一式)は到達不能残骸として撤去
       ebom_refs: [E-UI-SIMILARITY-035, E-UI-MERGE-036]
       artifact:
-        path: src/ViewPrism2.App/Views/SimilarSearchWindow.axaml
-        path_note: "+ Views/MergeDialog.axaml, Views/TrashView.axaml, ViewModels/{SimilarSearch,Merge,Trash}ViewModel.cs"
-        type: avalonia-app
-      interface_contract:
-        search_ui: "SimilarSearchViewModel(baseImageId): Threshold(50〜100 整数・既定 70)/ SearchAsync(進捗)/ Results(Score 降順)/ 空状態フラグ。精度モード UI なし(pHash のみ)。結果整列・空状態は ViewModel で unit 検査可能に"
-        merge_ui: "MergeViewModel(target, sources): 統合後タグプレビュー算出(MergeCalculator を呼ぶ)+非破壊注記+ExecuteAsync(MergeService.MergeAsync のみ経由)。マージ先/元の役割を視覚区別(K-DESIGN v3.0)"
-        trash_ui: "TrashViewModel(collectionId): 選択中コレクションの Deleted 画像一覧+件数。閲覧のみ(復元/完全削除なし)"
-        entry: "グリッドの選択コンテキスト(ツールバー/右クリック)に『類似画像を検索』『マージ』。アイコンは K-DESIGN v3.0"
-        i18n: "新規キーは ja 正・en 併記(similar.* / merge.* / trash.*)。K-I18N 規約"
-      invariants:
-        - 照合は pHash のみ(精度モード UI を出さない)
-        - マージ実行は MergeService の原子 API のみ経由(UI でタグ操作を再実装しない)
-        - INV-009 UI からも物理ファイルを操作しない
-      acceptance_refs: [CP-UI-G9, CP-L1-SMOKE]
+        path: "(retired — ECO-051 で撤去)"
+        path_note: "旧: SimilarSearchWindow/MergeDialog/TrashView(.axaml+.cs)+{SimilarSearch,Merge,Trash}ViewModel.cs+IWindowService 3 メンバ。ECO-014 で整理トレイへ置換され、ECO-024 の legacy 撤去で呼び出し元が消滅(IWindowService 間接参照のため依存検証から漏れた残骸)"
+        type: retired
+      trace_status: >-
+        ECO-051(2026-07-06)で撤去。生きた実体と受入の継承先: 類似検索/マージ UI= 整理トレイ
+        (M-UI-ORGANIZE-034/M-UI-IMAGETAB-035・CP-UI-G9 golden は歴代トレイで承認済み)・
+        トラッシュ UI= インペイン ポップアップ(ImageTabTrashViewModel・CpUiG1TrashPopupTests)。
+        撤去時のテスト移行(ECO-024 前例): しきい値クランプ→CpUi050・復元不在→Missing の UI 層観測→
+        CpUiG1TrashPopupTests・A-3 表示パリティ→TrashPopupItemVM.SizeLabel。
+        既知の残乖離: REQ-067 の「実行前統合後タグプレビュー+非破壊明示」は生存 UI に不在
+        (51-cheat-log R3・ECO-051 起票時所見 — 起票要否 maintainer 判断)
+      acceptance_refs: []   # ECO-051: 受入は継承先 unit(M-UI-ORGANIZE-034 等)の CP が担う
       fmea_refs: [FMEA-023]
 
     # ---------- v4.0 追加(loop-v4-repair-lifecycle)。**スキーマ変更なし**(既存列・既存 FK CASCADE で完結) ----------

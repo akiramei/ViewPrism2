@@ -141,6 +141,22 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
     }
 
     [Fact]
+    public async Task 復元_物理不在はMissing化しゴミ箱から消える()
+    {
+        // ECO-051: 撤去した旧 TrashViewModel 検査からの移行(INV-013 幽霊 normal 防止の UI 層観測。
+        // 分岐の意味論は Core=TrashService/S-26 が正・ここはポップアップ経由でも Missing に落ちることの配線検査)
+        var vm = await NewAsync(["a.jpg"], ["x.jpg"], new FakeProbe(exists: false));
+        await vm.OpenTrashCommand.ExecuteAsync(null);
+        vm.ToggleTrashItemCommand.Execute(vm.TrashPopupItems.Single(i => i.Name == "x.jpg"));
+
+        await vm.RestoreSelectedTrashCommand.ExecuteAsync(null);
+
+        Assert.Empty(vm.TrashPopupItems); // deleted でなくなった(Missing へ)
+        var x = await _db.Images.GetByIdAsync("x.jpg");
+        Assert.Equal(ImageStatus.Missing, x!.Status); // 幽霊 normal を作らない(INV-013)
+    }
+
+    [Fact]
     public async Task 完全削除は確認を経てDB行を消す_物理は不変_確認却下なら何もしない()
     {
         var vm = await NewAsync([], ["x.jpg", "y.jpg"]);

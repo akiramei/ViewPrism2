@@ -34,6 +34,14 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
             new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
 
         Assert.Equal(70, vm.SimilarThreshold); // REQ-064/065: 既定 70(範囲 50〜100)
+
+        // クランプ 50〜100(REQ-064/065 — ECO-051: 撤去した旧モーダル VM 検査からの移行)
+        vm.SimilarThreshold = 10;
+        Assert.Equal(50, vm.SimilarThreshold);
+        vm.SimilarThreshold = 999;
+        Assert.Equal(100, vm.SimilarThreshold);
+        vm.SimilarThreshold = 80;
+        Assert.Equal(80, vm.SimilarThreshold);
     }
 
     [Fact]
@@ -47,6 +55,12 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
             new StubWindowService(), new ImageSorter(), new AppSettings());
 
         Assert.Equal(70, vm.SimilarThreshold); // REQ-064/065: 既定 70(整理トレイと同値=転写ドリフト防止)
+
+        // クランプ 50〜100(REQ-064/065 — ECO-051: 撤去した旧モーダル VM 検査からの移行)
+        vm.SimilarThreshold = 10;
+        Assert.Equal(50, vm.SimilarThreshold);
+        vm.SimilarThreshold = 999;
+        Assert.Equal(100, vm.SimilarThreshold);
     }
 
     private sealed class StubWindowService : IWindowService

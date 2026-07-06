@@ -79,6 +79,44 @@
 ## 6. 残ゲート
 
 1. ~~工程診断~~ → 完了(残骸撤去・**裁定不要** — ECO-024 前例踏襲)
-2. /eco-fix eco-051 — 受入観点対応表 → 撤去 → 機械受入(+L1 スモーク)
-3. gate②: 軽量確認(起動+主要画面一巡)— 実施要否は maintainer 判断
-4. クローズ時: M-UI-SIMILARITY-023 retire の M4+register applied+教訓
+2. ~~/eco-fix eco-051 — 受入観点対応表 → 撤去 → 機械受入~~ → 完了(§7)
+3. **gate②**: 軽量確認(起動+主要画面一巡)— 実施要否は maintainer 判断
+4. クローズ時: register applied+教訓(M4=M-UI-SIMILARITY-023 retire は §7 で実施済み)
+
+## 7. 実施記録(2026-07-06 — 撤去・機械受入完了・gate② 待ち)
+
+- **実測裏取り(削除系につきプローブ非該当・代替)**: 到達不能の grep 全数証拠(§3)+
+  撤去後の機械受入全緑+L1 スモーク(CpL1SmokeTests=起動系・スイート内で緑)。
+- **受入観点対応表(ECO-024 前例「移行を確認してから削除」)**:
+
+  | 死者テストの観点 | 生存側カバー | 処置 |
+  |---|---|---|
+  | しきい値クランプ 50〜100+既定 70(モーダル VM) | 既定= CpUi050(ECO-050)。クランプ unit は無かった | **移行**: CpUi050 両 fact へクランプ検査を追加 |
+  | 検索結果の類似度降順・空状態(モーダル VM) | エンジン降順= CpSim017/S-21(凍結)。トレイ表示は golden(ECO-044/048/050 実機)+条件検索表示 unit | 削除(エンジン+golden で担保。トレイ類似検索「表示」の unit 新設は本 ECO 範囲外) |
+  | マージプレビュー(統合後タグ・マージ先優先・役割) | 統合意味論= OC-17/S-23 系(Core)。**プレビュー UI は生存側に機能ごと不在** | 削除+**R3 記録**(§下記) |
+  | トラッシュ deleted のみ列挙・空状態(旧 VM) | CpUiG1TrashPopupTests(列挙・空状態) | 削除 |
+  | 復元_物理存在→Normal(旧 VM・V4 拡張) | Core= CpTrash020/S-26。UI= CpUiG1TrashPopupTests 復元 fact | 削除 |
+  | 復元_物理不在→Missing(旧 VM・V4 拡張) | Core= CpTrash020/S-26。**UI 層観測が無かった** | **移行**: CpUiG1TrashPopupTests へ 1 fact 追加 |
+  | 完全削除_確認+CASCADE(旧 VM・V4 拡張) | Core= CpTrash020/S-30。UI= CpUiG1TrashPopupTests 完全削除/空にする fact | 削除 |
+  | A-3 表示パリティ(トラッシュ項目のサイズ文字列) | 生存側 TrashPopupItemVM.SizeLabel に同一観測点 | **移行**: CpDisplayParity022Tests A-3 を生存経路へ書換(ECO-024 A-2 移行と同型) |
+
+- **撤去**: src 9 ファイル(3 Window .axaml+.cs+3 VM)+ IWindowService 3 メンバ+
+  WindowService 3 メソッド+孤児フィールド 2(_similaritySearch/_mergeService — _trashService/_images は
+  Repair/Relink が使用のため残置)+死者テスト(CpUiSimilarityViewModelTests 全体・
+  CpUiRepairViewModelTests の旧 TrashViewModel 節)。DI は AddSingleton コンテナ解決のため無変更。
+  **テスト stub 14 ファイルは無改変**(インターフェースメンバ削除後は余剰公開メソッドとして合法 —
+  起票時想定より小さい diff)。i18n キー(similar.*/merge.*)は残置(無害・共有可能性の切り分け省略)。
+- **M4(同時実施)**: M-UI-SIMILARITY-023 を retired 化(継承先= M-UI-ORGANIZE-034/
+  M-UI-IMAGETAB-035/ImageTabTrashViewModel・テスト移行の記録・既知の残乖離を trace_status に明記)。
+- **R3 所見(51 記録)**: **REQ-067「実行前の統合後タグプレビュー+物理非破壊の明示」が生存 UI に不在**
+  (実装は死者にのみ存在した)。E-UI-MERGE-036 invariant と as-built の乖離。
+  起票の選択肢= a(トレイへ実装)/ b(REQ-067/E-BOM を as-built へ改訂)— maintainer 判断。
+- **機械受入(4 点全緑)**: build 0 error/0 warning・**Tests 558/558**(567→ 死者 10 fact 除去+
+  移行 1 fact 追加・クランプは既存 fact へ統合・L1 スモーク含む)・**Oracle 107+2skip**(無改変・
+  回帰ゼロ)・validate_bom 0-0。
+
+### gate② 確認基準(軽量 — 実施要否は maintainer 判断)
+
+到達不能コードの削除=視覚不変のため、機械受入+L1 で足りるとの判断も可。実機確認する場合:
+1. アプリ起動 → 画像タブ(一覧・整理トレイ・ゴミ箱ポップアップ)→ 作業タブ → タグタブ → ビューアを一巡
+2. 整理トレイの類似検索・マージ・取り消す、ゴミ箱の復元・完全削除が従来どおり動く

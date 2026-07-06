@@ -48,23 +48,9 @@ public interface IWindowService
     /// <summary>ビューアウィンドウ(REQ-044)。ordered は呼び出し元一覧の整列結果。</summary>
     void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex);
 
-    /// <summary>
-    /// 類似検索ウィンドウ(REQ-065、仕様 §2.10.4)。基準画像 1 枚に対し閾値で類似画像を検索する。
-    /// collectionEntries は選択中コレクションの normal 画像(結果のサムネイル表示用)。
-    /// </summary>
-    Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries);
-
-    /// <summary>
-    /// マージダイアログ(REQ-067、仕様 §2.10.5)。マージ先 1 枚・マージ元 1 枚以上。
-    /// 統合後タグプレビュー+非破壊明示。マージされたら true。
-    /// </summary>
-    Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources);
-
-    /// <summary>
-    /// トラッシュ表示(REQ-067/REQ-070/REQ-071、仕様 §2.10.5/§2.11.3-4)。選択中コレクションの
-    /// deleted 一覧。V4 で復元・完全削除(非破壊明示文言+確認)を含む。
-    /// </summary>
-    Task ShowTrashAsync(string collectionId);
+    // ECO-051: ShowSimilarSearchAsync / ShowMergeAsync / ShowTrashAsync は撤去。
+    // V3 旧 UI(独立モーダル)は ECO-014 で整理トレイへ置換され、ECO-024 の legacy 撤去で
+    // 呼び出し元が消滅した残骸だった(類似検索/マージ=整理トレイ・トラッシュ=インペイン ポップアップが実体)。
 
     /// <summary>
     /// 修復ライフサイクル UI(REQ-072、仕様 §2.11.5)。criteria 条件検索フォーム+結果と

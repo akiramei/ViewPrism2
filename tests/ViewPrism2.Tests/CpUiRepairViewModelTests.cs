@@ -376,77 +376,13 @@ public sealed class CpUiRepairViewModelTests
         Assert.Equal("sub/broken.png", missing.RelativePath);
     }
 
-    // ---- トラッシュ復元/完全削除(TrashViewModel 拡張) ----
-
-    private static TrashViewModel CreateTrashVm(TempDb db, IFilePresenceProbe probe)
-        => new(
-            Folder,
-            db.Images,
-            db.Folders,
-            CreateLoc(),
-            new TrashService(db.Images, db.Folders, probe),
-            new AcceptingWindows());
+    // ECO-051: 「トラッシュ復元/完全削除(TrashViewModel 拡張)」節は撤去(TrashViewModel=到達不能な
+    // V3 旧 UI の残骸を検査していた)。意味論の正は Core(TrashService — CpTrash020Tests/S-26/S-30)、
+    // 生存 UI 層はインペイン ポップアップ(CpUiG1TrashPopupTests: 復元 Normal/不在 Missing[移行]・
+    // 完全削除 CASCADE+物理不変・空にする)が担う。FakeProbe は Repair 系テストが引き続き使用。
 
     private sealed class FakeProbe(bool exists) : IFilePresenceProbe
     {
         public bool Exists(string absoluteImagePath) => exists;
-    }
-
-    [Fact]
-    public async Task トラッシュ復元_物理存在でNormal化_成功文言()
-    {
-        using var db = new TempDb();
-        await SeedFolderAsync(db);
-        await db.Images.AddAsync(Image("d1", "d1.jpg", ImageStatus.Deleted));
-        var vm = CreateTrashVm(db, new FakeProbe(exists: true));
-        await vm.LoadAsync();
-
-        Assert.False(vm.CanOperate);          // 未選択は操作不可
-        vm.SelectedItem = vm.Items.First();
-        Assert.True(vm.CanOperate);
-
-        await vm.RestoreAsync();
-
-        Assert.Equal("復元しました", vm.StatusMessage);
-        Assert.Equal(0, vm.Count);            // 復元で deleted 一覧から消える
-    }
-
-    [Fact]
-    public async Task トラッシュ復元_物理不在でMissing化_missing通知文言()
-    {
-        using var db = new TempDb();
-        await SeedFolderAsync(db);
-        var img = Image("d1", "d1.jpg", ImageStatus.Deleted);
-        await db.Images.AddAsync(img);
-        var vm = CreateTrashVm(db, new FakeProbe(exists: false));
-        await vm.LoadAsync();
-        vm.SelectedItem = vm.Items.First();
-
-        await vm.RestoreAsync();
-
-        Assert.Equal("リンク切れになりました", vm.StatusMessage); // 幽霊 normal 防止の結果表示
-        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("d1"))!.Status);
-    }
-
-    [Fact]
-    public async Task トラッシュ完全削除_確認後にimages行とタグがCASCADE消滅()
-    {
-        using var db = new TempDb();
-        await SeedFolderAsync(db);
-        var img = Image("d1", "d1.jpg", ImageStatus.Deleted);
-        await db.Images.AddAsync(img);
-        var tag = new Tag { Id = "t1", Name = "T", Type = TagType.Simple };
-        await db.Tags.AddAsync(tag);
-        await db.Tags.UpsertImageTagAsync(new ImageTag { ImageId = img.Id, TagId = tag.Id });
-
-        var vm = CreateTrashVm(db, new FakeProbe(exists: false));
-        await vm.LoadAsync();
-        vm.SelectedItem = vm.Items.First();
-
-        await vm.PurgeAsync();
-
-        Assert.Equal("完全削除しました", vm.StatusMessage);
-        Assert.Null(await db.Images.GetByIdAsync("d1"));
-        Assert.Empty(await db.Tags.GetImageTagsAsync("d1"));
     }
 }
