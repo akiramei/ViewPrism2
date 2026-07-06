@@ -503,12 +503,13 @@ control_plan:
       oracle: "adapter 不一致→再計算・連鎖無効化 / this-build golden exact / schema 同値 / 相対速度比"
       approver: automated
       test_vectors:
-        - "adapter version: IPHashImageReader.AdapterId(full=skia-full-decode-v1 / scaled=skia-scaled-decode-v1)。production DI=scaled-decode"
+        - "adapter version: IPHashImageReader.AdapterId(full=skia-full-decode-v1 / scaled=skia-scaled-decode-v2 — ECO-054 経路一貫性で世代交代。golden 値は capture 実測で不変=512² fixture は codec 縮小でちょうど長辺 64 に到達し中間段非発動)。production DI=scaled-decode"
         - "freshness: 内容一致でも hash_adapter 不一致なら stale→再計算→連鎖無効化(旧 adapter 値・旧類似度の混在禁止)。旧 DB の NULL は必ず再計算"
         - "schema: migration 003-image-features-hash-adapter 適用 DB = 新規 LatestDdl(S-05 / CP-DB-006 同値)"
-        - "this-build golden(scope=this-build): production adapter exact = b7ff8800d0de12d5(512 jpeg q90 pattern3・SkiaSharp 3.119.4)/ 単色を実 decode 経路で 0x8000…。adapter 世代交代ごとに再凍結"
+        - "this-build golden(scope=this-build): production adapter exact = b7ff8800d0de12d5(512 jpeg q90 pattern3・SkiaSharp 3.119.4。v1→v2 で値不変を capture 実測 — ECO-054)/ 単色を実 decode 経路で 0x8000…。adapter 世代交代ごとに再凍結"
         - "横断(scope=cross-factory): EQ-RANK(順位)を両工場・代表サイズで維持"
         - "latency 退行ガード(default-on): scaled-decode の μ が full-decode の 1/2 以下(相対比・machine 非依存)"
+        - "(ECO-054/S-42)フォーマット間経路一貫性: 同一内容の PNG(原寸)×JPEG(50%)複製ペアで scaled のフォーマット間距離 ≤ full の距離+2(高周波内容)・滑らかな内容は絶対距離 ≤5(是正前実績: 高周波で 30 vs 24・実ユーザーペアで 8 vs 2=-18 点)"
 
     # ---- v4.0 修復ライフサイクル(loop-v4-repair-lifecycle) ----
     - id: CP-CRITERIA-019

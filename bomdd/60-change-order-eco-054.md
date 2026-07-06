@@ -1,4 +1,4 @@
-# Change Order — ECO-054(staged): scaled-decode のフォーマット間系統誤差 — 経路対称化(P-09 世代交代を伴う品質改善)
+# Change Order — ECO-054(staged→fix 済み): scaled-decode のフォーマット間系統誤差 — 経路対称化(P-09 世代交代を伴う品質改善)
 
 > ECO-048 golden 実施時の R3 所見 #2(51-cheat-log 2026-07-06)から昇格起票。maintainer 所見
 > 「png→jpg 変換複製が 78 点。直感では 90 以上のはず」— 実測切り分けで直感が正と確定済み。
@@ -82,10 +82,46 @@
 
 ## 6. 残ゲート
 
-1. **gate①(裁定・human)**: 案 A/B/C の選択(§4・推奨 A)。A は P-09 世代交代
-   (初回検索の全再計算)と this-build golden 再凍結手続きの承認を含む。
-2. 裁定後: /eco-fix eco-054 — プローブ(png/jpg 複製の 70 台を是正前実測)→ 対称化 → 機械受入
-   (ThisBuildGolden 値が動いた場合は停止して報告)。
-3. golden(maintainer 実機): orientation_fixture_06.png × orientation_fixture_06.jpg が 90 点台で検出+既存検出の回帰なし
-   (初回検索は再計算で時間がかかる旨を基準に明記)。
+1. ~~**gate①(裁定・human)**: 案 A/B/C の選択~~ → **受領: 案 A**(maintainer 2026-07-06)
+2. ~~/eco-fix eco-054 — プローブ → 対称化 → 機械受入~~ → 完了(§7)
+3. **golden(maintainer 実機)**: §7 末尾の基準。
 4. クローズ時: CP 観点明記+register applied+教訓。
+
+## 7. 実施記録(2026-07-06 — 案 A 実装・機械受入完了・golden 待ち)
+
+- **プローブの較正過程(R5 — 初回プローブは不合格にならず差し戻し規律を適用)**: 合成の同一サイズ・
+  勾配ペアでは現象が再現せず(560/560 全緑)、規律どおりコードに触らず診断精密化へ。再現マトリクス
+  3 round(コンテンツ×解像度差×アスペクト)で機構を特定 — **発散源は JPEG 側**(DCT 事前縮小=面積平均
+  vs 全解像度直行=点サンプル。実ファイル経路間: jpg=8・png=0)。高周波成分を持つ内容でのみ顕在化
+  (busy 合成: 経路間 34・ペア scaled=30/full=24)。**成立したプローブ**= busy ペア+性質
+  「scaled のフォーマット間距離 ≤ full の距離+2」— 是正前不合格(30 > 26)を実測。
+- **設計の実測選定(プロトタイプ 2 案を実ペア+合成 2 種で比較)**:
+  | ペア | 現行 | pngOnly | **uniform(採用)** | full |
+  |---|---|---|---|---|
+  | 実ペア orientation_fixture_06 | 8(78 点) | 4 | **2(96 点)** | 2 |
+  | art 合成 | 0 | 4(逆向き非対称で悪化) | **2** | 2 |
+  | busy 合成 | 30 | 14 | **14(full の 24 より良い)** | 24 |
+  pngOnly(起票時の想定)は逆向き非対称を作る欠陥があり不採用。**uniform**(全フォーマット一様:
+  decode 後の長辺 >64 なら Mipmap Linear=面積平均近似で長辺 ~64 の中間段 → 共通の最終 32×32)を採用。
+- **起票時見込みからの変更と再確認**: uniform は JPEG 経路も変え得るため「golden 値不変見込み」の前提が
+  変わったが、**capture 実測で StructuredGolden 値は不変と確認**(512² fixture は codec 縮小でちょうど
+  長辺 64 に到達し中間段が非発動)。Oracle の実改変は **ProductionAdapterId 定数 1 行のみ**
+  (台帳ライセンス= CP-PHASH-ADAPTER-019「世代交代ごとに再凍結」・値の同一性を実測記録=教訓 3 の適用)。
+- **是正**: PHashImageReaderScaledDecode — 一様中間段(GetIntermediateSize: 長辺 64・短辺 32 クランプ・
+  拡大禁止・AwayFromZero)+ AdapterId `skia-scaled-decode-v2`(P-09 で旧特徴量は自動再計算・連鎖無効化。
+  migration 不要)。Core・full-decode reader・UI は不変。
+- **台帳同期**: K-SKIA v4.1 追補(経路一貫性の規定)・spec §2.10.3(v2 表記)・33(v2+S-42 ベクタ)・
+  41 新規行 S-42(フォーマット間経路一貫性 — 性質ベース 2 種)+ Oracle S42FormatConsistencyTests 新設。
+- **是正後の実測**: 実ペア orientation_fixture_06.png×jpg= **距離 2=96 点(full-decode と同値)**。
+- **機械受入(4 点全緑+selftest)**: build 0/0・**Tests 561/561**(558+3: busy 性質=プローブ合格転化・
+  勾配 scaled/full 対照)・**Oracle 109+2skip**(107+S-42 2 件。ThisBuildGolden= AdapterId v2 で全緑・
+  golden 値不変・単色不変・EQ-RANK/S-25 回帰ゼロ・latency ガード緑)・validate_bom 0-0・selftest OK。
+- diff: src 1 ファイル(reader)・tests 2(CP 1 新設+Oracle 1 新設)・Oracle 定数 1 行・bomdd 4。
+
+### golden 合格基準(gate② — maintainer 実機)
+
+1. **orientation_fixture_06.png × orientation_fixture_06.jpg が 90 点台(実測 96)で検出される**: どちらかを基準に類似検索
+   (既定 70 のまま)→ 相手が 96 点で結果に出る。※初回検索は全画像の特徴量再計算(adapter v2 への
+   世代交代)が走るため時間がかかります(2 回目以降は通常速度)。
+2. 回帰: 回転複製(rot90)・鏡像複製(mirror)が引き続き検出される(ECO-048 の検出面の保存)。
+3. 回帰: 無関係画像の混入なし(スコア序列の体感が崩れていない)。

@@ -352,6 +352,14 @@ fixed_oracle:
       spec_ref: "bomdd/20-spec.md#2.10.1a REQ-084(ECO-048)"
       equivalence_ref: EQ-001
       depth: unit
+    - id: S-42
+      scope: cross-factory
+      added_by: ECO-054
+      scenario: "scaled-decode のフォーマット間経路一貫性(ECO-054 案 A): 同一内容の PNG(原寸)×JPEG q92(50% 縮小)複製ペア(高周波=正弦重ね+擬似ノイズ/滑らか=勾配+矩形)を production reader(scaled)と full-decode で照合"
+      contract_expectation: "scaled のフォーマット間距離は full-decode の距離+2 を超えない(経路非対称の系統誤差を作らない — 是正前実績: 高周波 30 vs 24・実ユーザーペア 8 vs 2)。滑らかな内容は scaled でも絶対距離 ≤5(スコア 90 以上)"
+      spec_ref: "bomdd/20-spec.md#2.10.3(K-SKIA v4.1 経路一貫性・ECO-054)"
+      equivalence_ref: EQ-002
+      depth: unit
     - id: S-41
       scope: cross-factory
       added_by: ECO-049

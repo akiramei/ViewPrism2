@@ -16,7 +16,10 @@ namespace ViewPrism2.Oracle;
 public sealed class ThisBuildGoldenTests
 {
     /// <summary>production に DI される adapter の世代識別子。差し替え時はこの値と golden を再凍結する。</summary>
-    private const string ProductionAdapterId = "skia-scaled-decode-v1";
+    // ECO-054 再凍結(台帳ライセンス=CP-PHASH-ADAPTER-019「世代交代ごとに再凍結」): v1→v2(経路一貫性=
+    // 全フォーマット一様の中間縮小段)。StructuredGolden 値は capture 実測で不変(512² fixture は codec 縮小で
+    // ちょうど長辺 64 に到達し中間段が非発動)— 変わったのは本定数のみ。
+    private const string ProductionAdapterId = "skia-scaled-decode-v2";
 
     /// <summary>
     /// 固定フィクスチャ(512×512 JPEG q90・pattern 3)を production adapter で decode した pHash の凍結値。

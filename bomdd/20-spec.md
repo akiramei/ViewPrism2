@@ -663,8 +663,9 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
   **phash_variants**(REQ-084/ECO-048 — migration 006))。
   pHash 等の特徴量を画像ごとに保存。ORB 列(orb_descriptors/orb_keypoints)は**本ループでは作らない**(ORB defer)。
   **hash_adapter**(P-09)= pHash を計算した adapter 世代の識別子。decode 経路/レシピ/SkiaSharp 版が pHash の
-  絶対値を動かす変更をしたら新 id を採番する(production 現行 = `skia-scaled-decode-v1`。8 変種の追加は
-  identity pHash の絶対値を動かさないため世代交代に**該当しない** — ECO-048)
+  絶対値を動かす変更をしたら新 id を採番する(production 現行 = `skia-scaled-decode-v2` —
+  ECO-054 経路一貫性=全フォーマット一様の中間縮小段で世代交代。8 変種の追加(ECO-048)は
+  identity pHash の絶対値を動かさないため世代交代に**該当しない**)
   **phash_variants**(REQ-084)= 8 オリエンテーション変種の pHash(2.10.1a の順序)を `,` で連結した TEXT。
   NULL = 変種なし(旧レコード/変種非対応 reader)
 - **image_similarity**(列: cache_key PK、image_id1、image_id2、similarity_score、last_compared)。

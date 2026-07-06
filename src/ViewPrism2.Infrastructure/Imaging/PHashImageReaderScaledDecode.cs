@@ -27,8 +27,10 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
     /// <summary>
     /// scaled-decode(早期縮小)世代の adapter 識別子(P-09)。full-decode とは pHash 値が異なる。
     /// 8 変種の追加(ECO-048)は identity pHash の絶対値を動かさないため世代交代しない(仕様 §2.10.3)。
+    /// v2(ECO-054): 全フォーマット一様の中間縮小段(長辺 ~64・Mipmap Linear=面積平均近似)を追加 —
+    /// pHash 絶対値が動くため世代交代(旧 v1 特徴量は P-09 で自動再計算・this-build golden 再凍結)。
     /// </summary>
-    public string AdapterId => "skia-scaled-decode-v1";
+    public string AdapterId => "skia-scaled-decode-v2";
 
     /// <summary>8 オリエンテーション変種に対応する(REQ-084 / ECO-048)。</summary>
     public bool SupportsOrientationVariants => true;
@@ -85,25 +87,73 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
                 return null;
             }
 
-            // 最終 32×32 縮小処理は Factory-A と共通(双線形・Mipmap なし・決定性)。
-            // ただし入力画素が early-shrink で異なるため出力 pHash 値は Factory-A と一致しない(adapter drift)。
-            var info = new SKImageInfo(
-                PerceptualHash.Size, PerceptualHash.Size, SKColorType.Bgra8888, SKAlphaType.Unpremul);
-            using var resized = bitmap.Resize(info, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
-            if (resized is null)
+            // ECO-054(v2): 全フォーマット一様の中間縮小段。codec のネイティブ縮小が長辺 ~64 まで
+            // 届かない場合(JPEG=1/8 止まり・PNG 等=スケール非対応で原寸)、Mipmap Linear(面積平均
+            // 近似)で長辺 ~64 へ落とす。これにより最終 32×32 の入力が全フォーマットで同質になり、
+            // フォーマット間の系統誤差(実測 -18 点)を消す(K-SKIA v4.1 経路一貫性)。
+            SKBitmap? intermediate = null;
+            try
             {
-                _logger?.LogWarning("pHash 用リサイズに失敗しました: {Path}", absoluteImagePath);
-                return null;
-            }
+                var target = bitmap;
+                if (Math.Max(target.Width, target.Height) > IntermediateLongEdge)
+                {
+                    var (midW, midH) = GetIntermediateSize(target.Width, target.Height);
+                    intermediate = target.Resize(
+                        new SKImageInfo(midW, midH, SKColorType.Bgra8888, SKAlphaType.Unpremul),
+                        new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+                    if (intermediate is null)
+                    {
+                        _logger?.LogWarning("pHash 用中間縮小に失敗しました: {Path}", absoluteImagePath);
+                        return null;
+                    }
 
-            // GetPixelSpan() で BGRA 各バイトを一括取得(Factory-A と同一)
-            return resized.GetPixelSpan().ToArray();
+                    target = intermediate;
+                }
+
+                // 最終 32×32 縮小処理は Factory-A と共通(双線形・Mipmap なし・決定性)。
+                // 入力画素が early-shrink+中間段で異なるため出力 pHash 値は Factory-A と一致しない(adapter drift)。
+                var info = new SKImageInfo(
+                    PerceptualHash.Size, PerceptualHash.Size, SKColorType.Bgra8888, SKAlphaType.Unpremul);
+                using var resized = target.Resize(info, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+                if (resized is null)
+                {
+                    _logger?.LogWarning("pHash 用リサイズに失敗しました: {Path}", absoluteImagePath);
+                    return null;
+                }
+
+                // GetPixelSpan() で BGRA 各バイトを一括取得(Factory-A と同一)
+                return resized.GetPixelSpan().ToArray();
+            }
+            finally
+            {
+                intermediate?.Dispose();
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger?.LogWarning(ex, "pHash 計算に失敗しました: {Path}", absoluteImagePath);
             return null;
         }
+    }
+
+    /// <summary>
+    /// 中間縮小段(ECO-054)の目標寸法: 長辺を <see cref="IntermediateLongEdge"/> へ(アスペクト比保持・
+    /// 拡大なし・短辺は <see cref="PerceptualHash.Size"/> 未満にしない・丸めは AwayFromZero)。
+    /// </summary>
+    private static (int Width, int Height) GetIntermediateSize(int width, int height)
+    {
+        var longEdge = Math.Max(width, height);
+        var shortEdge = Math.Min(width, height);
+        var scale = (double)IntermediateLongEdge / longEdge;
+        if (shortEdge > PerceptualHash.Size)
+        {
+            scale = Math.Max(scale, (double)PerceptualHash.Size / shortEdge);
+        }
+
+        scale = Math.Min(scale, 1.0);
+        var w = Math.Max(PerceptualHash.Size, (int)Math.Round(width * scale, MidpointRounding.AwayFromZero));
+        var h = Math.Max(PerceptualHash.Size, (int)Math.Round(height * scale, MidpointRounding.AwayFromZero));
+        return (Math.Min(w, width), Math.Min(h, height)); // 拡大禁止(小画像は原寸のまま)
     }
 
     /// <summary>
