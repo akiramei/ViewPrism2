@@ -3,6 +3,7 @@
 
 実行:  python bomdd/validate_bom.py            (リポ直下 or どこからでも)
         python bomdd/validate_bom.py --quiet     (ERROR のみ表示)
+        python bomdd/validate_bom.py --selftest  (検査器の自己検査 — ECO-053 素通し様式の再発防止)
 
 終了コード:  0 = ERROR なし(WARN は許容) / 1 = ERROR あり / 2 = 実行不能(parse 失敗等)
 
@@ -26,9 +27,13 @@
     [E8] ebom_refs の E-* 参照は active E-BOM id(retired への dangling 禁止)
     [W2] active surface 部品は M-BOM 製造トレースを持つ(orphan 検出)
   Register (60-change-register.yaml)
-    [E9]  change_order.status は宣言語彙のみ
-    [E10] change_order.golden は宣言語彙のみ
+    [E9]  change.status は宣言語彙のみ(ECO-053: リストキーを changes: へ追随 — ECO-034 改名の未追随で
+          E9〜E11 が no-op 化していた欠陥の是正)
+    [E10] change.golden は宣言語彙で始まる(prefix 一致 — 運用の approved(日付 …) 形式に追随。欄なしも違反)
     [E11] superseded_by / reattributed_by は実在 ECO id
+  YAML 共通
+    [E13] 重複キー禁止(ECO-053: PyYAML safe_load の警告なし後勝ちが register 誤挿入事故を素通しした欠陥の是正。
+          全 YAML 台帳ロードに適用・ファイル名+キー+行番号を報告)
   UI-BOM (ui/image-tab/ui-bom.json・存在時のみ)
     [E12] ebomCandidate / ebomItemsReferenced の E-* 参照は active(superseded 欄は除外)
   Cross (00-manifest.yaml ↔ 60-change-register.yaml)
@@ -59,10 +64,81 @@ findings = []  # (severity, code, message)
 def err(code, msg):  findings.append(("ERROR", code, msg))
 def warn(code, msg): findings.append(("WARN",  code, msg))
 
+# ---- [E13] 重複キー検出ローダ(ECO-053) ----
+# PyYAML の SafeLoader は YAML 仕様のキー一意性を強制せず警告なしに後勝ちマージする。
+# register 誤挿入事故(ECO-049・da155ad で修復)を 0-0 で素通しした真因。
+# mapping 構築時に重複を検出し、ロード継続のうえ E13 として報告する(他検査も走らせる)。
+class _DupKeyLoader(yaml.SafeLoader):
+    duplicates = None  # ロード単位で差し替える
+
+def _dup_checking_mapping(loader, node, deep=False):
+    seen = {}
+    for key_node, _value_node in node.value:
+        try:
+            key = loader.construct_object(key_node, deep=True)
+            hashable = True
+        except Exception:
+            hashable = False
+        if hashable:
+            try:
+                if key in seen:
+                    loader.duplicates.append((key, key_node.start_mark.line + 1, seen[key]))
+                else:
+                    seen[key] = key_node.start_mark.line + 1
+            except TypeError:
+                pass  # unhashable キー(list 等)は一意性検査の対象外
+    return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+_DupKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dup_checking_mapping)
+
+def _load_yaml_text(text, label):
+    """text を重複キー検査つきでロードし、重複は E13 として findings へ。"""
+    loader = _DupKeyLoader(text)
+    loader.duplicates = []
+    try:
+        data = loader.get_single_data()
+    finally:
+        dups = loader.duplicates
+        loader.dispose()
+    for key, line, first_line in dups:
+        err("E13", f"{label}: キー {key!r} が重複(行 {line}・初出 行 {first_line})— "
+                   "YAML は警告なく後勝ちになり値が化ける(ECO-049 事故様式)")
+    return data
+
 def load_yaml(name):
-    return yaml.safe_load(open(os.path.join(BOMDD, name), encoding="utf-8"))
+    with open(os.path.join(BOMDD, name), encoding="utf-8") as f:
+        return _load_yaml_text(f.read(), name)
 def load_json(name):
     return json.load(open(os.path.join(BOMDD, name), encoding="utf-8"))
+
+def golden_ok(gd):
+    """[E10] golden は宣言語彙で始まる(prefix 一致 — 運用の approved(日付 …) 形式に追随)。"""
+    return isinstance(gd, str) and any(gd == v or gd.startswith(v) for v in GOLDEN_VOCAB)
+
+# ---- --selftest(ECO-053): 素通し様式の再発防止 — 検査器自身の検出能力を合成フィクスチャで自己検査 ----
+if "--selftest" in sys.argv:
+    ok = True
+    # (1) 重複キー検出: ECO-049 事故様式の最小再現(同一マッピングに baseline が 2 回)
+    findings.clear()
+    _load_yaml_text("changes:\n  - id: X\n    baseline: a\n    notes: n\n    baseline: b\n", "selftest.yaml")
+    if not any(c == "E13" for _, c, _ in findings):
+        print("selftest FAIL: 重複キーを検出できない(E13)"); ok = False
+    # (2) 語彙検査の意味論: prefix 一致と違反
+    if not golden_ok("approved(2026-07-06 maintainer 実機: …)"):
+        print("selftest FAIL: approved(…) 形式を許容しない(E10 prefix)"); ok = False
+    if golden_ok("各段で再ウォークスルー") or golden_ok(None):
+        print("selftest FAIL: 語彙外 golden を通してしまう(E10)"); ok = False
+    if "bogus-vocab-violation" in STATUS_VOCAB:
+        print("selftest FAIL: STATUS_VOCAB が汚染"); ok = False
+    # (3) register リストキー: 実台帳の changes: が空でない(E9〜E11 が no-op でない)
+    findings.clear()
+    _reg = load_yaml("60-change-register.yaml")
+    if not _reg.get("changes"):
+        print("selftest FAIL: register の changes: が読めない(E9〜E11 が no-op — ECO-034 未追随様式)"); ok = False
+    findings.clear()
+    print("selftest:", "OK" if ok else "FAIL")
+    sys.exit(0 if ok else 1)
 
 def is_e(x):  # E-BOM 部品 id か
     return isinstance(x, str) and x.startswith("E-")
@@ -145,7 +221,12 @@ for it in items:
 
 # ---------------------------------------------------------------- Register
 reg = load_yaml("60-change-register.yaml")
-cos = reg.get("change_orders", [])
+# ECO-053: リストキーは changes:(ECO-034 で change_orders: から改名 — validator 未追随で
+# E9〜E11 が 3 日間 no-op 化していた。「読めなければ空」でなく明示エラーにして再発を封じる)
+cos = reg.get("changes")
+if cos is None:
+    err("E9", "register のリストキー changes: が見つからない(E9〜E11 が実行不能 — キー改名時は validator を同期)")
+    cos = []
 eco_ids = {c["id"] for c in cos}
 for c in cos:
     cid = c.get("id", "?")
@@ -153,8 +234,8 @@ for c in cos:
     if st not in STATUS_VOCAB:          # [E9]
         err("E9", f"{cid}.status が宣言語彙外: {st!r}(許可: {sorted(STATUS_VOCAB)})")
     gd = c.get("golden")
-    if gd not in GOLDEN_VOCAB:          # [E10]
-        err("E10", f"{cid}.golden が宣言語彙外: {gd!r}(許可: {sorted(GOLDEN_VOCAB)})")
+    if not golden_ok(gd):               # [E10] prefix 一致(欄なし=None も違反)
+        err("E10", f"{cid}.golden が宣言語彙で始まらない: {str(gd)[:40]!r}(許可 prefix: {sorted(GOLDEN_VOCAB)})")
     for key in ("superseded_by", "reattributed_by"):  # [E11]
         v = c.get(key)
         if v and v not in eco_ids:
