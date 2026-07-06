@@ -975,7 +975,7 @@ changes:
   - id: ECO-056
     title: "整理トレイの v2 CAD 追随(3 ゾーン+マージ先解除+REQ-067 追記)+v1 以来の CAD 視覚/導線逸脱 6 点の是正"
     type: v2 追随+欠陥是正(ECO-055 golden 再確認時の maintainer 実機×v2 モック突合 8 所見。v2 新設 2 点=A-1/A-2 裁定済み・v1 定義への実装逸脱 6 点=ECO-014 ロット混入。同一 surface・同一 golden 由来につき 1 ECO — ECO-055 分離裁定の「順序実施」は満了)
-    status: staged
+    status: staged   # fix 済み・golden(gate②)待ち。プローブ= リフレクション解決 3 本(導線の不在を実行時不合格化)が是正前全滅→合格転化。是正= 子 VM に ClearMergeTarget/ClearTargets/BackToGrid(結果保持)/ToggleSearchOpen+v2 文言(N枚 → 1枚・blocked 注記・方式ラベル)、ホスト殻 4 コマンド(全通知=GF-055-01 先回り)、WorkTab 同型直実装。XAML 両タブ= 3 ゾーン DockPanel(上=マージ先ピン/下=検索折りたたみ+実行ピン/中央=対象のみスクロール)+解除✕+「条件検索」「類似画像検索」順+「探す」+2 列チェック行(condRow)+結果ヘッダ「グリッドへ」+タイル=チェック+バッジ同型(宛先=緑 OrganizeDestBrush/対象=青)。REQ-067 追記(A-2 履行)。テスト対応= 新設 3・移行 1(MergeButtonLabel 文言 pin=観点保存)。モック内語彙ゆれ(宛先/マージ先)は転写し golden 基準 6 で明示確認。Tests 568/568・Oracle 109+2skip・build 0/0・validate 0-0
     golden: pending
     baseline: "main 6c59f37"
     findings: "CAD=全 8 所見で健全・定義済み(是正不要)。v2 新設(228081d)= ①マージ先解除 clearDest+散文 L222/L353(A-2=REQ-067 追記へ) ②3 ゾーン固定(散文 L206-209・右ペイン共通クローム原則の実体化)。v1 から定義済み(v2 同一)= ③検索ボタン「探す」 ④条件 2 列グリッド ⑤チェックボックス行意匠 ⑥タブ「条件検索」「類似画像検索」の順・名称 ⑦検索結果ヘッダ backToGrid「グリッドへ」 ⑧タイル=selected チェック+isDest バッジ(マージ先は両方)。実装= トレイ全体が単一 ScrollViewer(実行ボタンごとスクロールアウト)・ClearDest 不在・タブ「類似画像」「条件」逆順短縮・「似た画像を探す」・WrapPanel+素 ToggleButton・検索結果に戻る導線なし(ShowSearchResults=organizeMode&&HasSearched&&!Done で HasSearched を戻す経路が存在しない=戻る手段は整理終了のみ)・マージ先=ラベルのみ/対象=チェックのみ排他。両タブ同型(CAD が同一部品と明記)。混入= 51ad8ee(整理モード製造②・ECO-014 ロット=ECO-050/055 と同族様式)。マスキング= G-9/G-1 観点が機能中心でモック詳細突合(文言/順序/意匠/導線)が不在=歴代 golden は外観大づかみで approved・v2 モック受入 Phase 0/1 を経た並置突合で一括顕在化"

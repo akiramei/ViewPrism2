@@ -738,10 +738,17 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>中央ブラウズグリッド: 検索結果表示中は譲る(整理モードでもグリッドで対象を選ぶため出す)。</summary>
     public bool ShowBrowseGrid => ShowGridPane && !ShowSearchResults;
     public bool ShowBrowseList => ShowListPane && !ShowSearchResults;
+    // ECO-056(v2 3 ゾーン): 下部ピンの検索パネル開閉+検索結果ヘッダ(グリッドへ/件数/方式)
+    public bool SearchOpen => Organize.SearchOpen;
+    public string SearchMethodLabel => Organize.SearchMethodLabel;
+    public string SearchResultsSubLabel => $"マージ先「{MergeTarget?.Name}」に似た画像 · {SearchResults.Count} 件";
 
     // 実行・完了
     public bool CanExecuteMerge => Organize.CanExecuteMerge;
     public string MergeButtonLabel => Organize.MergeButtonLabel;
+    // ECO-056(v2 モック): 実行不可の理由注記(下部ピン=上のヒントが見えない場面で有効)
+    public bool ShowMergeBlockedNote => _organizeMode && Organize.ShowMergeBlockedNote;
+    public string MergeBlockedNote => Organize.MergeBlockedNote;
     public bool OrganizeDone => Organize.OrganizeDone;
     public string DoneSummary => Organize.DoneSummary;
     /// <summary>取り消し(ECO-044/IMG-011 裁定③): ログに基づく補償 Undo の実行可否。</summary>
@@ -1569,6 +1576,43 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (!_organizeMode || Organize.MergeTargetId is null || imageId == Organize.MergeTargetId) return;
         Organize.ToggleTarget(imageId);
         RefreshSelectionMarkers(); // 整理対象マーカー+トレイのみ=Items を作り直さない
+    }
+
+    /// <summary>マージ先の解除(ECO-056/CAD v2・A-2 裁定=REQ-067): 整理対象は保持し、マージ先のみ未設定へ。
+    /// 実体は Organize 子 VM。通知は RefreshSelectionMarkers の一括通知(GF-055-01: 転送殻は全通知)。</summary>
+    [RelayCommand]
+    private void ClearMergeTarget()
+    {
+        if (!_organizeMode) return;
+        Organize.ClearMergeTarget();
+        RefreshSelectionMarkers(); // タイルの宛先マーカー+トレイのみ=Items を作り直さない
+    }
+
+    /// <summary>整理対象をすべて外す(ECO-056/v2 モック「すべて解除」)。マージ先は保持。</summary>
+    [RelayCommand]
+    private void ClearOrganizeTargets()
+    {
+        if (!_organizeMode) return;
+        Organize.ClearTargets();
+        RefreshSelectionMarkers();
+    }
+
+    /// <summary>検索結果からグリッドへ戻る(ECO-056/CAD backToGrid — v1 モック定義・51ad8ee から欠落)。
+    /// 結果は保持(再検索まで不変=モック実測)・整理モードは維持。</summary>
+    [RelayCommand]
+    private void BackToGrid()
+    {
+        if (!_organizeMode) return;
+        Organize.BackToGrid();
+        RefreshSelectionMarkers(); // ShowSearchResults/ShowBrowseGrid の切替は一括通知で反映
+    }
+
+    /// <summary>「似た画像を探す」パネルの開閉(ECO-056/v2 3 ゾーン: 下部ピン内の折りたたみ)。</summary>
+    [RelayCommand]
+    private void ToggleSearchOpen()
+    {
+        Organize.ToggleSearchOpen();
+        OnPropertyChanged(string.Empty); // 転送殻の全通知(GF-055-01)
     }
 
     [RelayCommand]

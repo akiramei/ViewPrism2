@@ -922,10 +922,11 @@
     <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
     <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
   </Style>
+  <!-- マージ先カード= 緑系(ECO-056/v2 モック: 宛先=緑の色意味論。青系は 51ad8ee 実装の逸脱) -->
   <Style Selector="Border.organizeSlot.target">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
-    <Setter Property="BoxShadow" Value="0 0 0 2 #2F2F6BED" />
+    <Setter Property="BorderBrush" Value="#B6E6CE" />
+    <Setter Property="Background" Value="#F3FBF7" />
+    <Setter Property="BoxShadow" Value="0 0 0 2 #2F15A06B" />
   </Style>
   <Style Selector="Border.organizeMini">
     <Setter Property="Width" Value="40" />
@@ -1015,24 +1016,141 @@
     <Setter Property="Padding" Value="18" />
   </Style>
 
-  <!-- グリッドの整理マーカー: マージ先=accent リング / 整理対象=チェック(thumbCheck 再利用) -->
+  <!-- グリッドの整理マーカー(ECO-056/v2 モック色意味論: 宛先=緑・対象=青。v1 実装の
+       マージ先=青リング+左上ラベルのみ/対象=チェックのみ は 51ad8ee の CAD 逸脱だった):
+       両者とも 左上チェック+右上バッジ+色リング の同型で表す。 -->
   <Style Selector="Border.thumbCell.mergeTarget">
+    <Setter Property="BorderBrush" Value="{StaticResource OrganizeDestBrush}" />
+    <Setter Property="BoxShadow" Value="0 0 0 3 #3815A06B" />
+  </Style>
+  <Style Selector="Border.thumbCell.organizeTarget">
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
     <Setter Property="BoxShadow" Value="0 0 0 3 #382F6BED" />
   </Style>
-  <!-- セル左上の整理ラベル(マージ先) -->
+  <!-- 宛先(マージ先)タイルの左上チェックは緑塗り(thumbCheck.selected の色 override) -->
+  <Style Selector="Border.thumbCheck.selected.dest">
+    <Setter Property="BorderBrush" Value="{StaticResource OrganizeDestBrush}" />
+    <Setter Property="Background" Value="{StaticResource OrganizeDestBrush}" />
+  </Style>
+  <!-- セル右上の整理バッジ(宛先=緑/対象=青・ECO-056 でモック位置=右上へ) -->
   <Style Selector="Border.cellTag">
     <Setter Property="CornerRadius" Value="7" />
     <Setter Property="Padding" Value="7,2" />
     <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Top" />
     <Setter Property="Margin" Value="7" />
+  </Style>
+  <Style Selector="Border.cellTag.dest">
+    <Setter Property="Background" Value="{StaticResource OrganizeDestBrush}" />
   </Style>
   <Style Selector="Border.cellTag TextBlock">
     <Setter Property="FontSize" Value="10.5" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- ============ ECO-056: 整理トレイ v2(3 ゾーン+マージ先解除)の部品 ============
+       golden 基準=「ViewPrism2 整理マージ v2」モック(CAD 228081d で権威切替)。 -->
+
+  <!-- ゾーン見出しチップ(マージ先=緑/整理対象=青) -->
+  <Style Selector="Border.trayBadge">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.trayBadge TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="Border.trayBadge.dest">
+    <Setter Property="Background" Value="#E7F7EF" />
+  </Style>
+  <Style Selector="Border.trayBadge.dest TextBlock">
+    <Setter Property="Foreground" Value="#0F8A5E" />
+  </Style>
+  <Style Selector="Border.trayBadge.src">
+    <Setter Property="Background" Value="#EAF1FE" />
+  </Style>
+  <Style Selector="Border.trayBadge.src TextBlock">
+    <Setter Property="Foreground" Value="#2459CF" />
+  </Style>
+
+  <!-- テキストリンク(すべて解除) -->
+  <Style Selector="Button.trayLink">
+    <Setter Property="Padding" Value="4,2" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+  </Style>
+  <Style Selector="Button.trayLink /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.trayLink:pointerover">
+    <Setter Property="Foreground" Value="#E5484D" />
+  </Style>
+
+  <!-- 「似た画像を探す」折りたたみヘッダ(下部ピン) -->
+  <Style Selector="Button.searchHead">
+    <Setter Property="Height" Value="44" />
+    <Setter Property="Padding" Value="13,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="CornerRadius" Value="11" />
+  </Style>
+  <Style Selector="Button.searchHead PathIcon.caret">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+  <Style Selector="Button.searchHead PathIcon.caret.open">
+    <Setter Property="RenderTransform" Value="rotate(180deg)" />
+  </Style>
+
+  <!-- 検索パネル(折りたたみの中身) -->
+  <Style Selector="Border.searchPanel">
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+  </Style>
+
+  <!-- 条件チェック行(2 列グリッドの各行= チェックボックス+ラベル・ON でハイライト) -->
+  <Style Selector="Border.condRow">
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="Padding" Value="8,0" />
+  </Style>
+  <Style Selector="Border.condRow.on">
+    <Setter Property="BorderBrush" Value="#CFE0FC" />
+    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
+  </Style>
+  <Style Selector="Border.condRow CheckBox">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- マージを実行= 緑(モック色意味論: 実行=緑・検索=青)。primaryAction(青)の色 override -->
+  <Style Selector="Button.primaryAction.merge /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource OrganizeDestBrush}" />
+  </Style>
+  <Style Selector="Button.primaryAction.merge:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#138A5D" />
+  </Style>
+  <Style Selector="Button.primaryAction.merge:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#138A5D" />
+  </Style>
+  <Style Selector="Button.primaryAction.merge:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ValueChipBg}" />
   </Style>
 
   <!-- ============ 作業モード(ECO-017): 緑系部品 ============ -->

@@ -131,7 +131,8 @@ public sealed class CpUiG1OrganizeTests : IDisposable
         Assert.Equal(2, vm.OrganizeTargets.Count);
         Assert.Equal("2 枚", vm.OrganizeTargetsCountLabel);
         Assert.True(vm.CanExecuteMerge);
-        Assert.Equal("マージを実行（2 枚）", vm.MergeButtonLabel);
+        // ECO-056(v2 モック): 実行可のラベルは総数(対象2+マージ先1)→1枚 を明示(観点=対象数の反映は保存)
+        Assert.Equal("マージを実行（3枚 → 1枚）", vm.MergeButtonLabel);
 
         // マージ先の再クリックは無操作(整理対象に落ちない)
         vm.HandleItemClick(Item(vm, "a.jpg"), ctrl: false, shift: false);

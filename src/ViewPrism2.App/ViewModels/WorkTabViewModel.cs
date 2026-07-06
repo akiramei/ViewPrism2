@@ -81,6 +81,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private bool _condDate;
     private bool _searching;
     private bool _hasSearched;
+    private bool _searchOpen; // ECO-056(v2 3 ゾーン): 下部ピンの「似た画像を探す」折りたたみ状態
     private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
     private bool _organizeDone;
     private int _doneSourceCount;
@@ -220,7 +221,15 @@ public sealed partial class WorkTabViewModel : ObservableObject
     /// <summary>検索実行可否(ECO-055 裁定③): 条件検索もマージ先必須+条件 1 つ以上。類似は従来どおり。</summary>
     public bool CanRunSearch => _mergeTargetId is not null && (!IsCriteriaMethod || HasAnyCond);
     public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
-    public string MergeButtonLabel => $"マージを実行（{_organizeTargets.Count} 枚）";
+    // ECO-056(v2 モック): 実行可= 総数(対象+マージ先)→1枚 を明示。不可= 素の文言+理由注記(画像タブと同型)
+    public string MergeButtonLabel => CanExecuteMerge ? $"マージを実行（{_organizeTargets.Count + 1}枚 → 1枚）" : "マージを実行";
+    public bool ShowMergeBlockedNote => _organizeMode && !_organizeDone && !CanExecuteMerge;
+    public string MergeBlockedNote => _mergeTargetId is null ? "宛先を選んでください" : "整理対象を1枚以上追加してください";
+    /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン)。</summary>
+    public bool SearchOpen => _searchOpen;
+    /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
+    public string SearchMethodLabel => _searchMethod == "similar" ? $"類似画像検索 · {_similarThreshold}% 以上" : "条件検索";
+    public string SearchResultsSubLabel => $"マージ先「{MergeTarget?.Name}」に似た画像 · {SearchResults.Count} 件";
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
     // ECO-044(IMG-011 裁定③): ログに基づく補償 Undo(画像タブと同型)
@@ -849,6 +858,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _searchMethod = "similar";
         _condHash = false; _condExt = false; _condSize = false; _condName = false; _condDate = false; // ECO-055
         _searching = false; _hasSearched = false;
+        _searchOpen = false; // ECO-056: 検索パネルは畳んだ状態で開始(v2 モック direct シナリオ)
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
         _undoOperationId = null; _canUndo = false; _undoNote = null; // ECO-044
@@ -875,6 +885,45 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private void RemoveOrganizeTarget(string imageId)
     {
         if (_organizeTargets.Remove(imageId)) RefreshSelectionMarkers();
+    }
+
+    /// <summary>マージ先の解除(ECO-056/CAD v2・A-2 裁定=REQ-067): 整理対象は保持し、マージ先のみ未設定へ。
+    /// 通知は一括(GF-055-01 教訓: 派生 CanExecuteMerge/CanRunSearch/バッジの取りこぼしを避ける)。</summary>
+    [RelayCommand]
+    private void ClearMergeTarget()
+    {
+        if (!_organizeMode) return;
+        _mergeTargetId = null;
+        RefreshSelectionMarkers(); // タイルの宛先マーカー+トレイ(BuildContextPanels)
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>整理対象をすべて外す(ECO-056/v2 モック「すべて解除」)。マージ先は保持。</summary>
+    [RelayCommand]
+    private void ClearOrganizeTargets()
+    {
+        if (!_organizeMode) return;
+        _organizeTargets.Clear();
+        RefreshSelectionMarkers();
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>検索結果からグリッドへ戻る(ECO-056/CAD backToGrid — v1 モック定義・51ad8ee から欠落)。
+    /// 結果は保持(再検索まで不変=モック実測)・整理モードは維持。</summary>
+    [RelayCommand]
+    private void BackToGrid()
+    {
+        if (!_organizeMode) return;
+        _hasSearched = false;
+        OnPropertyChanged(string.Empty); // ShowSearchResults/ShowBrowseGrid/ShowBrowseList の切替
+    }
+
+    /// <summary>「似た画像を探す」パネルの開閉(ECO-056/v2 3 ゾーン: 下部ピン内の折りたたみ)。</summary>
+    [RelayCommand]
+    private void ToggleSearchOpen()
+    {
+        _searchOpen = !_searchOpen;
+        OnPropertyChanged(string.Empty);
     }
 
     /// <summary>整理対象をマージ先へ昇格し、元のマージ先を整理対象へ戻す。</summary>

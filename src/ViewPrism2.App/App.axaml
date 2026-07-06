@@ -51,6 +51,8 @@
     <!-- バッジ -->
     <SolidColorBrush x:Key="BadgeBg" Color="#F1F3F7" />
     <SolidColorBrush x:Key="BadgeFg" Color="#5B6473" />
+    <!-- 整理トレイ v2(ECO-056): 宛先(マージ先)=緑の色意味論(v2 モック #15a06b) -->
+    <SolidColorBrush x:Key="OrganizeDestBrush" Color="#15A06B" />
     <SolidColorBrush x:Key="FaintTextBrush" Color="#AAB1BD" />
     <!-- CTA(青グラデーション) -->
     <LinearGradientBrush x:Key="CtaBrush" StartPoint="0%,0%" EndPoint="100%,100%">
