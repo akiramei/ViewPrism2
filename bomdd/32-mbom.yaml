@@ -129,15 +129,18 @@ mbom:
       ebom_refs: [E-THUMB-020]
       artifact:
         path: src/ViewPrism2.Infrastructure/Imaging/ThumbnailService.cs
+        path_note: "+ ExifOrientationTransform.cs / OrientedImageLoader.cs(ECO-049 — EXIF 正立の変換核とビューア向け正立ローダ)"
         type: dotnet-classlib
       interface_contract:
-        get: "Task<string?> GetOrCreateAsync(string absoluteImagePath)  // 戻り値=サムネイルファイルパス、失敗時 null(キャッシュ記録なし)"
-        cache_key: "MD5(absoluteImagePath.ToLowerInvariant()) の hex + 元拡張子が .png なら .png、それ以外 .jpg"
+        get: "Task<string?> GetOrCreateAsync(string absoluteImagePath)  // 戻り値=サムネイルファイルパス、失敗時 null(キャッシュ記録なし)。(ECO-049)EXIF Orientation を適用し正立で生成(正立化は縮小後の小画像=一様スケールと D4 は可換)"
+        cache_key: "MD5(absoluteImagePath.ToLowerInvariant()) の hex + '-v2'(ECO-049 生成規則世代サフィックス — 旧 {md5}.{ext} は参照しない孤児)+ 元拡張子が .png なら .png、それ以外 .jpg"
         params: "K-SKIA の定型どおり(長辺 256・inside・拡大なし・PNG/JPEG q80)"
-        resolution: "Task<(int w,int h)?> GetDimensionsAsync(path)  // SKCodec、フルデコードなし"
+        resolution: "Task<(int w,int h)?> GetDimensionsAsync(path)  // SKCodec、フルデコードなし。(ECO-049/REQ-085)Orientation 5〜8 は W/H 入替の実効寸法"
+        exif: "(ECO-049)ExifOrientationTransform: ToUprightBgra(bgra,w,h,origin)→(bgra,w,h)= D4 添字置換の正(S-41)・ToUpright(SKBitmap)は同表へ委譲・ToEffectiveDimensions。OrientedImageLoader.LoadOrientedOrNull(path)= TopLeft/判定不能は null(従来直読の高速経路)・正立時のみ BGRA8888(Premul)ピクセル列(App は SkiaSharp 型に触れない — ADR-0002)"
       invariants:
         - INV-009 元画像へ書き込まない
         - 読み取り不能キャッシュは削除して再生成
+        - since ECO-049(REQ-085) EXIF 適用は表示系のみ — pHash 入力(M-SIMSEARCH-021 系)には適用しない(P-09 世代を発動させない)
       acceptance_refs: [CP-THUMB-007]
       fmea_refs: [FMEA-012]
 
@@ -300,6 +303,7 @@ mbom:
         keys: "KeyBindings は ViewerViewModel の ICommand へ。モード別の解釈は ViewModel 内で M-VIEWERCORE-017 を呼ぶ(コードビハインドでの判定禁止)"
         persistence: "設定変更は即時 SettingsStore.Save。起動時に AppSettings の Viewer* から復元(REQ-059)。タグ制御(enableTagControl+action→tag_id 6個)も同経路で即時保存/復元(REQ-077)"
         errors: "個別画像のロード失敗は当該位置にエラー表示(ファイル名+失敗の旨)し、閲覧継続(仕様 §2.9)"
+        oriented_load: "(ECO-049/REQ-085)原本フルサイズの読込(ViewerImage/ViewerWindow の 2 箇所=全数)は OrientedBitmaps.Load 経由: TopLeft は従来の new Bitmap(path)=高速経路・挙動不変、正立時のみ OrientedImageLoader のピクセル列から WriteableBitmap を組む。例外面は従来と同一(呼び出し側 catch 節無変更)"
         tagctrl_ui: >-
           (ECO-022・仕様 §2.12.6)設定ドロワーに『タグ制御モード』トグル(enableTagControl)+『タグ制御マッピング』モーダル導線。
           モーダル=ビューア内中央オーバーレイ(ECO-019 in-tab popup 同型・ルートを Panel ラップ)。6 つの予約アクション各行に

@@ -229,11 +229,11 @@ control_plan:
         - "sync_folders.path UNIQUE(case-insensitive): 'C:/a' と 'c:/A' で 2 件目拒否"
 
     - id: CP-THUMB-007
-      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致する
+      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす
       classification: surface
       depth: L2
       tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact"
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp)"
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp / EXIF Orientation 付き jpg=APP1 手書き挿入の合成)"
       oracle: 出力ファイルのデコード結果(寸法・形式)とファイル存在・再生成有無
       approver: automated
       test_vectors:
@@ -241,6 +241,9 @@ control_plan:
         - "100x50 png → 100x50 png(拡大なし・PNG のまま)(FMEA-012)"
         - "gif/bmp/webp → jpg 出力"
         - "キャッシュヒット: 2 回目呼び出しでファイル mtime 不変(再生成なし)"
+        - "(ECO-049/REQ-085)EXIF=6 の jpg → サムネは正立(実効縦横比)・GetDimensions は実効寸法(5〜8 で W/H 入替)。V1〜v4.0 は全経路非適用=横倒しが仕様だった実績(沈黙次元裁定の解除)"
+        - "(ECO-049)キャッシュ世代移行: キャッシュ名は -v2 世代サフィックス・旧 {md5}.{ext} は参照しない(パスキーのみのキャッシュは生成規則変更で恒久 stale になる実績)"
+        - "(ECO-049)EXIF なし(TopLeft)は従来出力と同一(回帰)・正立ローダは TopLeft で null=従来直読の高速経路"
         - "壊れた jpg → null 返却・キャッシュファイルなし・例外なし(FMEA-012)"
         - "キャッシュファイル破損(0 バイト化)→ 削除+再生成"
 
@@ -617,7 +620,7 @@ control_plan:
     - { id: CP-UI-G5, characteristic: "ja/en 切替の即時反映・生キー露出なし(G-5)",            classification: surface, depth: G, tolerance: "G-5 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G6, characteristic: "タグタブ 3 ペイン(ビュー管理・階層エディタ・タグパレット+ダイアログ)(G-6・v1.2)+**(ECO-045/TAG-008)使用中タグ定義の削除拒否= 付与済み/ビュー配置済みタグの削除は拒否理由表示・定義と参照は無傷・未使用タグは削除成功(未確定仕様の仮置き=無条件削除+カスケードが V1 から稼働していた実績。golden 基準は実機到達可能な操作で書く — 子ルート化境界はタグ定義階層の編集 UI 不在で実機到達不能と判明し S-38 機械ガードへ振替の実績)。DB ガード×未保存編集状態(dirty エディタ)の谷間は ECO-046 で掃射済= **未保存の階層編集に載っているタグの削除は確認ダイアログの前に拒否・理由提示(ECO-046/U-a 再発防止: DB 参照ガードだけでは未コミット編集を関知できず、削除成功→保存で FK 違反の未処理例外『予期しないエラー』が ECO-045 golden 中に顕在化した実績。キャンセル後は削除可・保存後は TagInUse=DB ガード委譲・保存回帰も確認)**", classification: surface, depth: G, tolerance: "G-6 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G7, characteristic: "タグ付与パネル(現在タグ/追加/適用・固定値/連番)(G-7・v1.2)+**ピル埋込 TextBox(タグ追加検索等)のテキスト/カレット整列= 垂直中央+フォーカス枠に密着しない左余白(ECO-040 再発防止: Padding=0 上書き×VerticalContentAlignment 未指定で −7.5px 上寄り+0px 左密着が製造時から潜伏・検索未配線で入力機会が無くマスキングされた実績。同型の整理トレイ条件入力×画像/作業タブも同観点= headless 回帰 GfPillTextBoxCaretAlignTests が恒久ガード)**+**タグ追加検索の絞り込み動作= 部分一致(trim/大小無視)・空グループ消滅・クリア全復帰・絞り込み後の付与が正常(ECO-041 再発防止: UI 殻だけ描画され機能が未配線でも視覚検査は通ってしまう実績= 18 日潜伏。入力系 UI は golden で必ず 1 回操作して結果を見る)**", classification: surface, depth: G, tolerance: "G-7 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
-    - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1)", oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G8, characteristic: "ビューア拡張(モード切替・位置記憶・scroll・spread 右/左・表示設定・永続化・ロード失敗耐性)(G-8・v2.0)+**(ECO-049/REQ-085)EXIF Orientation 付き実画像の正立表示(サムネ・フルサイズとも)と解像度の実効寸法。V1〜v4.0 は横倒しが『仕様どおり』として潜伏した実績(沈黙次元裁定「原典も未適用」がコード上の意で、原典 Electron は Chromium 既定により表示は正立=挙動等価性の隠れ回帰)。読込経路差し替え時は全ビューアモード(normal/scroll/spread/タグ制御)の裏面検査を含める(ECO-037 教訓)**", classification: surface, depth: G, tolerance: "G-8 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(奇数枚数を含む 2 コレクション+読み取り不能ファイル 1+EXIF Orientation 付き実画像 1)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G11, characteristic: "タグ制御モード(設定トグル・マッピングモーダル表示パリティ・見開きでの skip/force/spread/empty 配置・ON とマッピングの復元)(G-11・ECO-022)。**表示パリティ=提示フィールドに限らずモーダル クローム全体をモック突合**: ヘッダ(タグアイコンバッジ+タイトル+説明+X)/ 行のカード化+アクション固定色アイコンバッジ / **行順(モック順=左固定→右固定→占有→skip→左空白→右空白)** / **常時 docked フッター(補足文+既定に戻す+完了 cta)** / 全体オーバーレイ。設定ドロワーは ScrollViewer が有界でカード末尾まで到達可(GF-TAGCTRL-01)。フッター補足文が右端で切れない(GF-TAGCTRL-03)。(FMEA-037=クローム脱漏ガード・2026-07-01 追加)", classification: surface, depth: G, tolerance: "G-11 チェックリスト全項目(20-spec.md §2.6・§2.12.6 提示フィールド)+ クローム パリティ(ヘッダ/フッター/カード/行順/全体オーバーレイ)をモック(standalone.html)と視覚突合", fixture_note: "実アプリ+作成済みタグ(シンプル/テキスト/数値)+フィクスチャ画像(広告ページを含む見開き用コレクション)", oracle: 承認者の目視チェック(モーダル=ヘッダ/6行カードの提示フィールド/フッター/行順+ドロワースクロール+見開き配置+広告除外+物理側保持), approver: maintainer }
     - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(プレビュー・非破壊明示・タグ集約)+**マージ完了パネル(統合しました+DoneSummary+続行 — ECO-037 再発防止: 導入後の右ペイン改変で幅自己参照により不可視化した実績)**+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)+**(ECO-044/IMG-011)タグ統合チェック非搭載=常時 union(見せかけトグル=切替可能だが Core は常に union が導入時から存在した実績・ECO-041『未配線 UI』同族)・「取り消す」=ログに基づく補償 Undo の往復(source 一覧復帰+タグ復元)と条件破れ時の不活性+理由表示。作業タブの整理トレイも同観点(CP-UI-G1 側から参照)**+**(ECO-048/REQ-084)回転・鏡像複製の検出。golden 入力は必ずピクセル実変換の複製で作る(EXIF タグ方式の回転はピクセル不変=検査を無効化した実績・51 R3)・確認閾値は仕様既定 70(scaled-decode の経路系統誤差により回転/異フォーマット複製は 70 台に落ち得る実績・51 R3 #2/#3=整理トレイ既定 80 のままでは漏れる)**", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpTrash021Tests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)",
