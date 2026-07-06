@@ -1,4 +1,4 @@
-# Change Order — ECO-053(staged): validate_bom の検査器欠陥 2 件 — YAML 重複キー無検査+register 検査(E9/E10/E11)の空回り
+# Change Order — ECO-053(applied): validate_bom の検査器欠陥 2 件 — YAML 重複キー無検査+register 検査(E9/E10/E11)の空回り
 
 > ECO-050 起票時の所見(register 誤挿入事故を validator が素通し)から昇格起票。
 > 診断で**第 2 の欠陥(register 検査の no-op 化)**を発見 — 単発の検出漏れではなく検査器の複合欠陥。
@@ -97,3 +97,18 @@
 - **機械受入(4 点全緑+selftest)**: build 0/0・Tests 558/558・Oracle 107+2skip(製品コード不変)・
   validate_bom 実台帳 0-0・--selftest OK。
 - diff: bomdd/validate_bom.py(+約 80 行)+ 60-change-register.yaml(正規化 4 行)。製品 src/tests 不変。
+
+## 8. クローズ(2026-07-06 gate② 承認)
+
+- **maintainer 承認**: register データ正規化 3 件(ECO-036 status/golden・ECO-037 golden — 本文からの
+  事実転記・意味不変)を確認。golden n/a(検査器のみ)。
+- **クローズ時追加**: `--selftest` を pre-commit hook(bomdd/hooks/pre-commit)へ組込み —
+  陽性対照(必ず検出されるべき合成フィクスチャ)を毎コミットで確認し、「沈黙した検査器」を
+  機械的に検出する。fail-open は環境問題(PyYAML 不在)のみ・selftest FAIL はブロック。
+- **教訓(一般形・昇格候補)**: **陽性対照のない検査器は「沈黙」と「健全」を区別できない** —
+  ECO-034 の検証「error/warn 不変」は、検査が止まったことによる不変を健全と誤読した
+  (negative-only 検証の罠)。検査器・リンタ・validator の類は (1) 台帳スキーマ変更の M4 対象に
+  含める(キー改名 1 行が検査 3 本を無音で殺した)(2) 必ず検出されるべきフィクスチャ=陽性対照を
+  持ち定期実行する。read-across: 62-migration-oracle の較正手順「新規行= FAIL を確認」
+  (negative control)と同じ思想の検査器版。ECO-051 教訓「呼び出しグラフの閉包」の親戚
+  (どちらも『動いているように見えるが実は死んでいる』様式 — コードは呼び出し元で、検査は陽性対照で生死を判定する)。

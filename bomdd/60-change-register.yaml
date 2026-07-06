@@ -942,7 +942,7 @@ changes:
   - id: ECO-053
     title: "validate_bom の検査器欠陥 2 件 — YAML 重複キー無検査+register 検査(E9/E10/E11)の空回り"
     type: 検査器是正(bomdd 工具 — 製品 src/tests・台帳データ無関係。ECO-050 起票時所見から昇格・診断で第 2 欠陥を発見)
-    status: staged   # 是正+機械受入完了(fix 済み)・gate② 待ち= register データ正規化 3 件(ECO-036 status verified→implemented/ECO-036・037 golden 自由文→approved(…) 形式=本文からの事実転記)の確認。プローブ実測= 事故 register(da155ad~1)と故意の語彙違反が現行 0-0 素通し → 是正後 E13×5(行番号一致)/E9 発火へ転化。是正= E13 重複キーローダ(全台帳)+changes: 追随(キー不在は明示エラー=no-op 構造の封止)+E10 prefix 化+--selftest 内蔵。実台帳 0-0・selftest OK・build 0/0・Tests 558/558・Oracle 107+2skip
+    status: applied   # 2026-07-06 gate② 承認(maintainer: 正規化 3 件=事実転記を確認)でクローズ。クローズ時追加= --selftest を pre-commit へ組込み(陽性対照を毎コミット確認=沈黙検査器の恒久検出)。プローブ実測= 事故 register(da155ad~1)と故意の語彙違反が現行 0-0 素通し → 是正後 E13×5(行番号一致)/E9 発火へ転化。是正= E13 重複キーローダ(全台帳)+changes: 追随(キー不在は明示エラー=no-op 構造の封止)+E10 prefix 化+--selftest 内蔵。実台帳 0-0・selftest OK・build 0/0・Tests 558/558・Oracle 107+2skip
     golden: n/a   # 検査器のみ(視覚/挙動不変)
     baseline: "main 2c7bc22"
     findings: "欠陥1= load_yaml が yaml.safe_load(validate_bom.py:62-63)= PyYAML は重複キーを警告なく後勝ちマージ → ECO-049 の register 誤挿入(同一マッピングに baseline 等が二重化・parsed 値が化けた)を 0-0 素通し(修復 da155ad・発見は人手)。欠陥2= reg.get(\"change_orders\")(:148)が ECO-034(2026-07-03)のキー改名 change_orders:→changes: に未追随 → cos=[] で E9/E10/E11 が 3 日間 no-op。マスキング= ECO-034 検証の「error/warn 不変」は検査停止による不変だった。付随= E10 復活時に GOLDEN_VOCAB(素値)と現運用(approved(日付…) 長文=ECO-022 以降)の乖離が露呈 → prefix 一致へ意味論追随(E9 status は素値運用で衝突なし)。重複キーの実害面は register に限らず全 YAML 台帳(誤挿入事故様式は台帳共通)"

@@ -37,6 +37,17 @@ if [ "$rc" -eq 2 ]; then
   echo "[bomdd] validator 実行不能(PyYAML 不在?)— skip(commit は許可)"
 fi
 
+# ─── validator selftest(ECO-053)──────────────────────────────
+# 陽性対照: 「必ず検出されるべき合成フィクスチャ」を検出できるかを毎コミットで確認する。
+# validator の 0-0 は「健全」と「検査が止まっている」を区別できない(ECO-034 のキー改名で
+# E9〜E11 が 3 日間 no-op 化・ECO-049 の重複キー事故を素通しした実績)ため、沈黙の検査器を
+# ここで検出する。FAIL は検査器自身の欠陥=ブロック(fail-open は環境問題のみ)。
+if ! "$PY" bomdd/validate_bom.py --selftest >/dev/null 2>&1; then
+  echo "[bomdd] validator selftest FAIL — 検査器が素通し状態の疑い(ECO-053 様式)。commit をブロックしました。"
+  echo "        詳細: python bomdd/validate_bom.py --selftest"
+  exit 1
+fi
+
 # ─── bomdd-lint(BomDD-Plm 参照層リンタ・2026-07-03 追加)─────────────
 # workspace(自リポ+ViewPrismUI)を error ゲートで lint(warn/info は通す)。
 # 単一リポ実行だと正当な ViewPrismUI: 形 cross-repo パス参照が不解決になるため workspace が正
