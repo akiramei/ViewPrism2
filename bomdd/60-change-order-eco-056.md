@@ -154,6 +154,19 @@
   是正= 「50%」「100%」(モック実測値 — 所見の「0%」はモックでは 50%)を追加。
   機械受入再走= build 0/0・**Tests 569/569**・Oracle 109+2skip・validate 0-0。
 
+- **GF-056-02(golden 所見 2026-07-07 → 是正済み)**: GF-056-01 是正後の再確認で 2 点
+  (基準 3 の高さ固定と目盛は合格)。
+  ①**タブ切替で画像一覧がちらつく**(所見は「影響を与えるのか?」の疑義) — 診断= 影響を与えていた。
+  ホスト SetSearchMethod が `Recompute()`= **Items 全再構築(Clear+Add)**を呼ぶ(`51ad8ee` 以来)。
+  検索方式はグリッド内容と無関係= 過剰再構築。プローブ= タブ切替 2 回で Items.CollectionChanged が
+  **4 回発火(是正前不合格)** → 全通知のみへ置換(WorkTab は元から名前列挙通知で非該当)して 0 回=
+  合格転化(ちらつきの構造ごと pin)。
+  ②**checked 条件行のラベルが白文字化し視認不能** — Fluent の `:checked` がテンプレート内
+  ContentPresenter.Foreground を白にする(コントロール側の Foreground setter だけでは負ける)。
+  プローブ= headless 実測でラベル実効 Foreground= **White(是正前不合格)** → ContentPresenter 側へ
+  Foreground を明示(checked/checked:pointerover/checked:pressed)して合格転化。
+  機械受入再走= build 0/0・**Tests 571/571**・Oracle 109+2skip・validate 0-0。
+
 ### golden 合格基準(gate② — maintainer 実機・v2 モックとの並置突合)
 
 1. **3 ゾーン(所見 2)**: 整理モードで整理対象を大量(10 枚以上)に積む → マージ先カードと

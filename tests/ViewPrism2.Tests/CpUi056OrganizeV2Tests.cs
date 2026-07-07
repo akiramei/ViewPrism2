@@ -1,5 +1,8 @@
+using System.Collections.Specialized;
 using System.Windows.Input;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ViewPrism2.App.Services;
@@ -133,6 +136,56 @@ public sealed class CpUi056OrganizeV2Tests : IDisposable
 
             Assert.True(Math.Abs(condHeight - similarHeight) <= 0.5,
                 $"タブ切替で検索パネルの高さが変わる(GF-056-01): 条件={condHeight:0.0} / 類似={similarHeight:0.0}");
+
+            window.Close();
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task 検索方式のタブ切替はグリッドItemsを再構築しない()
+    {
+        // GF-056-02 ②(golden 所見 2026-07-07): タブ切替で画像一覧がちらつく。
+        // 真因= ホスト SetSearchMethod が Recompute()= Items 全再構築(Clear+Add)を呼ぶ(51ad8ee 以来)。
+        // 検索方式はグリッド内容と無関係= CollectionChanged が一切発火しないことを pin する。
+        var vm = await NewVmAsync(("a.jpg", "H1", 10, "2026-06-11T00:00:00.000Z"));
+        vm.ToggleOrganizeCommand.Execute(null);
+
+        int collectionChanges = 0;
+        ((INotifyCollectionChanged)vm.Items).CollectionChanged += (_, _) => collectionChanges++;
+        vm.SetSearchMethodCommand.Execute("criteria");
+        vm.SetSearchMethodCommand.Execute("similar");
+
+        Assert.True(collectionChanges == 0,
+            $"タブ切替で Items が {collectionChanges} 回変更された= グリッド再構築のちらつき(GF-056-02)");
+    }
+
+    [Fact]
+    public async Task 条件トグルON時もラベルが白文字にならない()
+    {
+        // GF-056-02 ①(golden 所見 2026-07-07): Fluent の ToggleButton:checked がテンプレート内
+        // Foreground を白にし、淡青ハイライト上で白ラベル= 視認性が極めて悪い。
+        // headless 実レイアウトで checked 行のラベル実効 Foreground を実測する。
+        var vm = await NewVmAsync(("a.jpg", "H1", 10, "2026-06-11T00:00:00.000Z"));
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.ToggleSearchOpenCommand.Execute(null);
+        vm.SetSearchMethodCommand.Execute("criteria");
+        vm.CondHash = true;
+
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var window = new Window { Content = new ImageTabView { DataContext = vm }, Width = 1366, Height = 900 };
+            window.Show();
+            RunJobs();
+
+            var row = window.GetVisualDescendants().OfType<ToggleButton>()
+                .FirstOrDefault(t => t.Classes.Contains("condRow") && t.IsChecked == true);
+            Assert.NotNull(row);
+            var label = row!.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == "ハッシュ値");
+            Assert.NotNull(label);
+            var brush = Assert.IsAssignableFrom<ISolidColorBrush>(label!.Foreground);
+            bool whitish = brush.Color.R > 200 && brush.Color.G > 200 && brush.Color.B > 200;
+            Assert.True(!whitish,
+                $"checked 条件行のラベルが白系({brush.Color})= 淡青ハイライト上で視認不能(GF-056-02)");
 
             window.Close();
         }, CancellationToken.None);

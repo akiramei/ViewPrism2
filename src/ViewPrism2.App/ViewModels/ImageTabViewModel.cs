@@ -1634,7 +1634,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void SetSearchMethod(string method)
     {
         Organize.SetSearchMethod(method);
-        Recompute();
+        // GF-056-02: Recompute()(Items 全再構築)はグリッドをちらつかせる。検索方式はグリッド内容と
+        // 無関係のため、転送殻の全通知のみで足りる(51ad8ee 以来の過剰再構築の是正)
+        OnPropertyChanged(string.Empty);
     }
 
     /// <summary>似た画像を探す: 類似(E-SIMSEARCH-032)または条件(E-CRITERIA-037)。結果を中央ペインへ。

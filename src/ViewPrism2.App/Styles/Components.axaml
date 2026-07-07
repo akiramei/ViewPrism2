@@ -1142,9 +1142,21 @@
     <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource CardHoverBorderBrush}" />
   </Style>
+  <!-- checked の Foreground は ContentPresenter 側にも明示(GF-056-02: Fluent の :checked が
+       テンプレート内 Foreground を白にし、淡青ハイライト上で白ラベル=視認不能になる) -->
   <Style Selector="ToggleButton.condRow:checked /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#F3F8FF" />
     <Setter Property="BorderBrush" Value="#CFE0FC" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.condRow:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#F3F8FF" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardHoverBorderBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.condRow:checked:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#F3F8FF" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="ToggleButton.condRow:checked">
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
