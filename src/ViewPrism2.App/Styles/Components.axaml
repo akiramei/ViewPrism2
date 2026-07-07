@@ -1120,23 +1120,48 @@
     <Setter Property="Background" Value="{StaticResource PanelBrush}" />
   </Style>
 
-  <!-- 条件チェック行(2 列グリッドの各行= チェックボックス+ラベル・ON でハイライト) -->
-  <Style Selector="Border.condRow">
+  <!-- 条件チェック行(2 列グリッドの各行= 自前 18px チェック+ラベル・ON でハイライト。
+       GF-056-01: Fluent 標準 CheckBox はモックの 18px 角丸チェック意匠と乖離するため行ごと ToggleButton 化) -->
+  <Style Selector="ToggleButton.condRow">
     <Setter Property="Height" Value="36" />
-    <Setter Property="CornerRadius" Value="9" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
-    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
-    <Setter Property="Padding" Value="8,0" />
-  </Style>
-  <Style Selector="Border.condRow.on">
-    <Setter Property="BorderBrush" Value="#CFE0FC" />
-    <Setter Property="Background" Value="{StaticResource BadgeBg}" />
-  </Style>
-  <Style Selector="Border.condRow CheckBox">
+    <Setter Property="Padding" Value="9,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="FontSize" Value="12.5" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.condRow /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9" />
+  </Style>
+  <Style Selector="ToggleButton.condRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardHoverBorderBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.condRow:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#F3F8FF" />
+    <Setter Property="BorderBrush" Value="#CFE0FC" />
+  </Style>
+  <Style Selector="ToggleButton.condRow:checked">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <!-- 行内の自前チェックボックス視覚(OFF=白+灰枠 / ON=青塗り+白チェック) -->
+  <Style Selector="Border.condBox">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="BorderBrush" Value="#CBD1DA" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleButton.condRow:checked Border.condBox">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
   </Style>
 
   <!-- マージを実行= 緑(モック色意味論: 実行=緑・検索=青)。primaryAction(青)の色 override -->

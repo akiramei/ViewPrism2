@@ -1,6 +1,10 @@
 using System.Windows.Input;
+using Avalonia.Controls;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ViewPrism2.App.Services;
 using ViewPrism2.App.ViewModels;
+using ViewPrism2.App.Views;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
@@ -98,7 +102,51 @@ public sealed class CpUi056OrganizeV2Tests : IDisposable
         Assert.False(vm.CanExecuteMerge);
     }
 
+    [Fact]
+    public async Task 検索パネルはタブ切替で高さが変わらない()
+    {
+        // GF-056-01(golden 所見 2026-07-07): 「条件検索」「類似画像検索」の切替でパネル高さが変わる。
+        // CAD(v1/v2 モック)は切替コンテンツを height:150px の固定コンテナに収める(転写漏れ)。
+        // Avalonia.Headless の実レイアウトパスで searchPanel の Bounds.Height を両タブで実測する。
+        var vm = await NewVmAsync(("a.jpg", "H1", 10, "2026-06-11T00:00:00.000Z"));
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.ToggleSearchOpenCommand.Execute(null); // 検索パネルを開く
+        Assert.True(vm.SearchOpen);
+
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var window = new Window { Content = new ImageTabView { DataContext = vm }, Width = 1366, Height = 900 };
+            window.Show();
+            RunJobs();
+
+            var panel = window.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(b => b.Classes.Contains("searchPanel"));
+            Assert.NotNull(panel);
+
+            vm.SetSearchMethodCommand.Execute("criteria");
+            RunJobs();
+            double condHeight = panel!.Bounds.Height;
+
+            vm.SetSearchMethodCommand.Execute("similar");
+            RunJobs();
+            double similarHeight = panel.Bounds.Height;
+
+            Assert.True(Math.Abs(condHeight - similarHeight) <= 0.5,
+                $"タブ切替で検索パネルの高さが変わる(GF-056-01): 条件={condHeight:0.0} / 類似={similarHeight:0.0}");
+
+            window.Close();
+        }, CancellationToken.None);
+    }
+
     // ---- ヘルパ ----
+
+    private static void RunJobs()
+    {
+        for (var i = 0; i < 8; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
 
     private static ICommand ResolveCommand(object vm, string name)
     {
