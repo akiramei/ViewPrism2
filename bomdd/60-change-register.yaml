@@ -993,3 +993,16 @@ changes:
     impacted_bom: ["M-UI-IMAGETAB-035(seed data)", "33-control-plan/34-routing(公開前gate)", "製造台帳ECO-048〜055/PLM intake/UI-IR/as-built/charter", "Git全refs+remote refs"]
     body: 60-change-order-eco-057.md
     notes: "クローズ済み: worktree 200→0 findings(架空seed/repo-relative/合成fixture/work一式repo外隔離)+全履歴 164→0 findings(私有complete bundle後に232 commits+main/7tags洗浄・旧内部tree ref削除)。pre-commit/CP-RELEASE-018/ROUTING-PUBLIC-001恒久化。GitHub非Git資産0。force push後も旧SHA取得可を実測したため、明示承認を得て旧private repo削除→API/ls-remote不存在→同名private新規作成→洗浄済みmain+7tagsのみpush。旧SHA代表3件=取得不能/新HEAD=取得可。再作成repo fresh cloneでcommit同一/audit 0/build 0/0/Tests 572/572/Oracle 109+2skip/validate 0-0/selftest OK。GF-057-01=通常起動は実DBを読むためseed確認手順が誤り→VIEWPRISM2_DATA_DIR使い捨て空プロファイル手順へ是正(実DB無改変)。maintainer実機goldenで隔離空状態と私有データ非露出を確認しapplied"
+
+  - id: ECO-058
+    title: "作業タブ中央ブラウズの非仮想化 — 1万件でPrivate 6,698MiB以上・応答不能(ECO-026 read-across漏れ)"
+    type: 欠陥是正(既定済み仮想化契約への実装逸脱+M-BOM/Control Plan/P-01のWorkTab被覆漏れ。CAD健全・裁定不要)
+    status: staged
+    golden: pending
+    baseline: "main b283ff5b401ca6b78bfc4a35329a7732c0c1a408"
+    findings: "2026-07-10実測=256x192ウォームキャッシュ10,000件(全数寸法検査・workspace所属10,000・image_tags 50,000)でWorkTab切替未完了/応答なし、Private 6,698.4MiB以上・Working Set 6,749.4MiB以上(増加中に安全停止=下限)。対照ImageTab 10,000件はPrivate 239.6MiBで応答。CAD work_tab.md=中央ブラウズ/グリッド/リストは画像タブと同一部品・同一意味論+レイアウト不変条件全面継承。E-UI-WORKSPACE-043は仮想化必須E-UI-BROWSE-022に依存するが、実装はWorkTabView.axaml grid=ItemsControl+WrapPanel/list=素ItemsControlで全件ThumbnailImage実体化。混入=f211fa9a(ECO-020/021導入時)。ECO-026(51582a43)がImageTab同型だけを仮想化しWorkTabへのread-acrossを漏らした。マスキング=M-UI-WORKSPACE-029/E-UI-WORKSPACE-043 acceptanceにCP-NFR-026なし・FMEA-013 unit旧M-UI-013・P-01未観測かつImageTab固有操作中心"
+    impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "CP-NFR-026または新規WorkTab CP", "CP-UI-G1", "FMEA-013", "P-01または新規WorkTab探索プローブ"]
+    oracle: "既存固定Oracle行は変更しない(R6)。surface仮想化+検査被覆の是正"
+    verification: "起票時: 隔離実UI 1件/10,000件の比較測定済み・静的構造/履歴/CAD/BOM診断済み。validate_bom 0 error/0 warning。src/tests変更なし"
+    body: 60-change-order-eco-058.md
+    notes: "裁定不要=/eco-fix eco-058可。BOM/検査面read-across→端末保護付き不合格プローブ→最小是正の順。第一候補はImageTab実績のItemsRepeater+UniformGridLayout/VSP同型だが、実装方式はプローブ後に確定。DB/VM/Bitmap最適化は残存支配項を再測定するまで混ぜない(R3)"
