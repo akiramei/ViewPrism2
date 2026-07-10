@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO.Enumeration;
 using Microsoft.Extensions.Logging;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
@@ -15,6 +16,12 @@ namespace ViewPrism2.Infrastructure.Scanning;
 /// </summary>
 public sealed class ScanService
 {
+    /// <summary>
+    /// ECO-059: SQLite commit回数と未flush変更量をともに有界にする。
+    /// ファイル読取はHDDのランダムseekを増やさないよう直列のまま維持する。
+    /// </summary>
+    private const int ScanBatchSize = 512;
+
     /// <summary>対象拡張子(小文字化して比較、REQ-011)。</summary>
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.Ordinal)
     {
@@ -67,7 +74,12 @@ public sealed class ScanService
 
             try
             {
-                return await ScanCoreAsync(folder, progress, ct).ConfigureAwait(false);
+                // ECO-059/GF-059-01: Microsoft.Data.Sqlite の async API は同期完了し得る。
+                // ConfigureAwait(false) だけでは呼出元(UI)threadから離れないため、列挙・hash・
+                // DB batchを明示的にbackgroundへ移す。Progress<T>は生成元UI contextへpostする。
+                return await Task.Run(
+                    () => ScanCoreAsync(folder, progress, ct),
+                    ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
             {
@@ -104,15 +116,29 @@ public sealed class ScanService
             AttributesToSkip = FileAttributes.ReparsePoint,
         };
         var excludeNames = new HashSet<string>(folder.ExcludePatterns, StringComparer.OrdinalIgnoreCase);
-        var files = Directory.EnumerateFiles(root, "*", options)
-            .Where(path => ImageExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
-            .Where(path => !excludeNames.Contains(Path.GetFileName(path)))
-            .ToList();
+        // ECO-059: 列挙時にOSが既に返しているサイズ/日時を保持し、各ファイルのFileInfo再照会を避ける。
+        // 件数は百分率進捗に必要なため、軽量なメタデータだけをリスト化する(ファイル内容は保持しない)。
+        var enumerable = new FileSystemEnumerable<ScanFileEntry>(
+            root,
+            (ref FileSystemEntry entry) => new ScanFileEntry(
+                entry.ToFullPath(),
+                entry.Length,
+                entry.LastWriteTimeUtc.UtcDateTime,
+                entry.CreationTimeUtc.UtcDateTime),
+            options)
+        {
+            ShouldIncludePredicate = (ref FileSystemEntry entry) =>
+                !entry.IsDirectory &&
+                ImageExtensions.Contains(Path.GetExtension(entry.FileName).ToString().ToLowerInvariant()) &&
+                !excludeNames.Contains(entry.FileName.ToString()),
+        };
+        var files = enumerable.ToList();
 
         var existing = await _images.GetByFolderAsync(folder.Id).ConfigureAwait(false);
         var isInitialScan = folder.LastScan is null;
 
         int added = 0, missing = 0, pending = 0, updated = 0, skipped = 0;
+        var batch = new ScanBatchBuffer(_images, ScanBatchSize);
 
         // 手順 4: status=normal で物理ファイルが存在しない行 → missing
         // 手順 5: 物理ファイルが存在しない status=pending の行 → 行削除
@@ -125,38 +151,43 @@ public sealed class ScanService
             var fullPath = Path.Combine(root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
             if (record.Status == ImageStatus.Normal && !File.Exists(fullPath))
             {
-                await _images.UpdateStatusAsync(record.Id, ImageStatus.Missing).ConfigureAwait(false);
+                batch.AddStatus(record.Id, ImageStatus.Missing);
                 current.Add(record with { Status = ImageStatus.Missing });
                 missing++;
             }
             else if (record.Status == ImageStatus.Pending && !File.Exists(fullPath))
             {
-                await _images.DeleteAsync(record.Id).ConfigureAwait(false); // 候補が消えたため
+                batch.AddDelete(record.Id); // 候補が消えたため
             }
             else
             {
                 current.Add(record);
             }
+
+            await batch.FlushIfFullAsync().ConfigureAwait(false);
         }
+
+        // missing化を新規ファイル判定より先にDBへ反映する(ECO-001の実行順序を維持)。
+        await batch.FlushAsync().ConfigureAwait(false);
 
         var byPath = current.ToDictionary(i => i.RelativePath, StringComparer.OrdinalIgnoreCase);
         var missingInFolder = current.Where(i => i.Status == ImageStatus.Missing).ToList();
 
         // 手順 2〜3: 相対パス算出と優先順判定(OC-5)
         var processed = 0;
-        foreach (var path in files)
+        var lastReportedProgress = 0;
+        foreach (var file in files)
         {
             ct.ThrowIfCancellationRequested();
             try
             {
-                var info = new FileInfo(path);
-                var relativePath = PathNormalizer.ToRelative(root, path);
+                var relativePath = PathNormalizer.ToRelative(root, file.FullPath);
                 var facts = new ScanFileFacts(
                     relativePath,
-                    info.Length,
-                    IsoTimestamp.Format(info.LastWriteTimeUtc),
-                    IsoTimestamp.Format(info.CreationTimeUtc),
-                    () => ComputeHash(path));
+                    file.Length,
+                    IsoTimestamp.Format(file.LastWriteTimeUtc),
+                    IsoTimestamp.Format(file.CreationTimeUtc),
+                    () => ComputeHash(file.FullPath));
                 var dbFacts = new ScanDbFacts(
                     byPath.TryGetValue(relativePath, out var row) ? row : null,
                     missingInFolder);
@@ -169,34 +200,44 @@ public sealed class ScanService
                         break;
 
                     case ScanDecisionKind.UpdateMeta:
-                        await _images.UpdateFileMetaAsync(row!.Id, decision.Hash!, info.Length, facts.ModifiedDate)
-                            .ConfigureAwait(false);
+                        batch.AddFileMeta(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate);
                         updated++;
                         break;
 
                     case ScanDecisionKind.AddNormal:
-                        await _images.AddAsync(NewRecord(folder.Id, facts, decision, ImageStatus.Normal))
-                            .ConfigureAwait(false);
+                        batch.Add(NewRecord(folder.Id, facts, decision, ImageStatus.Normal));
                         added++;
                         break;
 
                     case ScanDecisionKind.AddPending:
                     default:
-                        await _images.AddAsync(NewRecord(folder.Id, facts, decision, ImageStatus.Pending))
-                            .ConfigureAwait(false);
+                        batch.Add(NewRecord(folder.Id, facts, decision, ImageStatus.Pending));
                         pending++;
                         break;
                 }
+
+                await batch.FlushIfFullAsync().ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // 読み取り不能ファイルは DB を変更せずスキップ+警告ログ。次回スキャンで再試行(REQ-012)
                 skipped++;
-                _logger?.LogWarning(ex, "読み取り不能ファイルをスキップしました: {Path}", path);
+                _logger?.LogWarning(ex, "読み取り不能ファイルをスキップしました: {Path}", file.FullPath);
             }
 
             processed++;
-            progress?.Report(processed * 100 / files.Count);
+            var percent = (int)((long)processed * 100 / files.Count);
+            if (percent < 100 && percent > lastReportedProgress)
+            {
+                progress?.Report(percent);
+                lastReportedProgress = percent;
+            }
+        }
+
+        await batch.FlushAsync().ConfigureAwait(false);
+        if (files.Count > 0)
+        {
+            progress?.Report(100);
         }
 
         return Result<ScanSummary>.Ok(new ScanSummary
@@ -230,8 +271,71 @@ public sealed class ScanService
     private static string ComputeHash(string path)
     {
         // K-WINFS: 他プロセスのロックと共存する読み取り。INV-009: 読み取り専用
-        using var stream = new FileStream(
-            path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        // ECO-059: HDDの連続読取をOSへ明示し、64KiBバッファで細粒度readを抑える。
+        using var stream = new FileStream(path, new FileStreamOptions
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.ReadWrite | FileShare.Delete,
+            BufferSize = 64 * 1024,
+            Options = FileOptions.SequentialScan,
+        });
         return FileHasher.ComputeSha256(stream);
+    }
+
+    private sealed record ScanFileEntry(
+        string FullPath,
+        long Length,
+        DateTime LastWriteTimeUtc,
+        DateTime CreationTimeUtc);
+
+    /// <summary>ECO-059: ScanService内だけで使う有界ミューテーションバッファ。</summary>
+    private sealed class ScanBatchBuffer
+    {
+        private readonly IImageRepository _images;
+        private readonly int _capacity;
+        private readonly List<ImageRecord> _adds = [];
+        private readonly List<ScanFileMetaUpdate> _fileMetaUpdates = [];
+        private readonly List<ScanStatusUpdate> _statusUpdates = [];
+        private readonly List<string> _deletes = [];
+
+        public ScanBatchBuffer(IImageRepository images, int capacity)
+        {
+            _images = images;
+            _capacity = capacity;
+        }
+
+        private int Count => _adds.Count + _fileMetaUpdates.Count + _statusUpdates.Count + _deletes.Count;
+
+        public void Add(ImageRecord image) => _adds.Add(image);
+
+        public void AddFileMeta(string id, string hash, long fileSize, string modifiedDate)
+            => _fileMetaUpdates.Add(new ScanFileMetaUpdate(id, hash, fileSize, modifiedDate));
+
+        public void AddStatus(string id, ImageStatus status)
+            => _statusUpdates.Add(new ScanStatusUpdate(id, status));
+
+        public void AddDelete(string id) => _deletes.Add(id);
+
+        public Task FlushIfFullAsync() => Count >= _capacity ? FlushAsync() : Task.CompletedTask;
+
+        public async Task FlushAsync()
+        {
+            if (Count == 0)
+            {
+                return;
+            }
+
+            var mutations = new ScanMutationBatch(
+                _adds.ToArray(),
+                _fileMetaUpdates.ToArray(),
+                _statusUpdates.ToArray(),
+                _deletes.ToArray());
+            await _images.ApplyScanBatchAsync(mutations).ConfigureAwait(false);
+            _adds.Clear();
+            _fileMetaUpdates.Clear();
+            _statusUpdates.Clear();
+            _deletes.Clear();
+        }
     }
 }

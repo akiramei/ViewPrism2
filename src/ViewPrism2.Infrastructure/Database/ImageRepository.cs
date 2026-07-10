@@ -7,6 +7,13 @@ namespace ViewPrism2.Infrastructure.Database;
 /// <summary>画像リポジトリ(M-DB-007)。relative_path は正規形のみ格納(INV-005)。</summary>
 public sealed class ImageRepository : IImageRepository
 {
+    private const string InsertSql = """
+        INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash,
+                            status, candidate_link_id, created_date, modified_date, notes)
+        VALUES (@Id, @SyncFolderId, @RelativePath, @FileName, @FileSize, @Hash,
+                @Status, @CandidateLinkId, @CreatedDate, @ModifiedDate, @Notes)
+        """;
+
     private const string SelectColumns = """
         SELECT id AS Id, sync_folder_id AS SyncFolderId, relative_path AS RelativePath,
                file_name AS FileName, file_size AS FileSize, hash AS Hash, status AS Status,
@@ -25,26 +32,54 @@ public sealed class ImageRepository : IImageRepository
     public Task AddAsync(ImageRecord image)
     {
         ArgumentNullException.ThrowIfNull(image);
-        return _db.RunAsync(conn => conn.ExecuteAsync("""
-            INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash,
-                                status, candidate_link_id, created_date, modified_date, notes)
-            VALUES (@Id, @SyncFolderId, @RelativePath, @FileName, @FileSize, @Hash,
-                    @Status, @CandidateLinkId, @CreatedDate, @ModifiedDate, @Notes)
-            """,
-            new
+        return _db.RunAsync(conn => conn.ExecuteAsync(InsertSql, ToInsertParameters(image)));
+    }
+
+    public Task ApplyScanBatchAsync(ScanMutationBatch batch)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        if (batch.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _db.RunAsync(async conn =>
+        {
+            using var tx = conn.BeginTransaction();
+            if (batch.StatusUpdates.Count > 0)
             {
-                image.Id,
-                image.SyncFolderId,
-                image.RelativePath,
-                image.FileName,
-                image.FileSize,
-                image.Hash,
-                Status = image.Status.ToDb(),
-                image.CandidateLinkId,
-                image.CreatedDate,
-                image.ModifiedDate,
-                image.Notes,
-            }));
+                await conn.ExecuteAsync(
+                    "UPDATE images SET status = @Status WHERE id = @Id",
+                    batch.StatusUpdates.Select(update => new
+                    {
+                        update.Id,
+                        Status = update.Status.ToDb(),
+                    }), tx).ConfigureAwait(false);
+            }
+
+            if (batch.Deletes.Count > 0)
+            {
+                await conn.ExecuteAsync(
+                    "DELETE FROM images WHERE id = @Id",
+                    batch.Deletes.Select(id => new { Id = id }), tx).ConfigureAwait(false);
+            }
+
+            if (batch.FileMetaUpdates.Count > 0)
+            {
+                await conn.ExecuteAsync(
+                    "UPDATE images SET hash = @Hash, file_size = @FileSize, modified_date = @ModifiedDate WHERE id = @Id",
+                    batch.FileMetaUpdates, tx).ConfigureAwait(false);
+            }
+
+            if (batch.Adds.Count > 0)
+            {
+                await conn.ExecuteAsync(
+                    InsertSql,
+                    batch.Adds.Select(ToInsertParameters), tx).ConfigureAwait(false);
+            }
+
+            tx.Commit();
+        });
     }
 
     public Task<ImageRecord?> GetByIdAsync(string id)
@@ -157,6 +192,24 @@ public sealed class ImageRepository : IImageRepository
         string Id, string SyncFolderId, string RelativePath, string FileName, long FileSize,
         string Hash, string Status, string? CandidateLinkId, string CreatedDate,
         string ModifiedDate, string? Notes);
+
+    private static object ToInsertParameters(ImageRecord image)
+    {
+        return new
+        {
+            image.Id,
+            image.SyncFolderId,
+            image.RelativePath,
+            image.FileName,
+            image.FileSize,
+            image.Hash,
+            Status = image.Status.ToDb(),
+            image.CandidateLinkId,
+            image.CreatedDate,
+            image.ModifiedDate,
+            image.Notes,
+        };
+    }
 
     private static ImageRecord? ToEntity(Row? row)
     {

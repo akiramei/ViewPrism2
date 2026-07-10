@@ -7,6 +7,12 @@ public interface IImageRepository
 {
     Task AddAsync(ImageRecord image);
 
+    /// <summary>
+    /// ECO-059: スキャン中の追加・メタ更新・status更新・削除を単一トランザクションで原子適用する。
+    /// 呼び出し側は件数上限を持つバッチだけを渡す。
+    /// </summary>
+    Task ApplyScanBatchAsync(ScanMutationBatch batch);
+
     Task<ImageRecord?> GetByIdAsync(string id);
 
     /// <summary>フォルダ配下の全行(全ステータス)。スキャン手順 1〜5 の基礎データ(仕様 §2.1)。</summary>

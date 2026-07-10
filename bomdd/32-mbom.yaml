@@ -99,14 +99,17 @@ mbom:
       interface_contract:
         judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。Decision = Skip | UpdateMeta | AddNormal | AddPending(candidateId)"
         scan: "Task<Result<ScanSummary>> ScanAsync(string folderId, IProgress<int>? progress, CancellationToken ct)  // 仕様 §2.1 手順 1〜6"
+        scan_batch: "IImageRepository.ApplyScanBatchAsync(ScanMutationBatch batch)  // ECO-059: bounded件数のadd/update-meta/update-status/deleteを単一transactionで適用。ScanServiceはバッチ上限到達ごとにflush"
         relink_candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId)  // relative_path 昇順"
         relink_commit: "Task<Result> CommitRelinkAsync(string missingImageId, string pendingImageId)  // id 不変・pending 行削除"
       invariants:
         - INV-009 ファイルへ書き込まない
         - 遷移は仕様 §2.1 遷移表のみ。スキャン二重起動は ErrorCode.ScanInProgress
         - 読み取り不能ファイルはスキップ+警告(summary.skipped へ計上)
+        - (ECO-059/FMEA-039) ファイル読取はHDDのランダムseekを増やさない直列+SequentialScan。列挙時のサイズ/日時を保持してFileInfo再照会を行わず、DB変更だけを有界バッチ化し、進捗通知は同じ整数百分率を重複送信しない
+        - (ECO-059/GF-059-01) ScanCoreAsyncはTask.Run境界で呼出元UI threadから明示分離する。ConfigureAwait(false)だけに依存しない(同期完了awaitはthreadを切り替えないため)
       acceptance_refs: [CP-SCAN-004]
-      fmea_refs: [FMEA-004, FMEA-011]
+      fmea_refs: [FMEA-004, FMEA-011, FMEA-039]
 
     - id: M-DB-007
       ebom_refs: [E-DB-010]
@@ -118,10 +121,12 @@ mbom:
         open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
         schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE"
         repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value"
+        scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。通常の単行repository APIは非スキャンconsumer向けに維持"
         cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
       invariants:
         - 接続は単一共有+SemaphoreSlim シリアル化(K-SQLITE)
         - migrations テーブル契約は REQ-004 のとおり
+        - (ECO-059) スキャンバッチの失敗は当該バッチを全ロールバックし、部分適用を残さない
       acceptance_refs: [CP-DB-006]
       fmea_refs: [FMEA-003, FMEA-005]
 
@@ -645,6 +650,7 @@ fmea:
   - { id: FMEA-013, unit: M-UI-IMAGETAB-035, failure_mode: "画像タブ中央ブラウズへの仮想化なしの素朴な ItemsControl 実装", effect: "1 万件で UI フリーズ", targeted_by: "CP-NFR-026+CP-UI-G1+probe P-01" }
   - { id: FMEA-014, unit: M-UI-IMAGETAB-035,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
   - { id: FMEA-038, unit: M-UI-WORKSPACE-029, failure_mode: "E-UI-BROWSE-022/FMEA-013 の read-across 漏れにより作業タブ中央 grid/list へ非仮想 ItemsControl を直置きする", effect: "1 万件で数 GiB のメモリ増加・タブ切替未完了・UI 応答不能", targeted_by: "CP-NFR-026+CP-UI-G1+probe P-01" }
+  - { id: FMEA-039, unit: M-SCAN-005, failure_mode: "大量初回スキャンを画像1件ごとのSQLite暗黙transactionで永続化し、同じ整数百分率も全件UI通知する／ConfigureAwait(false)だけで背景化したと誤認し同期完了awaitからUI thread上でscan coreを走らせる", effect: "26万件でcommit/dispatcher負荷が件数比例しスキャンが長時間化／処理全時間UI操作不能", targeted_by: "CP-SCAN-004(ECO-059 bounded batch+rollback+progress exact+GF-059-01 caller thread分離)" }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
   - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }

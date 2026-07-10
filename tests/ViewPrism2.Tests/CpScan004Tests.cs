@@ -1,6 +1,7 @@
 using System.Text;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
 using ViewPrism2.Infrastructure.Scanning;
 using Xunit;
@@ -217,6 +218,117 @@ public sealed class CpScan004Tests : IDisposable
         Assert.All(rows, r => Assert.Equal(ImageStatus.Normal, r.Status));
         Assert.Contains(rows, r => r.RelativePath == "sub/b.png"); // 正規形(INV-005)
     }
+
+    [Fact]
+    public async Task 初回スキャンは画像件数ごとの単行INSERTを行わない_FMEA039()
+    {
+        const int fileCount = 513;
+        for (var i = 0; i < fileCount; i++)
+        {
+            WriteFile($"batch-{i:D3}.jpg", $"content-{i}");
+        }
+
+        var folder = await RegisterFolderAsync();
+        var counting = new CountingImageRepository(_db.Images);
+        var scan = new ScanService(_db.Folders, counting, _db.Clock);
+
+        var result = await scan.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal(fileCount, result.Value!.Added);
+        Assert.Equal(0, counting.SingleAddCalls);
+        Assert.Equal(2, counting.ScanBatchCalls);
+        Assert.True(counting.MaxScanBatchCount <= 512);
+    }
+
+    [Fact]
+    public async Task 進捗通知は整数百分率の変化時だけで重複せず100で終わる_FMEA039()
+    {
+        const int fileCount = 250;
+        for (var i = 0; i < fileCount; i++)
+        {
+            WriteFile($"progress-{i:D3}.jpg", $"content-{i}");
+        }
+
+        var folder = await RegisterFolderAsync();
+        var values = new List<int>();
+        var progress = new SyncProgress(values.Add);
+
+        var result = await _scan.ScanAsync(folder.Id, progress, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.NotEmpty(values);
+        Assert.Equal(100, values[^1]);
+        Assert.True(values.Count <= 100, $"進捗通知が {values.Count} 回発生しました。");
+        Assert.Equal(values, values.Distinct());
+        Assert.True(values.SequenceEqual(values.Order()), "進捗は単調増加でなければなりません。");
+    }
+
+    [Fact]
+    public async Task スキャンバッチ失敗は当該バッチを全ロールバックする_FMEA039()
+    {
+        var folder = await RegisterFolderAsync();
+        var duplicatePath = "duplicate.jpg";
+        var batch = new ScanMutationBatch(
+            [
+                NewBatchRecord(folder.Id, duplicatePath, "batch-1"),
+                NewBatchRecord(folder.Id, duplicatePath, "batch-2"),
+            ],
+            [],
+            [],
+            []);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => _db.Images.ApplyScanBatchAsync(batch));
+
+        Assert.Empty(await _db.Images.GetByFolderAsync(folder.Id));
+    }
+
+    [Fact]
+    public async Task 同期完了repositoryでもScanAsyncは同期batchを待たず呼出threadを解放する_GF05901()
+    {
+        WriteFile("background.jpg", "content");
+        var folder = await RegisterFolderAsync();
+        using var batchEntered = new ManualResetEventSlim();
+        using var releaseBatch = new ManualResetEventSlim();
+        using var scanCallReturned = new ManualResetEventSlim();
+        var counting = new CountingImageRepository(
+            _db.Images,
+            completeReadsSynchronously: true,
+            batchEntered,
+            releaseBatch);
+        var scan = new ScanService(new ImmediateFolderRepository(folder), counting, _db.Clock);
+        var callerReleasedBeforeBatch = false;
+        var coordinator = Task.Run(
+            () =>
+            {
+                Assert.True(batchEntered.Wait(TimeSpan.FromSeconds(5)), "scan batchへ到達しませんでした。");
+                callerReleasedBeforeBatch = scanCallReturned.Wait(TimeSpan.FromMilliseconds(500));
+                releaseBatch.Set();
+            },
+            TestContext.Current.CancellationToken);
+
+        var scanTask = scan.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken);
+        scanCallReturned.Set();
+        var result = await scanTask;
+        await coordinator;
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.True(callerReleasedBeforeBatch, "ScanAsync呼出元が同期scan batchの完了まで占有されました。");
+    }
+
+    private static ImageRecord NewBatchRecord(string folderId, string relativePath, string id)
+        => new()
+        {
+            Id = id,
+            SyncFolderId = folderId,
+            RelativePath = relativePath,
+            FileName = relativePath,
+            FileSize = 1,
+            Hash = new string('0', 64),
+            Status = ImageStatus.Normal,
+            CreatedDate = "2026-01-01T00:00:00.000Z",
+            ModifiedDate = "2026-01-01T00:00:00.000Z",
+        };
 
     [Fact]
     public async Task 規則2_内容変更でhashとメタが更新されstatusは不変()
@@ -517,5 +629,101 @@ public sealed class CpScan004Tests : IDisposable
         }
 
         public void Report(int value) => _onReport(value);
+    }
+
+    private sealed class CountingImageRepository : IImageRepository
+    {
+        private readonly IImageRepository _inner;
+        private readonly bool _completeReadsSynchronously;
+        private readonly ManualResetEventSlim? _batchEntered;
+        private readonly ManualResetEventSlim? _releaseBatch;
+
+        public CountingImageRepository(
+            IImageRepository inner,
+            bool completeReadsSynchronously = false,
+            ManualResetEventSlim? batchEntered = null,
+            ManualResetEventSlim? releaseBatch = null)
+        {
+            _inner = inner;
+            _completeReadsSynchronously = completeReadsSynchronously;
+            _batchEntered = batchEntered;
+            _releaseBatch = releaseBatch;
+        }
+
+        public int SingleAddCalls { get; private set; }
+
+        public int ScanBatchCalls { get; private set; }
+
+        public int MaxScanBatchCount { get; private set; }
+
+        public Task AddAsync(ImageRecord image)
+        {
+            SingleAddCalls++;
+            return _inner.AddAsync(image);
+        }
+
+        public Task ApplyScanBatchAsync(ScanMutationBatch batch)
+        {
+            _batchEntered?.Set();
+            if (_releaseBatch is not null && !_releaseBatch.Wait(TimeSpan.FromSeconds(5)))
+            {
+                throw new TimeoutException("scan batchの解放待ちがタイムアウトしました。");
+            }
+
+            ScanBatchCalls++;
+            MaxScanBatchCount = Math.Max(MaxScanBatchCount, batch.Count);
+            return _inner.ApplyScanBatchAsync(batch);
+        }
+
+        public Task<ImageRecord?> GetByIdAsync(string id) => _inner.GetByIdAsync(id);
+
+        public Task<IReadOnlyList<ImageRecord>> GetByFolderAsync(string syncFolderId)
+            => _completeReadsSynchronously
+                ? Task.FromResult<IReadOnlyList<ImageRecord>>([])
+                : _inner.GetByFolderAsync(syncFolderId);
+
+        public Task<IReadOnlyList<ImageRecord>> GetAllNormalAsync() => _inner.GetAllNormalAsync();
+
+        public Task UpdateFileMetaAsync(string id, string hash, long fileSize, string modifiedDate)
+            => _inner.UpdateFileMetaAsync(id, hash, fileSize, modifiedDate);
+
+        public Task UpdateStatusAsync(string id, ImageStatus status) => _inner.UpdateStatusAsync(id, status);
+
+        public Task UpdateNotesAsync(string id, string? notes) => _inner.UpdateNotesAsync(id, notes);
+
+        public Task DeleteAsync(string id) => _inner.DeleteAsync(id);
+
+        public Task ApplyRelinkAsync(string missingImageId, string pendingImageId)
+            => _inner.ApplyRelinkAsync(missingImageId, pendingImageId);
+
+        public Task<IReadOnlyList<string>> GetDistinctNormalTagValuesAsync(string tagId)
+            => _inner.GetDistinctNormalTagValuesAsync(tagId);
+    }
+
+    private sealed class ImmediateFolderRepository : ISyncFolderRepository
+    {
+        private readonly SyncFolder _folder;
+
+        public ImmediateFolderRepository(SyncFolder folder)
+        {
+            _folder = folder;
+        }
+
+        public Task<Result> AddAsync(SyncFolder folder) => Task.FromResult(Result.Ok());
+
+        public Task<SyncFolder?> GetByIdAsync(string id)
+            => Task.FromResult<SyncFolder?>(id == _folder.Id ? _folder : null);
+
+        public Task<SyncFolder?> GetByPathAsync(string path)
+            => Task.FromResult<SyncFolder?>(PathNormalizer.Equals(path, _folder.Path) ? _folder : null);
+
+        public Task<IReadOnlyList<SyncFolder>> GetAllAsync()
+            => Task.FromResult<IReadOnlyList<SyncFolder>>([_folder]);
+
+        public Task UpdateAsync(SyncFolder folder) => Task.CompletedTask;
+
+        public Task DeleteAsync(string id) => Task.CompletedTask;
+
+        public Task UpdateLastScanAsync(string id, string lastScan) => Task.CompletedTask;
     }
 }

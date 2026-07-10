@@ -76,6 +76,8 @@ ebom:
         - 遷移は仕様 §2.1 遷移表の 6 パターンのみ
         - missing 化(§2.1 手順 4/5)は各ファイル判定(手順 3)より先に実行 — 単一スキャンのリネーム検出のため(ECO-001 で明文化)
         - スキャン二重起動禁止(同一フォルダ)
+        - (ECO-059) スキャン中のDB変更は件数上限を持つバッチで明示トランザクション適用し、画像1件ごとの暗黙commitを禁止する。進捗は整数百分率が変化した時だけ通知し、非空入力は100で完了する。列挙時に得たサイズ/日時を再利用してFileInfoの再照会を避け、SHA-256全体読取はHDD向け直列+SequentialScanで維持する
+        - (ECO-059/GF-059-01) スキャン本体の列挙・ハッシュ・DBバッチは呼出元UIスレッドから明示分離し、同期完了するrepository awaitに依存しない。進捗だけを呼出元のProgress経由でUI contextへ通知する
       acceptance_refs: [CP-SCAN-004]
 
     - id: E-HASH-006
@@ -149,6 +151,7 @@ ebom:
         - FK 規則は仕様 §2.0 のとおり(CASCADE/SET NULL)
         - 新規 DB = 最新スキーマ+全マイグレーション既適用マーク
         - 接続ごとに PRAGMA journal_mode=WAL・foreign_keys=ON を明示発行
+        - (ECO-059) スキャンバッチ内の追加・メタ更新・status更新・削除は単一明示トランザクションで原子適用し、失敗時は当該バッチを全ロールバックする
         - (ECO-020) マイグレーション 004-workspaces で workspaces / workspace_images を追加。is_default の部分 UNIQUE 索引でデフォルト高々 1 件を担保(INV-W1)。両 FK→CASCADE(workspace 削除・画像の完全削除で所属消滅)。LatestDdl 末尾と列順・索引名を揃えスキーマ同値(CP-DB-006)を保つ
         - (ECO-025・現状追認) 表示列 display_columns は既存 views.display_columns TEXT(JSON)へ格納=**マイグレーション不要**(ECO-020 の workspaces 追加と対照)。ECO-025 の進化モデル(順序・kind・名前固定・最大5)は同一 TEXT 列へ前方互換に直列化する。スキーマ同値(CP-DB-006)不変
         - since ECO-044: マイグレーション 005-merge-operations で merge_operations(マージ操作ログ・IMG-011 裁定③)を追加。target_id FK→images CASCADE(destination 完全削除でログ消滅=自然に取り消し不可)。source_ids はログ内 JSON(FK なし — sources の完全削除は Undo 時の行不在で検出)。LatestDdl 末尾と列順・索引名を揃えスキーマ同値(CP-DB-006)を保つ(ECO-020 前例)
