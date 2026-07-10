@@ -31,6 +31,12 @@ exploratory_probes:
         work_tab_list: "Working Set median 490.9 MiB(max 490.9) / Private median 388.9 MiB(max 388.9)・grid→list切替完了・全試料応答あり"
         after_list_scroll: "3回連続scroll後 Working Set median 500.4 MiB(max 500.5) / Private median 399.1 MiB(max 399.1)・可視行がimage-00032〜00043へ進み応答あり・grid復帰完了"
         finding: "WorkTab gridのPrivateは是正前観測下限6,698.4 MiBから333.9 MiBへ少なくとも20.1分の1。件数比例の数GiB増加と切替不能は再現せず、残る約94 MiB(ImageTab比)は本ECOで追加最適化しない。固定MiB閾値は新設せず探索値として記録"
+      eco-058-maintainer-golden:
+        date: 2026-07-11
+        harness: "M-GOLDEN-HARNESS-039の一意TEMP隔離fixture(normal/workspace所属10,000・image_tags 50,000・256x192 source/warm cache各10,000)"
+        result: "maintainer実機でImageTab/WorkTab各10,000項目、WorkTab切替、grid/list往復・双方scroll、単独/Ctrl/Shift選択、タグ編集/作業/整理/削除の4文脈モード、画像/タグドット/件数/リスト列の描画、応答あり・件数比例の数GiB増加なし、正常終了後cleanupを全項目確認"
+        qualitative_latency: "ImageTab→WorkTabは少し待ち、体感で1秒以下(未計時)。WorkTab→ImageTabは一瞬で切り替わる"
+        classification: "P-01の非阻害探索観測。固定時間閾値や両方向の相対同等性は現契約になくGF/ECO-058不合格にしない。定量目標や改善を求める場合は、DB取得・集約・VM再構築・初回描画を区分計測して別ECOで扱う"
   - id: P-02
     scenario: "キーボードのみで主要操作(フォルダ登録→スキャン→ノード選択→画像選択→ビューア)を試みる"
     dimension: アクセシビリティ(フォーカス遷移・操作可能性)

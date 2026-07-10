@@ -1,8 +1,9 @@
-# Change Order — ECO-058(implemented / golden pending): 作業タブ中央ブラウズの非仮想化 — 1万件で6.5GiB超・応答不能
+# Change Order — ECO-058(applied): 作業タブ中央ブラウズの非仮想化 — 1万件で6.5GiB超・応答不能
 
 > maintainer の性能調査要求を受け、2026-07-10 に実コード読解と隔離データで実測した欠陥。
 > 起票時点では工程診断と変更台帳登録のみで `src/tests` は変更しなかった。
-> 2026-07-10 の `/eco-fix eco-058` でプローブ先行の最小是正と機械受入まで完了し、現在は maintainer golden 待ち。
+> 2026-07-10 の `/eco-fix eco-058` でプローブ先行の最小是正と機械受入まで完了し、
+> 2026-07-11 の maintainer 実機 golden 合格を受け `/eco-accept eco-058` でクローズした。
 
 ## 1. 症状（maintainer 報告・2026-07-10）
 
@@ -105,7 +106,7 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
 - WorkTab grid は Working Set median 434.5 MiB / Private median 333.9 MiB、list は
   490.9 / 388.9 MiB、list連続scroll後は 500.4 / 399.1 MiB。是正前 grid の Private
   6,698.4 MiB以上（観測下限）に対し少なくとも20.1分の1となり、数GiB増加・切替不能は再現しなかった。
-- 固定MiB/秒閾値は新設せず、探索値は P-01 に記録。視覚・選択・文脈モードの最終確認はgoldenへ残す。
+- 固定メモリ上限・固定時間閾値は新設せず、探索値は P-01 に記録。視覚・選択・文脈モードの最終確認はgoldenへ残す。
 
 ## 5. 影響 BOM
 
@@ -118,7 +119,7 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
 - 実装対象: `WorkTabView.axaml` のレイアウトホストのみ。`WorkTabViewModel`/DB/Core は対象外。
 - CAD変更なし。既存固定 Oracle 行は変更しない（R6）。
 
-## 6. 残ゲート
+## 6. 完了した golden ゲート
 
 ### 6.1 GF-058-01 — golden実行経路の欠落（maintainer指摘・2026-07-10）
 
@@ -128,7 +129,8 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
   `%APPDATA%/ViewPrism2` の既存profileを読み、10,000件条件を保証せず、実ユーザーデータにも依存する。
   `dotnet run --project src/ViewPrism2.App` は既定Debugでもあり、本ECOのRelease計測経路と一致しない。
 - ECO-057/GF-057-01で確立済みの隔離規律を本ECOへread-acrossし、source-onlyの
-  `M-GOLDEN-HARNESS-039` を追加した。ECO状態は `implemented / golden pending` のまま維持する。
+  `M-GOLDEN-HARNESS-039` を追加した。追加時点ではECO状態を `implemented / golden pending` のまま
+  維持し、2026-07-11のmaintainer実機合格後に§8の受入で`applied`へ移行した。
 
 ### 6.2 golden実行手順（通常profile無改変の正常系）
 
@@ -164,7 +166,8 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
    # 上の出力と停止済みprocessを確認後、対象1件を $exactPath に代入して実行
    Remove-Item -LiteralPath $exactPath -Recurse
    ```
-8. 以上が合格なら `/eco-accept eco-058`。異常終了や既存profile表示があれば合格にせず停止する。
+8. 以上を2026-07-11にmaintainerが全項目合格と確認し、`/eco-accept eco-058`を実行した。
+   異常終了や既存profile表示があれば合格にしない規律は今後の再実施でも維持する。
    なお致命例外時の `Program.WriteFatalLog` だけはoverrideを未継承で、通常profileの`fatal.log`へ追記し得る
    （51 R3記録）。発火時はgolden不合格であり、本ECOをacceptしない。
 
@@ -183,5 +186,28 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
   Tests **573/573**、Oracle **109 pass / 既知2 skip**、validate **0/0**、selftest **OK**、
   public-release audit **0 findings**を再確認した。
 
-**停止点**: `/eco-fix` のgolden基準に到達。CAD裁定・追加性能最適化は不要。
-maintainer実機golden合格後に `/eco-accept eco-058` でクローズする。
+## 8. クローズ(2026-07-11 — golden 合格/applied)
+
+- **実機確認**: maintainer が `M-GOLDEN-HARNESS-039` の一意TEMP隔離fixtureで、ImageTab/WorkTab各
+  10,000項目、WorkTabへの切替、grid/list往復と双方のscroll、単独/Ctrl/Shift選択、タグ編集・作業・
+  整理・削除の4文脈モード、画像・タグドット・件数・リスト列の描画を全項目確認した。応答不能や
+  件数比例の数GiB増加は再発せず、正常終了後のfixture cleanupも確認して `/eco-accept eco-058` で承認した。
+- **非阻害の探索所見**: ImageTab→WorkTabだけ少し待ち、体感で1秒以下（未計時）、逆方向は一瞬で
+  切り替わると観測した。これはWorkTab入場時の毎回再読込と、起動時に初期化済みのImageTab再表示という
+  コード上のライフサイクル非対称と整合するが、知覚遅延の支配区間は未計時である。
+  ECO-058の表示仮想化は画面外Control/ThumbnailImage実体化を抑えるが、DB読込・集約・10,000件の
+  ViewModel再構築までは除去しない。固定時間閾値や両方向の相対同等性は現契約になく、P-01の非阻害観測として
+  記録し、golden failureにはしない。
+- **再発防止**: CP-UI-G1へ、ECO-020/021導入時からの非仮想実装がECO-026のImageTab是正でも
+  read-acrossされず、10,000件でPrivate 6,698.4MiB以上・切替未完了まで潜伏した実績を明記した。
+  CP-NFR-026のheadless実体化数ガード、P-01の隔離実規模観測、M-GOLDEN-HARNESS-039の再現可能な
+  入力経路を組み合わせ、決定論的な小入力と実規模UIの二層で封止する。
+- **M4判定**: 既定REQ-041/E-UI-BROWSE-022の仮想化契約への実装逸脱と検査被覆漏れの是正であり、
+  新しいsurface・挙動仕様・設計裁定はない。E/M-BOM、FMEA、CP、P-01はfix時に同期済みのため、
+  20-spec、35-design-system-bom、CADへの追加同期は不要。既存固定Oracle行も無変更のまま維持した。
+- **教訓/read-across**: 部品間の`depends_on`だけでは、共有する非機能契約の検査伝播を証明しない。
+  先行surfaceのFMEA/是正を全consumerへ構造検索し、E-BOM、M-BOM、FMEA、Control Plan、探索入力まで
+  消費面ごとにread-acrossする。さらに画面の見た目の複雑さから遷移速度を推測せず、DB再読込、集約、
+  ViewModel再構築、可視セル実体化を分離して扱う。この一般形は方法論への昇格候補とする。
+- **残課題**: 固定時間目標またはImageTabとの相対性能目標は未設定。追加改善が必要になった場合はR3に従い、
+  DB取得・集約・VM再構築・初回描画を区分計測する別ECOとして起票する。本ECOへ追加最適化は混ぜない。
