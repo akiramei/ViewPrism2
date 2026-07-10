@@ -982,3 +982,14 @@ changes:
     impacted_bom: ["M-UI-ORGANIZE-034(ClearDest)", "M-UI-IMAGETAB-035(トレイ 3 ゾーン+検索結果ヘッダ+タイル)", "M-UI-WORKSPACE-029(同型)", "10-requirements(REQ-067 追記=A-2 裁定済み)", "CP-UI-G9/CP-UI-G1(クローズ時観点明記)"]
     body: 60-change-order-eco-056.md
     notes: "裁定不要(A-1/A-2 裁定済み・逸脱 6 点は CAD 権威確定)=/eco-fix 可。是正= トレイ DockPanel 化(上=マージ先ピン・下=アクションピン・対象のみ内部スクロール)+ClearDest(全通知=GF-055-01 教訓先回り)+視覚適合(タブ/文言/2 列 Grid/チェック行意匠/タイル チェック+バッジ)+「グリッドへ」導線。プローブ= ①解除手段の不在 ②戻る経路の不在 を是正前不合格で固定(視覚系は golden 管轄・fact 化は着手時判断=ECO-040 基盤)。未検証 3 点(タイル重畳の細部・戻り後の結果保持・結果ヘッダ構成)は v2 モック実測で fix 時確定。ECO-055 golden 基準 1 とは独立"
+
+  - id: ECO-057
+    title: "公開前プライバシー・著作権・評判リスクの無害化 — 誤って public 化しても私有画像・端末情報を取得不能にする"
+    type: 公開安全性の欠陥是正(実装デモデータ+製造台帳+Git履歴+配布工程。CAD非該当・裁定不要)
+    status: staged
+    golden: pending
+    baseline: "main b4c91a9"
+    findings: "2026-07-10 公開前監査: tracked/current+全230コミットに画像バイナリ・動画・文書・archiveなし、主要secret形式なし、author emailはGitHub noreplyのみ。一方、ImageTabSeedViewModelに実ユーザー名を含むOneDrive/Pictures/Downloads/Camera/Desktop絶対パス+件数、台帳等13ファイルに絶対パス、ECO-048〜055系17箇所に私有実画像orientation_fixture_06の識別子/スマホ由来/EXIF/寸法/変換名/類似度実測。ignore済みwork/に未追跡スクリーンショット21枚があり、目視で実パス・OneDriveフォルダ/件数・私有キャラクター画像/ファイル名・Snipping Tool通知を確認。通常pushには入らないがZIP/手動公開で混入する。現行削除だけでは履歴から文字列を復元可能"
+    impacted_bom: ["M-UI-IMAGETAB-035(seed data)", "33-control-plan/34-routing(公開前gate)", "製造台帳ECO-048〜055/PLM intake/UI-IR/as-built/charter", "Git全refs+remote refs"]
+    body: 60-change-order-eco-057.md
+    notes: "裁定不要=/eco-fix可。是正=架空seed+repo-relative化+実画像識別情報の合成fixture化+work画像のrepo外隔離+公開安全プローブ恒久化+私有bundle退避後に全履歴/remote refs洗浄+fresh clone再監査。既存固定Oracle/DB/製品機能は不変"
