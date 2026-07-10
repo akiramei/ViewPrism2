@@ -1,5 +1,9 @@
+using Avalonia.Controls;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ViewPrism2.App.Services;
 using ViewPrism2.App.ViewModels;
+using ViewPrism2.App.Views;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
@@ -369,6 +373,64 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         vm.SetGridCommand.Execute(null);
         Assert.True(vm.ShowBrowseGrid);
         Assert.Contains(notified, p => string.IsNullOrEmpty(p) || p == nameof(vm.ShowBrowseGrid));
+    }
+
+    /// <summary>
+    /// ECO-058 / CP-NFR-026: 画面外セルまで全件生成する非仮想 ItemsControl の再混入を、
+    /// 実レイアウト後の visual tree に残るセル数で検出する。
+    /// </summary>
+    [Fact]
+    [Trait("cp", "CP-NFR-026")]
+    public async Task 中央ブラウズはグリッドとリストで画面外セルを全件実体化しない()
+    {
+        const int itemCount = 256;
+        var vm = NewVm();
+        for (var i = 0; i < itemCount; i++)
+        {
+            vm.Items.Add(new ImageItemVM(
+                $"nfr-{i}", $"nfr-{i:D3}.jpg",
+                isFolder: false, isPlaceholder: false, hasThumb: false,
+                thumbBrush: null, selectable: false, isSelected: false, hasTagDots: false,
+                tagDots: [], sizeLabel: "", dateLabel: "", target: null));
+        }
+        vm.WsEmpty = false;
+
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var window = new Window
+            {
+                Content = new WorkTabView { DataContext = vm },
+                Width = 1366,
+                Height = 900,
+            };
+
+            try
+            {
+                window.Show();
+                RunLayoutJobs();
+                var gridCells = window.GetVisualDescendants().OfType<Border>()
+                    .Count(b => b.Classes.Contains("thumbCellWrap") && b.IsEffectivelyVisible);
+
+                vm.SetListCommand.Execute(null);
+                RunLayoutJobs();
+                var listRows = window.GetVisualDescendants().OfType<Border>()
+                    .Count(b => b.Classes.Contains("imageListRow") && b.IsEffectivelyVisible);
+
+                Assert.True(
+                    gridCells is > 0 and < itemCount / 2 && listRows is > 0 and < itemCount / 2,
+                    $"画面外セルを全件実体化: Items={itemCount}, grid={gridCells}, list={listRows}");
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, CancellationToken.None);
+    }
+
+    private static void RunLayoutJobs()
+    {
+        for (var i = 0; i < 8; i++)
+            Dispatcher.UIThread.RunJobs();
     }
 
     [Fact]

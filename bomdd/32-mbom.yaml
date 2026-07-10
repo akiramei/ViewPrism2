@@ -216,7 +216,7 @@ mbom:
         design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ(ImageTabViewModel の日本語ラベルは surface 内定数=モック CAD 準拠)"
         column_picker: "(ECO-025 β-2/DRY・SC-COLUMN-PICKER-001)表示列の列ピッカーは共通 VM ColumnPickerViewModel(ViewColumnModel[進化モデル=名前固定 VE-001/最大5 VE-002/タグ母集合限定/kind/display_columns 直列化]を消費・選択済み列/追加元/追加・削除・並べ替え/件数・上限バッジ/ラベル解決・編集ごとに Changed 発火)。**2 surface が同一 VM を消費しビューだけ golden 承認レイアウトを保つ**: (α)ViewEditDialog=モーダル・追加元 2 カラム(BasicSources チップ無し/TagSources チップ有り)・保存で反映(ViewEditDialogViewModel が Columns を合成)。(β-2)ファイル一覧「表示列」ポップオーバー(ColumnPickerView・モーダル型クローム/フッター無し=ライブ編集)・追加元は単一マージ(AvailableColumns・基本にも「基本」チップ)。ImageTabViewModel が view 軸+ビュー選択時のみ「表示列」ボタンを出し(CanEditColumns)、Changed→ViewService.UpdateAsync で display_columns を書き戻す(VE-003)→Recompute で列/ソート再構築(除去列がソート中なら解除)。CAD file_list.md L68 の docked フッターはモックに無く=ライブ編集のためフッター無し(CAD 是正済)"
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-UI-G6, CP-L1-SMOKE, CP-COLPICKER-025]  # ECO-023 で CP-UI-G3(詳細パネル)retired・ECO-024 で除去・ECO-025 で CP-COLPICKER-025 追加
-      fmea_refs: [FMEA-013]
+      fmea_refs: []
 
     - id: M-UI-016        # v1.2 追加(ずる裁定: タグ付与 UI)→ **superseded(ECO-036 第5段・2026-07-04)**
       # M 層 lineage の初適用: god-VM(1,765 行・scale-01 のハブ)を 3 分割+残余の複合宣言へ解体。
@@ -244,8 +244,8 @@ mbom:
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
         - 子 VM はホスト型を参照しない(関数注入)。通知は消費者(XAML/tests=ホスト公開契約)に対し旧実装と同一回数・同一位置(51 通知トポロジー 3 則)
-      acceptance_refs: [CP-TAGUI-013, CP-UI-G7]
-      fmea_refs: [FMEA-014]
+      acceptance_refs: [CP-TAGUI-013, CP-NFR-026, CP-UI-G7]
+      fmea_refs: [FMEA-013, FMEA-014]
 
     - id: M-UI-014
       ebom_refs: [E-UI-VIEWER-024]
@@ -351,12 +351,15 @@ mbom:
         type: avalonia-app
       interface_contract:
         shell: "作業タブ(第3タブ)= 左作業スペースサイドバー(一覧/選択/＋=デフォルト回転/インラインリネーム/件数/276-64 折り畳み)+ ワークスペースヘッダ(名前+既定バッジ+件数)+ 中央グリッド/リスト(フラット・表示軸/パンくずなし)+ ソート + 空状態(画像タブ作業モードへの誘導)"
+        browse: "(ECO-058/REQ-041 read-across)中央 grid=ItemsRepeater+UniformGridLayout / list=VirtualizingStackPanel。E-UI-BROWSE-022 と同じく可視範囲だけを実体化し、非仮想 ItemsControl 直置きを禁止"
         modes: "(ECO-021 β-1〜β-4)作業モード=別スペースへ移動(E-WORKSPACE-042.MoveImages)/ タグ編集(E-UI-TAGASSIGN-029 再利用)/ 整理トレイ(E-UI-SIMILARITY-035+E-UI-MERGE-036 再利用・現スペース内)/ 削除+ゴミ箱 in-tab popup(E-TRASH-038/E-UI-REPAIR-039 再利用)。修復はコレクションスコープのため非搭載。選択機構・排他隠し(ECO-014§8)は作業タブ側でオーケストレート(UQ-W06=B 隔離方式)"
         domain: "ドメイン操作は E-WORKSPACE-042 経由(状態遷移を UI で再実装しない)。ゴミ箱は workspace スコープ(GetDeletedImagesAsync)"
       invariants:
         - 件数/一覧は status=normal のみ(INV-W2)。デフォルトは常に 1 つ(INV-W1)・デフォルトはリネーム不可(INV-W3)
         - Core 意味論不変(MoveImages/Merge/Trash は既存サービス再利用)。新 Core なし
-      acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-UI-G1]
+        - 中央 grid/list は画面外 ImageItemVM セル/ThumbnailImage を全件実体化しない(REQ-041・FMEA-038)
+      acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-NFR-026, CP-UI-G1]
+      fmea_refs: [FMEA-038]
 
     # ---------- v3.0 追加(loop-v3-similarity) ----------
     - id: M-PHASH-020
@@ -625,8 +628,9 @@ fmea:
   - { id: FMEA-010, unit: M-CORE-001,  failure_mode: "ID 大文字混入・日時形式揺れ(ローカル時刻/桁数)",             effect: "同一判定・時系列ソート破壊",            targeted_by: CP-UTIL-005 }
   - { id: FMEA-011, unit: M-SCAN-005,  failure_mode: "ロックファイル・ジャンクションでスキャン全体停止/無限再帰",   effect: "スキャン不能",                          targeted_by: CP-SCAN-004 }
   - { id: FMEA-012, unit: M-THUMB-008, failure_mode: "壊れた画像で例外伝播/小画像の拡大",                            effect: "一覧表示停止・画質劣化",                targeted_by: CP-THUMB-007 }
-  - { id: FMEA-013, unit: M-UI-013,    failure_mode: "仮想化なしの素朴な ItemsControl 実装",                         effect: "1 万件で UI フリーズ",                  targeted_by: CP-UI-G1(+probe P-01) }
+  - { id: FMEA-013, unit: M-UI-IMAGETAB-035, failure_mode: "画像タブ中央ブラウズへの仮想化なしの素朴な ItemsControl 実装", effect: "1 万件で UI フリーズ", targeted_by: "CP-NFR-026+CP-UI-G1+probe P-01" }
   - { id: FMEA-014, unit: M-UI-IMAGETAB-035,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
+  - { id: FMEA-038, unit: M-UI-WORKSPACE-029, failure_mode: "E-UI-BROWSE-022/FMEA-013 の read-across 漏れにより作業タブ中央 grid/list へ非仮想 ItemsControl を直置きする", effect: "1 万件で数 GiB のメモリ増加・タブ切替未完了・UI 応答不能", targeted_by: "CP-NFR-026+CP-UI-G1+probe P-01" }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
   - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }
@@ -664,7 +668,7 @@ silence_sweep:
   - { dimension: NodeGraph 構造変化時の選択状態,  decision: specified,  where: M-UI-013,                            note: "再構築後に旧選択ノード id が解決できなければルート選択へ(REQ-037 と同じフォールバック)— G2' AUDIT-101 解消" }
   - { dimension: リスト列幅の配分,                decision: specified,  where: M-UI-013,                            note: "width は star 値(name=2*、他=1*)。削除済みタグ列はスキップし残り列の star で全幅按分 — G2' AUDIT-102 解消" }
   - { dimension: 丸め方式(サムネイル寸法),       decision: specified,  where: K-SKIA,                              note: "Round half away from zero・最小 1px" }
-  - { dimension: グリッド性能(1 万件),           decision: exploratory, note: "probe P-01 で観測。固定オラクルに入れない(仕様 §4)" }
+  - { dimension: 中央ブラウズ性能(画像/作業タブ・grid/list・1 万件), decision: exploratory, note: "probe P-01 で応答性・スクロール・メモリを両 surface 観測。固定オラクルに入れない(仕様 §4・ECO-058)" }
   - { dimension: アクセシビリティ,                decision: exploratory, note: "probe P-02 で観測のみ" }
   - { dimension: テーマ(ダーク),                 decision: out-of-scope, note: "V1 はライトのみ(仕様 §4)" }
   - { dimension: インストーラ/配布,              decision: out-of-scope, note: "チャーター・仕様 §4 のとおり" }

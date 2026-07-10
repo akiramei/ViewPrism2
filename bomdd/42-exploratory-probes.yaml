@@ -7,11 +7,27 @@ bomdd:
 
 exploratory_probes:
   - id: P-01
-    scenario: "ダミー画像 10,000 件(DB 直接投入+実サムネイル 500 件)でグリッド表示・スクロール・列数切替・ビュー切替を操作"
-    dimension: 大規模ライブラリでの UI 応答性(初期表示時間・スクロール体感・メモリ使用量)
-    sweep_ref: "silence_sweep: グリッド性能(1 万件)"
+    scenario: "画像10,000件(DB直接投入+256x192ウォームキャッシュ10,000件)でImageTab/WorkTab双方のgrid/list表示・切替・スクロールを操作。Private/Working Set・応答状態を記録し、端末保護の停止条件を設ける"
+    dimension: 大規模ライブラリでの中央ブラウズ UI 応答性(初期表示・タブ/grid/list切替・スクロール体感・メモリ使用量)
+    sweep_ref: "silence_sweep: 中央ブラウズ性能(画像/作業タブ・grid/list・1 万件)"
     observed:
       factory-01: ~
+      eco-058-before:
+        date: 2026-07-10
+        baseline: b283ff5b401ca6b78bfc4a35329a7732c0c1a408
+        dataset: "normal画像10,000・workspace所属10,000・image_tags 50,000・256x192 JPEG warm cache 10,000(全数寸法検査)"
+        image_tab: "Working Set 331.2 MiB / Private 239.6 MiB・10,000項目表示完了・応答あり"
+        work_tab: "Working Set 6,749.4 MiB以上 / Private 6,698.4 MiB以上・切替未完了・応答なし・増加中に安全停止(観測下限)"
+      eco-058-after:
+        date: 2026-07-10
+        implementation: "WorkTab grid=ItemsRepeater+UniformGridLayout / list=ItemsControl+VirtualizingStackPanel(ECO-058最小是正)"
+        dataset: "beforeと同じ構造を再生成: normal画像10,000・workspace所属10,000・image_tags 50,000・256x192 JPEG warm cache 10,000(全数寸法検査)"
+        sampling: "同一起動内・各安定区間20試料×250msの中央値/最大。ImageTab grid→WorkTab grid→list→3回連続scroll→grid往復を実UI操作"
+        image_tab_grid: "Working Set median 334.3 MiB(max 336.4) / Private median 238.1 MiB(max 241.1)・10,000項目表示/scroll完了・全試料応答あり"
+        work_tab_grid: "Working Set median 434.5 MiB(max 434.7) / Private median 333.9 MiB(max 334.1)・タブ切替/scroll完了・全試料応答あり"
+        work_tab_list: "Working Set median 490.9 MiB(max 490.9) / Private median 388.9 MiB(max 388.9)・grid→list切替完了・全試料応答あり"
+        after_list_scroll: "3回連続scroll後 Working Set median 500.4 MiB(max 500.5) / Private median 399.1 MiB(max 399.1)・可視行がimage-00032〜00043へ進み応答あり・grid復帰完了"
+        finding: "WorkTab gridのPrivateは是正前観測下限6,698.4 MiBから333.9 MiBへ少なくとも20.1分の1。件数比例の数GiB増加と切替不能は再現せず、残る約94 MiB(ImageTab比)は本ECOで追加最適化しない。固定MiB閾値は新設せず探索値として記録"
   - id: P-02
     scenario: "キーボードのみで主要操作(フォルダ登録→スキャン→ノード選択→画像選択→ビューア)を試みる"
     dimension: アクセシビリティ(フォーカス遷移・操作可能性)

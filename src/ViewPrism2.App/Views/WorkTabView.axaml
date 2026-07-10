@@ -768,11 +768,14 @@
                      FontSize="13" Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap" TextAlignment="Center" />
         </StackPanel>
 
-        <!-- グリッド -->
+        <!-- グリッド(ECO-058 / E-UI-BROWSE-022 read-across): 画像タブと同じ仮想化ホストを使い、
+             画面外セルと ThumbnailImage を実体化しない。セルのテンプレートと操作経路は不変。 -->
         <ScrollViewer IsVisible="{Binding ShowBrowseGrid}">
-          <ItemsControl ItemsSource="{Binding Items}" Margin="11">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
+          <ItemsRepeater ItemsSource="{Binding Items}" Margin="11">
+            <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="164" MinItemHeight="206" MinColumnSpacing="0" MinRowSpacing="0" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
               <DataTemplate x:DataType="vm:ImageItemVM">
                 <Border Classes="thumbCellWrap" Width="164" Padding="7" PointerPressed="OnItemPressed">
                  <StackPanel Width="150">
@@ -820,8 +823,8 @@
                  </StackPanel>
                 </Border>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+            </ItemsRepeater.ItemTemplate>
+          </ItemsRepeater>
         </ScrollViewer>
 
         <!-- リスト -->
@@ -836,6 +839,11 @@
           </Border>
           <ScrollViewer>
             <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ImageItemVM">
                   <Border Classes="imageListRow" Classes.selected="{Binding IsSelected}" PointerPressed="OnItemPressed">

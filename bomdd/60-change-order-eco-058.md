@@ -1,7 +1,8 @@
-# Change Order — ECO-058(staged): 作業タブ中央ブラウズの非仮想化 — 1万件で6.5GiB超・応答不能
+# Change Order — ECO-058(implemented / golden pending): 作業タブ中央ブラウズの非仮想化 — 1万件で6.5GiB超・応答不能
 
 > maintainer の性能調査要求を受け、2026-07-10 に実コード読解と隔離データで実測した欠陥。
-> 本起票は工程診断と変更台帳登録のみで、`src/tests` は変更しない。
+> 起票時点では工程診断と変更台帳登録のみで `src/tests` は変更しなかった。
+> 2026-07-10 の `/eco-fix eco-058` でプローブ先行の最小是正と機械受入まで完了し、現在は maintainer golden 待ち。
 
 ## 1. 症状（maintainer 報告・2026-07-10）
 
@@ -63,63 +64,72 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
    VM/モードの所有境界であり、同一中央ブラウズの仮想化契約を解除しない。
    FL-004（表示形式のタブ独立永続）も保存キーの裁定で、実体化戦略とは無関係。
 
-### 3.2 未検証（推測と分離）
+### 3.2 起票時の未検証事項（fix後の扱い）
 
-- 10,000 件の WorkTab が構築を完了した場合の最終ピーク値（安全停止したため不明）。
-- グリッドとリストを個別起動したときのピーク差（静的には双方非仮想だが、実測は既定 grid）。
-- どの Avalonia 仮想化方式を採用するか、および仮想化後に残る VM/DB/Bitmap 負荷の割合。
-- 固定メモリ上限や秒数の製品目標。現行契約は「1 万件で操作可能」の探索観測で、数値閾値は未固定。
+- 是正前10,000件WorkTabの完了時ピークは、安全停止したため引き続き不明（再実行不要）。
+- 是正後のgrid/list別メモリとscroll後値は §4.4 / P-01 で測定済み。
+- 仮想化方式は ImageTab と同じ ItemsRepeater/UniformGridLayout/VSP を採用。残るVM/DB/Bitmap負荷の
+  詳細分解は、本ECOの操作可能性回復に不要なためR3で混ぜず、将来必要時に別ECOで測る。
+- 固定メモリ上限や秒数の製品目標は未固定のまま。現行契約は「1万件で操作可能」の探索観測である。
 
-## 4. 是正方針（案 — `/eco-fix` 着手時にプローブで確定）
+## 4. 実施した是正（`/eco-fix eco-058`）
 
 ### 4.1 BOM／検査面を先に閉じる
 
-- E-UI-WORKSPACE-043/M-UI-WORKSPACE-029 に、中央ブラウズは E-UI-BROWSE-022 の
-  仮想化不変条件（画面外セル/サムネ非実体化・素の ItemsControl 直置き禁止）を継承すると明記。
-- CP-NFR-026 を WorkTab へread-acrossするか、WorkTab専用の決定論ガードを新設するかを
-  プローブ設計時に確定。FMEA-013 の unit/target と CP-UI-G1 の再検査範囲を同期。
-- P-01 を画像タブ/作業タブの両 surface に拡張するか、WorkTab 1 万件プローブを分離新設し、
-  本 ECO の是正前/後観測値を記録する。
+- E-UI-WORKSPACE-043/M-UI-WORKSPACE-029 に、中央ブラウズが E-UI-BROWSE-022 の
+  仮想化不変条件（画面外セル/サムネ非実体化・非仮想 ItemsControl 直置き禁止）を継承すると明記した。
+- 既存 CP-NFR-026 を WorkTab へread-acrossし、CP-UI-G1 に 10,000 件のgrid/list受入観点を追加。
+  FMEA-013 は実所有者 M-UI-IMAGETAB-035 へ是正し、WorkTab同型事故を FMEA-038 として分離した。
+- P-01 を ImageTab/WorkTab の両 surface とgrid/list/scrollへ拡張し、是正前/後を同じ構造の
+  256×192ウォームキャッシュ10,000件で記録した。
 
 ### 4.2 プローブ先行（R5）
 
-- 256×192ウォームキャッシュの件数ランプで、是正前に
-  「項目数に比例して実体化数・Private Memoryが増える」ことを再現可能な治具へ固定する。
-- 端末保護の停止条件を持たせ、10,000 件での応答不能を無制限に再実行しない。
-- 可能なら headless Avalonia で全件数に対する実体化要素数を観測し、壁時計だけに依存しない
-  不合格プローブを先に追加する。成立しなければ実UI探索プローブ+構造ガードで担保する。
+- `CpUiG1WorkTabTests` に256項目・1366×900固定viewportのheadless実レイアウトプローブを追加した。
+  visual tree 上の実効可視セルを grid/list 別に数え、各surfaceが全件の半数未満であることを要求する。
+- 製品修正前に追加プローブだけを走らせ、既存572件合格に対し追加1件が
+  `Items=256, grid=256, list=256` で不合格になることを実測した（R5の赤）。
+- 最小修正後は同プローブを含む573件が全合格。壁時計や静的grepだけでなく、実体化数で再混入を拒否する。
 
-### 4.3 実装はプローブ後に選ぶ
+### 4.3 最小実装
 
-- 第一候補は、画像タブで実績のあるグリッド `ItemsRepeater+UniformGridLayout` と
-  リスト `VirtualizingStackPanel` の同型適用。セル視覚・選択/タグドット/整理マーカー等は維持する。
-- ページングや軽量プレースホルダーは、仮想化が WorkTab の操作契約を満たさないと
-  プローブで判明した場合の代案。現時点で採択しない。
-- 仮想化後の再計測で残存支配項が確認されるまで、DB/VM/Bitmap キャッシュ最適化を本 ECO に混ぜない。
+- 画像タブで実績のある grid `ItemsRepeater+UniformGridLayout` と list
+  `ItemsControl+VirtualizingStackPanel` を WorkTab のレイアウトホストへ同型適用した。
+- DataTemplate、`Items`、PointerPressed、選択/タグドット/整理マーカー、ViewModel、DB は変更していない。
+  ページング、軽量プレースホルダー、DB/VM/Bitmapキャッシュ最適化は混ぜなかった（R3）。
 
-### 4.4 受入の方向
+### 4.4 探索受入結果
 
-- 10,000 件で WorkTab への切替が完了し、UI操作とスクロールが可能。
-- 画面外セル/サムネイルを全件実体化せず、項目数に比例する数 GiB 級の増加を再発させない。
-- grid/list 双方で、選択、Shift/Ctrl、タグドット/絞り込み、各文脈モード、ソート、表示形式永続を退行させない。
-- 視覚は現 CAD と既存 golden を維持。固定数値閾値は探索結果を記録し、要求を新設する必要が出た場合だけ別途裁定する。
+- 同構造の実UI 10,000件で WorkTab への切替、grid/list往復、双方のscroll、grid復帰が完了し、
+  全プロセス試料で応答あり。タグドット、件数、画像、リスト列も描画された。
+- WorkTab grid は Working Set median 434.5 MiB / Private median 333.9 MiB、list は
+  490.9 / 388.9 MiB、list連続scroll後は 500.4 / 399.1 MiB。是正前 grid の Private
+  6,698.4 MiB以上（観測下限）に対し少なくとも20.1分の1となり、数GiB増加・切替不能は再現しなかった。
+- 固定MiB/秒閾値は新設せず、探索値は P-01 に記録。視覚・選択・文脈モードの最終確認はgoldenへ残す。
 
 ## 5. 影響 BOM
 
 - `E-UI-WORKSPACE-043`（E-UI-BROWSE-022 仮想化契約の継承明記、acceptance read-across）。
 - `M-UI-WORKSPACE-029`（WorkTabView/VM 製造・acceptance read-across）。
-- `CP-NFR-026` または本件用新規 CP、`CP-UI-G1`（再検査範囲）。
-- `FMEA-013`（WorkTabへの unit/target read-across）。
-- `P-01` または WorkTab 専用探索プローブ（42-exploratory-probes）。
-- 将来の実装対象: `WorkTabView.axaml`。`WorkTabViewModel`/DB/Core は再計測で必要性が確定するまで対象外。
+- `CP-NFR-026`、`CP-UI-G1`（WorkTab再検査範囲）。
+- `FMEA-013`（ImageTab実所有者へ修正）と `FMEA-038`（WorkTab read-across漏れを新設）。
+- `P-01`（両surface・grid/list・10,000件のbefore/after）。
+- 実装対象: `WorkTabView.axaml` のレイアウトホストのみ。`WorkTabViewModel`/DB/Core は対象外。
 - CAD変更なし。既存固定 Oracle 行は変更しない（R6）。
 
 ## 6. 残ゲート
 
-1. `/eco-fix eco-058`: BOM/検査面のread-across → 不合格プローブ先行 → 最小是正 → 再計測。
-2. 機械受入: build 0 / Tests / Oracle（既知 skip のみ）/ validate_bom 0 error・0 warning。
-3. golden（maintainer実機）: WorkTab 10,000 件で切替完了・スクロール可能、grid/list往復と
+1. golden（maintainer実機）: WorkTab 10,000 件で切替完了・スクロール可能、grid/list往復と
    選択/文脈モードの視覚退行なし。
-4. `/eco-accept eco-058`: CP 観点・register applied・本文クローズの3点セット。
+2. `/eco-accept eco-058`: CP 観点・register applied・本文クローズの3点セット。
 
-**診断停止点**: CAD裁定は不要。`/eco-fix eco-058` で是正に着手できる。
+## 7. 機械受入（2026-07-10）
+
+- Release build: **0 warning / 0 error**。
+- `ViewPrism2.Tests`: **573/573 pass**（既存572 + ECO-058実体化数プローブ1）。
+- `ViewPrism2.Oracle`: **109 pass / 既知2 skip**。既存固定Oracle行・Oracleコードは無変更。
+- `validate_bom.py`: **0 error / 0 warning**。変更YAML 5件は個別parse成功。
+- 一時再計測ハーネス/画像/DB/cacheは P-01 転記後に全削除し、成果物へ含めていない。
+
+**停止点**: `/eco-fix` のgolden基準に到達。CAD裁定・追加性能最適化は不要。
+maintainer実機golden合格後に `/eco-accept eco-058` でクローズする。

@@ -179,13 +179,13 @@ control_plan:
       notes: "描画(2 surface の golden 承認レイアウト=α 2カラム/β-2 単一マージ・ポップオーバー クローム)は maintainer 実機 golden(CP-UI-G2/G6 系)。本 CP は共通 VM の決定論のみ。"
 
     - id: CP-NFR-026
-      characteristic: 画像タブ一覧の性能不変条件(ECO-026)=一覧再構築・件数計算・タグ列引き・サムネ資源が退行しない
+      characteristic: 中央ブラウズの性能不変条件(ECO-026/058)=画像タブの一覧再構築・件数計算・タグ列引き・サムネ資源と、作業タブgrid/listの可視範囲実体化が退行しない
       classification: surface
       depth: unit
       tolerance: "評価回数・アルゴリズム計算量・資源解放の呼び出しを exact 検査(壁時計は flaky のため決定論ガード)"
-      fixture: tests/ViewPrism2.Tests/CpNfr026Tests.cs
-      fixture_note: "Trait cp=CP-NFR-026。ConditionEvaluator スパイ・カウンタ等"
-      oracle: 評価回数/引きの計算量/Release 呼び出しの完全一致
+      fixture: tests/ViewPrism2.Tests/CpNfr026Tests.cs + CpUiG1WorkTabTests.cs
+      fixture_note: "Trait cp=CP-NFR-026。WorkTabはAvalonia.Headless実レイアウトで256項目に対する実体化セル数をgrid/list別に観測"
+      oracle: 評価回数/引きの計算量/Release 呼び出し/可視範囲セル数の決定論的制約
       approver: automated
       test_vectors:
         - "(#3) ビュー軸チップ件数算出は母集合を 1 パスでバケット集計=子ノード数に比例した全件条件評価を行わない(評価回数上限を検証)"
@@ -193,7 +193,8 @@ control_plan:
         - "(#2) 表示形式(grid/list)切替では Items(ImageItemVM)を作り直さない(同一インスタンス維持を検証)"
         - "(#5) 表示列ライブ編集は列/セル再構築のみでフォルダ/チップ全 Recompute を回さない"
         - "(#6) ThumbnailImage は detach/リサイクルで進行中ロードをキャンセルし Bitmap を Dispose する"
-      notes: "(#1)グリッド仮想化=画面外セル非実体化 は探索プローブ P-07 系(1万件で操作可能)+ maintainer 実機 golden で受入。本 CP は決定論ガードを担い、壁時計性能はプローブが担う。"
+        - "(ECO-058) WorkTab中央ブラウズは256項目・固定viewportでgrid/list各surfaceの実体化セル数が全件の半数未満(可視範囲+overscanのみ)。非仮想ItemsControlによる全件実体化をheadless実レイアウトで拒否"
+      notes: "画面外非実体化は本CPの決定論ガード、実1万件の応答性/スクロール/メモリは探索プローブ P-01 + maintainer実機 golden で受入。壁時計をunit合否にしない。"
 
     - id: CP-TOOLBAR-RESPONSIVE-027
       characteristic: 画像タブ ツールバー狭幅レスポンシブ収納(IMG-014/ECO-027)の段階/回り込み状態計算と表示列モードゲートが退行しない
@@ -629,7 +630,7 @@ control_plan:
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に
     # {cp_id, 実施日, 承認者, 判定(approved/rejected), 所見} の形式で記録する
-    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+画像タブ surface(E-UI-BROWSE-022 のグリッド/リスト、E-UI-AXIS-NAV-040 のFS/タグビュー軸、E-UI-MODE-041 の文脈モード入口)の描画と操作(G-1・v1.3+ECO-016)+**作業タブ(E-UI-WORKSPACE-043)のグリッド⇔リスト切替の即時反映(ECO-038 再発防止: 派生プロパティ通知漏れで切替不能が導入時から潜伏・再読込の遅延反映がマスキングした実績)**+**(ECO-050)作業タブ整理の類似しきい値初期値=仕様値 70(90=転写ドリフトが導入時から潜伏した実績・機械側は CpUi050 pin テストで恒久封止)**+**(ECO-055)作業タブ整理トレイの条件検索も属性一致トグル 5 種の全数+マージ先必須(CP-UI-G9 側と同観点。転写ドリフト防止は共有写像 OrganizeCriteria+CpUi055CriteriaTests が両タブ pin)**+**(ECO-056)作業タブ整理トレイも v2 3 ゾーン+マージ先解除+グリッドへ+モック詳細突合(CP-UI-G9 側 ①〜⑤ と同一部品・同観点 — work_tab.md L95 が権威。機械側は CpUi056 の作業タブ解除 fact が pin)**", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+surface 分割後の3部品が同時に破綻しないこと", fixture_note: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
+    - { id: CP-UI-G1, characteristic: "シェル(タブ構成+コレクションスコープ)+画像タブ surface(E-UI-BROWSE-022 のグリッド/リスト、E-UI-AXIS-NAV-040 のFS/タグビュー軸、E-UI-MODE-041 の文脈モード入口)の描画と操作(G-1・v1.3+ECO-016)+**作業タブ(E-UI-WORKSPACE-043)のグリッド⇔リスト切替の即時反映(ECO-038 再発防止: 派生プロパティ通知漏れで切替不能が導入時から潜伏・再読込の遅延反映がマスキングした実績)**+**(ECO-050)作業タブ整理の類似しきい値初期値=仕様値 70(90=転写ドリフトが導入時から潜伏した実績・機械側は CpUi050 pin テストで恒久封止)**+**(ECO-055)作業タブ整理トレイの条件検索も属性一致トグル 5 種の全数+マージ先必須(CP-UI-G9 側と同観点。転写ドリフト防止は共有写像 OrganizeCriteria+CpUi055CriteriaTests が両タブ pin)**+**(ECO-056)作業タブ整理トレイも v2 3 ゾーン+マージ先解除+グリッドへ+モック詳細突合(CP-UI-G9 側 ①〜⑤ と同一部品・同観点 — work_tab.md L95 が権威。機械側は CpUi056 の作業タブ解除 fact が pin)**+**(ECO-058)256×192ウォームキャッシュ10,000件の作業スペースを開き、grid/list双方への切替完了・スクロール/選択操作可能・応答なしや件数比例の数GiB増加を再発させない(CP-NFR-026 headless実体化数ガード+P-01実測。固定MiB上限は探索値として記録)**", classification: surface, depth: G, tolerance: "G-1 チェックリスト全項目+surface 分割後の3部品が同時に破綻しないこと", fixture_note: 実アプリ+フィクスチャ画像セット(コレクション 2 つ以上)+階層なしビュー1件, oracle: 承認者の目視チェック, approver: maintainer }
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     # CP-UI-G3 は ECO-023(2026-07-01)で撤回。REQ-043/E-UI-DETAIL-023 リバース誤りに伴い golden 対象から除外。
     # 旧承認(50-as-built golden_approvals 2026-06-12)は歴史記録として残すが superseded(ECO-023)。

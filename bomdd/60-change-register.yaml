@@ -997,12 +997,12 @@ changes:
   - id: ECO-058
     title: "作業タブ中央ブラウズの非仮想化 — 1万件でPrivate 6,698MiB以上・応答不能(ECO-026 read-across漏れ)"
     type: 欠陥是正(既定済み仮想化契約への実装逸脱+M-BOM/Control Plan/P-01のWorkTab被覆漏れ。CAD健全・裁定不要)
-    status: staged
+    status: implemented   # 2026-07-10 /eco-fix完了・golden待ち。CP-NFR-026 read-across→R5赤(grid/list=256/256)→最小仮想化→Tests 573/573・10k実UI応答回復
     golden: pending
     baseline: "main b283ff5b401ca6b78bfc4a35329a7732c0c1a408"
     findings: "2026-07-10実測=256x192ウォームキャッシュ10,000件(全数寸法検査・workspace所属10,000・image_tags 50,000)でWorkTab切替未完了/応答なし、Private 6,698.4MiB以上・Working Set 6,749.4MiB以上(増加中に安全停止=下限)。対照ImageTab 10,000件はPrivate 239.6MiBで応答。CAD work_tab.md=中央ブラウズ/グリッド/リストは画像タブと同一部品・同一意味論+レイアウト不変条件全面継承。E-UI-WORKSPACE-043は仮想化必須E-UI-BROWSE-022に依存するが、実装はWorkTabView.axaml grid=ItemsControl+WrapPanel/list=素ItemsControlで全件ThumbnailImage実体化。混入=f211fa9a(ECO-020/021導入時)。ECO-026(51582a43)がImageTab同型だけを仮想化しWorkTabへのread-acrossを漏らした。マスキング=M-UI-WORKSPACE-029/E-UI-WORKSPACE-043 acceptanceにCP-NFR-026なし・FMEA-013 unit旧M-UI-013・P-01未観測かつImageTab固有操作中心"
-    impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "CP-NFR-026または新規WorkTab CP", "CP-UI-G1", "FMEA-013", "P-01または新規WorkTab探索プローブ"]
+    impacted_bom: ["E-UI-WORKSPACE-043", "M-UI-WORKSPACE-029", "CP-NFR-026", "CP-UI-G1", "FMEA-013/FMEA-038", "P-01"]
     oracle: "既存固定Oracle行は変更しない(R6)。surface仮想化+検査被覆の是正"
-    verification: "起票時: 隔離実UI 1件/10,000件の比較測定済み・静的構造/履歴/CAD/BOM診断済み。validate_bom 0 error/0 warning。src/tests変更なし"
+    verification: "fix時: CP-NFR-026 headless実レイアウトを追加し是正前だけ不合格(既存572 pass+追加1 fail: Items=256/grid=256/list=256)→最小仮想化後573/573 pass。256x192 warm cache 10,000全数検査データで実UI再測定: Image grid WS/Private median=334.3/238.1MiB、Work grid=434.5/333.9、Work list=490.9/388.9、list連続scroll後=500.4/399.1、全試料応答あり・tab/grid/list/scroll/grid復帰完了。是正前Work Private下限6,698.4MiB比で少なくとも20.1分の1。build 0 warning/0 error、Oracle 109+既知2skip(無改変)、validate 0/0、YAML parse OK"
     body: 60-change-order-eco-058.md
-    notes: "裁定不要=/eco-fix eco-058可。BOM/検査面read-across→端末保護付き不合格プローブ→最小是正の順。第一候補はImageTab実績のItemsRepeater+UniformGridLayout/VSP同型だが、実装方式はプローブ後に確定。DB/VM/Bitmap最適化は残存支配項を再測定するまで混ぜない(R3)"
+    notes: "golden待ち。実装=WorkTabView gridをItemsRepeater+UniformGridLayout、listをItemsControl+VirtualizingStackPanelへ同型化。DataTemplate/PointerPressed/VM/DB/Coreは無変更。BOM面=E/M-BOM継承+CP-NFR-026/CP-UI-G1+FMEA-038+P-01をread-across、FMEA-013はImageTab実所有へ是正。固定MiB閾値は新設せず探索値として記録。DB/VM/Bitmap追加最適化は残存支配項を別ECOで実測するまで混ぜない(R3)。golden=WorkTab 10kでgrid/list往復+scroll+選択/文脈モード視覚退行なしをmaintainer確認後 /eco-accept eco-058"
