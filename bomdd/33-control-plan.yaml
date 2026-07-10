@@ -610,20 +610,21 @@ control_plan:
         - "移動: 元から除去し移動先へ・同一スペース拒否・不在=NotFound"
 
     - id: CP-RELEASE-018
-      characteristic: "公開候補に私有端末識別子・実画像識別子・未承認 media/文書/archive・主要 secret 形式が存在せず、golden 用 seed が架空データだけで構成される(ECO-057)"
+      characteristic: "公開候補に私有端末識別子・実画像識別子・未承認 media/文書/archive・主要 secret 形式が存在せず、機械 fixture の seed が架空データだけで構成される。公開受入の実機起動は VIEWPRISM2_DATA_DIR の使い捨て空プロファイルへ隔離し、既存ユーザープロファイル由来のコレクション・画像・実端末パスが出ないことを確認する(ECO-057/GF-057-01: 通常起動を golden に用いた初回手順が実プロファイルを読み、repo 外の私有データを表示した潜伏実績)"
       classification: release-safety
-      depth: "unit/L2/history"
-      tolerance: "現行ツリー・Git管理外を含むworkspace・全Git refs/commit messages/blobsの findings=0。許可 media は由来/ライセンスを ALLOWED_TRACKED_MEDIA に明示したものだけ"
+      depth: "unit/L2/history/G"
+      tolerance: "現行ツリー・Git管理外を含むworkspace・全Git refs/commit messages/blobsの findings=0。許可 media は由来/ライセンスを ALLOWED_TRACKED_MEDIA に明示したものだけ。隔離した空プロファイルの実機表示はコレクション0・画像0・私有パス/画像露出0"
       fixture: "bomdd/audit_public_release.py + tests/ViewPrism2.Tests/CpRelease057PublicSafetyTests.cs"
-      fixture_note: "通常commitはworktree検査、公開直前は python bomdd/audit_public_release.py --history。private term の値は検査出力へ再掲しない"
-      oracle: "public-release audit PASS (0 findings) + seed regression 全緑"
-      approver: automated
+      fixture_note: "通常commitはworktree検査、公開直前は python bomdd/audit_public_release.py --history。実機goldenは VIEWPRISM2_DATA_DIR に一意な一時ディレクトリを指定し、既存 %APPDATA% プロファイルを削除・移動・改変せずに実施する。通常プロファイルでの起動結果を公開受入証跡にしない。private term の値は検査出力へ再掲しない"
+      oracle: "public-release audit PASS (0 findings) + seed regression 全緑 + maintainer実機で隔離空状態/私有データ非露出"
+      approver: "automated+maintainer"
       test_vectors:
         - "実ユーザープロファイルを含む絶対パス → private-profile-path/private-user"
         - "私有実画像 fixture 名・第三者作品由来デモ名 → real-image-fixture/third-party-title/private-image-name"
         - "workspace 内の未追跡/ignore済み画像 → workspace-media+magic byte"
         - "全 refs の commit message/path/blob に残る同パターン → history finding"
         - "秘密鍵/GitHub token/AWS access key/JWT/credential assignment/Base64 image → secret finding"
+        - "GF-057-01: 通常起動で既存profileを読む手順 → golden不適格。使い捨てVIEWPRISM2_DATA_DIRで0件表示を確認"
 
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に

@@ -1,4 +1,4 @@
-# Change Order — ECO-057(staged): 公開前プライバシー・著作権・評判リスクの無害化
+# Change Order — ECO-057(applied): 公開前プライバシー・著作権・評判リスクの無害化
 
 > 2026-07-10、maintainer から「誤って公開ボタンを押しても被害が出ない状態」を要求として受理。
 > 対象は現行ツリーだけでなく、全 Git 履歴、Git 管理外の配布混入候補、将来の再混入経路を含む。
@@ -100,9 +100,9 @@
 ## 6. 残ゲート
 
 1. ~~工程診断~~ → 完了。裁定不要。
-2. `/eco-fix eco-057`: 匿名化、隔離、公開安全プローブ、機械受入、履歴洗浄、remote 同期。
-3. golden: 洗浄済み fresh clone で製品表示が架空データのみ、公開安全プローブ 0 件、主要画面回帰。
-4. `/eco-accept eco-057`: 公開前 gate を CP/routing に固定しクローズ。
+2. ~~/eco-fix eco-057: 匿名化、隔離、公開安全プローブ、機械受入、履歴洗浄、remote 同期。~~ → 完了。
+3. ~~golden: 洗浄済み fresh clone の機械受入+使い捨て `VIEWPRISM2_DATA_DIR` による実機の空状態/私有データ非露出。~~ → 2026-07-10 maintainer 合格。
+4. ~~/eco-accept eco-057: 公開前 gate を CP/routing に固定しクローズ。~~ → 本節で完了。
 
 ## 7. 実施記録(2026-07-10 — worktree 是正・機械受入完了、履歴洗浄前 checkpoint)
 
@@ -186,3 +186,23 @@
   製品は仕様どおりであり、Git公開対象への混入ではない(実DB/画像はrepo外・tracked/history audit 0)。
 - 是正: 既存プロファイルを破壊せず、既設の `VIEWPRISM2_DATA_DIR` 隔離注入口(CP-L1-SMOKEと同経路)を
   golden手順へ採用。合格期待は「架空seed表示」でなく「空の隔離プロファイルから実データが出ない」。
+
+## 8. クローズ(2026-07-10 — golden 合格/applied)
+
+- **実機確認**: maintainer が `VIEWPRISM2_DATA_DIR` の使い捨て空プロファイルで起動し、画像タブの
+  左コレクション欄が空、項目数が 0、既存ユーザープロファイル由来の実端末パス・私有画像が表示
+  されないことを添付画面で確認し、`/eco-accept eco-057` で承認した。既存プロファイルは無改変。
+- **再発防止**: `CP-RELEASE-018` に、worktree/全履歴監査だけでなく、実機goldenを使い捨て
+  `VIEWPRISM2_DATA_DIR` へ隔離する観点と GF-057-01 の潜伏実績を追記した。公開操作は引き続き
+  `ROUTING-PUBLIC-001` の worktree→全履歴→fresh clone→GitHub非Git資産→公開許可の順序に従う。
+  通常ユーザープロファイルでの起動結果は公開受入証跡として扱わない。
+- **M4 判定**: 製品挙動・surface・要求仕様の変更はなく、公開工程と検査入力の隔離に関する是正である。
+  CP/routing は fix 時点で同期済み、acceptでCPのgolden観点を補強したため、spec §2.6、E-BOM、M-BOM、
+  35-dsbom への追加同期は不要。
+- **教訓/read-across**: 公開安全性は「現行worktree」「Git全refs/サーバー残存object」「Git管理外資産」
+  「実行時ユーザープロファイル」を別々の信頼境界として検査する。ignore、force push、通常起動は、
+  それぞれ別境界の安全性を証明しない。特にgolden入力を実ユーザー状態から隔離しないと、検査そのものが
+  保護対象を画面へ露出する。これは ECO-041/050/053 の「検査面にない次元は正常に見えたまま潜伏する」
+  教訓の公開工程へのread-acrossであり、ViewPrism2固有でない方法論レベルの昇格候補とする。
+- **残課題**: 私有complete bundleと隔離済みスクリーンショットはrepo外の私有バックアップとして維持する。
+  将来の公開可視性変更は、新しいcommitを含め必ず `ROUTING-PUBLIC-001` を再実施する。未確定裁定なし。
