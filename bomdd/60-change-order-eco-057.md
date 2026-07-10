@@ -162,11 +162,27 @@
 
 ### golden 合格基準(gate② — maintainer 実機)
 
-1. `dotnet run --project src/ViewPrism2.App` で起動し、画像タブの golden seed を表示する。
-   コレクションのパスがすべて `C:\Demo\Media\...`、件数が架空値で、アルバム/作例/スタジオ等の
-   一般名だけになっていること。
-2. seed のルート/タグパレットを一巡し、第三者作品名、私有画像名、ゲーム用途を想起させる旧タグ語彙、
-   実端末ユーザー名・クラウドフォルダ名が表示されないこと。
-3. 画像/作業/タグ各タブを一巡し、匿名化によるレイアウト崩れ・生ID露出・操作回帰がないこと。
-4. `python bomdd/audit_public_release.py --history` を実行し、`PASS (0 findings)` を確認すること。
+1. 起動中の ViewPrism2 を終了する。既存 `%APPDATA%\ViewPrism2` は削除・移動・改変しない。
+2. PowerShell で次を実行し、使い捨ての空プロファイルへ分離して起動する。
+   ```powershell
+   $env:VIEWPRISM2_DATA_DIR = Join-Path $env:TEMP ("ViewPrism2-ECO057-" + [guid]::NewGuid())
+   dotnet run --project src/ViewPrism2.App
+   ```
+3. 画像タブに既存コレクション/画像/実端末パスが現れず、空状態であること。タグ/作業タブも既存
+   ユーザープロファイル由来データを表示しないこと。各タブを一巡し、レイアウト崩れ・生ID露出・
+   操作回帰がないこと。
+4. アプリ終了後に `Remove-Item Env:VIEWPRISM2_DATA_DIR` で環境変数を解除する。必要なら手順2で表示した
+   一時ディレクトリだけを削除してよいが、`%APPDATA%\ViewPrism2` には触れないこと。
+5. `python bomdd/audit_public_release.py --history` を実行し、`PASS (0 findings)` を確認すること。
    この合格後も `ROUTING-PUBLIC-001` の gate を通さず新しいcommitをpublic化しないこと。
+
+#### GF-057-01(2026-07-10 — golden手順の是正)
+
+- 初回提示したgolden手順は、通常起動で `C:\Demo\Media\...` のseed表示を求めていた。しかし実際の
+  composition rootは `MainWindowViewModel.ImageTab=ImageTabViewModel` を構築し、通常起動は
+  `%APPDATA%\ViewPrism2\viewprism2.db` を読む。`ImageTabSeedViewModel` は通常起動へ未接続で、
+  `CpRelease057PublicSafetyTests` が直接構築する機械fixtureである。
+- maintainer の通常起動実測で既存ユーザープロファイル由来のパス/画像が表示され、手順の誤りが顕在化。
+  製品は仕様どおりであり、Git公開対象への混入ではない(実DB/画像はrepo外・tracked/history audit 0)。
+- 是正: 既存プロファイルを破壊せず、既設の `VIEWPRISM2_DATA_DIR` 隔離注入口(CP-L1-SMOKEと同経路)を
+  golden手順へ採用。合格期待は「架空seed表示」でなく「空の隔離プロファイルから実データが出ない」。
