@@ -1010,12 +1010,12 @@ changes:
   - id: ECO-059
     title: "26万画像のHDD初回スキャンが長時間化 — 1件1暗黙トランザクションと過剰進捗通知"
     type: 性能欠陥是正(既存スキャン意味論不変・永続化粒度/通知頻度の実装是正。CAD非該当・裁定不要)
-    status: implemented   # GF-059-01是正中/golden pending。初回fixは単行追加8回/進捗250回を不合格実測→512件有界transaction+列挙メタ再利用+SequentialScan+進捗最大100回へ是正、DB区間40.3〜46.4x短縮。実HDD goldenは26万件35分で完了したが全時間UI操作不能のため不合格。同期完了awaitではUI threadを離れない真因を追加プローブ→background化で是正する
-    golden: pending
+    status: applied   # 2026-07-11 maintainer実機golden合格。26万件35分・件数整合。初回の全時間UI操作不能はGF-059-01でbackground化し、再確認でスキャン中UI操作可能。狭義目標達成としてクローズ
+    golden: "approved(2026-07-11 maintainer 実機: 隔離profileの実HDD約260,000件を35分で完了・件数整合。GF-059-01是正後はスキャン中もUI操作可能。旧時間不明(最大約1時間の記憶)のため固定時間倍率は対象外とし、1件1commit/過剰通知除去+UI caller非占有の狭義目標を承認)"
     baseline: "main 26fa0ee"
     findings: "maintainer報告=HDD上26万画像の初回スキャンが相当時間。実装読解で初回N件はREQ-013により全件SHA-256後、ScanServiceがIImageRepository.AddAsyncをN回awaitし、ImageRepositoryは明示transactionなしの単一INSERTをDatabaseManager.RunAsyncでN回実行=SQLite暗黙transaction/commitがN回。26万件なら26万commit。progress.Reportも全件呼び、整数100段階に26万UI dispatch。構造は初版b1f13ec2から潜伏。CP-SCAN-004は小入力の判定/遷移exactのみで大量時の書込粒度・通知数を検査せず。SHA-256全体読取はREQ-013のため維持、HDD向けファイル並列読取は採用しない"
     impacted_bom: ["E-SCAN-005", "M-SCAN-005", "E-DB-010/M-DB-007", "CP-SCAN-004", "FMEA-039"]
     oracle: "既存固定Oracle行は変更しない(R6)。バッチ入口/ロールバック/重複なし進捗を新規unit exactで封止"
     verification: "初回R5赤=既存573 pass+新規2 fail(8画像で単行Add 8回、250画像で進捗250回)。初回是正後=513画像が単行Add 0/バッチ2/最大512、重複pathバッチ全rollback、進捗重複なし・単調・最大100・100終端。合成5,000行Release×3: 単行4306.3/4117.0/4548.7ms、batch92.8/102.1/98.8ms=40.3〜46.4x。GF-059-01赤=同期完了repositoryでcaller/batch thread id同一(6)、追加1 fail。Task.Run明示background化後は同期batch停止中もScanAsync callerが先に解放されるexact probeへ強化。build 0 warning/0 error、Tests 577/577、Oracle 109+既知2skip、validate 0/0+selftest OK"
     body: 60-change-order-eco-059.md
-    notes: "GF-059-01是正中。初回実装=ScanMutationBatch/IImageRepository.ApplyScanBatchAsync+ImageRepository単一transaction、ScanService最大512件flush(26万件なら追加transaction 260,000→508)、FileSystemEnumerable列挙メタ再利用、直列SequentialScan+64KiB、進捗最大100回。実HDD隔離golden=26万件35分・件数整合だが35分間UI操作不能で不合格。追加是正=同期完了するSQLite awaitでもscan coreをUI threadから確実に分離し、progressはUI contextへpost。全件一括mutation保持、SHA省略/後回し、HDD並列読取、DBスキーマ変更は行わない"
+    notes: "クローズ済み。実装=ScanMutationBatch/IImageRepository.ApplyScanBatchAsync+ImageRepository単一transaction、ScanService最大512件flush(26万件なら追加transaction 260,000→508)、FileSystemEnumerable列挙メタ再利用、直列SequentialScan+64KiB、進捗最大100回、Task.Run明示background境界。実HDD隔離golden=26万件35分・件数整合。初回の35分UI操作不能はGF-059-01で是正し再確認で操作可能。全件一括mutation保持、SHA省略/後回し、HDD並列読取、DBスキーマ変更なし。段階的公開とhash未確定表現(NULL/特殊値/別状態列)は後続ECOへ分離"

@@ -121,6 +121,7 @@ control_plan:
         - "(ECO-059/FMEA-039) 複数の新規/更新/status変更/削除を件数上限付きバッチ入口へ集約し、画像1件ごとの暗黙commitを行わない。バッチ失敗は当該バッチ全ロールバック"
         - "(ECO-059) 進捗通知は整数百分率が単調増加・重複なし・非空入力は100終端。ファイル件数ではなく最大100回"
         - "(ECO-059/GF-059-01) repository APIが同期完了し、同期scan batchを意図的に停止しても、ScanAsync呼出しはbatch解放前に戻ってcallerを解放する。ConfigureAwait(false)だけでなく明示background境界をexact検査"
+        - "(ECO-059 潜伏実績/2026-07-11 golden) 実HDD約26万件で35分完了したが初回fixは全時間UI操作不能。GF-059-01後はmaintainer実機でスキャン中のUI操作可能を確認。総時間とcaller占有を別特性として検査する"
 
     - id: CP-TAG-011
       characteristic: タグ管理(検証・UPSERT・バッチ原子性・カスケード・使用中削除ガード=ECO-045)が仕様 §2.2 と一致する

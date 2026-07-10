@@ -1,4 +1,4 @@
-# Change Order — ECO-059(implemented / golden pending): 26万画像のHDD初回スキャンが長時間化 — 1件1トランザクションと過剰進捗通知
+# Change Order — ECO-059(applied): 26万画像のHDD初回スキャンが長時間化 — 1件1トランザクションと過剰進捗通知
 
 > maintainer の性能改善要求を受け、2026-07-11 に起票・工程診断した。
 > 起票時点では `src/tests` を変更せず、既存仕様・BOM・実装・履歴を突合した。
@@ -86,7 +86,7 @@
 - `ViewPrism2.Tests`：577/577 pass（ECO-059新規4観点を含む。GF-059-01再是正後）。
 - `ViewPrism2.Oracle`：109 pass / 既知2 skip。既存固定Oracle行は無変更。
 - `validate_bom.py`：0 error / 0 warning、`--selftest` OK。
-- gate②（pending）：通常profileのコレクションを削除・再追加せず、隔離したアプリデータ領域から同じHDDフォルダを新規スキャンし、結果件数が従来どおり、進捗が停止せず、スキャン中もウィンドウ移動・タブ切替等の非DB UI操作に応答することをmaintainerが確認する。物理画像はINV-009により読取専用。
+- gate②（approved）：隔離profileの実HDD約260,000件で件数整合・35分完了、GF-059-01是正後にスキャン中もUI操作可能をmaintainerが確認した。物理画像はINV-009により読取専用。
 
 ## 7. GF-059-01 — 26万件スキャン中にUIが35分間操作不能（golden不合格）
 
@@ -109,4 +109,14 @@
 - `Progress<int>`は`FolderManagementViewModel`がUI threadで生成するため、backgroundからの`Report`は既定どおりUI `SynchronizationContext`へpostされる。進捗最大100回の初回是正も維持する。
 - 最終回帰プローブはthread id比較を、より直接的な「同期scan batchを意図的に停止しても`ScanAsync`呼出しがbatch解放前に戻る」検査へ強化した。是正後は呼出元が先に解放され合格する。
 - build 0 warning / 0 error、`ViewPrism2.Tests` 577/577 pass、`ViewPrism2.Oracle` 109 pass / 既知2 skip、`validate_bom.py` 0 error / 0 warning、`--selftest` OK。既存固定Oracle行は無変更。
-- goldenは再実行待ち。合格条件は総時間の固定上限ではなく、スキャン中もウィンドウ移動・タブ切替・非DB UI操作が継続応答し、進捗・最終件数が正常であること。DB操作は単一接続gateを短時間共有するためbatch commit中の瞬間的待ちは許容するが、処理全時間の操作不能は不合格とする。
+- golden再確認でスキャン中のUI操作可能をmaintainerが確認した。総時間の固定上限ではなく、進捗・最終件数とcaller非占有を合格特性とした。DB操作は単一接続gateを短時間共有するためbatch commit中の瞬間的待ちは許容するが、処理全時間の操作不能は不合格とする。
+
+## 8. クローズ（2026-07-11 — golden合格/applied）
+
+- **実機確認**: maintainerが隔離profileから実HDD約260,000件を初回スキャンし、35分で完了・件数整合を確認した。初回goldenの全時間UI操作不能はGF-059-01として不合格に戻し、明示background化後の再確認でスキャン中もUI操作可能になったことを確認した。
+- **承認範囲**: 旧版の正確な時間は不明（最大約1時間の記憶）のため、35分や短縮倍率を固定性能目標にはしない。狭義目標である「画像1件ごとの暗黙commit除去」「重複進捗通知除去」「長時間処理がUI callerを占有しない」を達成として承認した。
+- **再発防止**: CP-SCAN-004へ、約26万件・35分完了でも全時間UI操作不能となった潜伏実績を明記した。bounded batch/rollback/progress exactに加え、同期完了repository+停止batchでも`ScanAsync` callerが先に解放されるプローブで、`ConfigureAwait(false)`だけの擬似非同期を封止する。
+- **M4判定**: 既存REQ-011〜015のSHA-256・状態遷移・サマリ意味論を変えない内部性能是正。E/M-BOM・FMEA・CPはfix時同期済み、surface/CAD/20-spec/35-design-system-bomのas-built乖離はないため追加M4は不要。golden権威は50-as-builtへ転記した。
+- **教訓/read-across**: `Async` APIと`ConfigureAwait(false)`は、長時間同期区間を呼出threadから分離する保証ではない。UI応答性の受入は「asyncメソッドであること」で代用せず、同期完了する依存と意図的に停止する長時間区間を組み合わせ、callerが先に解放されることを直接検査する。これはサムネイル・pHash等の重いI/O consumerへread-acrossする一般則である。
+- **後続事項（R3分離）**: スキャン中コレクションの段階的公開は本ECOへ混ぜない。次ECOでは、類似画像検索をスキャン完了まで無効化することを採用し、`images.hash`未確定表現はNULL・特殊値・別状態列を不変条件、索引、再リンク、検索、migration互換まで比較して裁定する。特殊値を事前に不採用とはしない。
+- **コミット履歴注記**: 起票時はcommit指示が無かったため起票単独commitを作らず、起票記録+fixを`b217025`へ同梱した。受入は本クローズcommitで分離する。
