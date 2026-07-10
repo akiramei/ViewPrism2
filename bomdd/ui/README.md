@@ -15,7 +15,7 @@
 > - タグタブ: 本ディレクトリ直下(下記)。入力モックは旧 `work/tag-tab/`。
 > - **画像タブ: [image-tab/](image-tab/)**(入力モックは `ViewPrismUI:資料/画像タブ/`)。
 >
-> モックの一次資料は **ViewPrismUI**(`C:/Demo/source/repos/ViewPrismUI`= UI/UX 設計の正典/CAD 源泉)へ移管。本 `bomdd/ui/` は E-BOM へ接続する抽出成果物を置く。
+> モックの一次資料は **ViewPrismUI**(`../ViewPrismUI`= UI/UX 設計の正典/CAD 源泉)へ移管。本 `bomdd/ui/` は E-BOM へ接続する抽出成果物を置く。
 
 ## タグタブ(直下)
 

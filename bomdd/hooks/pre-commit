@@ -8,7 +8,28 @@
 # 規律: python/PyYAML が無い環境では fail-open(skip)し、コミットを wedge しない。
 #       ブロックするのは「validator が ERROR を返したとき」だけ。
 
-# bomdd/ に触れないコミットは検査しない(高速化)
+# ─── publication-safety gate(ECO-057) ───────────────────────
+# Git 管理外の画像も ZIP/手動公開には混入するため、コミット対象に関係なく作業ツリー全体を検査する。
+# secret/私有端末パス/私有画像識別子/未承認 media のいずれかを検出したら fail-closed。
+AUDIT_PY=""
+for c in python python3 py; do
+  if command -v "$c" >/dev/null 2>&1; then
+    AUDIT_PY="$c"; break
+  fi
+done
+if [ -z "$AUDIT_PY" ]; then
+  echo "[public-release] Python が見つからない — 公開安全検査を実行できないため commit をブロックしました。"
+  exit 1
+fi
+if [ -f bomdd/audit_public_release.py ]; then
+  echo "[public-release] privacy/media/secret audit..."
+  if ! "$AUDIT_PY" bomdd/audit_public_release.py; then
+    echo "[public-release] 公開禁止情報を検出 — commit をブロックしました。"
+    exit 1
+  fi
+fi
+
+# 以降の BOM 検査は bomdd/ に触れないコミットでは省略する(高速化)
 git diff --cached --name-only | grep -q '^bomdd/' || exit 0
 
 # PyYAML を実際に import できるインタプリタを選ぶ(python3 が yaml 無しスタブのことがある)

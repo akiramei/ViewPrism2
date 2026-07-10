@@ -1,7 +1,7 @@
 # ECO-PROJ-002 ViewPrism2成果物: 要求未接続のE-BOMがあります
 
 ## 宛先
-- 対象リポジトリ: ViewPrism2: C:\Demo\source\repos\ViewPrism2
+- 対象リポジトリ: ViewPrism2: <repo-root>
 - 変更責務: ProjectArtifacts
 - 変更種別: BomSync
 - 対象パス: bomdd/30-ebom.yaml

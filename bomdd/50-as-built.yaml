@@ -91,7 +91,7 @@ as_built:
 
   # 設計者側リバース入力(原典 source-grounded。工場非開示は維持)
   reverse_input:
-    location: "C:/Demo/source/repos/view-prism/docs/porting-spec/(01〜11+README)"
+    location: "../view-prism/docs/porting-spec/(01〜11+README)"
     nature: "原典 view-prism のソースコードを一次情報にした移植仕様。RVP-* トレース表・互換ポリシー台帳・E-BOM/K-BOM/CP 候補・未裁定項目を含む"
     v1_cross_check:
       date: 2026-06-11

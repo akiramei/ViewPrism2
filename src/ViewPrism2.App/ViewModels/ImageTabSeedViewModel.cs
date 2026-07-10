@@ -80,16 +80,16 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
 
     private static readonly Dictionary<string, TagDef> TagDefs = new()
     {
-        ["samplealbum"] = new("samplealbum", "サンプルアルバム", "#f2912b", "シンプル"),
+        ["album"] = new("album", "サンプルアルバム", "#f2912b", "シンプル"),
         ["featured"] = new("featured", "おすすめ", "#8b5cf6", "シンプル"),
         ["fav"] = new("fav", "お気に入り", "#e5484d", "シンプル"),
-        ["job"] = new("job", "職種", "#2f6bed", "テキスト", new[] { "風景", "人物", "静物", "抽象" }),
-        ["arts"] = new("arts", "アーツ", "#12a594", "テキスト", new[] { "写真", "イラスト", "3D" }),
-        ["gender"] = new("gender", "性別", "#e93d82", "テキスト", new[] { "男", "女" }),
+        ["category"] = new("category", "カテゴリ", "#2f6bed", "テキスト", new[] { "風景", "人物", "静物", "抽象" }),
+        ["style"] = new("style", "スタイル", "#12a594", "テキスト", new[] { "写真", "イラスト", "3D" }),
+        ["season"] = new("season", "季節", "#e93d82", "テキスト", new[] { "春", "夏", "秋", "冬" }),
         ["rating"] = new("rating", "評価", "#e8b931", "数値", Min: 1, Max: 5),
     };
 
-    private static readonly string[] AddOrder = { "samplealbum", "featured", "fav", "job", "arts", "gender", "rating" };
+    private static readonly string[] AddOrder = { "album", "featured", "fav", "category", "style", "season", "rating" };
 
     // ---------------- アイテムモデル ----------------
     private sealed class SeedItem
@@ -106,7 +106,7 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
         public double Hue;
     }
 
-    private readonly List<SeedItem> _efImages;
+    private readonly List<SeedItem> _sampleImages;
     private readonly List<SeedItem> _rootItems;
 
     // ---------------- 状態(モック state) ----------------
@@ -129,30 +129,30 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
 
     public ImageTabSeedViewModel()
     {
-        _efImages = BuildSampleAlbumImages();
+        _sampleImages = BuildSampleImages();
         _rootItems = new List<SeedItem>
         {
-            new() { Id = "d_samplealbum", Type = "folder", Target = "samplealbum", Name = "SAMPLE_ALBUM", Count = 34 },
-            new() { Id = "d_studioshots", Type = "folder", Target = "studioshots", Name = "StudioShots", Count = 18 },
-            new() { Id = "d_shots", Type = "folder", Target = "shots", Name = "スクリーンショット", Count = 53 },
-            new() { Id = "img_yume", Type = "image", Name = "sample-photo.jpg", Size = 2.4, Date = "2025/11/02", Hue = 210, BaseTags = Array.Empty<string>() },
+            new() { Id = "d_album", Type = "folder", Target = "album", Name = "サンプルアルバム", Count = 24 },
+            new() { Id = "d_studio", Type = "folder", Target = "studio", Name = "スタジオ撮影", Count = 12 },
+            new() { Id = "d_shots", Type = "folder", Target = "shots", Name = "作例", Count = 8 },
+            new() { Id = "img_sample", Type = "image", Name = "sample-photo.jpg", Size = 2.4, Date = "2025/11/02", Hue = 210, BaseTags = Array.Empty<string>() },
         };
         Recompute();
     }
 
-    private static List<SeedItem> BuildSampleAlbumImages()
+    private static List<SeedItem> BuildSampleImages()
     {
-        var featured = new HashSet<int> { 5, 10, 15, 20, 25, 30, 33 };
+        var featured = new HashSet<int> { 5, 10, 15, 20 };
         var arr = new List<SeedItem>();
-        for (int i = 1; i <= 34; i++)
+        for (int i = 1; i <= 24; i++)
         {
-            var tags = new List<string> { "samplealbum" };
+            var tags = new List<string> { "album" };
             if (featured.Contains(i)) tags.Add("featured");
             arr.Add(new SeedItem
             {
-                Id = "ef" + i,
+                Id = "sample" + i,
                 Type = "image",
-                Name = "ch_" + i.ToString("D3") + ".png",
+                Name = "sample_" + i.ToString("D3") + ".png",
                 Hue = (i * 47) % 360,
                 Placeholder = i % 8 == 0,
                 Size = 0.6 + (i % 5) * 0.7,
@@ -165,8 +165,8 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
 
     private List<SeedItem> FolderListing(string target)
     {
-        if (target == "samplealbum") return _efImages.Select(Clone).ToList();
-        int n = target == "studioshots" ? 18 : 12;
+        if (target == "album") return _sampleImages.Select(Clone).ToList();
+        int n = target == "studio" ? 12 : 8;
         var arr = new List<SeedItem>();
         for (int i = 1; i <= n; i++)
         {
@@ -174,7 +174,7 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
             {
                 Id = target + "_" + i,
                 Type = "image",
-                Name = (target == "studioshots" ? "shot_" : "cap_") + i.ToString("D2") + ".png",
+                Name = (target == "studio" ? "studio_" : "example_") + i.ToString("D2") + ".png",
                 Hue = (i * 71) % 360,
                 Placeholder = i % 3 == 0,
                 Size = 0.3 + (i % 4) * 0.4,
@@ -228,29 +228,29 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
         }
 
         // view 軸(サンプルアルバム)
-        var efClone = _efImages.Select(Clone).ToList();
+        var sampleClone = _sampleImages.Select(Clone).ToList();
         if (_viewPath.Count == 0)
         {
             var chips = new List<ChipSpec>
             {
-                new("samplealbum", 34, Nav: true),
+                new("album", 24, Nav: true),
                 new("rating", 0, Nav: true, Alias: "評価1", Color: "#e8b931"),
                 new("rating", 0, Nav: true, Alias: "評価2", Color: "#e8b931"),
                 new("rating", 0, Nav: true, Alias: "評価3", Color: "#e8b931"),
                 new("rating", 0, Nav: true, Alias: "評価4", Color: "#e8b931"),
                 new("rating", 0, Nav: true, Alias: "評価5", Color: "#e8b931"),
             };
-            return new Context(new(), efClone, chips, "view", efClone.Count, true);
+            return new Context(new(), sampleClone, chips, "view", sampleClone.Count, true);
         }
-        int featuredCount = efClone.Count(im => ImgTags(im).Contains("featured"));
+        int featuredCount = sampleClone.Count(im => ImgTags(im).Contains("featured"));
         var viewChips = new List<ChipSpec>
         {
-            new("job", 0, Nav: true),
-            new("arts", 0, Nav: true),
+            new("category", 0, Nav: true),
+            new("style", 0, Nav: true),
             new("featured", featuredCount, Nav: true),
         };
-        var viewCrumbs = new List<(string, string)> { ("samplealbum", "サンプルアルバム") };
-        return new Context(viewCrumbs, efClone, viewChips, "view", efClone.Count, true);
+        var viewCrumbs = new List<(string, string)> { ("album", "サンプルアルバム") };
+        return new Context(viewCrumbs, sampleClone, viewChips, "view", sampleClone.Count, true);
     }
 
     private List<SeedItem> SortItems(List<SeedItem> items)
@@ -484,11 +484,11 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
 
     private static readonly (string Id, string Name, int Count, string Path)[] SeedCollections =
     {
-        ("pics", "画像", 105, @"C:\Demo\OneDrive\画像"),
-        ("shots", "スクリーンショット", 53, @"C:\Demo\Pictures\Screenshots"),
-        ("dl", "ダウンロード", 213, @"C:\Demo\Downloads"),
-        ("camera", "カメラ", 67, @"C:\Demo\Pictures\Camera"),
-        ("desk", "デスクトップ", 12, @"C:\Demo\Desktop"),
+        ("pics", "サンプル画像", 24, @"C:\Demo\Media\Pictures"),
+        ("shots", "作例", 8, @"C:\Demo\Media\Examples"),
+        ("archive", "アーカイブ", 16, @"C:\Demo\Media\Archive"),
+        ("studio", "スタジオ", 12, @"C:\Demo\Media\Studio"),
+        ("reference", "参考資料", 6, @"C:\Demo\Media\Reference"),
     };
 
     // =====================================================================
@@ -566,7 +566,7 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
         if (chip.IsNeutral) { _tagFilter = null; }
         else if (chip.IsNav)
         {
-            if (chip.Id == "samplealbum") { _viewPath.Clear(); _viewPath.Add("samplealbum"); }
+            if (chip.Id == "album") { _viewPath.Clear(); _viewPath.Add("album"); }
         }
         else { _tagFilter = _tagFilter == chip.Id ? null : chip.Id; }
         Recompute();

@@ -986,10 +986,10 @@ changes:
   - id: ECO-057
     title: "公開前プライバシー・著作権・評判リスクの無害化 — 誤って public 化しても私有画像・端末情報を取得不能にする"
     type: 公開安全性の欠陥是正(実装デモデータ+製造台帳+Git履歴+配布工程。CAD非該当・裁定不要)
-    status: staged
+    status: implemented   # 是正+旧GitHub repo削除/同名private再作成+remote fresh clone機械受入完了。golden待ち
     golden: pending
     baseline: "main b4c91a9"
     findings: "2026-07-10 公開前監査: tracked/current+全230コミットに画像バイナリ・動画・文書・archiveなし、主要secret形式なし、author emailはGitHub noreplyのみ。一方、ImageTabSeedViewModelに実ユーザー名を含むOneDrive/Pictures/Downloads/Camera/Desktop絶対パス+件数、台帳等13ファイルに絶対パス、ECO-048〜055系17箇所に私有実画像orientation_fixture_06の識別子/スマホ由来/EXIF/寸法/変換名/類似度実測。ignore済みwork/に未追跡スクリーンショット21枚があり、目視で実パス・OneDriveフォルダ/件数・私有キャラクター画像/ファイル名・Snipping Tool通知を確認。通常pushには入らないがZIP/手動公開で混入する。現行削除だけでは履歴から文字列を復元可能"
     impacted_bom: ["M-UI-IMAGETAB-035(seed data)", "33-control-plan/34-routing(公開前gate)", "製造台帳ECO-048〜055/PLM intake/UI-IR/as-built/charter", "Git全refs+remote refs"]
     body: 60-change-order-eco-057.md
-    notes: "裁定不要=/eco-fix可。是正=架空seed+repo-relative化+実画像識別情報の合成fixture化+work画像のrepo外隔離+公開安全プローブ恒久化+私有bundle退避後に全履歴/remote refs洗浄+fresh clone再監査。既存固定Oracle/DB/製品機能は不変"
+    notes: "是正完了・golden待ち: worktree 200→0 findings(架空seed/repo-relative/合成fixture/work一式repo外隔離)+全履歴 164→0 findings(私有complete bundle後に232 commits+main/7tags洗浄・旧内部tree ref削除)。pre-commit/CP-RELEASE-018/ROUTING-PUBLIC-001恒久化。GitHub非Git資産0。force push後も旧SHA取得可を実測したため、明示承認を得て旧private repo削除→API/ls-remote不存在→同名private新規作成→洗浄済みmain+7tagsのみpush。旧SHA代表3件=取得不能/新HEAD=取得可。再作成repo fresh cloneでcommit同一/audit 0/build 0/0/Tests 572/572/Oracle 109+2skip/validate 0-0/selftest OK"

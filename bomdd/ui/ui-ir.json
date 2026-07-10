@@ -8,10 +8,10 @@
     "method": "BomDD ui-ir-ui-bom.md (candidate extension)",
     "note": "UI-IR は HTML+JS モックから抽出した観測・追跡用の中間表現であり、設計を縛る原本ではない。仮品番 TMP-UI-* で候補を追跡する。",
     "sources": [
-      { "id": "M1", "file": "work/tag-tab/ViewPrism2 タグ管理.dc.html", "role": "タグタブ画面(3ペイン)モック" },
-      { "id": "M2", "file": "work/tag-tab/ViewPrism2 タグ作成ダイアログ.dc.html", "role": "タグ作成/編集ダイアログ(適応型モーダル)モック" },
-      { "id": "M3", "file": "work/tag-tab/ViewPrism2 配置タグ設定.dc.html", "role": "階層+配置タグ設定+条件ダイアログ モック(M1中央ペインのフル版)" },
-      { "id": "S",  "file": "work/tag-tab/ViewPrism2 タグタブ仕様書.dc.html", "role": "機能説明(functional spec)・抽出の根拠テキスト" }
+      { "id": "M1", "archiveRef": "private-design-archive:M1", "role": "タグタブ画面(3ペイン)モック" },
+      { "id": "M2", "archiveRef": "private-design-archive:M2", "role": "タグ作成/編集ダイアログ(適応型モーダル)モック" },
+      { "id": "M3", "archiveRef": "private-design-archive:M3", "role": "階層+配置タグ設定+条件ダイアログ モック(M1中央ペインのフル版)" },
+      { "id": "S",  "archiveRef": "private-design-archive:S", "role": "機能説明(functional spec)・抽出の根拠テキスト" }
     ],
     "observations": [
       "3つの画面モックは実体としては1画面=タグタブ。M1=3ペイン全体、M3=M1中央『階層構造』の高忠実度版、M2/条件ダイアログ=モーダル。",

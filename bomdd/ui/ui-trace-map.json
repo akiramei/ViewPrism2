@@ -6,9 +6,9 @@
     "extractedAt": "2026-06-16",
     "note": "HTML locator(file + 記述子)→ UI-IR → UI-BOM → E-BOM 候補 の対応表。モックはインラインスタイル+テンプレート(sc-for/sc-if)のため安定 CSS セレクタが無く、locator はデータバインド名/節ラベルで記述する。handling: bom=UI-BOM 昇格済 / trace=追跡のみ / nonBom=BOM 対象外。ebomItemRef は昇格『候補』であり確定ではない。",
     "files": {
-      "M1": "work/tag-tab/ViewPrism2 タグ管理.dc.html",
-      "M2": "work/tag-tab/ViewPrism2 タグ作成ダイアログ.dc.html",
-      "M3": "work/tag-tab/ViewPrism2 配置タグ設定.dc.html"
+      "M1": "private-design-archive:M1",
+      "M2": "private-design-archive:M2",
+      "M3": "private-design-archive:M3"
     }
   },
   "entries": [

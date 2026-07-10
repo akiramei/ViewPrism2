@@ -103,3 +103,70 @@
 2. `/eco-fix eco-057`: 匿名化、隔離、公開安全プローブ、機械受入、履歴洗浄、remote 同期。
 3. golden: 洗浄済み fresh clone で製品表示が架空データのみ、公開安全プローブ 0 件、主要画面回帰。
 4. `/eco-accept eco-057`: 公開前 gate を CP/routing に固定しクローズ。
+
+## 7. 実施記録(2026-07-10 — worktree 是正・機械受入完了、履歴洗浄前 checkpoint)
+
+- **プローブ先行(R5)**:
+  - `CpRelease057PublicSafetyTests` を追加。golden seed のコレクションパスが架空プロファイルで、
+    アイテム名が一般名だけであることを固定した。
+  - `audit_public_release.py` を追加し、現行 workspace に対して是正前 **200 findings** を実測した。
+    内訳は private user/profile path、実画像 fixture 識別子、第三者作品由来デモ名、私有画像名、
+    `work/` 内の未追跡 media 21 枚+magic bytes。値そのものは検査出力で再掲しない設計とした。
+- **是正裁定**: 単語単位の隠蔽ではなく、転写元となる seed/台帳を一般化し、workspace media を
+  リポジトリ外へ隔離し、全コミットで fail-closed 検査する案を採用。ignore 追加だけの案は
+  ZIP/手動公開を防げないため不採用。
+- **現行ツリー是正**:
+  - 画像タブ seed を `C:\Demo\Media\...` の架空コレクション、一般的なアルバム/作例/カテゴリ/
+    スタイル/季節タグ、`sample-photo.jpg`/`sample_NNN.png` へ全面置換。第三者作品・趣味嗜好を
+    推測させる作品名/用途語彙を撤去した。
+  - 製造台帳・治具・UI-IR の実ユーザー識別子を `maintainer`、絶対パスを `<repo-root>` または
+    repo-relative path、実画像 fixture を合成 fixture の一般名へ置換。`scale01-jig.py` は
+    `__file__` 基準で repo root を解決するよう変更し、可搬性も保存した。
+  - `work/tag-tab` 一式(media 21+HTML/JS 等)をリポジトリ外の私有バックアップ領域へ移動。
+    Git 管理外だったため tracked diff/履歴削除は発生しない。
+- **恒久封止**:
+  - pre-commit は変更ファイル種別に関係なく worktree 公開安全監査を実行し、Python 不在も含め
+    fail-closed。`CP-RELEASE-018` と `ROUTING-PUBLIC-001` に worktree→全履歴→fresh clone→
+    GitHub 非Git資産→公開許可の順序を固定した。
+- **是正後実測(worktree)**: public-release audit **PASS 0 findings**。build **0 warning/0 error**、
+  Tests **572/572**(既存571+新規1)、Oracle **109 pass+2 skip**(既存行無改変)、
+  validate_bom **0 error/0 warning**、validator selftest **OK**。
+- **履歴洗浄**:
+  - repo 外に全 11 refs/完全履歴を含む私有 bundle を作成し、`git bundle verify` で complete history を確認。
+  - 232 commits の blob/commit message を置換し、main+7 tags を匿名化履歴へ移行。書換え不能だった
+    Codex 内部 tree ref は bundle 保全後に削除。全refs履歴プローブは **164 findings→0 findings** に転化した。
+  - rewrite 後に old objects を repack/cleanup。生成された Python bytecode は削除し、`.gitignore` に
+    `__pycache__/`/`*.pyc` を追加した。
+- **GitHub 非Git資産監査(同期前・repo は PRIVATE のまま)**:
+  - Releases=0、Actions runs=0、Actions artifacts=0、Issues=0、Pull Requests=0、pull refs=0。
+  - Wiki disabled/リポジトリなし、Pages なし。公開時に別経路から露出する資産は検出されなかった。
+- **fresh clone/remote 同期**:
+  - 短い一時パスの local fresh clone で audit 0、build 0/0、Tests 572/572、Oracle 109+2skip、
+    validate 0-0、selftest OK。長い私有保管パスでは MTP がログ競合/停止したため、その結果は
+    受入に使わず専用プロセスを終了し、短い独立 clone の直列再走結果だけを採用した。
+  - remote refs が監査開始時の main+7 tags と完全一致し第三者更新がないことを確認後、main は
+    `--force-with-lease`、7 tags は同名の洗浄済みrefsへ force push。可視性は PRIVATE のまま維持。
+  - GitHub から remote fresh clone し、local HEAD と commit 完全一致、7 tags 完備、全履歴 audit 0。
+    さらに build 0/0、Tests 572/572、Oracle 109+2skip、validate 0-0、selftest OK を再確認した。
+  - 履歴書換えで commit ID は変わったため、旧IDの監査証跡は非公開 bundle のみに保存する。
+- **GitHub server 残存の除去(2026-07-10)**:
+  - force push 後も代表旧 SHA 3 件が GitHub commits API で取得可能(`exit 0`)と実測。現行台帳には
+    履歴説明用の旧短縮IDが残るため、ref非到達だけでは「誤ってpublic化しても安全」を満たさないと判定した。
+  - 削除直前に complete bundle、洗浄済みlocal audit 0、HEAD、7 tags、GitHub 非Git資産0、repo設定を
+    再確認。maintainer の明示承認後、旧private repoを削除し、API/ls-remote双方で不存在を確認した。
+  - 同名repoを**新規private**で作成し、空repo確認後に洗浄済みmain+7 tagsだけをpush。default branch=main、
+    Issues enabled、Wiki disabledを復元。代表旧 SHA 3 件はすべて取得不能(`exit 1`)、新HEADだけ取得可能
+    (`exit 0`)へ転化した。remote refsは HEAD+main+7 tagsのみ。
+  - 再作成repoからfresh cloneし、local HEAD完全一致・7 tags・全履歴audit 0・build 0/0・
+    Tests 572/572・Oracle 109+2skip・validate 0-0・selftest OKを再確認。repoはPRIVATEのまま。
+
+### golden 合格基準(gate② — maintainer 実機)
+
+1. `dotnet run --project src/ViewPrism2.App` で起動し、画像タブの golden seed を表示する。
+   コレクションのパスがすべて `C:\Demo\Media\...`、件数が架空値で、アルバム/作例/スタジオ等の
+   一般名だけになっていること。
+2. seed のルート/タグパレットを一巡し、第三者作品名、私有画像名、ゲーム用途を想起させる旧タグ語彙、
+   実端末ユーザー名・クラウドフォルダ名が表示されないこと。
+3. 画像/作業/タグ各タブを一巡し、匿名化によるレイアウト崩れ・生ID露出・操作回帰がないこと。
+4. `python bomdd/audit_public_release.py --history` を実行し、`PASS (0 findings)` を確認すること。
+   この合格後も `ROUTING-PUBLIC-001` の gate を通さず新しいcommitをpublic化しないこと。

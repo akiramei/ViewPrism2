@@ -6,7 +6,7 @@
 
 ## 題材
 - 何を作るか(1〜3行):
-  TypeScript/Electron 製画像管理アプリ view-prism(C:\Demo\source\repos\view-prism)を
+  TypeScript/Electron 製画像管理アプリ view-prism(../view-prism)を
   .NET 10 / Avalonia UI 12.0 / SQLite で再実装する。
   中核コンセプトは「タグ × 仮想ビュー」によるフォルダ階層に依存しない画像管理。
 - 種別: GUI(デスクトップアプリケーション)

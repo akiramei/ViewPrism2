@@ -1,7 +1,7 @@
 # ECO-PROJ-003 ViewPrism2成果物: ECO / ECR の 3 件を是正する
 
 ## 宛先
-- 対象リポジトリ: ViewPrism2: C:\Demo\source\repos\ViewPrism2
+- 対象リポジトリ: ViewPrism2: <repo-root>
 - 変更責務: ProjectArtifacts
 - 変更種別: BomSync
 - 対象パス: bomdd/61-impact-analysis.md

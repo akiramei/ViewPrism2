@@ -230,3 +230,34 @@ routing_eco022:
       id: ROUTE22-CHEAT-REPORT
       name: ずる報告+As-Built 情報を提出する
       output: [cheat-report(全件), 実装サマリ(製造単位→成果物パス対応表)]
+
+# ---- ECO-057: public 化の直前に必ず通す fail-closed 経路 ----
+routing_public_release:
+  id: ROUTING-PUBLIC-001
+  purpose: "GitHub 可視性を public に変更する前に、現行ツリー・全履歴・非Git資産を無害化済みと証明する"
+  invariant: "worktree 検査だけで公開可としない。全 refs の履歴検査、fresh clone、GitHub 側の release/artifact/wiki/issue attachment/PR refs 確認がすべて完了するまで public 化禁止"
+  steps:
+    - order: 1
+      id: PUBLIC-WORKTREE
+      name: 現行ツリーとGit管理外成果物を検査
+      command: ["python bomdd/audit_public_release.py"]
+      output: ["PASS (0 findings)"]
+    - order: 2
+      id: PUBLIC-HISTORY
+      name: 全ローカルrefs・commit messages・paths・blobsを検査
+      command: ["python bomdd/audit_public_release.py --history"]
+      output: ["PASS (0 findings)"]
+    - order: 3
+      id: PUBLIC-FRESH-CLONE
+      name: remoteからfresh cloneし、履歴検査と機械受入を再走
+      command: ["python bomdd/audit_public_release.py --history", "dotnet build", "dotnet test tests/ViewPrism2.Tests", "dotnet test tests/ViewPrism2.Oracle", "python bomdd/validate_bom.py"]
+      output: ["audit/build/tests/oracle/validate 全緑"]
+    - order: 4
+      id: PUBLIC-GITHUB-NONGIT
+      name: GitHubの非Git資産を確認
+      input: ["releases/assets", "Actions artifacts/logs", "Wiki", "Issues/PR attachments", "PR hidden refs", "GitHub Pages"]
+      output: ["公開禁止資産なし、または削除/匿名化記録"]
+    - order: 5
+      id: PUBLIC-GO
+      name: public化を許可
+      precondition: "PUBLIC-WORKTREE〜PUBLIC-GITHUB-NONGITが同一clean commitで全合格"

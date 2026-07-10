@@ -16,8 +16,9 @@
 # 6. B3 指標: ECO ごとの実変更 unit 数(組立面=複数 unit に触る変更の頻度)。
 import subprocess, yaml, re, json, sys
 from collections import Counter, defaultdict
+from pathlib import Path
 
-ROOT = r'C:\Demo\source\repos\ViewPrism2'
+ROOT = str(Path(__file__).resolve().parents[2])
 
 def git(*args):
     return subprocess.run(['git', '-C', ROOT] + list(args), capture_output=True, text=True, encoding='utf-8').stdout

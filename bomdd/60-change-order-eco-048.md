@@ -8,7 +8,7 @@
 
 - 現行の類似検索(pHash 単独)は、**回転(90/180/270°)・鏡像・クロップされた同一ソース画像を
   検出できない**。これらを検出できるようにしたい。
-- 移植候補: `C:\Demo\source\repos\SimilarPic`(2026-07-06 作成・git 未初期化)。
+- 移植候補: `../SimilarPic`(2026-07-06 作成・git 未初期化)。
   pHash+dHash+Edge ヒストグラム+Tile ハッシュ+Visual stats の重み合成
   +8 オリエンテーション(Identity/Rotate90/180/270/FlipH/FlipV/Transpose/Transverse)総当たり
   +ORB 二段幾何検証(OpenCvSharp・スコア 0.66–0.82 の Possible 帯のみ遅延実行)。

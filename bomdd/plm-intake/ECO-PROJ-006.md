@@ -1,7 +1,7 @@
 # ECO-PROJ-006 ViewPrism2成果物: 未解決事項ファイルに解決済み裁定が混在しています
 
 ## 宛先
-- 対象リポジトリ: ViewPrism2: C:\Demo\source\repos\ViewPrism2
+- 対象リポジトリ: ViewPrism2: <repo-root>
 - 変更責務: ProjectArtifacts
 - 変更種別: DefectCorrection
 - 対象パス: bomdd/ui/unresolved-questions.md

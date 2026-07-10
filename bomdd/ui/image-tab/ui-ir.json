@@ -7,7 +7,7 @@
     "extractedAt": "2026-06-17",
     "method": "BomDD ui-ir-ui-bom.md (candidate extension, テーマ/思想を上位部品=designIntent として認識する拡張版)",
     "note": "UI-IR は HTML+JS モックから抽出した観測・追跡用の中間表現であり、設計を縛る原本ではない。仮品番 TMP-UI-* で候補を追跡する。タグタブ抽出(bomdd/ui/)と同一スキーマ。共有アトム(種別チップ TMP-UI-CMP-0004 / カラードット TMP-UI-CMP-0005)と共有ドメイン(タグ/種別/ビュー/候補値/数値範囲/カラー)は tag-tab の仮品番を再利用し、本書では新規 id を振らない。",
-    "sourceRepo": "ViewPrismUI (C:/Demo/source/repos/ViewPrismUI) — UI/UX 設計の正典(CAD 源泉)。本成果物は ViewPrism2/bomdd/ui/image-tab/ に置き E-BOM へ接続する。",
+    "sourceRepo": "ViewPrismUI (../ViewPrismUI) — UI/UX 設計の正典(CAD 源泉)。本成果物は ViewPrism2/bomdd/ui/image-tab/ に置き E-BOM へ接続する。",
     "sources": [
       {
         "id": "M",
