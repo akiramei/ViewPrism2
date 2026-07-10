@@ -376,3 +376,9 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   #4(タグ列引き)が中心で、#3/#5/#6 の直接検査を確認できなかった。ECO-058 は WorkTab の
   非仮想化 read-acrossだけを扱うため、既存ベクタの追補/宣言是正は混ぜない。起票要否は
   maintainer判断（起票時はCPと実fixture全体を再監査し、他テストによる代替被覆も確認する）。
+
+- **致命例外ログだけが `VIEWPRISM2_DATA_DIR` 隔離を継承しない**: 正常起動後のApp/DB/settings/
+  日次ログはoverride先を使うが、`Program.WriteFatalLog` は常に `%APPDATA%/ViewPrism2/logs/fatal.log`
+  へ追記する。GF-058-01の正常goldenでは発火せず、発火時はgolden不合格なので本ECOの性能是正へ
+  混ぜない。ただし「異常系を含め既存profileを一切書き換えない」隔離契約へ昇格する場合は、
+  ECO-057/CP-RELEASE-018側を含む別ECOでfatal経路もoverrideへread-acrossする。

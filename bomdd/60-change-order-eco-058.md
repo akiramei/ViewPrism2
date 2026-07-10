@@ -114,14 +114,59 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
 - `CP-NFR-026`、`CP-UI-G1`（WorkTab再検査範囲）。
 - `FMEA-013`（ImageTab実所有者へ修正）と `FMEA-038`（WorkTab read-across漏れを新設）。
 - `P-01`（両surface・grid/list・10,000件のbefore/after）。
+- `M-GOLDEN-HARNESS-039`（隔離10,000件fixture生成・全数検証・Release app起動・正常終了後自動削除）。
 - 実装対象: `WorkTabView.axaml` のレイアウトホストのみ。`WorkTabViewModel`/DB/Core は対象外。
 - CAD変更なし。既存固定 Oracle 行は変更しない（R6）。
 
 ## 6. 残ゲート
 
-1. golden（maintainer実機）: WorkTab 10,000 件で切替完了・スクロール可能、grid/list往復と
-   選択/文脈モードの視覚退行なし。
-2. `/eco-accept eco-058`: CP 観点・register applied・本文クローズの3点セット。
+### 6.1 GF-058-01 — golden実行経路の欠落（maintainer指摘・2026-07-10）
+
+- 初回の `/eco-fix` 引き渡しは「WorkTab 10,000件を確認」とだけ提示し、隔離fixtureの生成・接続手順を
+  残さなかった。一時計測ハーネス/データは削除済みなので、maintainerが同じ入力を再現できなかった。
+- **通常起動はgoldenに使用できない**。`VIEWPRISM2_DATA_DIR` 未指定のAppは
+  `%APPDATA%/ViewPrism2` の既存profileを読み、10,000件条件を保証せず、実ユーザーデータにも依存する。
+  `dotnet run --project src/ViewPrism2.App` は既定Debugでもあり、本ECOのRelease計測経路と一致しない。
+- ECO-057/GF-057-01で確立済みの隔離規律を本ECOへread-acrossし、source-onlyの
+  `M-GOLDEN-HARNESS-039` を追加した。ECO状態は `implemented / golden pending` のまま維持する。
+
+### 6.2 golden実行手順（通常profile無改変の正常系）
+
+1. 起動中の ViewPrism2 をすべて終了する。既存 `%APPDATA%/ViewPrism2` は削除・移動・変更しない。
+2. リポジトリルートでRelease一式をビルドする。
+   ```powershell
+   dotnet build -c Release
+   ```
+   失敗した場合は停止する。手順2/3を1行に連結する場合は `;` でなく `&&` を使い、stale binaryを起動しない。
+3. 次の**専用コマンドだけ**でgoldenを起動する（通常のApp起動コマンドは使わない）。
+   ```powershell
+   dotnet run --project tests/ViewPrism2.GoldenHarness -c Release --no-build -- golden
+   ```
+   治具は一意な `%TEMP%/ViewPrism2-ECO058-Golden-{guid}` に、normal画像10,000、default workspace所属
+   10,000、image_tags 50,000、256×192 source/warm cache各10,000を生成する。DB件数と全20,000画像の
+   ヘッダ寸法を検証してから、子Release appだけに `VIEWPRISM2_DATA_DIR` を渡して起動する。既存processと
+   `Global\ViewPrism2` mutexを生成前/launch直前に拒否し、ready windowが20秒以内に成立しなければ非0終了する。
+4. ImageTabで10,000項目を確認後、WorkTabへ切替。gridでscrollし、listへ切替えてscroll、gridへ戻す。
+   各段階で「応答なし」や件数比例の数GiB増加がなく、画像・タグドット・件数・リスト列が描画されること。
+5. 選択（単独/Ctrl/Shift）と、タグ編集・作業・整理・削除の文脈モードを一巡し、選択マーカー、
+   右ペイン、モード解除、grid/listの視覚・操作に退行がないこと。
+6. Appを閉じる。正常終了では専用コマンドが子process停止後、自身がmarkerを置いた一意TEMP fixtureだけを
+   削除する。`Removed isolated ECO-058 fixture: ...` を確認する。Ctrl+C handlerもbest-effort cleanupを行うが、
+   terminal/hostによるsignal伝達を合格条件として仮定しない。
+   環境変数は親shellへ設定しないため解除操作は不要。
+7. terminal/hostの強制終了や電源断では `finally` が実行されずTEMPが残り得る。その場合はViewPrism2と
+   harnessが終了済みであることを確認し、候補の `.viewprism2-eco058-owned` markerを確認してから、
+   表示されたexact pathだけを削除する（prefixだけで一括削除しない）。
+   ```powershell
+   $candidate = Get-ChildItem $env:TEMP -Directory -Filter 'ViewPrism2-ECO058-Golden-*'
+   $candidate | Where-Object { Test-Path (Join-Path $_.FullName '.viewprism2-eco058-owned') } |
+     Select-Object -ExpandProperty FullName
+   # 上の出力と停止済みprocessを確認後、対象1件を $exactPath に代入して実行
+   Remove-Item -LiteralPath $exactPath -Recurse
+   ```
+8. 以上が合格なら `/eco-accept eco-058`。異常終了や既存profile表示があれば合格にせず停止する。
+   なお致命例外時の `Program.WriteFatalLog` だけはoverrideを未継承で、通常profileの`fatal.log`へ追記し得る
+   （51 R3記録）。発火時はgolden不合格であり、本ECOをacceptしない。
 
 ## 7. 機械受入（2026-07-10）
 
@@ -129,7 +174,14 @@ WorkTab はメモリ増加中にウィンドウが「応答なし」となり、
 - `ViewPrism2.Tests`: **573/573 pass**（既存572 + ECO-058実体化数プローブ1）。
 - `ViewPrism2.Oracle`: **109 pass / 既知2 skip**。既存固定Oracle行・Oracleコードは無変更。
 - `validate_bom.py`: **0 error / 0 warning**。変更YAML 5件は個別parse成功。
-- 一時再計測ハーネス/画像/DB/cacheは P-01 転記後に全削除し、成果物へ含めていない。
+- 初回再計測の一時ハーネス/画像/DB/cacheは P-01 転記後に全削除。GF-058-01是正後は
+  source-only生成器だけを追跡し、生成画像/DB/cacheは一意TEMPへ置いて終了後に削除する。
+- `M-GOLDEN-HARNESS-039 verify-fixture`: exact 10,000件fixtureの生成・DB/全画像寸法検証・自動削除に成功。
+  `golden` commandの実起動でも、ImageTab/WorkTabとも `10000 項目`、sourceが一意TEMP配下であることを
+  確認し、App終了後にApp/harness process=0・fixture directory=0へ収束した。
+- GF-058-01追補後に全機械受入を再走し、golden治具を含むsolution build **0 warning / 0 error**、
+  Tests **573/573**、Oracle **109 pass / 既知2 skip**、validate **0/0**、selftest **OK**、
+  public-release audit **0 findings**を再確認した。
 
 **停止点**: `/eco-fix` のgolden基準に到達。CAD裁定・追加性能最適化は不要。
 maintainer実機golden合格後に `/eco-accept eco-058` でクローズする。

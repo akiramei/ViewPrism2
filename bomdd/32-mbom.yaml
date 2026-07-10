@@ -550,6 +550,20 @@ mbom:
         fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
         l2: "スキーマ同値(新規 DB vs マイグレーション適用 DB)・サムネイル出力メタデータ検査を含む"
 
+    # ---- ECO-058/GF-058-01: 通常profileへ接続しない10,000件golden実行経路 ----
+    - id: M-GOLDEN-HARNESS-039
+      ebom_refs: []
+      artifact:
+        path: tests/ViewPrism2.GoldenHarness
+        type: dotnet-console(golden-fixture-launcher)
+      verifies: [M-UI-WORKSPACE-029]
+      interface_contract:
+        command: "dotnet build -c Release 成功後に dotnet run --project tests/ViewPrism2.GoldenHarness -c Release --no-build -- golden (連結する場合は && でfail-fast)"
+        isolation: "一意な %TEMP%/ViewPrism2-ECO058-Golden-{guid}/data を生成し、子ViewPrism2.App.exeだけへ VIEWPRISM2_DATA_DIR を設定。既存process+Global\\ViewPrism2 mutexを生成前/launch直前に拒否し、ready window成立を検査してからgolden開始。正常UI経路は通常 %APPDATA% profileへ接続しない"
+        fixture: "production DatabaseManager/ThumbnailService/SettingsStoreを再利用し、normal画像10,000・default workspace所属10,000・simple tag 5×全画像=image_tags 50,000・source/warm cache各10,000を生成。source/cache全数のJPEGヘッダ寸法=256x192とDB件数をlaunch前に検証"
+        lifecycle: "Release app終了まで待機し、治具が所有markerを置いた一意TEMP rootだけをfinallyで再帰削除。CancelKeyPress handlerは子process停止+cleanupのbest-effort。host/terminal強制終了・電源断はfinally不能のため残存し得る=App終了確認後にmarker付きexact pathだけを手動削除。生成画像/DB/cacheはtracked成果物にしない。verify-fixture commandはUIを起動せず同じ全数生成/検証/削除を行う"
+      acceptance_refs: [CP-UI-G1]
+
     # ---- ECO-035(2026-07-04): scale-01 遡及採点で検出した写像被覆ギャップの是正 — 台帳宣言のみ(実装変更なし) ----
     - id: M-ORACLE-030         # 固定オラクル治具(治具は製品と同格 — M-HARNESS-015 と同種)。scale-01 まで所有 unit 不在だった
       ebom_refs: []

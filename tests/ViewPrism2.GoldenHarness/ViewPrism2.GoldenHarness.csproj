@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M-GOLDEN-HARNESS-039 / ECO-058: isolated 10k maintainer golden launcher. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ViewPrism2.GoldenHarness</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ViewPrism2.Infrastructure\ViewPrism2.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
