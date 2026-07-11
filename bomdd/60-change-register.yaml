@@ -1070,3 +1070,15 @@ changes:
     verification: "R5赤=新規CP-SIM-017がCS1061(FindSimilarInScopeAsync不在)+CS0103(SimilarityScopeResolver不在)。是正=Core明示候補API+FS親path完全一致/view current-node resolver+ImageTab検索時delegate+WorkTab後段filter撤去。reader呼出=base+scope内候補exact、scope外/非normal/別collectionのfeature/cache非接触。build 0 warning/0 error、Tests 583/583、Oracle 109+既知2skip、validate 0/0、diff-check clean"
     body: 60-change-order-eco-062.md
     notes: "クローズ済み。gate①=A+V1+検索時点snapshot・CAD eef89bb。REQ-087/仕様/E/M-BOM/CP/FMEA同期。FindSimilarInScopeAsyncはscope snapshotを受けCoreでNormal/自己除外/同一collection/重複をfilter先行、既存FindSimilarAsyncはOracle後方互換。FS resolver=親path完全一致・subfolder/tag chip除外・現folder外target候補0、view=current node、WorkTab=_sourceImages先行限定。DB/adapter/criteria不変。CP観点=CP-UI-G9(FS/view+整理裏面)/CP-UI-G1(workspace read-across)/CP-SIM-017(unit exact)。M4=fix時にREQ-087/spec/E/M-BOM同期済み、acceptでCP+50-as-builtを完了"
+
+  - id: ECO-063
+    title: "タグビューのホームノード初期遷移が画像タブで無視される"
+    type: 欠陥是正(E-BOMトレース漏れ+新ImageTab M3bの実装未配線。CAD/REQ-037/Core保存・単一node解決は健全、裁定不要)
+    status: staged
+    golden: pending
+    baseline: "main 6bfb74f"
+    findings: "maintainer実機2026-07-11: タグタブで階層nodeをhome設定・保存しても画像タブでview選択時root開始。CAD tag_tab.md=homeは画像タブでview適用時に最初に開く場所、REQ-037/spec§2.4=解決可なら該当nodeへ自動nav・不能はrootで明確。保存(ViewService/Repository)とNodeGraphBuilder.ResolveHomeはCP-VIEW-012/CP-GRAPH-002/S-12で健全。E-BOM欠陥=E-UI-AXIS-NAV-040がREQ-037非参照。実装欠陥=ImageTabViewModel.LoadViewAsyncがgraph構築後_viewPath.Clearのみでview.HomeTagId/ResolveHomeを未参照。混入=45a6c77(2026-06-18 M3b初版)。検査欠測=Core単体解決のみ、ImageTabのview選択testsはHomeTagId未設定。V1 goldenの初期遷移観点を新surface置換後に機械移管せず潜伏"
+    impacted_bom: ["E-UI-AXIS-NAV-040(REQ-037接点)", "E-GRAPH-003/M-GRAPH-003(home path契約)", "M-UI-IMAGETAB-035(LoadViewAsync)", "CP-GRAPH-002", "CP-UI-G1/CP-UI-G6", "tests/ViewPrism2.Tests(surface接続probe)"]
+    oracle: "既存固定Oracle S-12/行は変更しない(R6)。nested home pathとImageTab view選択直後のcrumb/画像集合/HomeActive、null/参照切れroot fallback、collection切替再loadを新規unitで固定"
+    body: 60-change-order-eco-063.md
+    notes: "裁定不要。推奨=NodeGraphBuilderへ既存ResolveHomeを維持したhome path API追加→LoadViewAsyncで_viewPath初期化。ImageTab独自DFSは避ける。DB/schema/CAD/XAML/タグタブ保存/i18n不変。次=/eco-fix ECO-063でプローブ先行"
