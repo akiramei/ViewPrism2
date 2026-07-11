@@ -1,4 +1,4 @@
-# Change Order — ECO-069(implemented / golden pending): ECO-025 v2ソートが作業タブへ展開されず旧固定UIが残る
+# Change Order — ECO-069(applied): ECO-025 v2ソートが作業タブへ展開されず旧固定UIが残る
 
 > maintainer所見(2026-07-12)「画像タブと作業タブのソートボタンが異なり、画像タブが正しいはず」を
 > `/eco-file`で受理し、ECO-025のread-across範囲を工程診断した既存機能拡張/品質是正要求。
@@ -158,3 +158,24 @@ workspaceごとの表示列構成または候補母集合を新設し、ImageTab
 6. タグ編集・作業・整理・削除の各modeへ入り、sort表示/順序と従来の選択・マージ割当を壊さないことを確認する。
 7. 画像タブの表示列sort(基本列+タグ列)、grid/list、chip/解除に回帰がないことを確認する。
 8. アプリを再起動するとWorkTabのsortは解除される一方、WorkTabのgrid/list表示形式は従来どおり独立永続することを確認する。
+
+## 9. gate②合格・クローズ(2026-07-12)
+
+maintainerが`/eco-accept ECO-069`で§8.4の実機goldenを承認した。作業タブgridで`並び替え`+
+初期`なし`badge、基本3候補、popup内昇降順、要約chip/解除、サイズ・更新日のtile補助値を確認し、
+listの固定3列headerからも同じ列/方向を操作できた。grid/list往復で状態と表示順が共有され、tag絞り込み後の
+double clickでもviewer列・前後順が画面順と一致した。再起動時はsortだけ解除され、WorkTab表示形式は独立永続した。
+タグ編集・作業・整理・削除modeと、画像タブの基本列/タグ列sort・grid/list・chip解除にも回帰はなかった。
+
+再発防止はCP-UI-G1の潜伏履歴+golden観点、`CpUiG1WorkTabTests`のheadless chromeと基本3候補/
+解除/grid-list-viewer共有exact、M-UI-WORKSPACE-029のsort契約へ固定した。CADはViewPrismUI `3d76313`、
+製品側REQ-074/仕様§2.6/E-UI-WORKSPACE-043/M-UI-WORKSPACE-029/CP-UI-G1をfix時に同期済みであり、
+M4の追加同期は不要。Design System BOMは新部品を作らず既存v2末端を再利用したため改訂不要である。
+
+教訓: read-acrossを「後で別裁定」として認識しただけでは、差分は閉じない。deferしたsurface差分には、
+適用/非適用の裁定所有者、後続ECOまたはbacklog、両surfaceを比較するCPを同時に割り当てる必要がある。
+ECO-038/058/068で得た「共有意味論はsurface配線を自動継承しない」という教訓を、今回は表示語彙だけでなく
+候補母集合・解除・方向・表示形式間状態・consumer(viewer)順まで一つのconformance契約に拡張した。
+
+残課題なし。workspaceへの表示列編集・タグ列sort・schema追加は案Aの明示的対象外であり、利用者要求が
+実測された場合に別ECOとして起票する。
