@@ -1,0 +1,34 @@
+#!/bin/sh
+# bomdd lifecycle commit-msg hook(ECO-061)
+# ─────────────────────────────────────────────────────────────
+# register の status 遷移を含むコミットに、対応するライフサイクル trailer
+# (BomDD-ECO-Fix / BomDD-ECO-Accept: ECO-NNN)を強制する。
+# pre-commit では遷移コミット自身の trailer が履歴に未出現(自己参照制約)のため、
+# メッセージ側をここで fail-closed 検査する。履歴側は validate_bom.py E15〜E17 が検査。
+#
+# 規律: python/PyYAML が無い環境では fail-open(skip)し、コミットを wedge しない
+# (pre-commit の validator 節と同じ縮退規約)。ブロックは「検査が FAIL したとき」だけ。
+
+# register に触れないコミットでは省略(高速化)
+git diff --cached --name-only | grep -q '^bomdd/60-change-register.yaml$' || exit 0
+
+PY=""
+for c in python python3 py; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c "import yaml" >/dev/null 2>&1; then
+    PY="$c"; break
+  fi
+done
+if [ -z "$PY" ]; then
+  echo "[bomdd] PyYAML 付き python が見つからない — lifecycle commit-msg 検査を skip(commit は許可)"
+  exit 0
+fi
+
+if ! "$PY" bomdd/validate_bom.py --commit-msg "$1"; then
+  echo "[bomdd] lifecycle trailer 違反 — commit をブロックしました。"
+  echo "        status 遷移コミットには対応する trailer が必要です:"
+  echo "          staged→implemented : BomDD-ECO-Fix: ECO-NNN"
+  echo "          implemented→applied: BomDD-ECO-Accept: ECO-NNN"
+  echo "        (trailer はコミットメッセージ末尾の空行後ブロックに置く)"
+  exit 1
+fi
+exit 0

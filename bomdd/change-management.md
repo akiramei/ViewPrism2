@@ -95,6 +95,33 @@
 
 全コミットで pre-commit の validate_bom(0 error)を通過すること。
 
+### 4.1 状態遷移とライフサイクル証拠(ECO-061・ECO-061 以降に適用)
+
+**背景**: ECO-060 運用時、fix コミットなしで register が applied 化される違反が発生し、validator が
+0-0 で素通しした(一次資料: `reports/incident-eco060-lifecycle-2026-07-11.md`)。入口スキルの散文
+前提は防御にならない — 状態遷移は状態不変条件として機械検査する(BomDD playbook §13)。
+
+**許可遷移(正本)**: 下表以外の遷移(飛び越し・逆行・superseded からの復帰)は禁止。
+新規エントリは必ず `staged` で登場する。doc-only ECO も fix→accept の 2 段を踏む。
+
+| 遷移 | 必須 trailer(遷移コミット自身に携行) | 対応 prefix |
+|---|---|---|
+| (新規)→ staged | なし | `起票(eco-NNN):` |
+| staged → implemented | `BomDD-ECO-Fix: ECO-NNN` | `fix(eco-NNN):` |
+| implemented → applied | `BomDD-ECO-Accept: ECO-NNN` | `accept(eco-NNN):` |
+| staged/implemented/applied → superseded | なし(`superseded_by` 参照を E11 が検査) | `decide(eco-NNN):` 等 |
+
+**機械検査(fail-closed)**:
+- `validate_bom.py` [E14]〜[E19]: 証拠の実在(E15/E16)・祖先関係と順序(E17)・参照先実在(E18)・
+  遷移エッジ(E19)・宣言と git 可用性(E14)。適用範囲は register の `lifecycle_evidence` ブロックが
+  宣言(ECO-001..060 は遡及免除を**明示** — 黙って除外しない)。
+- `hooks/commit-msg`: 遷移コミット自身への trailer を commit 時点で強制(pre-commit では遷移コミットの
+  trailer が履歴未出現という自己参照制約があるため、メッセージ側で塞ぐ)。
+- trailer はコミットメッセージ末尾の trailer ブロック(空行の後)に置く。例:
+  `git commit -m "fix(eco-061): <要約>" -m "BomDD-ECO-Fix: ECO-061"`。
+- `/eco-accept` は事前条件(fix 証拠の実在)に加え、accept コミット後に validator 0-0 を確認する
+  **post-condition** を持つ(受入条件7)。
+
 ## 5. 導線(スキル)
 
 作業者は自由文プロンプトではなく、以下のスキルを入口にする(`.claude/skills/`)。
