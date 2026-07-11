@@ -37,6 +37,11 @@ exploratory_probes:
         result: "maintainer実機でImageTab/WorkTab各10,000項目、WorkTab切替、grid/list往復・双方scroll、単独/Ctrl/Shift選択、タグ編集/作業/整理/削除の4文脈モード、画像/タグドット/件数/リスト列の描画、応答あり・件数比例の数GiB増加なし、正常終了後cleanupを全項目確認"
         qualitative_latency: "ImageTab→WorkTabは少し待ち、体感で1秒以下(未計時)。WorkTab→ImageTabは一瞬で切り替わる"
         classification: "P-01の非阻害探索観測。固定時間閾値や両方向の相対同等性は現契約になくGF/ECO-058不合格にしない。定量目標や改善を求める場合は、DB取得・集約・VM再構築・初回描画を区分計測して別ECOで扱う"
+      eco-064-maintainer-golden:
+        date: 2026-07-11
+        dataset: "maintainer大規模profile(件数・壁時計は未記録。機密識別子は記録しない)"
+        result: "cold startでshell先行表示、loading中のwindow移動/resize・タブ・設定応答、catalog→content二段表示、偽の未選択/0件なし、content中collection切替の旧結果非復帰、ready後のLastCollection/FS-view/home/grid-list/scan表示回帰なしを実機確認"
+        classification: "CP-UI-G1 golden approved。固定ms閾値は新設せず、機械側CP-STARTUP-028のcardinality/scheduling境界と組み合わせて受入"
   - id: P-02
     scenario: "キーボードのみで主要操作(フォルダ登録→スキャン→ノード選択→画像選択→ビューア)を試みる"
     dimension: アクセシビリティ(フォーカス遷移・操作可能性)
