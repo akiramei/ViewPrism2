@@ -85,9 +85,13 @@
 - 冷検索の支配要因がdecode/D4 pHash/単一SQLite接続のfeature+similarity upsertのどれかは未計測。無制限並列化は
   disk seek/CPU/共有SQLite semaphoreを競合させるため、計測なしでは採用できない。
 
-## §4 是正方針(gate①の案)
+## §4 是正方針(gate①裁定済み — 2026-07-11)
 
-### 案A(推奨・maintainer要求): 整理検索sessionを明示し、全triggerでcancel+世代無効化
+maintainerが2026-07-11に**案A**を採用した。CADはViewPrismUI `487aa53`
+(`decide(IMG-020): 類似検索の停止と整理ライフサイクルに案Aを採用`)で先行改訂済み。
+`docs/screens/image_tab.md`「類似画像検索の実行セッション」を挙動正本とし、作業タブは同一部品として全面継承する。
+
+### 案A(採用・maintainer要求): 整理検索sessionを明示し、全triggerでcancel+世代無効化
 
 1. 類似検索状態を`idle / preparing / comparing / cancelling / completed`として定義し、1 surfaceにつきactive sessionを1件に限定する。
 2. 検索中は同じCTAを「停止」へ切り替える。停止押下は即`cancelling`、結果0件/失敗へ遷移させない。
@@ -103,14 +107,14 @@
 - golden影響: CP-UI-G9/G1で検索中CTA・phase/count/bar・停止・整理終了・再入場・再検索cancel時の旧結果保持・通常完了を両タブ確認。
 - 利点: 報告3症状と、同じ構造から生じる多重実行/遅延結果混入を一つの状態不変条件で閉じる。
 
-### 案B(最小): 明示停止+整理終了だけcancel、その他は遅延結果破棄のみ
+### 案B(不採用): 明示停止+整理終了だけcancel、その他は遅延結果破棄のみ
 
 - 「停止」と整理終了ではcancelするが、マージ先/scope変更、新検索等はgenerationで旧結果を捨てるだけで計算継続を許す。
 - diff規模: **中**。CTA/progress/最低限CTS+generationは必要。案Aよりtrigger配線とgolden行列が小さい。
 - 欠点: 見えない旧検索がCPU/IO/DBを消費し続け、「整理文脈を失った検索は止める」という要求を部分的にしか満たさない。
   新検索との同時実行も許し得るため、単一active search要求とは相性が悪い。
 
-### 案C(不採用候補): 進捗だけ追加し、検索はbackground継続
+### 案C(不採用): 進捗だけ追加し、検索はbackground継続
 
 - 現在のCore百分率を表示するだけで停止/世代管理を追加しない。
 - diff規模: **小**。ただし整理終了後の処理継続、多重実行、旧結果書戻しを温存し、maintainer要求1〜4/6を満たさない。
@@ -143,12 +147,9 @@
 
 ## §6 残ゲート
 
-1. **gate① ViewPrismUI裁定**:
-   - 案A(推奨・maintainer要求) / 案B / 案Cの検索session所有と自動cancel範囲。
-   - 初回cancel=grid、再検索cancel=直前completed結果保持、途中結果非公開の確定。
-   - phase/count/barの配置と`停止しています…`の表示、条件検索への適用範囲。
-2. CAD commitを先行し、製品ECOへ取り込む。
+1. ~~**gate① ViewPrismUI裁定**: 案A/B/C、cancel範囲、結果保持、進捗配置、条件検索への適用を確定する。~~
+   → **案A採用**(2026-07-11・maintainer)。条件検索は停止/段階進捗の対象外。
+2. ~~CAD commitを先行し、製品ECOへ取り込む。~~ → ViewPrismUI `487aa53`で完了。
 3. `/eco-fix ECO-066`: 遅延結果/多重実行/progress未配線をプローブ先行で不合格化してから製造する。
 4. 機械受入: build 0 / Tests / Oracle / validate_bom 0-0 / lifecycle。
 5. gate② golden: 画像/作業タブで明示停止、自動停止、進捗、終了→再入場、再検索cancel、通常完了と整理回帰を実機確認する。
-

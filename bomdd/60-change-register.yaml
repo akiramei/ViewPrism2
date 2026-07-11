@@ -1112,7 +1112,7 @@ changes:
 
   - id: ECO-066
     title: "類似画像検索の停止・進捗可視化 — 整理ライフサイクルと遅延結果の整合"
-    type: 既存機能拡張+実装逸脱是正(REQ-065/E-BOMは進捗を要求するがsurface未配線。停止/自動cancel/単一session/cancel結果保持はCAD・要求・BOM未定義でgate①が先)
+    type: 既存機能拡張+実装逸脱是正(REQ-065/E-BOMは進捗を要求するがsurface未配線。停止/自動cancel/単一session/cancel結果保持はCAD・要求・BOM未定義だったがgate①案A+IMG-020で確定)
     status: staged
     golden: pending
     baseline: "main fc66e98"
@@ -1121,4 +1121,4 @@ changes:
     oracle: "既存固定Oracle行は変更しない(R6)。新規exactで単一active、progress単調phase/count、明示/自動cancel、latest-wins、終了→再入場の旧結果非公開、first/re-search cancel結果、途中cache再利用を固定。固定msは合否にせず区分計測、知覚面は両タブgolden"
     verification: "(staged — 製造前)"
     body: 60-change-order-eco-066.md
-    notes: "gate①待ち。推奨案A=整理検索sessionをidle/preparing/comparing/cancelling/completedで所有し、停止/整理終了/target・scope変更/別mode/新検索/window終了でcancel+generation無効化。初回cancel=grid、再検索cancel=直前completed保持、途中結果非公開、候補単位cache保持。案B=停止+整理終了だけcancel/他は結果破棄のみ、案C=進捗だけ。性能は現adapterで冷温+base/decode+D4/DBを区分し、独立最適化は別ECO。src/tests変更なし"
+    notes: "gate①完了(2026-07-11 maintainer案A採用、CAD ViewPrismUI 487aa53/IMG-020)。整理検索sessionをidle/preparing/comparing/cancelling/completedで所有し、停止/整理終了/target・scope変更/別mode/新検索/window終了でcancel+generation無効化。初回cancel=grid、再検索cancel=直前completed保持、途中結果非公開、候補単位cache保持。固定150px設定領域を進捗へ置換、同位置CTA=探す→停止→停止中。作業タブ同一・条件検索は対象外。性能は現adapterで冷温+base/decode+D4/DBを区分し、独立最適化は別ECO。次=/eco-fix ECO-066、src/tests変更なし"
