@@ -54,11 +54,44 @@ public sealed class SimilaritySearchService
             return [];
         }
 
-        // 同一コレクション(REQ-053)。フィルタ先行: status=Normal・基準自身除外(仕様 §2.10.4)
+        // OC-16 後方互換: 明示 scope のない呼び出しは同一コレクション全体。
         var folderImages = await _images.GetByFolderAsync(baseImage.SyncFolderId).ConfigureAwait(false);
-        var candidates = folderImages
+        return await FindSimilarCoreAsync(baseImage, threshold, folderImages, progress, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// ECO-062/REQ-087: 検索 surface が確定した閲覧コンテキストだけを候補として検索する。
+    /// scope 外・非 Normal・別コレクション・基準自身は feature/cache 参照より前に除外する。
+    /// </summary>
+    public async Task<IReadOnlyList<SimilarResult>> FindSimilarInScopeAsync(
+        string baseImageId,
+        int threshold,
+        IReadOnlyCollection<ImageRecord> scopeCandidates,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        var baseImage = await _images.GetByIdAsync(baseImageId).ConfigureAwait(false);
+        if (baseImage is null || baseImage.Status != ImageStatus.Normal)
+        {
+            return [];
+        }
+
+        return await FindSimilarCoreAsync(baseImage, threshold, scopeCandidates, progress, ct).ConfigureAwait(false);
+    }
+
+    private async Task<IReadOnlyList<SimilarResult>> FindSimilarCoreAsync(
+        ImageRecord baseImage,
+        int threshold,
+        IReadOnlyCollection<ImageRecord> scopeCandidates,
+        IProgress<int>? progress,
+        CancellationToken ct)
+    {
+        // フィルタ先行(REQ-087): scope 候補にも Core 境界を再適用し、重複 id も 1 回だけ処理する。
+        var candidates = scopeCandidates
             .Where(i => i.Status == ImageStatus.Normal
-                && !string.Equals(i.Id, baseImageId, StringComparison.Ordinal))
+                && string.Equals(i.SyncFolderId, baseImage.SyncFolderId, StringComparison.Ordinal)
+                && !string.Equals(i.Id, baseImage.Id, StringComparison.Ordinal))
+            .DistinctBy(i => i.Id, StringComparer.Ordinal)
             .ToList();
 
         if (candidates.Count == 0)

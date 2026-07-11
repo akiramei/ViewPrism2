@@ -171,9 +171,40 @@ public sealed partial class ImageTabViewModel : ObservableObject
             similar,
             merge,
             getCollectionId: () => _collectionId,
+            getSimilarityScopeCandidates: ResolveSimilarityScopeCandidates,
             recompute: Recompute,
             refreshSelectionMarkers: RefreshSelectionMarkers,
             reloadImagesAsync: ReloadImagesAsync);
+    }
+
+    /// <summary>
+    /// ECO-062/IMG-018: 検索ボタン押下時の FS/view 文脈を候補 snapshot にする。
+    /// FS は _entries から再解決してタグ chip の一時フィルタを候補へ波及させない。
+    /// </summary>
+    private IReadOnlyList<ImageRecord> ResolveSimilarityScopeCandidates()
+    {
+        if (Organize.MergeTargetId is not { } baseId)
+        {
+            return [];
+        }
+
+        var baseImage = _entries.FirstOrDefault(entry =>
+            string.Equals(entry.Record.Id, baseId, StringComparison.Ordinal))?.Record;
+        if (baseImage is null)
+        {
+            return [];
+        }
+
+        if (_axis == "view" && _viewRoot is not null)
+        {
+            var fullPath = new List<GraphNode> { _viewRoot };
+            fullPath.AddRange(_viewPath);
+            var currentNodeImages = ViewMatched(fullPath).Select(entry => entry.Record).ToList();
+            return SimilarityScopeResolver.ForView(currentNodeImages, baseImage);
+        }
+
+        return SimilarityScopeResolver.ForFileSystem(
+            _entries.Select(entry => entry.Record).ToList(), baseImage, _fsPath);
     }
 
     /// <summary>コレクションルート+相対パスから絶対パスを組み立てる(BuildEntry と同型・ゴミ箱子 VM へも供給)。</summary>

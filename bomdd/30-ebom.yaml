@@ -238,7 +238,7 @@ ebom:
       name: 類似検索エンジン(候補=normal 限定・閾値・降順安定・キャッシュ協調)— v3.0 新設
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-064, REQ-084]
+      requirement_refs: [REQ-064, REQ-084, REQ-087]
       kbom_refs: []
       depends_on: [E-PHASH-031, E-SIMCACHE-033, E-DOMAIN-001]
       invariants:
@@ -246,6 +246,7 @@ ebom:
         - 同一コレクション内(REQ-053)。閾値以上(≧)を類似度降順・同値 id 昇順で安定
         - 検索は UI をブロックしない(非同期・進捗通知可)
         - since ECO-048(REQ-084) ペア距離=小 id の identity × 大 id の全変種の最小(対称・決定的・単調拡張)。変種なし特徴量とは identity 同士のみ(後方互換)
+        - since ECO-062(REQ-087) 明示候補集合を受け、normal・自身除外・同一collectionを再検証してから特徴量/ペアcacheへ進む。候補未指定の既存APIはOC-16後方互換でcollection全体
       acceptance_refs: [CP-SIM-017]
 
     - id: E-SIMCACHE-033
@@ -585,7 +586,7 @@ ebom:
       name: 類似検索 UI(起動・閾値スライダー・精度モード非表示・結果一覧(類似度%降順)・進捗・空状態)— v3.0 新設+ECO-014(整理トレイの find へ統合)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-065, REQ-064, REQ-086]
+      requirement_refs: [REQ-065, REQ-064, REQ-086, REQ-087]
       external_source_ref: K-ORIGIN
       external_source_note: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
@@ -595,6 +596,7 @@ ebom:
         - 結果整列・選択・空状態のロジックは描画から独立した決定論的ロジックとして unit 検査可能にする
         - (ECO-014/UQ-I07・IMG-005) 類似検索は独立モーダル(原典 SimilarImageSearchModal)でなく、画像タブ右ペインの**整理トレイ**(整理モード)の find として提供する。整理は「整理」ボタンで開始しタグ編集モードと排他。find「似た画像を探す」は ①類似画像検索(E-SIMSEARCH-032・pHash 閾値スライダー)②条件検索(**E-CRITERIA-037 を消費**・hash/拡張子/サイズ/名前/mtime)の2方式。**(ECO-055 as-built)条件検索の UI 意味論=「マージ先との属性一致」をトグル 5 種で選ぶ(自由入力ではない)。一致の定義(裁定 2026-07-06)= ハッシュ SHA-256/拡張子(大小無視)/サイズ(バイト)=完全一致・ファイル名=マージ先名本体(拡張子除く)の部分一致・更新日=同一日(UTC)。条件検索もマージ先必須∧条件 1 つ以上で実行可。マージ先→SearchCriteria の写像は両タブ共有の OrganizeCriteria.FromMergeTarget(転写ドリフト防止)**。**(ECO-056 as-built)検索 UI の形= トレイ下部ピンの「似た画像を探す」折りたたみ内。タブは「条件検索」「類似画像検索」の順(v1 CAD から)・切替コンテンツ 150px 固定・実行ボタンは「探す」。検索結果は中央ペインにヘッダ(「グリッドへ」戻り=結果保持・件数・方式ラベル)つきで表示(backToGrid は v1 CAD 定義=51ad8ee からの実装欠落を是正)**。検索結果は中央ペイン全面に候補+**一致率**(見比べ重視)・候補ごとに「整理対象に追加」。Core(E-SIMSEARCH-032/E-CRITERIA-037)の意味論は不変(候補=normal・同一コレクション REQ-053・閾値以上を類似度降順安定)
         - (ECO-060/REQ-086) 選択中collectionがスキャン中なら類似方式の検索を実行せず「スキャン完了後に利用できます」と理由を表示する。条件検索は公開済みnormal画像に対し利用可能
+        - (ECO-062/REQ-087/IMG-018) 類似方式の候補は検索時点の閲覧文脈。FS=マージ先と同一親folder直下(タグchip非影響・subfolder除外・現folder外targetは0)、view=現在node path表示母集合、WorkTab=現workspace。Core呼出前から限定し結果後段filterだけで済ませない。条件検索は不変
       acceptance_refs: [CP-UI-G9]
 
     - id: E-UI-MERGE-036

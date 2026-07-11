@@ -955,7 +955,6 @@ public sealed partial class WorkTabViewModel : ObservableObject
         if (!_organizeMode) return;
         _searching = true; OnPropertyChanged(nameof(Searching));
         var results = new List<(string ImageId, int Score, bool IsCriteria)>();
-        var inWorkspace = new HashSet<string>(_sourceImages.Select(i => i.Id), StringComparer.Ordinal);
         try
         {
             if (_searchMethod == "criteria")
@@ -979,9 +978,10 @@ public sealed partial class WorkTabViewModel : ObservableObject
             }
             else if (_mergeTargetId is not null) // 類似は基準(マージ先)が必要
             {
-                var found = await _similar.FindSimilarAsync(_mergeTargetId, _similarThreshold).ConfigureAwait(true);
-                foreach (var s in found)
-                    if (inWorkspace.Contains(s.ImageId)) results.Add((s.ImageId, s.Score, false)); // 現スペース内に限定
+                // ECO-062: 結果後段 filter ではなく、現 workspace を pHash/cache 前の明示候補にする。
+                var found = await _similar.FindSimilarInScopeAsync(
+                    _mergeTargetId, _similarThreshold, _sourceImages).ConfigureAwait(true);
+                foreach (var s in found) results.Add((s.ImageId, s.Score, false));
             }
         }
         finally { _searching = false; }

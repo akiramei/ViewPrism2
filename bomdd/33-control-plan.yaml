@@ -462,6 +462,8 @@ control_plan:
         - "(ECO-048/REQ-084)回転・鏡像検出: 実 decode 経路 E2E で 90° 回転・左右反転の複製が閾値 70 で検出される(単一オリエンテーション時代は原理的に検出不能=是正前プローブ不合格の実績)"
         - "(ECO-048)ペア距離の対称性: 探索方向(A→B / B→A)によらず同一スコア(小 id の identity × 大 id の全変種の最小=ペア正規化キャッシュと整合)"
         - "(ECO-048)変種の後方互換: 変種対応 reader の下で phash_variants NULL の旧レコードは stale=再計算(自動アップグレード)/変種非対応 reader では旧レコードのまま identity 同士の従来挙動・例外なし"
+        - "(ECO-062/REQ-087)明示scopeフィルタ先行: scope外・非normal・別collectionはreader/feature/similarity cache非接触。巨大collectionの存在にかかわらずreader呼出数はbase+scope内候補だけ"
+        - "(ECO-062/IMG-018)surface scope: FSは親relative_path完全一致(a/≠a2/、subfolder除外、tag chip非影響、現folder外baseは0)、viewは検索時current node path、WorkTabは現workspaceをCore前段で渡す"
 
     - id: CP-MERGE-018
       characteristic: マージ計算・マージサービスのタグ集約・status 遷移・原子性が仕様 §2.10.5・OC-17 と一致する

@@ -22,6 +22,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private readonly MergeService _merge;
     private readonly CriteriaSearchService _criteriaSearch;
     private readonly Func<string?> _getCollectionId;
+    private readonly Func<IReadOnlyList<ImageRecord>> _getSimilarityScopeCandidates;
     private readonly Action _recompute;
     private readonly Action _refreshSelectionMarkers;
     private readonly Func<Task> _reloadImagesAsync;
@@ -55,6 +56,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         SimilaritySearchService similar,
         MergeService merge,
         Func<string?> getCollectionId,
+        Func<IReadOnlyList<ImageRecord>> getSimilarityScopeCandidates,
         Action recompute,
         Action refreshSelectionMarkers,
         Func<Task> reloadImagesAsync)
@@ -64,6 +66,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _criteriaSearch = new CriteriaSearchService(images); // 整理トレイの条件検索(E-CRITERIA-037)。images のみ依存
         _images = images; // ECO-055
         _getCollectionId = getCollectionId;
+        _getSimilarityScopeCandidates = getSimilarityScopeCandidates;
         _recompute = recompute;
         _refreshSelectionMarkers = refreshSelectionMarkers;
         _reloadImagesAsync = reloadImagesAsync;
@@ -243,7 +246,8 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
             }
             else if (_mergeTargetId is not null) // 類似は基準(マージ先)が必要
             {
-                var found = await _similar.FindSimilarAsync(_mergeTargetId, _similarThreshold).ConfigureAwait(true);
+                var found = await _similar.FindSimilarInScopeAsync(
+                    _mergeTargetId, _similarThreshold, _getSimilarityScopeCandidates()).ConfigureAwait(true);
                 foreach (var s in found) results.Add((s.ImageId, s.Score, false));
             }
         }

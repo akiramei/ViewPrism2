@@ -135,3 +135,53 @@ golden 再検査範囲:
 - **gate①(CAD/意味論裁定)**: 完了。A + V1 + 検索時点を採用、ViewPrismUI `eef89bb` へ反映済み。
 - `/eco-fix ECO-062`: 要求/BOM/新規受入行をオラクル・ファーストで同期 → プローブ先行 → 最小製造 → 機械受入。
 - **gate②(golden)**: §5 の FS/view/workspace 境界と既存整理操作の実機確認後に `/eco-accept ECO-062`。
+
+## §7 実施記録(2026-07-11・fix)
+
+### 7.1 プローブ先行(R5) — 是正前の赤
+
+`CpSim017Tests` に CP-SIM-017 の新規 3 観点を先行追加した。
+
+1. 明示 scope 候補外・非 normal・別 collection が reader/feature/similarity cache に触れず、reader 呼出数が
+   `base + scope内候補` だけになること。
+2. FS は親 path 完全一致(`a/` と `a2/` を区別)・subfolder 除外・検索時点の current folder 外 target は 0 件。
+3. view は target から leaf を逆算せず、検索時点 current node の母集合を使うこと。
+
+是正前実行は **CS1061** (`SimilaritySearchService.FindSimilarInScopeAsync` 不在) + **CS0103**
+(`SimilarityScopeResolver` 不在)で不合格。診断どおり「Core が明示候補を受けない」「surface の FS/view scope 決定がない」
+ことを実測で裏取りした。初回 sandbox 実行は Avalonia telemetry log の権限拒否だったため通常環境で再実行し、上記の
+製品由来コンパイル不合格を確認した。
+
+### 7.2 製造
+
+- `SimilaritySearchService`:
+  - `FindSimilarInScopeAsync(baseId, threshold, IReadOnlyCollection<ImageRecord>, ...)` を追加。
+  - 明示候補へ normal・自身除外・同一 collection・重複 id 除外を feature/cache より前に再適用。
+  - 既存 `FindSimilarAsync` は同一 collection 全体を渡す後方互換 facade として維持し、既存固定 Oracle を無改変で保存。
+- `SimilarityScopeResolver`(新規純粋ロジック):
+  - FS は slash 正規化後の親 relative path 完全一致。base が current folder 外なら空。
+  - view は検索時 current node が渡す画像集合を母集合とし、同一 collection/normal を整える。
+- `ImageTabViewModel` → `ImageTabOrganizeViewModel`:
+  - 検索ボタン押下時に候補を解決する関数を注入。FS は `_entries` から再解決して tag chip の `_matchedFiles`
+    フィルタを波及させず、view は root + `_viewPath` をその時点で `ViewMatched` 評価する。
+- `WorkTabViewModel`:
+  - collection 全体を計算後に workspace ID で落とす後段 filter を撤去し、`_sourceImages` を Core の明示候補へ渡す。
+- 要求/BOM:
+  - REQ-087 新設、仕様 §2.10.4、E/M-BOM、CP-SIM-017、FMEA-022、沈黙次元を IMG-018/CAD `eef89bb` と同期。
+  - DB schema / migration / pHash adapter / 条件検索は不変。
+
+### 7.3 機械受入
+
+- `dotnet build --no-restore`: **0 warning / 0 error**。
+- `dotnet test tests/ViewPrism2.Tests --no-build`: **583/583 pass**(既存 580 + ECO-062 新規 3)。
+- `dotnet test tests/ViewPrism2.Oracle --no-build`: **109 pass + 既知 2 skip**(既存行無改変)。
+- `python bomdd/validate_bom.py`: fix 記録・status 更新後に **0 error / 0 warning**。
+- `git diff --check`: error なし。
+
+テスト運用所見: 最初の全 Tests 実行は直前 test host が TestResults log を保持して失敗したため、当該
+`ViewPrism2.Tests` process だけを終了して再実行した。再実行で 1 件失敗したのは新規プローブが `outside` 画像を
+明示 scope に含めながら scope 外を期待した入力矛盾で、surface/Core 責務に合わせ候補から外して是正。その後 583/583。
+
+## §8 残ゲート(fix 後)
+
+- **gate②(golden)** のみ。§5 の操作を maintainer 実機で確認後、`/eco-accept ECO-062` でクローズする。

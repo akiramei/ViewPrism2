@@ -1,4 +1,5 @@
 using Dapper;
+using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services.Similarity;
@@ -17,6 +18,64 @@ public sealed class CpSim017Tests
     private const string FolderRoot = "C:/pics";
 
     // ---- OC-16: 候補フィルタ・閾値・安定ソート ----
+
+    [Fact]
+    public async Task ECO062_明示scope外はreaderとcacheに触れず件数はscope内だけに比例する()
+    {
+        using var db = new TempDb();
+        var (folderA, folderB) = await SeedTwoFoldersAsync(db);
+        var baseImg = await SeedImageAsync(db, folderA, "a/base.jpg", ImageStatus.Normal, "0000000000000000");
+        var inScope = await SeedImageAsync(db, folderA, "a/in.jpg", ImageStatus.Normal, "0000000000000000");
+        var outside = await SeedImageAsync(db, folderA, "other/out.jpg", ImageStatus.Normal, "0000000000000000");
+        var deleted = await SeedImageAsync(db, folderA, "a/deleted.jpg", ImageStatus.Deleted, "0000000000000000");
+        var otherCollection = await SeedImageAsync(db, folderB, "a/foreign.jpg", ImageStatus.Normal, "0000000000000000");
+
+        var reader = ReaderFor(baseImg, inScope, outside, deleted, otherCollection);
+        var service = NewService(db, reader);
+        var results = await service.FindSimilarInScopeAsync(
+            baseImg.Id,
+            threshold: 50,
+            scopeCandidates: [inScope, deleted, otherCollection],
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.Collection(results, result => Assert.Equal(inScope.Id, result.ImageId));
+        Assert.Equal(2, reader.ComputeCount); // base + scope内normal同一collectionだけ
+        Assert.Null(await db.Features.GetAsync(outside.Id));
+        Assert.Null(await db.Features.GetAsync(deleted.Id));
+        Assert.Null(await db.Features.GetAsync(otherCollection.Id));
+        Assert.Null(await db.Similarities.GetAsync(baseImg.Id, outside.Id));
+    }
+
+    [Fact]
+    public void ECO062_FSscopeは親path完全一致でsubfolderを除外し現folder外targetなら空になる()
+    {
+        var baseImage = ScopeRecord("base", "folder-a", "a/base.jpg");
+        var sameFolder = ScopeRecord("same", "folder-a", "a/same.jpg");
+        var subfolder = ScopeRecord("sub", "folder-a", "a/sub/child.jpg");
+        var prefixCollision = ScopeRecord("prefix", "folder-a", "a2/other.jpg");
+
+        var inA = SimilarityScopeResolver.ForFileSystem(
+            [baseImage, sameFolder, subfolder, prefixCollision], baseImage, ["a"]);
+        Assert.Equal(["base", "same"], inA.Select(image => image.Id).OrderBy(id => id));
+
+        var afterNavigation = SimilarityScopeResolver.ForFileSystem(
+            [baseImage, sameFolder, subfolder, prefixCollision], baseImage, ["a", "sub"]);
+        Assert.Empty(afterNavigation); // target は検索時点の現在folder外
+    }
+
+    [Fact]
+    public void ECO062_ViewScopeは対象画像からleafを逆算せず検索時の現在node母集合を使う()
+    {
+        var baseImage = ScopeRecord("base", "folder-a", "outside/base.jpg");
+        var currentNodeA = ScopeRecord("node-a", "folder-a", "x/a.jpg");
+        var currentNodeB = ScopeRecord("node-b", "folder-a", "y/b.jpg");
+        var foreign = ScopeRecord("foreign", "folder-b", "z/c.jpg");
+
+        var scope = SimilarityScopeResolver.ForView(
+            [currentNodeA, currentNodeB, foreign], baseImage);
+
+        Assert.Equal(["node-a", "node-b"], scope.Select(image => image.Id).OrderBy(id => id));
+    }
 
     [Fact]
     public async Task 候補はnormal限定_他status_別コレクション_基準自身を除外する()
@@ -367,6 +426,19 @@ public sealed class CpSim017Tests
 
     private static string AbsPath(string relativePath)
         => Path.Combine(FolderRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+    private static ImageRecord ScopeRecord(string id, string folderId, string relativePath) => new()
+    {
+        Id = id,
+        SyncFolderId = folderId,
+        RelativePath = relativePath,
+        FileName = Path.GetFileName(relativePath),
+        FileSize = 1,
+        Hash = "hash",
+        Status = ImageStatus.Normal,
+        CreatedDate = "2026-01-01T00:00:00.000Z",
+        ModifiedDate = "2026-01-01T00:00:00.000Z",
+    };
 
     private static async Task<(string FolderA, string FolderB)> SeedTwoFoldersAsync(TempDb db)
     {
