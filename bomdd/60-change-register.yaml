@@ -1124,14 +1124,14 @@ changes:
     notes: "クローズ済み。案A=共通SimilaritySearchSession、詳細phase/count進捗、production reader任意cancel capability、両タブ停止CTA/自動cancel/generation無効化、first/re-search cancel結果意味論を製造。REQ/spec/E/M/CP/FMEA、35-design-system-bomのSC-SIMILARITY-SESSION-002、50-as-built承認記録までM4同期。性能最適化/ETA/schema/pHash意味論は対象外。"
 
   - id: ECO-067
-    title: "pHash衝突で表情差のある別画像が100%表示される — 類似品質/100%意味論の見直し"
-    type: 既存機能の品質改善要求(CAD/要求/品質設計の欠測。現実装はpHash-only固定仕様に適合するため実装逸脱ではない。gate①で方式裁定が先)
+    title: "pHash距離0の非同一画像が100%表示される — 重複品質契約の見直し"
+    type: 既存機能の品質改善要求(CAD/要求/品質設計の欠測。現実装はpHash-only固定仕様に適合。gate①で案Aを重複関係検証として修正採用・ViewPrismUI IMG-021確定)
     status: staged
     golden: pending
     baseline: "main 224e216c960a"
     findings: "利用者報告+maintainer実機2026-07-11=同一人物/ほぼ同構図で顔の表情が明確に異なる別画像が複数100%表示。商用ゲーム画像/スクリーンショット/ファイル名はrepoへ取り込まず匿名化事実のみ記録。仕様§2.10.1-2/REQ-061/062は32x32 grayscale→DCT低周波8x8→中央値二値化64bit pHash、距離0→100を固定し、実装は完全適合。距離1=98のため100は表示丸めでなくidentityまたは8変種とのpHash距離0。CADは『一致率』を見せるが100%の同一性保証、collision許容、局所差品質を未定義。CP/Oracleは決定性/距離曲線/大域近傍を検査するだけで同構図の局所差を拒否しない。帰属=仕様そのものの品質契約不足"
-    impacted_bom: ["ViewPrismUI image_tab/work_tab/review_points/mock", "REQ-061/062/064/065/084・20-spec §2.10/ORB defer", "E-PHASH-031/E-SIMSEARCH-032/E-UI-SIMILARITY-035", "M-PHASH-020/M-SIMSEARCH-021/M-UI-ORGANIZE-034/K-BOM/Service BOM", "CP-PHASH-016/CP-SIM-017/CP-UI-G9/G1+新品質CP/Oracle/P-07"]
-    oracle: "既存固定Oracle行は変更しない(R6)。gate①後、自作/合成fixtureで同一・再encode・回転鏡像・局所表情差・無関係の階層を新規行として追加し、現行pHash collision/順位/表示意味を先行不合格化"
-    verification: "(staged — 製造前。src/tests変更なし。添付商用画像はgit非収載)"
+    impacted_bom: ["ViewPrismUI IMG-021/image_tab/work_tab/review_points/mock", "REQ-061/062/064/065/084・20-spec §2.10/ORB defer", "E-PHASH-031/E-SIMSEARCH-032/E-UI-SIMILARITY-035", "M-PHASH-020/M-SIMSEARCH-021/M-UI-ORGANIZE-034/K-BOM/Service BOM", "CP-PHASH-016/CP-SIM-017/CP-UI-G9/G1+新品質CP/Oracle/P-07"]
+    oracle: "既存固定Oracle行は変更しない(R6)。/eco-fixで自作/合成fixtureの同一・再encode・回転鏡像・局所表情差・無関係・pHash距離0非同一の階層を新規行として追加し、現行順位/表示意味を先行不合格化"
+    verification: "(staged — gate① CAD bb9623b完了、製造前。src/tests変更なし。添付商用画像はgit非収載)"
     body: 60-change-order-eco-067.md
-    notes: "改善要。gate①候補=A推奨(pHashをcoarse候補抽出に維持+detail-aware第2段rerank、100%を裁定した同一性へ予約)/B(表示制限・改称のみ。検索の甘さは残る)/C(pHash特徴/曲線変更。adapter/cache全再計算だが局所差保証は弱い)。人間作業はViewPrismUI裁定だけ。明示/eco-fixまで修正しない"
+    notes: "gate①完了: 案Aを修正採用。目的=一般視覚類似でなく同一原画像の電子的変種整理。関係=同一file/画像内容一致/実質同一/部分重複/類似。100%=正規化表示画素一致のみ、SHA-256一致は同一file。pHashはcoarse候補抽出限定、第2段で幾何対応/重複領域/位置合わせ後局所差を検証。部分重複/類似は自動削除・重複投入なし。Bは暫定表示のみ/Cは候補抽出比較のみで完了不可。CAD=ViewPrismUI bb9623b。明示/eco-fixまで修正しない"
