@@ -98,7 +98,18 @@ workspaceごとの表示列構成または候補母集合を新設し、ImageTab
 
 ## 6. 残ゲート
 
-1. **gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。
+1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
 2. CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-069`で先行赤probe→是正→機械受入。
 3. gate② golden: 選択案の操作契約を画像タブと並置確認。
 4. `/eco-accept ECO-069`でCP/As-Built/register/教訓をクローズ。
+
+## 7. gate①裁定(2026-07-12)
+
+- maintainer裁定: **案A=v2基本3列parityを採用**。
+- 作業タブのsort候補は`name / size / modified_date`。アクティブビュー、表示列編集、タグ列sort、
+  workspace schemaは追加しない。
+- gridは`並び替え`+現在列badge（未sort=`なし`）+popup内候補/昇降順+要約chip/解除+tile補助値、
+  listは固定3列header+active/方向+同じchip/解除。列/方向はgrid/list共有、未sort=名前昇順。
+- FL-002=S-a、FL-004=D-b、FL-001の不変条件は維持。
+- ViewPrismUI CAD反映: `3d76313` (`work_tab.md`、FL-002/004裁定追補、FL-003 review/live spec)。
+- gate①完了。次の明示入口は`/eco-fix ECO-069`。この裁定コミットではsrc/testsを変更しない。
