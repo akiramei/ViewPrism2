@@ -36,6 +36,14 @@ public partial class ViewerWindow : Window
     private double? _lastTrackedOffsetY;
     private double? _lastTrackedViewportHeight;
 
+    /// <summary>
+    /// ECO-071 golden補正: normal Width/Originalのwheel page turnだけが持つ着地点。
+    /// 非同期画像ロードとlayout確定をまたぐため、対象pathと組にして通常のbutton/key送りへ漏らさない。
+    /// </summary>
+    private string? _pendingNormalWheelLandingPath;
+    private int _pendingNormalWheelLandingAction;
+    private string? _loadedNormalPath;
+
     /// <summary>ウィンドウ生存期間。閉じると寸法先読み(GF-V2)をキャンセルする。</summary>
     private readonly CancellationTokenSource _lifetimeCts = new();
     private bool _dimsPrewarmStarted;
@@ -172,9 +180,10 @@ public partial class ViewerWindow : Window
     {
         if (_viewModel is null) return;
 
+        var normalScroll = _viewModel.ShowNormalScroll;
         var action = ResolveWheelAction(
             _viewModel.IsScroll,
-            _viewModel.ShowNormalScroll,
+            normalScroll,
             NormalScroll.Offset.Y,
             NormalScroll.Viewport.Height,
             NormalScroll.Extent.Height,
@@ -182,8 +191,16 @@ public partial class ViewerWindow : Window
             e.Delta.Y);
         if (action == 0) return;
 
+        var previousIndex = _viewModel.CurrentIndex;
         if (action > 0) _viewModel.NextCommand.Execute(null);
         else _viewModel.PrevCommand.Execute(null);
+
+        if (normalScroll && _viewModel.CurrentIndex != previousIndex && _viewModel.CurrentImagePath is { } path)
+        {
+            _pendingNormalWheelLandingPath = path;
+            _pendingNormalWheelLandingAction = action;
+            QueuePendingNormalWheelLanding(path);
+        }
         e.Handled = true;
     }
 
@@ -208,6 +225,41 @@ public partial class ViewerWindow : Window
         }
 
         return deltaY < 0 ? 1 : -1;
+    }
+
+    /// <summary>normal内部panのwheel page turn先。Next=先頭、Prev=新しい画像の末尾。</summary>
+    private static double? ResolveWheelLandingOffset(
+        bool normalScroll, int action, double viewportHeight, double extentHeight)
+    {
+        if (!normalScroll || action == 0) return null;
+        return action > 0 ? 0 : Math.Max(0, extentHeight - viewportHeight);
+    }
+
+    private void QueuePendingNormalWheelLanding(string path)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_viewModel is null || !_viewModel.ShowNormalScroll ||
+                !string.Equals(_viewModel.CurrentImagePath, path, StringComparison.Ordinal) ||
+                !string.Equals(_loadedNormalPath, path, StringComparison.Ordinal) ||
+                !string.Equals(_pendingNormalWheelLandingPath, path, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            // Source代入後のmeasure/arrangeを確定してから、切替先画像自身のExtentで末尾を求める。
+            NormalScroll.UpdateLayout();
+            var offsetY = ResolveWheelLandingOffset(
+                normalScroll: true,
+                _pendingNormalWheelLandingAction,
+                NormalScroll.Viewport.Height,
+                NormalScroll.Extent.Height);
+            if (offsetY is null) return;
+
+            NormalScroll.Offset = new Vector(NormalScroll.Offset.X, offsetY.Value);
+            _pendingNormalWheelLandingPath = null;
+            _pendingNormalWheelLandingAction = 0;
+        }, DispatcherPriority.Loaded);
     }
 
     /// <summary>
@@ -263,6 +315,12 @@ public partial class ViewerWindow : Window
         switch (e.PropertyName)
         {
             case nameof(ViewerViewModel.CurrentImagePath):
+                if (_pendingNormalWheelLandingPath is { } pendingPath &&
+                    !string.Equals(pendingPath, _viewModel?.CurrentImagePath, StringComparison.Ordinal))
+                {
+                    _pendingNormalWheelLandingPath = null;
+                    _pendingNormalWheelLandingAction = 0;
+                }
                 _ = LoadNormalAsync();
                 break;
             case nameof(ViewerViewModel.CurrentSpreadPair):
@@ -326,6 +384,7 @@ public partial class ViewerWindow : Window
         {
             NormalImage.Source = null;
             NormalScrollImage.Source = null;
+            _loadedNormalPath = null;
             return;
         }
 
@@ -339,12 +398,15 @@ public partial class ViewerWindow : Window
                 // Fit 用とスクロール(Width/One)用の両 host に同じ Bitmap を割り当てる(切替で再ロードしない)
                 NormalImage.Source = bitmap;
                 NormalScrollImage.Source = bitmap;
+                _loadedNormalPath = path;
+                QueuePendingNormalWheelLanding(path);
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
             NormalImage.Source = null; // 壊れた画像・消失でもクラッシュしない
             NormalScrollImage.Source = null;
+            _loadedNormalPath = null;
         }
     }
 

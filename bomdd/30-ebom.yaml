@@ -502,7 +502,7 @@ ebom:
         - ペアリング・送り・追跡・高さ統一・位置記憶の判断は E-VIEWER-CALC-030 のみ経由(UI 側で再実装しない)
         - タグ制御 ON の見開き配置・送り・現在画像は E-VIEWER-TAGCTRL-044(OC-23/24/25)のみ経由(UI 側で再実装しない)
         - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り — 仕様 §2.9)
-        - (ECO-071/REQ-091/IMG-022案A) canvas wheel下=logical Next/上=Prev。normal Fit/spreadはpage turn、normal Width/Originalはevent前offsetでpan優先+既に端の外向きeventだけturn。scroll/drawer/mapping modalはcontent scroll、horizontal無視。既存Next/Prevへ委譲しspread/tag-control意味論を再実装しない
+        - (ECO-071/REQ-091/IMG-022案A+golden補正) canvas wheel下=logical Next/上=Prev。normal Fit/spreadはpage turn、normal Width/Originalはevent前offsetでpan優先+既に端の外向きeventだけturnし、Next先頭/Prev末尾へload/layout確定後に着地。wheel以外の着地点不変。scroll/drawer/mapping modalはcontent scroll、horizontal無視。既存Next/Prevへ委譲しspread/tag-control意味論を再実装しない
         - スクロールは全件一括読み込みしない(REQ-055)
         - "タグ制御マッピングモーダルは提示フィールド契約(6行×グリフ/名前+英名/説明/タグ picker・色ドット+ラベル/未割り当て)を満たす(REQ-078・ECO-003/004 表示パリティ教訓)"
       acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-UI-G11]

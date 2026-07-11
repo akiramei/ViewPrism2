@@ -9,6 +9,8 @@
   ホイールを回しても次/前へ移動しない。
 - 期待は、ホイール下方向で論理的な「次へ」、上方向で「前へ」を操作できること。
 - 再現: 画像を複数含む一覧からviewerを開き、単一/右開き/左開きへ切り替えてキャンバス上でホイール操作する。
+- **初回golden不合格所見**: 単一Width/Originalで画像下端からwheel Nextし、次画像の上端からwheel Prevすると、
+  前画像の読み終えた末尾ではなく先頭へ着地した。連続した長い画像をwheelで往復する操作として不連続である。
 
 ## 2. 工程診断
 
@@ -85,8 +87,8 @@
 ## 6. 残ゲート
 
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
-2. ~~CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-071`で先行赤probe→是正→機械受入。~~ → 完了(§8)
-3. gate② golden: 4modeとnormal fit3種、内部scroll/overlay、spread送り規則、端/入力体感を確認。
+2. ~~CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-071`で先行赤probe→是正→機械受入。~~ → 初回完了(§8)、golden補正完了(§9)
+3. gate② golden再確認: 4modeとnormal fit3種、内部scroll/着地点/overlay、spread送り規則、端/入力体感を確認。
 4. `/eco-accept ECO-071`でCP/As-Built/register/教訓をクローズ。
 
 ## 7. gate①裁定(2026-07-12)
@@ -101,6 +103,8 @@
 - wheelは既存Next/Prevへ委譲し、spreadのpageTurnMode/SHIFT/空白開始/tag-control planを再実装しない。
 - Ctrl+wheel zoom、Home/End、mode数字キー、設定永続キー追加は対象外。
 - ViewPrismUI CAD反映: `ec01a73` (`image_viewer.md`、IMG-022 review point)。
+- 初回goldenの着地点所見を案Aの欠けた境界契約として補正し、CAD `153c366`で
+  Width/Originalのwheel Next先頭/Prev末尾、viewport内は先頭=末尾、button/key/seek不変を追記した。
 - gate①完了。次の明示入口は`/eco-fix ECO-071`。本裁定ではsrc/testsを変更しない。
 
 ## 8. 実施記録(2026-07-12 — 機械受入完了・golden待ち)
@@ -148,3 +152,40 @@
 7. scroll modeではwheelが従来の連続scrollだけを行い、1eventでNext/Prevへ飛ばず、現在位置追跡・仮想化を維持する。
 8. 設定drawerとタグ制御mapping modal上でwheel scrollし、内容が動く一方で裏のviewer位置が変わらないことを確認する。
 9. horizontal wheelだけでは移動せず、mouse/touchpadで1操作が意図せず複数ページを飛び越えないことを体感確認する。
+
+## 9. golden不合格補正(2026-07-12 — 再機械受入)
+
+### 9.1 所見と先行probe(R5)
+
+- 初回goldenで、単一Width/Originalの上端からwheel Prevした前画像が末尾でなく先頭へ着地した。
+  初回契約はpage turnの発火境界だけを規定し、切替先の着地点を沈黙次元としていた。
+- `CpUiG4ViewerTests.スクロール可能な単一画像のホイール送りは次の先頭と前の末尾へ着地する`を
+  製品コード変更前に追加した。Next=0、Prev=`max(0,Extent-Viewport)`、pan不能=0、Fit/action0=着地点なしを要求。
+- 是正前実測は`ViewPrism2.Tests` **610件中1件不合格(609 pass)**。`ResolveWheelLandingOffset`がnullで、
+  着地点provider不在を確認した。Avalonia telemetry logのsandbox拒否後、同一コマンドを承認済み環境で再実測した。
+
+### 9.2 是正裁定とdiff
+
+- CAD IMG-022を`153c366`で先行補正し、REQ-091/仕様§2.9/E-UI-VIEWER-024/M-UI-018/CP-UI-G8へ同期した。
+- `ViewerWindow`はWidth/Originalのwheel page turnで実際にindexが変わった場合だけ、対象pathとactionを保留する。
+  通常のbutton/key/seek、Fit/spread、端停止では保留しない。
+- 非同期画像load完了後にLoaded priorityでlayoutを確定し、切替先自身のExtentから
+  `ResolveWheelLandingOffset`を計算する。Nextは先頭、Prevは末尾、viewport内は0。対象pathが変われば保留を破棄し、
+  遅延loadが後続navigationへ着地点を漏らさない。
+- Core/VM送り計算、XAML、DB/schema/i18n/settings、Design System BOM、既存Oracle期待値は変更していない。
+
+### 9.3 再機械受入
+
+- 先行probeを含む`ViewPrism2.Tests`: **610/610 pass**。
+- `dotnet build ViewPrism2.sln --no-restore`: **0 warning / 0 error**。
+- `ViewPrism2.Oracle`: **109 pass / 2 known skip**。既存固定期待値変更なし(R6)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+- `git diff --check`: clean。
+
+### 9.4 gate②再操作
+
+1. 単一Width/Originalで縦長画像A・Bを連続させ、A下端からwheel下でBへ進むとB先頭に着地する。
+2. そのままB上端からwheel上でAへ戻ると、A先頭ではなく末尾に着地する。
+3. viewport内に収まる画像を間に置き、先頭=末尾として上下どちらからも余分なpanや飛越しがない。
+4. 同じ前後移動を前/次button、PageUp/Down、矢印、seekで行い、wheel専用の末尾着地が漏れない。
+5. §8.4のFit/spread/scroll/overlay/horizontal/touchpad回帰を再確認する。

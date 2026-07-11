@@ -581,7 +581,8 @@ scroll にそのまま適用される。見開き(spread)のみ矢印キーを R
 
 **マウスホイール規則(ECO-071/REQ-091/IMG-022案A)**: canvasのvertical wheelは下=logical Next、上=logical Prev。
 normal Fitとspreadはpage turn。normal Width/Originalは画像内panを優先し、event開始時点で既に端なら外向きeventを
-page turnへ送る(端へ到達させた同じeventでは送らない)。scroll mode、設定drawer、mapping modalはcontent scrollのまま。
+page turnへ送る(端へ到達させた同じeventでは送らない)。Width/Originalのwheel Next先は先頭、wheel Prev先は末尾へ
+load/layout確定後に着地する(viewport内なら先頭=末尾)。この着地点はwheelだけでbutton/key/seekは不変。scroll mode、設定drawer、mapping modalはcontent scrollのまま。
 horizontal wheelは無視する。送りは既存Next/Prevへ委譲してspread step/SHIFT/空白開始/tag-control planを維持する。
 Ctrl+wheel zoom等は非搭載のまま。
 

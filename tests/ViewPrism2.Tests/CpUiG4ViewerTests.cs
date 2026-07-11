@@ -38,6 +38,26 @@ public sealed class CpUiG4ViewerTests
         Assert.Equal(0, Wheel(false, false, 0, 0, 0, 1, 0));       // horizontalだけは無視
     }
 
+    /// <summary>ECO-071 golden不合格probe: normal内部panからのpage turnは読み進める向きの端へ着地する。</summary>
+    [Fact]
+    [Trait("cp", "CP-UI-G8")]
+    public void スクロール可能な単一画像のホイール送りは次の先頭と前の末尾へ着地する()
+    {
+        var windowType = typeof(ViewPrism2.App.Views.ViewerWindow);
+        var resolve = windowType.GetMethod("ResolveWheelLandingOffset",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(resolve);
+
+        double? Landing(bool normalScroll, int action, double viewport, double extent) =>
+            (double?)resolve!.Invoke(null, [normalScroll, action, viewport, extent]);
+
+        Assert.Equal(0d, Landing(true, 1, 100, 300));       // 下端→Next: 次画像の先頭
+        Assert.Equal(200d, Landing(true, -1, 100, 300));    // 上端→Prev: 前画像の末尾
+        Assert.Equal(0d, Landing(true, -1, 300, 100));      // pan不能なら先頭=末尾
+        Assert.Null(Landing(false, -1, 100, 300));          // Fit/spreadには内部pan着地なし
+        Assert.Null(Landing(true, 0, 100, 300));            // content scroll中は着地なし
+    }
+
     private static ImageEntry Entry(string id, string name)
     {
         var record = new ImageRecord
