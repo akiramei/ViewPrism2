@@ -99,3 +99,47 @@ golden再検査:
 - gate①(設計裁定): **不要**。CAD/REQ-037が明確で、既定動作への実装追随。
 - `/eco-fix ECO-063`: surface接続の赤プローブ→Core path契約→ImageTab配線→4点機械受入。
 - gate②(golden): §5の設定→画像タブ消費往復をmaintainer実機確認後、`/eco-accept ECO-063`。
+
+## §7 実施記録(2026-07-11・fix)
+
+### 7.1 プローブ先行(R5)
+
+`CpUiG1CollectionScopeTests` に、二段階のsimple nodeを持つビューを作成し、子nodeを `home_tag_id` として
+保存してから画像タブで選択するsurface接続プローブを先行追加した。期待は `HomeActive=false`、パンくず
+`[親, ホーム]`、表示画像=`a1.jpg` 1件。是正前は **584件中1件不合格**:
+
+- `Assert.False(vm.HomeActive)` が Actual=`true`。保存済みhomeを無視してroot開始する症状を直接再現。
+
+この赤により、Core/DB保存ではなく `LoadViewAsync` の最終接続欠落という診断を実測裏取りした。
+
+### 7.2 是正
+
+- `NodeGraphBuilder.ResolveHomePath(root, homeTagId)` を追加:
+  - rootを除く祖先→homeのGraphNode列を返す。
+  - null/参照切れは空列(root fallback)。
+  - textual値展開で同じhierarchy nodeが複製される場合は、既存 `ResolveHome` と同じDFS先頭を採用。
+  - 既存 `ResolveHome` は新pathの末尾を返すfacadeとして公開契約を維持(固定Oracle無改変)。
+- `ImageTabViewModel.LoadViewAsync`:
+  - graph構築後に `_viewPath.AddRange(_graphBuilder.ResolveHomePath(_viewRoot, view.HomeTagId))` を実行。
+  - UI独自DFSは追加せず、Coreの単一決定規則を消費。
+- プローブ強化:
+  - CP-GRAPH-002にnested/textual複製DFS/null/参照切れのhome path exactを追加。
+  - CP-UI-G1にビュー選択直後のcrumb/画像集合/HomeActiveに加え、view軸のままcollection切替→再構築後も
+    home pathを再適用する裏面を追加。
+- BOM同期:
+  - E-UI-AXIS-NAV-040へREQ-037参照とhome初期path invariant。
+  - M-GRAPH-003へpath API、M-UI-IMAGETAB-035へLoadViewAsync配線、CP-GRAPH-002へベクタを追加。
+
+変更なし: CAD/REQ-037/仕様、DB/schema、タグタブ保存、XAML、i18n、settings。
+
+### 7.3 機械受入
+
+- `dotnet build --no-restore`: **0 warning / 0 error**。
+- `dotnet test tests/ViewPrism2.Tests --no-build`: **585/585 pass**(既存583 + ECO-063新規2)。
+- `dotnet test tests/ViewPrism2.Oracle --no-build`: **109 pass + 既知2 skip**(既存行無改変)。
+- `python bomdd/validate_bom.py`: status/記録更新後 **0 error / 0 warning**。
+- `git diff --check`: errorなし。
+
+## §8 残ゲート(fix後)
+
+- gate②(golden)のみ。§5の設定→画像タブ消費往復をmaintainer実機確認後、`/eco-accept ECO-063`。

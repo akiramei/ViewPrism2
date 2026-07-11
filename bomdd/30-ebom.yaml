@@ -410,13 +410,14 @@ ebom:
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-053, REQ-060]
+      requirement_refs: [REQ-037, REQ-053, REQ-060]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       supersedes: E-UI-GRID-022
       split_by: ECO-016
       depends_on: [E-EVAL-002, E-VIEWSVC-009, E-DOMAIN-001]
       invariants:
+        - since ECO-063(REQ-037) タグビュー選択/再load時は保存済みhome_tag_idをrootからのGraphNode pathへ解決して初期ナビに使う。null/参照切れはroot。Home解決をUIで再実装しない
         - since ECO-010/I01: 画像タブのタグビュー軸ナビゲーションは左 NodeGraph ツリーでなく、チップ+パンくず+表示軸セレクタで行う(FS 軸と同一の「チップで潜る・パンくずで戻る」操作)。ビュー階層は E-VIEWSVC-009 を消費する
         - since ECO-011/I04: 画像タブは選択コレクションのスコープ内(REQ-053・横断しない)で表示軸を切替える。FS フォルダ軸は relative_path から派生し、新スキーマ/スキャン不要・読み取り専用 INV-009。タグビュー軸は E-VIEWSVC-009 を消費する
         - since ECO-011/I04: 「全画像」固定入口(選択コレクション内の全 normal 画像・フラット)は2軸ナビとは別に維持する

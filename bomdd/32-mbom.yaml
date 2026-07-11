@@ -69,7 +69,7 @@ mbom:
       interface_contract:
         build: "GraphNode BuildGraph(IReadOnlyList<HierarchyNode> hierarchy, IReadOnlyDictionary<string,Tag> tags, ITagValueSource values)  // OC-2。values は status=Normal の distinct 値のみ返す契約"
         path2cond: "IReadOnlyList<ViewCondition> BuildConditions(IReadOnlyList<GraphNode> pathFromRoot)  // OC-3"
-        home: "GraphNode? ResolveHome(GraphNode root, string? homeTagId)  // 解決不能なら null(呼び出し側がルートへ)"
+        home: "GraphNode? ResolveHome(root, homeTagId)=既存単一node API + IReadOnlyList<GraphNode> ResolveHomePath(root, homeTagId)=ECO-063画像タブ初期ナビ用root除外path。解決不能/nullは空列(root fallback)、複製nodeは既存と同じDFS先頭"
       invariants:
         - INV-004 入力階層に循環があっても無限ループしない(検出して当該枝を打ち切り+警告)
         - INV-008 参照切れタグのノードはスキップ
@@ -240,7 +240,7 @@ mbom:
       ebom_refs: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-TAGASSIGN-029]
       artifact:
         path: src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs
-        path_note: "残余= ブラウズ(母集合/items/選択)+FS/view 軸ナビ+ソート/表示列+モード統制(排他・クリック意味論ディスパッチ)+タグ編集パネル[AddGroups/CurrentTags/ApplyTagAsync ほか]。ECO-060=App/Services/ScanCoordinator.csのstarted/batch/completedを消費して取込順append・完了sort。切り出し済み子 VM= Trash(032)/Work(033)/Organize(034)を内部生成し公開契約の転送殻を持つ。WorkTabViewModel の作業タブ再利用[ECO-021 β-2]・Views/ 側は M-UI-013 所有(表示面の品目トレースは本 unit 経由)"
+        path_note: "残余= ブラウズ(母集合/items/選択)+FS/view 軸ナビ+ソート/表示列+モード統制(排他・クリック意味論ディスパッチ)+タグ編集パネル[AddGroups/CurrentTags/ApplyTagAsync ほか]。ECO-060=App/Services/ScanCoordinator.csのstarted/batch/completedを消費して取込順append・完了sort。ECO-063=LoadViewAsyncがNodeGraphBuilder.ResolveHomePathを消費して保存済みhomeへ初期遷移(null/参照切れはroot)。切り出し済み子 VM= Trash(032)/Work(033)/Organize(034)を内部生成し公開契約の転送殻を持つ。WorkTabViewModel の作業タブ再利用[ECO-021 β-2]・Views/ 側は M-UI-013 所有(表示面の品目トレースは本 unit 経由)"
         type: avalonia-app
       interface_contract:
         panel: "画像タブ タグ編集モード: CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel は ECO-024 で撤去(インライン化)"

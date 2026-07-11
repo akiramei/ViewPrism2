@@ -219,6 +219,55 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
     }
 
     [Fact]
+    public async Task ECO063_ビュー選択時に保存済みホームノードまで初期遷移する()
+    {
+        var (a, b) = await SeedTwoCollectionsAsync();
+        var images = (await _db.Images.GetAllNormalAsync())
+            .Where(image => image.SyncFolderId == a.Id)
+            .OrderBy(image => image.FileName, StringComparer.Ordinal)
+            .ToList();
+
+        var tagService = new TagService(_db.Tags);
+        var parentTag = (await tagService.CreateAsync("親", TagType.Simple)).Value!;
+        var homeTag = (await tagService.CreateAsync("ホーム", TagType.Simple)).Value!;
+        Assert.True((await tagService.TagImageAsync(images[0].Id, parentTag.Id, null)).IsSuccess);
+        Assert.True((await tagService.TagImageAsync(images[0].Id, homeTag.Id, null)).IsSuccess);
+        Assert.True((await tagService.TagImageAsync(images[1].Id, parentTag.Id, null)).IsSuccess);
+
+        var viewService = new ViewService(_db.Views, _db.Clock);
+        var view = (await viewService.CreateAsync("ホーム付きビュー")).Value!;
+        var parentNode = new HierarchyNode
+        {
+            Id = IdGenerator.NewId(), ViewId = view.Id, TagId = parentTag.Id, Position = 0,
+        };
+        var homeNode = new HierarchyNode
+        {
+            Id = IdGenerator.NewId(), ViewId = view.Id, TagId = homeTag.Id,
+            ParentId = parentNode.Id, Position = 0,
+        };
+        Assert.True((await viewService.SaveHierarchyAsync(
+            view.Id, [parentNode, homeNode], homeNode.Id)).IsSuccess);
+
+        var vm = NewImageTab(new AppSettings());
+        await vm.InitializeAsync();
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
+        await vm.SelectAxisCommand.ExecuteAsync(view.Id);
+
+        Assert.True(vm.IsViewAxis);
+        Assert.False(vm.HomeActive);
+        Assert.Equal(["親", "ホーム"], vm.Crumbs.Select(crumb => crumb.Name));
+        Assert.Equal(["a1.jpg"], ImageNames(vm));
+
+        // view軸のままcollectionを切替える再loadでも、rootへ退行せずhome pathを再適用する。
+        await vm.SelectCollectionCommand.ExecuteAsync(b.Id);
+        Assert.Equal(["親", "ホーム"], vm.Crumbs.Select(crumb => crumb.Name));
+        Assert.Empty(ImageNames(vm));
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
+        Assert.Equal(["親", "ホーム"], vm.Crumbs.Select(crumb => crumb.Name));
+        Assert.Equal(["a1.jpg"], ImageNames(vm));
+    }
+
+    [Fact]
     public async Task 選択コレクションと表示モードはsettingsへ書き戻され復元される()
     {
         var (a, _) = await SeedTwoCollectionsAsync();

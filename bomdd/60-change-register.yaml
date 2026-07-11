@@ -1074,11 +1074,12 @@ changes:
   - id: ECO-063
     title: "タグビューのホームノード初期遷移が画像タブで無視される"
     type: 欠陥是正(E-BOMトレース漏れ+新ImageTab M3bの実装未配線。CAD/REQ-037/Core保存・単一node解決は健全、裁定不要)
-    status: staged
+    status: implemented   # 2026-07-11 fix完了。surface赤probe→home path API+LoadView配線→機械受入全緑。gate②待ち
     golden: pending
     baseline: "main 6bfb74f"
     findings: "maintainer実機2026-07-11: タグタブで階層nodeをhome設定・保存しても画像タブでview選択時root開始。CAD tag_tab.md=homeは画像タブでview適用時に最初に開く場所、REQ-037/spec§2.4=解決可なら該当nodeへ自動nav・不能はrootで明確。保存(ViewService/Repository)とNodeGraphBuilder.ResolveHomeはCP-VIEW-012/CP-GRAPH-002/S-12で健全。E-BOM欠陥=E-UI-AXIS-NAV-040がREQ-037非参照。実装欠陥=ImageTabViewModel.LoadViewAsyncがgraph構築後_viewPath.Clearのみでview.HomeTagId/ResolveHomeを未参照。混入=45a6c77(2026-06-18 M3b初版)。検査欠測=Core単体解決のみ、ImageTabのview選択testsはHomeTagId未設定。V1 goldenの初期遷移観点を新surface置換後に機械移管せず潜伏"
     impacted_bom: ["E-UI-AXIS-NAV-040(REQ-037接点)", "E-GRAPH-003/M-GRAPH-003(home path契約)", "M-UI-IMAGETAB-035(LoadViewAsync)", "CP-GRAPH-002", "CP-UI-G1/CP-UI-G6", "tests/ViewPrism2.Tests(surface接続probe)"]
     oracle: "既存固定Oracle S-12/行は変更しない(R6)。nested home pathとImageTab view選択直後のcrumb/画像集合/HomeActive、null/参照切れroot fallback、collection切替再loadを新規unitで固定"
+    verification: "R5赤=HomeTagId保存済み二段viewを画像タブ選択→HomeActive expected false/actual true、584中1fail。是正=NodeGraphBuilder.ResolveHomePath(root除外path・null/参照切れ空・複製DFS先頭)+既存ResolveHome facade維持、LoadViewAsyncが_viewPathへ適用。CP-GRAPH nested/textual exact+CP-UI-G1 view選択/collection再load。build 0 warning/0 error、Tests 585/585、Oracle 109+既知2skip、validate 0/0、diff-check clean"
     body: 60-change-order-eco-063.md
-    notes: "裁定不要。推奨=NodeGraphBuilderへ既存ResolveHomeを維持したhome path API追加→LoadViewAsyncで_viewPath初期化。ImageTab独自DFSは避ける。DB/schema/CAD/XAML/タグタブ保存/i18n不変。次=/eco-fix ECO-063でプローブ先行"
+    notes: "fix完了・gate②待ち。NodeGraphBuilderへ既存ResolveHome互換を維持したResolveHomePath追加、LoadViewAsyncで検索時ではなくview open/reload時の_viewPath初期化。ImageTab独自DFSなし。E-UI-AXIS-NAV-040にREQ-037接点、M-GRAPH/M-UI-IMAGETAB/CP-GRAPH同期。DB/schema/CAD/XAML/タグタブ保存/i18n不変"

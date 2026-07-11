@@ -370,4 +370,23 @@ public sealed class CpGraph002Tests
         Assert.Null(Builder.ResolveHome(result.Root, "h-deleted")); // 参照切れ → null(エラーにしない)
         Assert.Null(Builder.ResolveHome(result.Root, null));        // 未設定 → null
     }
+
+    [Fact]
+    public void ECO063_ホームpathはrootを除く祖先列を返し複製nodeはDFS先頭で決定する()
+    {
+        var hierarchy = new[]
+        {
+            Node("h1", TextualTag.Id),
+            Node("h2", SimpleTag.Id, parentId: "h1"),
+        };
+        var source = new FakeValueSource().With(TextualTag.Id, "red", "blue");
+        var result = Builder.BuildGraph(hierarchy, Tags(TextualTag, SimpleTag), source);
+
+        var path = Builder.ResolveHomePath(result.Root, "h2");
+
+        // h2 は blue/red の各値枝に複製される。既存 ResolveHome と同じ DFS 先頭(blue)を採用。
+        Assert.Equal(["Color", "blue", "Favorite"], path.Select(node => node.DisplayName));
+        Assert.Empty(Builder.ResolveHomePath(result.Root, "h-deleted"));
+        Assert.Empty(Builder.ResolveHomePath(result.Root, null));
+    }
 }

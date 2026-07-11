@@ -78,31 +78,53 @@ public sealed class NodeGraphBuilder
     /// <summary>ホームタグ解決(REQ-037)。解決不能なら null(呼び出し側がルートへ)。エラーにしない。</summary>
     public GraphNode? ResolveHome(GraphNode root, string? homeTagId)
     {
+        var path = ResolveHomePath(root, homeTagId);
+        return path.Count == 0 ? null : path[^1];
+    }
+
+    /// <summary>
+    /// ECO-063/REQ-037: 画像タブの初期ナビに使う root 除外の home path。
+    /// 解決不能/null は空列(root fallback)。複製ノードは従来 ResolveHome と同じ DFS 先頭を採る。
+    /// </summary>
+    public IReadOnlyList<GraphNode> ResolveHomePath(GraphNode root, string? homeTagId)
+    {
         ArgumentNullException.ThrowIfNull(root);
         if (homeTagId is null)
         {
-            return null;
+            return [];
         }
 
-        return FindByHierarchyNodeId(root, homeTagId);
+        var path = new List<GraphNode>();
+        return TryFindPath(root, homeTagId, path) ? path : [];
     }
 
-    private static GraphNode? FindByHierarchyNodeId(GraphNode node, string hierarchyNodeId)
+    private static bool TryFindPath(GraphNode node, string hierarchyNodeId, List<GraphNode> path)
     {
+        var include = node.Kind != NodeKind.Root;
+        if (include)
+        {
+            path.Add(node);
+        }
+
         if (string.Equals(node.HierarchyNodeId, hierarchyNodeId, StringComparison.Ordinal))
         {
-            return node;
+            return true;
         }
 
         foreach (var child in node.Children)
         {
-            if (FindByHierarchyNodeId(child, hierarchyNodeId) is { } found)
+            if (TryFindPath(child, hierarchyNodeId, path))
             {
-                return found;
+                return true;
             }
         }
 
-        return null;
+        if (include)
+        {
+            path.RemoveAt(path.Count - 1);
+        }
+
+        return false;
     }
 
     private static List<HierarchyNode> OrderSiblings(IEnumerable<HierarchyNode> siblings)

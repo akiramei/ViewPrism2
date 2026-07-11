@@ -1245,6 +1245,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
         var result = _graphBuilder.BuildGraph(hierarchy, _tagById, valueIndex);
         _viewRoot = result.Root;
         _viewPath.Clear();
+        // ECO-063/REQ-037: 保存済み home を画像タブの初期 path へ接続。
+        // null/参照切れは空 path のまま=root fallback。独自 DFS は持たず Core の決定規則を消費する。
+        _viewPath.AddRange(_graphBuilder.ResolveHomePath(_viewRoot, view.HomeTagId));
         Recompute();
     }
 

@@ -80,6 +80,7 @@ control_plan:
         - "循環階層入力: 無限ループせず警告付きで枝打ち切り(FMEA-008)"
         - "参照切れタグのノード: スキップ"
         - "ホームタグ: 解決可→該当ノード / 不能→null / homeTagId=null→null"
+        - "(ECO-063)ホームpath: nested nodeはroot除外の祖先列、不能/nullは空列、textual値枝に複製されたnodeは既存ResolveHomeと同じDFS先頭"
 
     - id: CP-SORT-003
       characteristic: 整列器が field×direction・安定性・OrdinalIgnoreCase を満たす
