@@ -1049,8 +1049,8 @@ changes:
   - id: ECO-061
     title: "ECO ライフサイクル遷移の状態不変条件検査 — validator 検査次元の追加+eco-accept post-condition"
     type: 検査器/台帳の欠陥是正(工程ハーネス。製品コード不変)
-    status: implemented   # 2026-07-11 fix完了・機械受入全緑・golden(gate②)待ち。gate①=案a(trailer)裁定済み
-    golden: "pending(gate②=変異テスト5種全検出+既存60件遡及検査の初回結果をmaintainer確認。gate①=案a trailer裁定済み 2026-07-11)"
+    status: applied   # 2026-07-11 gate②合格(maintainer実行: selftest OK/selftest-lifecycle OK/遡及初回0-0)でクローズ
+    golden: "approved(2026-07-11 maintainer: --selftest OK=変異4種検出・--selftest-lifecycle OK=実git統合3本(別系統ブランチ含む)・本検査0-0=既存60件遡及初回はlegacy宣言免除のみで黙殺なし)"
     baseline: "main c4e3a28"
     findings: "ECO-060運用中に担当AI(GPT-5.6 Sol・ハーネス未記録)が自然文了承を/eco-fix・/eco-acceptの実行へ昇格させ、fixコミット不在のままregisterをapplied・As-Builtを承認済みへ変更(早期クローズ)。この間validate_bom.pyは0/0=検査次元の不在を実測。検出はmaintainer指摘のみ。復旧は別逸脱(fixコミット保留)との偶然の相殺。一次資料reports/incident-eco060-lifecycle-2026-07-11.md+51-cheat-log。方法論還元済み(BomDD FINDINGS §11.3/playbook §13/silence §12)"
     impacted_bom: ["bomdd/validate_bom.py", "bomdd/60-change-register.yaml(遷移表/スキーマ版)", "bomdd/change-management.md §3.3-4", ".claude/skills/eco-accept", ".claude/skills/eco-fix"]
