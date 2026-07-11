@@ -149,10 +149,10 @@ public sealed class SimilaritySearchService
                     goto Progress;
                 }
 
-                // productionはpHashを固定の粗候補gateにだけ使い、利用者しきい値は検証器一致度へ適用。
+                // productionはpHashを固定の粗候補gate+大局scoreに使い、利用者しきい値は後段のvisibleScoreへ適用。
                 if (score < CoarsePHashThreshold) goto Progress;
                 var relationship = pair.DuplicateRelationship;
-                var candidateScore = pair.CandidateScore ?? score;
+                var detailScore = pair.CandidateScore ?? score;
                 if (relationship is null
                     || !string.Equals(pair.VerifierAdapter, _duplicateVerifier.AdapterId, StringComparison.Ordinal))
                 {
@@ -167,21 +167,28 @@ public sealed class SimilaritySearchService
                             AbsolutePath(folder.Path, candidate.RelativePath), ct,
                             bytesKnownDifferent: true).ConfigureAwait(false);
                     relationship = verified.Relationship;
-                    candidateScore = verified.CandidateScore;
+                    detailScore = verified.CandidateScore;
                     await _similarities.UpsertVerificationAsync(
-                        baseImage.Id, candidate.Id, score, relationship.Value, candidateScore,
+                        baseImage.Id, candidate.Id, score, relationship.Value, detailScore,
                         _duplicateVerifier.AdapterId, _clock.UtcNowIso()).ConfigureAwait(false);
                 }
 
+                // GF-067-04: UIは単一の連続類似度。大局(pHash)と詳細検証の弱い方を採用し、
+                // 内部関係分類で40/70/90帯へ強制しない。決定的exactだけ100を許す。
+                var visibleScore = relationship is DuplicateRelationship.SameFile
+                    or DuplicateRelationship.ImageContentMatch
+                    ? 100
+                    : Math.Min(score, detailScore);
+
                 // NonSimilarはpHashの粗い候補にすぎず、整理結果へ公開しない。
-                if (relationship is not DuplicateRelationship.NonSimilar && candidateScore >= threshold)
+                if (relationship is not DuplicateRelationship.NonSimilar && visibleScore >= threshold)
                 {
                     results.Add(new SimilarResult
                     {
                         ImageId = candidate.Id,
                         Score = score, // 後方互換/内部診断。UIへ百分率表示しない。
                         Relationship = relationship,
-                        CandidateScore = candidateScore,
+                        CandidateScore = visibleScore,
                     });
                 }
             }

@@ -80,7 +80,7 @@ design_system_bom:
     states: [idle, preparing, comparing, cancelling, completed]
     visual_contract: "固定150px設定領域をphase/count/barへ置換し、同位置CTAを探す→停止→停止中へ切替。cancelは0件/失敗表示にしない"
     lifecycle_contract: "明示停止、整理終了、target/scope/mode/new search/window終了でcancel+generation無効化。first cancel=grid、re-search cancel=直前completed保持"
-    result_contract: "ECO-067/GF-067-02: 設定と結果は検証器一致度N%の単一軸。結果badgeはN%だけで関係語彙/pHash scoreを併記せず、70%検索には70%以上だけを表示する"
+    result_contract: "ECO-067/GF-067-04: 設定と結果はmin(pHash大局score,連続detail score)のN%単一軸。結果badgeはN%だけで内部関係を併記せず、70%検索には70%以上だけを表示。exactのみ100"
     control_plan_refs: [CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-UI-G1, CP-UI-G9]
 
   source_cad_refs:

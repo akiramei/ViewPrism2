@@ -248,7 +248,7 @@ ebom:
         - since ECO-048(REQ-084) ペア距離=小 id の identity × 大 id の全変種の最小(対称・決定的・単調拡張)。変種なし特徴量とは identity 同士のみ(後方互換)
         - since ECO-062(REQ-087) 明示候補集合を受け、normal・自身除外・同一collectionを再検証してから特徴量/ペアcacheへ進む。候補未指定の既存APIはOC-16後方互換でcollection全体
         - since ECO-066(REQ-089) preparing/comparingのphase+completed/totalを通知し、候補間と画像reader段階でcancelを観測する。cancel済みsessionの結果はsurfaceへ公開しないが正常生成済みcacheは保持する
-        - since ECO-067(REQ-090/GF-067-03) pHashは粗候補抽出のみ。byte/正規化表示画素exact+D4位置合わせRGBA局所差(平均/面積/強度/block最大/上位6 block集中率)+crop重複で関係分類し、pHash距離0や全体meanだけで100%/重複を確定しない。一致度写像は関係帯域を跨がない
+        - since ECO-067(REQ-090/GF-067-04) pHashは粗候補抽出+大局score。byte/正規化表示画素exact+D4位置合わせRGBA局所差(平均/面積/強度/block最大/上位6 block集中率)+crop重複で内部関係と独立した連続詳細scoreを得る。表示は両scoreの小さい方、exactのみ100。内部関係は表示数値を強制せず削除安全性を担う
       acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DUPQUALITY-030]
 
     - id: E-SIMCACHE-033
@@ -603,7 +603,7 @@ ebom:
         - (ECO-060/REQ-086) 選択中collectionがスキャン中なら類似方式の検索を実行せず「スキャン完了後に利用できます」と理由を表示する。条件検索は公開済みnormal画像に対し利用可能
         - (ECO-062/REQ-087/IMG-018) 類似方式の候補は検索時点の閲覧文脈。FS=マージ先と同一親folder直下(タグchip非影響・subfolder除外・現folder外targetは0)、view=現在node path表示母集合、WorkTab=現workspace。Core呼出前から限定し結果後段filterだけで済ませない。条件検索は不変
         - (ECO-066/REQ-089/IMG-020) pHash類似検索は整理所有の単一session。150px固定領域をpreparing/comparing/cancellingのphase+件数+barへ置換しCTA=探す→停止→停止中。明示停止/整理終了/target・scope・mode・新検索・window終了でcancel+generation無効化。初回cancel=grid、再検索cancel=直前completed保持、途中結果非公開、正常cache保持。画像/作業タブ同一、条件検索は対象外
-        - (ECO-067/REQ-090/IMG-021/GF-067-02) 利用者向け判断軸は検証器一致度N%だけ。検索しきい値も同じ軸へ適用し70%未満を70%検索へ出さない。関係分類/pHash粗scoreは内部の安全判定/候補抽出だけに使い表示しない。部分重複/類似は自動削除・重複投入なし
+        - (ECO-067/REQ-090/IMG-021/GF-067-04) 利用者向け判断軸はpHash大局scoreと連続詳細scoreの小さい方N%だけ。検索しきい値も同じ軸へ適用し70%未満を70%検索へ出さない。関係分類は数値を強制しない非表示の安全判定。部分重複/類似は自動削除・重複投入なし
       acceptance_refs: [CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-UI-G9]
 
     - id: E-UI-MERGE-036

@@ -14,12 +14,12 @@ public enum DuplicateRelationship
     SameFile = 5,
 }
 
-/// <summary>重複関係検証の結果。CandidateScore はUIの一致度%と検索しきい値に使う決定値。</summary>
+/// <summary>重複関係検証の結果。CandidateScore は関係分類と独立した詳細類似度。</summary>
 public sealed record DuplicateVerificationResult
 {
     public required DuplicateRelationship Relationship { get; init; }
 
-    /// <summary>0〜100 の決定的一致度。確率ではなく、関係帯域内の順位・表示・検索に共通利用する。</summary>
+    /// <summary>0〜100 の詳細類似度。検索側でpHash大局スコアとの小さい方を表示・しきい値へ使う。</summary>
     public int CandidateScore { get; init; }
 
     /// <summary>100%表示が許されるのは、決定的に表示画素一致を含む関係だけ。</summary>
@@ -28,26 +28,26 @@ public sealed record DuplicateVerificationResult
 }
 
 /// <summary>
-/// ECO-067/GF-067-03: 検証器の画像測定値を利用者向け一致度帯へ写像する単一正本。
-/// 関係ごとの帯域を跨がせず、検索しきい値・表示・順位の同一軸を保つ。
+/// ECO-067/GF-067-04: 位置合わせ後の測定値を関係分類と独立した連続的な詳細類似度へ写像する。
+/// 小面積差分は減点するが、関係語彙の固定帯域へ強制しない。近似値は100を返さない。
 /// </summary>
-public static class DuplicateCandidateScore
+public static class DetailSimilarityScore
 {
-    public static int FromMean(DuplicateRelationship relationship, double mean) => relationship switch
+    public static int FromMeasurements(
+        double mean,
+        double changedFraction,
+        double severeFraction,
+        double maxBlockMean,
+        double topSixBlockFraction)
     {
-        DuplicateRelationship.SameFile or DuplicateRelationship.ImageContentMatch => 100,
-        DuplicateRelationship.SubstantiallySame => InBand(99, 90, mean, 12),
-        DuplicateRelationship.PartialOverlap => InBand(79, 70, mean, 40),
-        DuplicateRelationship.Similar => InBand(49, 40, mean, 55),
-        _ => 0,
-    };
-
-    private static int InBand(int ceiling, int floor, double value, double acceptedMaximum)
-    {
-        var normalized = Math.Clamp(value / acceptedMaximum, 0, 1);
+        var globalPenalty = Math.Clamp(mean / 55.0, 0, 1) * 20.0;
+        var localMagnitude = (Math.Sqrt(Math.Clamp(changedFraction, 0, 1)) * 90.0)
+            + (Math.Sqrt(Math.Clamp(severeFraction, 0, 1)) * 35.0)
+            + (Math.Sqrt(Math.Clamp(maxBlockMean / 255.0, 0, 1)) * 20.0);
+        var localPenalty = Math.Clamp(topSixBlockFraction, 0, 1) * Math.Min(25.0, localMagnitude);
         return Math.Clamp(
-            (int)Math.Round(ceiling - (normalized * (ceiling - floor)), MidpointRounding.AwayFromZero),
-            floor, ceiling);
+            (int)Math.Round(99.0 - globalPenalty - localPenalty, MidpointRounding.AwayFromZero),
+            1, 99);
     }
 }
 

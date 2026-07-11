@@ -504,7 +504,7 @@ control_plan:
       characteristic: "ECO-067/REQ-090/IMG-021 pHash粗候補と同一原画像由来の重複関係検証を分離し、100%境界・局所差・削除安全性を守る"
       classification: "core + surface"
       depth: "unit + L2(schema) + golden"
-      tolerance: "内部関係分類/一致度順位/表示N% exact。検索しきい値と表示は同じ軸。pHash距離0非同一は100%/重複禁止。migration007はLatestDdl同値"
+      tolerance: "内部関係分類と連続表示N%を独立検査。表示=min(pHash,detail)、検索しきい値と表示は同じ軸、exactのみ100。pHash距離0非同一は100%/重複禁止。migration007はLatestDdl同値"
       fixture: tests/ViewPrism2.Tests/CpDuplicateQuality030Tests.cs
       fixture_note: "Trait cp=CP-DUPQUALITY-030。テスト内生成PNG/JPEGのみ。商用画像・利用者画像・固定binary fixtureなし"
       oracle: "SameFile/ImageContentMatch/SubstantiallySame/PartialOverlap/Similar/NonSimilar、pair cache adapter、UI一致度badgeの完全一致"
@@ -515,13 +515,12 @@ control_plan:
         - "55%以上のtrim共有→部分重複。自動削除対象にしない"
         - "同構図の局所色/内容置換→類似(重複でない)。全体平均で実質同一へ希釈しない"
         - "8bit grayscale同値の赤/緑局所置換でproduction pHash距離0を再現しても、類似・100%禁止"
-        - "検索E2Eは関係/candidate scoreをmigration007 pair cacheへverifier adapter付き保存し、UIはcandidate scoreのN%だけを表示。pHash粗score/関係語彙を表示しない"
-        - "GF-067-02: threshold70はcandidateScore48を除外し、threshold40(テスト専用・UI最小未満)では返す。UI badgeは48%/94%で語彙を併記しない"
-        - "GF-067-03: 160x120の小面積・中差分の瞼/口線3か所は64x64後も上位6/64 block集中率で検出しSimilar 40〜49。強い大矩形fixtureだけで代用しない"
-        - "GF-067-03: CandidateScore境界はmean 0/上限で実質同一99/90、部分重複79/70、類似49/40。関係帯域を跨がない"
-        - "GF-067-03: skia-duplicate-relationship-v1のpair cacheはv2検索で再検証・保存し、旧99%を再利用しない"
-        - "順位: candidate score降順→id。同一file/画像内容一致/実質同一/部分重複/類似の内部帯は逆転しない"
-      notes: "goldenは画像/作業タブで単一一致度% badge、70%/80%のしきい値と結果下限の一致、100%境界、既存session/scope/merge回帰を確認"
+        - "検索E2Eは関係/detail scoreをmigration007 pair cacheへverifier adapter付き保存し、UIはmin(pHash,detail)のN%だけを表示。関係語彙を表示しない"
+        - "GF-067-04: 小面積瞼/口線とpHash距離0局所色差は内部Similarのまま表示70〜94、threshold70で返りthreshold95で除外。99/49の崖を禁止"
+        - "GF-067-04: detail scoreは測定差に応じて単調に低下し近似最大99。関係ごとの固定score帯を持たない"
+        - "GF-067-04: skia-duplicate-relationship-v2のpair cacheはv3検索で再検証・保存し、旧固定帯scoreを再利用しない"
+        - "順位: 表示score降順→id。内部関係は順位値を強制せず削除安全性だけを担う"
+      notes: "goldenは画像/作業タブで単一連続一致度% badge、表情差が70%検索へ複数残ること、70%/80%と結果下限の一致、100%境界、既存session/scope/merge回帰を確認"
 
     - id: CP-MERGE-018
       characteristic: マージ計算・マージサービスのタグ集約・status 遷移・原子性が仕様 §2.10.5・OC-17 と一致する

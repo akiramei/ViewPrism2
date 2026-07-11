@@ -62,7 +62,7 @@ public sealed record ImageSimilarity
     /// <summary>ECO-067: 重複関係検証結果。NULL=未検証/旧cache。</summary>
     public DuplicateRelationship? DuplicateRelationship { get; init; }
 
-    /// <summary>同一関係内の内部候補順位値。利用者向け百分率ではない。</summary>
+    /// <summary>詳細検証の連続類似度。最終表示はpHash SimilarityScoreとの小さい方。</summary>
     public int? CandidateScore { get; init; }
 
     /// <summary>重複関係検証器の世代。現行と不一致なら再検証する。</summary>
@@ -80,9 +80,9 @@ public sealed record SimilarResult
     /// <summary>類似度%(0〜100)。</summary>
     public int Score { get; init; }
 
-    /// <summary>ECO-067: 利用者へ表示する重複関係。NULLは検証器を注入しない互換経路のみ。</summary>
+    /// <summary>ECO-067: 内部の重複安全分類。NULLは検証器を注入しない互換経路のみ。</summary>
     public DuplicateRelationship? Relationship { get; init; }
 
-    /// <summary>内部順位値。確率/一致率として表示しない。</summary>
+    /// <summary>GF-067-04: UI表示・検索しきい値に使う連続類似度(pHashと詳細検証の小さい方)。</summary>
     public int CandidateScore { get; init; }
 }

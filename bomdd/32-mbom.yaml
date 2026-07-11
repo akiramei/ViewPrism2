@@ -401,8 +401,8 @@ mbom:
         type: dotnet-classlib
       interface_contract:
         extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ。失敗は null。**(ECO-048)default interface methodで変種を後方互換追加**。**(ECO-066/REQ-089)任意capability ICancellablePHashImageReaderを追加して既存fake/固定Oracle契約を無改変維持し、productionはdecode前後/変種計算前にcancel観測(同期Skia primitive実行中そのものは中断不能)**"
-        search: "FindSimilarAsync(baseImageId, threshold, progress, ct, detailedProgress)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, scopeCandidates, progress, ct, detailedProgress)=ECO-062明示候補。候補はNormal/自身除外/同一collectionをCore再検証しfilter先行→cache→計算保存。productionはpHash score>=内部固定50だけを検証候補とし、利用者thresholdは検証器candidateScoreへ適用、candidateScore降順/id昇順。verifier未注入の固定Oracle経路だけ従来pHash threshold/scoreを維持。ECO-048の8変種最小距離を維持。**(ECO-066/REQ-089)detailedProgress=Preparing→Comparing(0..total)、旧IProgress<int>は後方互換、ctはreaderまで伝搬**"
-        duplicate_verifier: "IDuplicateRelationshipVerifier.VerifyAsync(pathA,pathB,ct)→DuplicateVerificationResult。production adapter=skia-duplicate-relationship-v2(GF-067-03: v1 cache再検証)。byte/正規化sRGB BGRA exact→D4全8変種64x64 RGBA局所差(mean/changed/severe/maxBlock/差分総量上位6/64 block集中率80%+最低量)→55%以上crop重複。CandidateScoreはCoreの関係帯域写像(100/90-99/70-79/40-49)、結果はcandidateScore/idで安定順、関係は内部安全契約、NonSimilarは非公開"
+        search: "FindSimilarAsync(baseImageId, threshold, progress, ct, detailedProgress)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, scopeCandidates, progress, ct, detailedProgress)=ECO-062明示候補。候補はNormal/自身除外/同一collectionをCore再検証しfilter先行→cache→計算保存。productionはpHash score>=内部固定50だけを検証候補とし、表示score=exactなら100/それ以外はmin(pHash score, detail score)。利用者threshold/順位は表示scoreへ適用しid昇順で安定。verifier未注入の固定Oracle経路だけ従来pHash threshold/scoreを維持。ECO-048の8変種最小距離を維持。**(ECO-066/REQ-089)detailedProgress=Preparing→Comparing(0..total)、旧IProgress<int>は後方互換、ctはreaderまで伝搬**"
+        duplicate_verifier: "IDuplicateRelationshipVerifier.VerifyAsync(pathA,pathB,ct)→DuplicateVerificationResult。production adapter=skia-duplicate-relationship-v3(GF-067-04: v2 cache再検証)。byte/正規化sRGB BGRA exact→D4全8変種64x64 RGBA局所差(mean/changed/severe/maxBlock/差分総量上位6/64 block集中率80%+最低量)→55%以上crop重複。CandidateScore列は関係と独立した連続detail score(近似最大99)。関係は内部安全契約、NonSimilarは非公開"
         features_repo: "IImageFeatureRepository: GetAsync(imageId)/UpsertAsync(feature)/DeleteByImageAsync。feature 取得時 file_size/modified_date/hash が現行と異なれば呼び出し側が再計算→Upsert→関与 similarity 行を連鎖削除。(ECO-048)ImageFeature.PhashVariants(8 変種の ',' 連結・NULL=旧レコード)を保存/取得"
         similarity_repo: "IImageSimilarityRepository: GetAsync/UpsertAsync/UpsertVerificationAsync/DeleteInvolvingAsync。cache_key={min}-{max}。migration007のduplicate_relationship/candidate_score/verifier_adapterで検証cache、旧NULL/adapter不一致は再検証"
         schema: >-
@@ -422,7 +422,8 @@ mbom:
         - since ECO-066(REQ-089) phase/count progressは単調、cancel後の検索結果publicationはsurface session generationで拒否し正常cacheは再利用
         - since ECO-067(REQ-090) pHash scoreは候補抽出専用。距離0だけで画像内容一致/実質同一/100%を確定しない
         - since GF-067-02 productionの利用者thresholdと表示/順位は同じcandidateScore軸。pHashは内部固定50の粗候補gate。固定Oracleのverifierなし経路は旧契約を維持
-        - since GF-067-03 小面積局所編集は上位6 block集中率で全体meanへの希釈を禁止。CandidateScore帯域写像はCore単一正本。verifier v1 cacheはv2不一致で再検証
+        - since GF-067-03 小面積局所編集は上位6 block集中率で全体meanへの希釈を禁止。verifier v1 cacheはv2不一致で再検証。固定関係帯域写像はGF-067-04で廃止
+        - since GF-067-04 GF-067-03の関係帯域写像を廃止。表示/threshold/順位=min(pHash,連続detail)、exactのみ100。関係は数値と独立。verifier v2 cacheはv3不一致で再検証
       acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-DB-006]
       fmea_refs: [FMEA-022, FMEA-025, FMEA-041, FMEA-042]
 

@@ -15,7 +15,7 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
     private const int CanonicalSize = 64;
     private const int BlockSize = 8;
 
-    public string AdapterId => "skia-duplicate-relationship-v2";
+    public string AdapterId => "skia-duplicate-relationship-v3";
 
     public async Task<DuplicateVerificationResult> VerifyAsync(
         string absolutePathA,
@@ -80,7 +80,7 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
                 && bestFull.ChangedFraction <= 0.12 && bestFull.MaxBlockMean <= 30.0)
             {
                 return Result(DuplicateRelationship.SubstantiallySame,
-                    DuplicateCandidateScore.FromMean(DuplicateRelationship.SubstantiallySame, bestFull.Mean));
+                    bestFull.DetailSimilarityScore);
             }
 
             var geometryChanged = a.Width != b.Width || a.Height != b.Height;
@@ -107,16 +107,16 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
                 && bestCrop.ChangedFraction <= 0.50 && bestCrop.MaxBlockMean <= 150.0)
             {
                 return Result(DuplicateRelationship.PartialOverlap,
-                    DuplicateCandidateScore.FromMean(DuplicateRelationship.PartialOverlap, bestCrop.Mean));
+                    bestCrop.DetailSimilarityScore);
             }
 
             // pHash候補として大局的に近くても上記precision条件を満たさないものは「類似」。
             // 局所置換はmeanが低くてもmax block/severe率でここへ落ちる。
             if (bestFull.Mean <= 55.0 || bestCrop.Mean <= 42.0)
             {
-                var metric = Math.Min(bestFull.Mean, bestCrop.Mean);
+                var detailMetrics = Metrics.Better(bestFull, bestCrop);
                 return Result(DuplicateRelationship.Similar,
-                    DuplicateCandidateScore.FromMean(DuplicateRelationship.Similar, metric));
+                    detailMetrics.DetailSimilarityScore);
             }
 
             return Result(DuplicateRelationship.NonSimilar, 0);
@@ -273,6 +273,9 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
         double TopSixBlockFraction)
     {
         public static Metrics Worst => new(double.MaxValue, 1, 1, double.MaxValue, 0);
+        public int DetailSimilarityScore => global::ViewPrism2.Core.Services.Similarity.DetailSimilarityScore
+            .FromMeasurements(Mean, ChangedFraction, SevereFraction, MaxBlockMean, TopSixBlockFraction);
+
         public static Metrics Better(Metrics a, Metrics b)
         {
             // まず局所差を含む総合risk、同値ならmeanを優先。

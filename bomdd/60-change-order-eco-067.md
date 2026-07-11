@@ -301,3 +301,50 @@ fix commit後、maintainerが実機で次を確認する:
 2. 同一file/同一画素は100%、再圧縮・小resize・回転鏡像は90〜99%、trimは70〜79%で残ること。
 3. 旧検索済みprofileでも再検索によりv1 cacheが使い回されず、旧98〜99%が残らないこと。
 4. 画像/作業タブで表示としきい値が単一のN%軸、70→80→70が再現し、条件検索・停止・merge/Undoに回帰がないこと。
+
+## §11 GF-067-04 是正(2026-07-11 / golden再確認待ち)
+
+### 11.1 実機不合格と真因
+
+GF-067-03後の実機70%検索で、同じ人物・同じ構図の表情差候補が従来複数件から1件へ激減した。利用者の
+「見た目が近い画像を70%未満とは考えにくい」という判断と不一致。添付商用画像はrepoへ収載せず、件数と
+匿名化所見だけを記録した。
+
+真因は、内部の削除安全分類をそのまま表示数値帯へ写像したGF-067-02/03契約。局所集中判定の境界を挟むと、
+見た目が近い表情差が`SubstantiallySame=99%`または`Similar=49%以下`へ不連続に分断された。分類精度の追加だけでは
+この崖を解消できないため、関係分類と利用者向け連続類似度を分離する。
+
+CAD IMG-021はViewPrismUI `e6a8078`で補正済み。結果badgeは従来どおりN%一つで、関係ラベルを復活させない。
+
+### 11.2 R5先行不合格
+
+既存の商用画像不使用fixtureの期待を次へ変更した:
+
+- 小面積・中差分の瞼/口線3か所: 内部`Similar`を維持し、表示詳細scoreは70〜95。
+- production pHash距離0局所色差: 内部`Similar`を維持し、表示scoreは70〜94。threshold70で返り95で除外。
+- verifier v2の誤った99% cacheをv3で再検証し、関係`Similar`と連続scoreへ更新。
+
+是正前は前2件がactual 49/48で、対象15件中2件だけ不合格。関係分類と固定表示帯の結合を実測で裏取りした。
+
+### 11.3 是正
+
+- `DetailSimilarityScore`をCore純粋関数として追加。meanの大局減点と、changed/severe/maxBlock/上位6 block集中率の
+  局所減点を連続合成し、近似結果は1〜99に限定する。測定差が増えるほど単調に下げる。
+- `DuplicateRelationshipVerifier`は関係と独立したdetail scoreを返す。`Similar`を40〜49へ、`PartialOverlap`を
+  70〜79へ強制しない。verifier adapterをv3へ更新し、v2 cacheを自動再検証する。
+- production表示/threshold/順位は、決定的exactなら100、それ以外は`min(pHash大局score, detail score)`。
+  pHashは候補抽出だけでなく大局的な見た目の上限、detailは局所差の上限として働く。
+- 内部関係は非表示の削除安全契約として維持。`PartialOverlap/Similar`の自動削除・重複投入禁止は不変。
+- UI形状、DB schema/migration、pHash adapter、固定Oracle行、新規依存は変更しない。
+
+対象CP 7/7、全製品テスト603/603へ転じた。機械受入はbuild 0 warning / 0 error、固定Oracle
+109 pass / 既知2 skip、validator 0 error / 0 warning。既存固定Oracle行は変更していない。
+
+### 11.4 残ゲート
+
+fix commit後、maintainerが同じ実機画像で次を確認する:
+
+1. 70%検索で表情差候補が1件へ激減せず、見た目に応じた複数の連続値で残る。
+2. 表情差は100%にならず、95%等へ上げると段階的に絞られる。
+3. 同一file/正規化画素一致だけ100%。再圧縮/resize/回転鏡像/trimの候補性を失わない。
+4. 内部`類似/部分重複`は自動削除・自動投入されず、画像/作業タブの単一N%、70→80→70、条件検索、停止、merge/Undoに回帰がない。
