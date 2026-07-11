@@ -86,7 +86,19 @@ foldersにも選択列と同じ比較を適用する。
 
 ## 6. 残ゲート
 
-1. **gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。
+1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
 2. CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-070`で先行赤probe→是正→機械受入。
 3. gate② golden: FS軸のfolder-first、群別sort、grid/list、パンくず、scan lifecycleを確認。
 4. `/eco-accept ECO-070`でCP/As-Built/register/教訓をクローズ。
+
+## 7. gate①裁定(2026-07-12)
+
+- maintainer裁定: **案A=type-primary + フォルダ名を現在方向で独立sortを採用**。
+- FS軸の一次順序は常に`folder群 → image群`。両群を混在させず、個別sort後に連結する。
+- folder群は選択列にsize/date/tag値を新設せず、常に名前で比較する。方向だけ現在の`sortDir`を共有する。
+- image群は従来どおり選択した基本/タグ列と方向で比較する。架空のfolder値・集約値・OS metadata I/Oは追加しない。
+- 未sortの通常表示はfolder名昇順→image名昇順。スキャン中はIMG-015の取込順appendを優先し、
+  完了時に明示sortがあれば両群へ最新方向を適用、明示sortなしは既存取込順保持契約に従う。
+- タグビュー軸、作業タブ、viewer列、FL-001/002/004は不変。
+- ViewPrismUI CAD反映: `0f303a4` (`file_list.md`、`image_tab.md`、FL-003 review point)。
+- gate①完了。次の明示入口は`/eco-fix ECO-070`。本裁定ではsrc/testsを変更しない。
