@@ -579,6 +579,12 @@ scroll にそのまま適用される。見開き(spread)のみ矢印キーを R
 再定義する。**PageDown/PageUp は全モードで論理キー(常に 次へ/前へ・見開きでは現行ステップ分)であり、
 読書方向で反転しない**。
 
+**マウスホイール規則(ECO-071/REQ-091/IMG-022案A)**: canvasのvertical wheelは下=logical Next、上=logical Prev。
+normal Fitとspreadはpage turn。normal Width/Originalは画像内panを優先し、event開始時点で既に端なら外向きeventを
+page turnへ送る(端へ到達させた同じeventでは送らない)。scroll mode、設定drawer、mapping modalはcontent scrollのまま。
+horizontal wheelは無視する。送りは既存Next/Prevへ委譲してspread step/SHIFT/空白開始/tag-control planを維持する。
+Ctrl+wheel zoom等は非搭載のまま。
+
 **表示モードとモード切替 (REQ-054)**
 - モード: normal(既定。§2.6 REQ-044 の単一画像表示そのもの)/ scroll / spread-right / spread-left
 - ビューア上部のコントロールバーにモード切替と表示設定(REQ-058 の resizeMode/alignMode/gapMode+

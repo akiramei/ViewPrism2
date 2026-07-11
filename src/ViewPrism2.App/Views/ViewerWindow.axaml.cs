@@ -57,6 +57,11 @@ public partial class ViewerWindow : Window
         AddHandler(KeyDownEvent, OnKeyModifier, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnKeyModifier, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
+        // ECO-071案A: 子ScrollViewerがwheelを消費する前(Tunnel)に、normal内部panの可否を判定する。
+        // ViewerBody外の設定drawer/mapping modalはrouteに入らないため、裏のviewerを送らない。
+        ViewerBody.AddHandler(PointerWheelChangedEvent, OnViewerWheelChanged,
+            Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
+
         // scroll は仮想化 ListBox(K-AVALONIA v2.0/Run2)。内部 ScrollViewer の ScrollChanged を購読し位置追跡(OC-11)。
         // ContainerClearing(仮想化でコンテナが画面外へリサイクルされる瞬間)で ViewerImage を Release し、
         // Bitmap を破棄・進行中ロードをキャンセルする(= 画面外アイテムは Bitmap を保持しない)。
@@ -157,6 +162,52 @@ public partial class ViewerWindow : Window
         }
 
         _viewModel?.SetShift(shift);
+    }
+
+    /// <summary>
+    /// ECO-071/IMG-022: canvas wheelをlogical Next/Prevへ変換する。
+    /// normal Width/Originalはevent前offsetでpan可能なら子ScrollViewerへ渡し、既に端の場合だけpage turnする。
+    /// </summary>
+    private void OnViewerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        var action = ResolveWheelAction(
+            _viewModel.IsScroll,
+            _viewModel.ShowNormalScroll,
+            NormalScroll.Offset.Y,
+            NormalScroll.Viewport.Height,
+            NormalScroll.Extent.Height,
+            e.Delta.X,
+            e.Delta.Y);
+        if (action == 0) return;
+
+        if (action > 0) _viewModel.NextCommand.Execute(null);
+        else _viewModel.PrevCommand.Execute(null);
+        e.Handled = true;
+    }
+
+    /// <returns>-1=Prev、0=content scroll/無操作、1=Next。</returns>
+    private static int ResolveWheelAction(
+        bool continuousScroll,
+        bool normalScroll,
+        double offsetY,
+        double viewportHeight,
+        double extentHeight,
+        double deltaX,
+        double deltaY)
+    {
+        const double epsilon = 0.5;
+        if (continuousScroll || Math.Abs(deltaY) <= epsilon) return 0;
+
+        if (normalScroll)
+        {
+            var maxOffset = Math.Max(0, extentHeight - viewportHeight);
+            if (deltaY < 0 && offsetY < maxOffset - epsilon) return 0;
+            if (deltaY > 0 && offsetY > epsilon) return 0;
+        }
+
+        return deltaY < 0 ? 1 : -1;
     }
 
     /// <summary>

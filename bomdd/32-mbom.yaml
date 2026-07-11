@@ -312,6 +312,7 @@ mbom:
           REQ-055 の要求であり Run2 収束の合格条件(P-05 再測定で確認)。
         spread: "2 列 Grid(1fr/1fr)。クリックは各半面全体(余白含む)。キーは §2.9 規則(spread-right は矢印反転・Page キーは論理)。画像 2 枚は並行ロード+次ペア 2 枚を先読み(実装定数)"
         keys: "KeyBindings は ViewerViewModel の ICommand へ。モード別の解釈は ViewModel 内で M-VIEWERCORE-017 を呼ぶ(コードビハインドでの判定禁止)"
+        wheel: "(ECO-071/REQ-091/IMG-022案A)ViewerBodyへPointerWheelChanged Tunnel handler。ResolveWheelAction(continuousScroll,normalScroll,offsetY,viewportH,extentH,deltaX,deltaY)=-1|0|1を描画非依存exact。Fit/spread=-1|1、Width/Originalはevent前offsetでpan可能なら0/既に端なら±1、scroll=0、horizontal=0。±1はViewerViewModel PrevCommand/NextCommandだけを実行しHandled=true。drawer/mapping modalはViewerBodyのroute外"
         persistence: "設定変更は即時 SettingsStore.Save。起動時に AppSettings の Viewer* から復元(REQ-059)。タグ制御(enableTagControl+action→tag_id 6個)も同経路で即時保存/復元(REQ-077)"
         errors: "個別画像のロード失敗は当該位置にエラー表示(ファイル名+失敗の旨)し、閲覧継続(仕様 §2.9)"
         oriented_load: "(ECO-049/REQ-085)原本フルサイズの読込(ViewerImage/ViewerWindow の 2 箇所=全数)は OrientedBitmaps.Load 経由: TopLeft は従来の new Bitmap(path)=高速経路・挙動不変、正立時のみ OrientedImageLoader のピクセル列から WriteableBitmap を組む。例外面は従来と同一(呼び出し側 catch 節無変更)"
@@ -325,7 +326,7 @@ mbom:
           **plan→描画結線(G3 ドライラン major-2 補正)**: ON 時は `CurrentSpreadPair`/`CurrentPositionText`/Next/Prev を SpreadPairCalculator 直呼びから plan(OC-24/25)由来へ切替える(現在=プラン見開き index・表示ペアは plan[cur]・位置は canonical/非 skip 総数)。`spread` 占有・片側空白は plan の見開き要素フラグ(span/spread/空白)で描画分岐。OFF 時は従来経路のまま(回帰ゼロ)。
           **マッピング先タグの現存性濾過(major-1 補正)**: picker は TagService.GetAllAsync の**現存タグのみ**を提示(削除済みタグは出さない)。Resolve(E-VIEWER-TAGCTRL-044)は画像のタグ ID 基準の自然無視で足り、タグ存在台帳を入力に取らない。
           DS は ECO-019/整理トレイの in-tab popup 部品系を再利用(新規 DS 最小化・視覚は golden G-11)
-        excluded: "実装しない(事前ずる列挙で慣習混入が予想される次元の明示): 仕様列挙外のキー(Home/End・数字キーのモード切替・ホイールでのページ送り — normal/spread のホイールは何もしない)/ 横長画像の自動単独配置 / Ctrl+ホイールズーム / クロスフェード等のアニメーション。必要と判断した場合はずる報告"
+        excluded: "実装しない(事前ずる列挙で慣習混入が予想される次元の明示): 仕様列挙外のキー(Home/End・数字キーのモード切替)/ 横長画像の自動単独配置 / Ctrl+ホイールズーム / クロスフェード等のアニメーション。必要と判断した場合はずる報告。normal/spread wheel page turnはECO-071/REQ-091で除外解除済み"
         resize_anchor: "ウィンドウリサイズ時: 見開き=同一ペアを保ったまま再レイアウト(仕様 §4)/ scroll=現在位置の画像を維持(画像単位アンカー)"
         memory: "scroll の Bitmap 保持は読み込みウィンドウ範囲のみ(範囲外は K-AVALONIA の手順で破棄)。normal/spread は ImageMemoryCache(REQ-045)の範囲"
       invariants:

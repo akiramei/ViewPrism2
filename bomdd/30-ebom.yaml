@@ -492,7 +492,7 @@ ebom:
       name: "画像ビューア(normal フィット表示+v2.0 拡張: scroll/spread-right/spread-left・コントロールバー(モード切替+表示設定)・設定永続化結線・モード別位置記憶)+ ECO-022 タグ制御(設定トグル+マッピングモーダル+プラン描画結線)"
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-078, REQ-085]
+      requirement_refs: [REQ-044, REQ-045, REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-078, REQ-085, REQ-091]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-CACHE-011, E-SORT-004, E-VIEWER-CALC-030, E-VIEWER-TAGCTRL-044, E-SETTINGS-013, E-TAGSVC-008, E-THUMB-020]
@@ -502,6 +502,7 @@ ebom:
         - ペアリング・送り・追跡・高さ統一・位置記憶の判断は E-VIEWER-CALC-030 のみ経由(UI 側で再実装しない)
         - タグ制御 ON の見開き配置・送り・現在画像は E-VIEWER-TAGCTRL-044(OC-23/24/25)のみ経由(UI 側で再実装しない)
         - 余白クリック閉じるは normal のみ(scroll=無操作 / spread=半面送り — 仕様 §2.9)
+        - (ECO-071/REQ-091/IMG-022案A) canvas wheel下=logical Next/上=Prev。normal Fit/spreadはpage turn、normal Width/Originalはevent前offsetでpan優先+既に端の外向きeventだけturn。scroll/drawer/mapping modalはcontent scroll、horizontal無視。既存Next/Prevへ委譲しspread/tag-control意味論を再実装しない
         - スクロールは全件一括読み込みしない(REQ-055)
         - "タグ制御マッピングモーダルは提示フィールド契約(6行×グリフ/名前+英名/説明/タグ picker・色ドット+ラベル/未割り当て)を満たす(REQ-078・ECO-003/004 表示パリティ教訓)"
       acceptance_refs: [CP-UI-G4, CP-UI-G8, CP-UI-G11]

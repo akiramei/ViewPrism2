@@ -1,4 +1,4 @@
-# Change Order — ECO-071(staged): ビューアーの単一・見開きモードでホイール送りを追加する
+# Change Order — ECO-071(implemented / golden pending): ビューアーの単一・見開きモードでホイール送りを追加する
 
 > maintainer要求(2026-07-12)「ビューアーにて単一や右開き・左開きでも、マウスホイールで画像を
 > 次へ・前へ切り替えたい」を`/eco-file`で受理した既存機能拡張要求。
@@ -85,7 +85,7 @@
 ## 6. 残ゲート
 
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
-2. CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-071`で先行赤probe→是正→機械受入。
+2. ~~CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-071`で先行赤probe→是正→機械受入。~~ → 完了(§8)
 3. gate② golden: 4modeとnormal fit3種、内部scroll/overlay、spread送り規則、端/入力体感を確認。
 4. `/eco-accept ECO-071`でCP/As-Built/register/教訓をクローズ。
 
@@ -102,3 +102,49 @@
 - Ctrl+wheel zoom、Home/End、mode数字キー、設定永続キー追加は対象外。
 - ViewPrismUI CAD反映: `ec01a73` (`image_viewer.md`、IMG-022 review point)。
 - gate①完了。次の明示入口は`/eco-fix ECO-071`。本裁定ではsrc/testsを変更しない。
+
+## 8. 実施記録(2026-07-12 — 機械受入完了・golden待ち)
+
+### 8.1 先行probe(R5)
+
+- `CpUiG4ViewerTests`へ、`ViewerWindow`のwheel provider存在と`ResolveWheelAction`の決定表を
+  reflectionで観測するprobeを製品コード変更前に追加した。
+- 決定表はFit/spread下=Next/上=Prev、scroll mode=content scroll、Width/Original途中=pan、
+  下端外向き=Next、上端外向き=Prev、horizontal-only=無操作を要求した。
+- 是正前実測は`ViewPrism2.Tests` **609件中1件不合格(608 pass)**。`OnViewerWheelChanged`がnullで、
+  起票診断どおりprovider未配線を確認してから製品コードへ着手した。
+
+### 8.2 是正裁定とdiff
+
+- `ViewerWindow`の`ViewerBody`へ`PointerWheelChanged`のTunnel handlerを追加した。子ScrollViewerが
+  offsetを変える前に判定するため、端へ到達させたeventとpage turnを同時発火させない。
+- `ResolveWheelAction`を描画非依存の純粋決定表(-1=Prev/0=content scroll/1=Next)として分離した。
+  continuous scrollとvertical deltaなしは0。NormalScrollは`maxOffset=Extent-Viewport`とevent前Offsetで
+  pan可能なら0、既に端なら±1。Fit/spreadはvertical deltaの符号で±1。
+- ±1は既存`PrevCommand`/`NextCommand`だけを実行し`Handled=true`にする。spread step/SHIFT/空白開始/
+  tag-control plan/端停止は既存VM/Core経路をそのまま消費する。
+- handlerをViewerBodyへ限定したため、兄弟overlayの設定drawer/mapping modalはroute外でcontent scrollを維持する。
+- REQ-091新設、仕様§2.9、E-UI-VIEWER-024、M-UI-018、CP-UI-G8へ案Aと明示除外解除を同期した。
+  CADはgate①のViewPrismUI `ec01a73`で同期済み。
+- XAML描画、Core送り計算、DB/schema/i18n/settings、Design System BOM、既存Oracle期待値は変更していない。
+
+### 8.3 機械受入
+
+- 先行probeを含む`ViewPrism2.Tests`: **609/609 pass**。
+- `dotnet build ViewPrism2.sln --no-restore`: **0 warning / 0 error**。
+- `ViewPrism2.Oracle`: **109 pass / 2 known skip**。既存固定期待値変更なし(R6)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+- `git diff --check`: clean。
+
+### 8.4 gate②操作
+
+1. 複数画像でviewerを単一Fitにし、canvas上のwheel下で次、wheel上で前へ進み、先頭/末尾では停止することを確認する。
+2. 単一Width/Originalでviewportより縦に大きい画像を表示し、中間位置のwheelは画像内panだけを行って画像を切替えない。
+3. Width/Originalでwheelにより下端/上端へ到達したeventでは切替わらず、既に端からさらに外向きへ回した次eventで
+   Next/Prevになることを確認する。画像がviewport内に収まりpan不能なら最初のeventからpage turnする。
+4. spread-right/spread-leftの両方でwheel下=論理Next、上=Prevとなり、右開きだけ方向反転しないことを確認する。
+5. 見開きのdouble/single page、SHIFT押下、空白ページ開始、奇数末尾を切替え、wheelがbutton/PageDownと同じstep/端規則になる。
+6. タグ制御ON+skip/spread/左右固定/空白mappingでもwheelがplan見開き単位で進み、配置を壊さない。
+7. scroll modeではwheelが従来の連続scrollだけを行い、1eventでNext/Prevへ飛ばず、現在位置追跡・仮想化を維持する。
+8. 設定drawerとタグ制御mapping modal上でwheel scrollし、内容が動く一方で裏のviewer位置が変わらないことを確認する。
+9. horizontal wheelだけでは移動せず、mouse/touchpadで1操作が意図せず複数ページを飛び越えないことを体感確認する。

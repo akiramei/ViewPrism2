@@ -13,6 +13,31 @@ namespace ViewPrism2.Tests;
 [Trait("cp", "CP-UI-G4")]
 public sealed class CpUiG4ViewerTests
 {
+    /// <summary>ECO-071先行probe: wheel providerと描画非依存のmode/境界判定を固定する。</summary>
+    [Fact]
+    [Trait("cp", "CP-UI-G8")]
+    public void ホイールは単一見開きを論理送りし内部スクロールとoverlayを横取りしない()
+    {
+        var windowType = typeof(ViewPrism2.App.Views.ViewerWindow);
+        Assert.NotNull(windowType.GetMethod("OnViewerWheelChanged",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic));
+        var resolve = windowType.GetMethod("ResolveWheelAction",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(resolve);
+
+        int Wheel(bool continuous, bool normalScroll, double offset, double viewport, double extent,
+            double dx, double dy) => (int)resolve!.Invoke(null,
+                [continuous, normalScroll, offset, viewport, extent, dx, dy])!;
+
+        Assert.Equal(1, Wheel(false, false, 0, 0, 0, 0, -1));  // Fit/spread: 下=Next
+        Assert.Equal(-1, Wheel(false, false, 0, 0, 0, 0, 1));  // Fit/spread: 上=Prev
+        Assert.Equal(0, Wheel(true, false, 0, 0, 0, 0, -1));   // scroll modeはcontent scroll
+        Assert.Equal(0, Wheel(false, true, 20, 100, 300, 0, -1)); // Width/Original途中はpan
+        Assert.Equal(1, Wheel(false, true, 200, 100, 300, 0, -1)); // 既に下端ならNext
+        Assert.Equal(-1, Wheel(false, true, 0, 100, 300, 0, 1));   // 既に上端ならPrev
+        Assert.Equal(0, Wheel(false, false, 0, 0, 0, 1, 0));       // horizontalだけは無視
+    }
+
     private static ImageEntry Entry(string id, string name)
     {
         var record = new ImageRecord

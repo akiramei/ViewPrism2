@@ -1180,12 +1180,12 @@ changes:
   - id: ECO-071
     title: "ビューアーの単一・見開きモードでホイール送りを追加する"
     type: 既存機能拡張(Loop V2で明示除外したnormal/spread wheel page turnをgate①案A=context-awareで追加。Fit/spread=page、Width/Original=pan優先+既に端で次event、scroll/overlay非横取り。CAD=ec01a73)
-    status: staged
+    status: implemented
     golden: pending
     baseline: "main 01286e6b611e"
     findings: "maintainer要求2026-07-12=viewer単一/右開き/左開きでもwheelで次/前。CAD image_viewer interaction、REQ-044/057、spec§2.9はbutton/key/clickのみ。M-UI-018 excludedはnormal/spread wheel=何もしないを初版415cecaから明示。ViewerWindowにPointerWheel handlerなし。normal Fitは内部scrollなし、Width/OriginalはNormalScroll、scroll mode/設定drawer/mapping modalもwheel content scrollを消費するため優先順位未定義。既存Next/Prevは端停止、spread step/SHIFT/空白開始/tag-control planを一元処理し再利用可能。CP-UI-G8/testsはwheel provider配線を欠測"
     impacted_bom: ["ViewPrismUI image_viewer/review point", "REQ-044/054/057・20-spec §2.9", "E-UI-VIEWER-024", "M-UI-018", "ViewerWindow.axaml(.cs)/ViewerViewModel", "CP-UI-G8/CpUiG4ViewerTests+headless wheel routing"]
     oracle: "既存固定Oracle行は変更しない(R6)。新規unit/headlessでwheel down=Next/up=Prev、normal fit/width/original優先順位、spread-right/left論理方向+step/SHIFT/tag-control、scroll/drawer/modal非横取り、端停止を固定"
-    verification: "2026-07-12 gate①案A裁定・ViewPrismUI ec01a73反映。製造前/staged。src/tests変更なし"
+    verification: "2026-07-12 /eco-fix完了。先行赤=Tests 609件中1 fail(OnViewerWheelChanged null、608 pass)。是正後Tests 609/609、build 0 warning/0 error、Oracle 109 pass/2 known skip(R6不変)、BOM validator 0/0、diff-check clean。gate② golden待ち"
     body: 60-change-order-eco-071.md
-    notes: "gate①完了: 案A=context-aware。wheel下=logical Next/上=Prev。Fit/spreadはpage、Width/Originalは内部pan優先+既に端で外向き次eventだけpage。scroll/drawer/mapping modalはcontent scroll、horizontal無視。既存Next/Prevへ委譲しspread step/SHIFT/空白開始/tag-control plan維持。Ctrl+wheel zoom等なし。CAD=ec01a73。/eco-fix待ち"
+    notes: "機械受入済み/golden待ち。ViewerBody Tunnel provider+ResolveWheelAction決定表。wheel下=logical Next/上=Prev。Fit/spreadはpage、Width/Originalはevent前offsetでpan優先+既に端の外向きeventだけpage。scroll/drawer/mapping modalはcontent scroll、horizontal無視。既存Next/Prevへ委譲しspread step/SHIFT/空白開始/tag-control plan維持。Core/XAML描画/DB/schema/i18n/settings/DS/Oracle不変。REQ-091/spec/E/M-BOM/CP同期、CAD=ec01a73"

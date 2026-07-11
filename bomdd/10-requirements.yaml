@@ -1211,3 +1211,21 @@ requirements:
       - "trim画像を完全重複として自動削除する"
       - "全体平均だけで局所的な目・口・文字・物体の置換を希釈し実質同一とする"
       - "一般意味embeddingだけで同一人物の別画像を重複判定する"
+
+  - id: REQ-091
+    statement: "ビューアcanvasのvertical mouse wheelは、下方向(Delta.Y<0)をlogical Next、上方向(Delta.Y>0)をlogical Prevとして扱う。normal Fitとspread-right/spread-leftは常にpage turnし、端では停止する。normal Width/Originalは画像内panを優先し、現在方向へpan可能ならpage turnせず、event開始時点で既に上端/下端にいる状態からさらに外向きへ回したeventだけPrev/Nextへ送る。端へ到達させた同じeventでは送らない。scroll mode、設定drawer、タグ制御mapping modalは自身のcontent scrollを維持し、裏のviewerを送らない。horizontal wheelは無視する。wheelは既存Next/Prevへ委譲し、spreadのpageTurnMode、SHIFT、空白開始、右/左開き配置、tag-control plan、端停止を独自再実装しない。Ctrl+wheel zoom、Home/End、数字キーmode切替、wheel設定永続キーは追加しない"
+    rationale: |
+      ECO-071案A裁定(maintainer 2026-07-12)。CAD=ViewPrismUI IMG-022 `ec01a73`。
+      Loop V2 M-BOMはnormal/spread wheelを明示非搭載としていたが、連続scroll以外でもwheelで読み進めたい要求を受理した。
+      normal Width/OriginalのScrollViewer、scroll mode、設定drawer、mapping modalを一律に横取りすると既存pan/scrollを壊すため、
+      ViewerBodyのtunnel段階でevent前offsetを見てcontext-awareに分岐する。送り計算は既存Next/Prevを単一正本として維持する。
+      受入はmode/fit/offset/deltaの決定表をCP-UI-G4/G8 unit、provider routingとoverlay/体感をCP-UI-G8 goldenで確認する。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "ViewPrismUI docs/screens/image_viewer.md/review_points.md IMG-022 (`ec01a73`) / ECO-071"
+    counterexamples:
+      - "normal Fit/spreadでwheelを回しても現在画像が変わらない"
+      - "normal Width/Originalの途中でwheelが画像内panせず次画像へ飛ぶ"
+      - "画像内panで下端へ到達させた同じwheel eventが同時に次画像へ送る"
+      - "設定drawer/mapping modal上のwheelが裏のviewerも送る"
+      - "spread-rightだけwheel方向を反転し、wheel下が前へ戻る"
