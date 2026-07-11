@@ -1148,3 +1148,16 @@ changes:
     verification: "2026-07-11 fix完了: 先行probe=WorkTab HandleItemClickにisDoubleClickなしでCS1739×6を確認。是正=ViewへClickCount+DoubleClickDetector、VMへ通常閲覧分岐、可視順workspace normal→tag filter→current sortをRecompute/OpenViewerで共用。probe含むTests 605/605、build 0 warning/0 error、Oracle 109 pass+既知2skip、validate 0-0、diff-check clean。CAD IMG-004同期=0e13056"
     body: 60-change-order-eco-068.md
     notes: "クローズ済み。ImageTab同型のdouble click検出、WorkTab通常閲覧だけShowViewer、現workspaceのtag絞り込み/current sort可視順+startIndex exact。single clickと編集/作業/整理/削除modeは非起動。M-UI-WORKSPACE-029/CP-UI-G1/CAD IMG-004(0e13056)/50-as-built同期。Viewer/Core/DB/schema/i18n/Oracle不変。教訓=surface再利用宣言だけでイベント配線は継承されず、空stubでなく記録spyによるprovider/consumer境界conformanceが必要"
+
+  - id: ECO-069
+    title: "ECO-025 v2ソートが作業タブへ展開されず旧固定UIが残る"
+    type: 既存機能拡張+品質是正(CAD適用範囲の矛盾。work_tabは画像タブと同一意味論、FL-002/004裁定資料はWorkTab v2を別裁定へdefer。gate①で射影範囲を確定後にread-across是正)
+    status: staged
+    golden: pending
+    baseline: "main 13cdc3ed73d5"
+    findings: "maintainer所見2026-07-12=画像/作業タブのsortボタンが異なり画像側が正しいはず。ImageTabはECO-025 72e47c3でv2(並び替え+badge、popup内候補/方向、chip+解除、list header、grid tile、grid/list共有)へ刷新。WorkTabはf211fa9の旧3択+別方向button、解除/header/tileなしのまま。CAD work_tab L14はsortを同一部品/意味論とするが、FL-002/004裁定資料はWorkTabへのv2適用を別裁定/ECOへ明示defer。REQ-081/spec/E-UI-BROWSEはactive view display_columns軸、REQ-074/E-UI-WORKSPACEはsort可のみでworkspace射影未定義。M-UI-WORKSPACE/CP-UI-G1/WorkTab testsもv2 parityをpinしない。認識済みdeferがCP/backlogへ閉じず残留した工程欠陥"
+    impacted_bom: ["ViewPrismUI work_tab/file_list/FL-002-004 decision/live spec", "REQ-074/081・20-spec §2.6", "E-UI-WORKSPACE-043/E-UI-BROWSE-022", "M-UI-WORKSPACE-029", "WorkTabView.axaml/WorkTabViewModel+共有sort末端", "CP-UI-G1/CpUiG1WorkTabTests+headless parity"]
+    oracle: "既存固定Oracle行は変更しない(R6)。案Aなら新規unit/headlessで既定3候補、未sort、列/方向/解除、list header、grid tile、grid-list共有、tag filter/viewer順、各文脈modeをexact固定"
+    verification: "(staged — gate①/CAD裁定前。製造なし)"
+    body: 60-change-order-eco-069.md
+    notes: "起票のみ。gate①候補A=v2基本3列parity(推奨)/B=視覚のみ/C=workspace表示列新設。FL-002揮発、FL-004表示形式独立、FL-001 grid列なしは不変。裁定前にsrc/tests変更禁止"
