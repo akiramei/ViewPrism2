@@ -84,7 +84,21 @@
 
 ## 6. 残ゲート
 
-1. **gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。
+1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
 2. CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-071`で先行赤probe→是正→機械受入。
 3. gate② golden: 4modeとnormal fit3種、内部scroll/overlay、spread送り規則、端/入力体感を確認。
 4. `/eco-accept ECO-071`でCP/As-Built/register/教訓をクローズ。
+
+## 7. gate①裁定(2026-07-12)
+
+- maintainer裁定: **案A=内部scroll境界を尊重するcontext-aware送りを採用**。
+- viewer canvasのvertical wheelは下(`Delta.Y<0`)=logical Next、上(`Delta.Y>0`)=logical Prev。
+  horizontal wheelは無視し、開き方向では反転しない。
+- normal Fitとspread-right/leftは常にpage turn。端では既存Next/Prevどおり停止する。
+- normal Width/Originalは画像内panを優先し、現在方向へまだpan可能なら送らない。既に端にいる状態で
+  さらに外向きへ回した次eventだけpage turnする。端へ到達させたeventでは送らない。
+- scroll mode、設定drawer、タグ制御mapping modalはcontent scrollを維持し、裏のviewerを送らない。
+- wheelは既存Next/Prevへ委譲し、spreadのpageTurnMode/SHIFT/空白開始/tag-control planを再実装しない。
+- Ctrl+wheel zoom、Home/End、mode数字キー、設定永続キー追加は対象外。
+- ViewPrismUI CAD反映: `ec01a73` (`image_viewer.md`、IMG-022 review point)。
+- gate①完了。次の明示入口は`/eco-fix ECO-071`。本裁定ではsrc/testsを変更しない。
