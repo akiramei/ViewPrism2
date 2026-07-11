@@ -1200,3 +1200,14 @@ changes:
     impacted_bom: ["ViewPrismUI 新画面(mock=maintainer作成、docs/screens追加が先行)", "新REQ群+20-spec新節(A層/B層役割分担の核文)", "E-BOM新規(スナップショット作成器/検証器/復元ブートストラップ)", "M-BOM新規(Infrastructure SnapshotService+App起動シーケンス+バックアップUI)", "新CP(partial非昇格/検証失敗非掲載/復元失敗フォールバック/migration前進/未知migration拒否)", "K-BOM追加なし・DBスキーマ変更なし"]
     oracle: "既存固定Oracle行は変更しない(R6)。新規unit+一時DB fixtureでVACUUM INTO→quick_check/foreign_key_check→checksum→アトミックリネーム、中断時.partial残置、復元9手順の退避/差し替え/失敗復帰、未知migration ID拒否を固定"
     body: 60-change-order-eco-072.md
+
+  - id: ECO-073
+    title: "コレクションの論理書き出し/取り込み(バックアップB層 V1)"
+    type: 新機能(バックアップ2層構成のうちB層=コレクション単位の非破壊統合。仕様はmaintainer+外部アドバイザー事前議論で確定済み、gate①=CAD mock作成のみ。A層=ECO-072)
+    status: staged
+    golden: "pending(gate①=CAD mock作成→/eco-fix後に実機確認。観点=書き出し→別状態ライブラリへの取り込み→プレビュー&競合解決→結果レポートの一連UI・「画像ファイルは含まれません」明示)"
+    baseline: "main 86bfed9e0394"
+    findings: "maintainer要求2026-07-12=コレクション単位バックアップ+リストア時のタグ定義欠落(revずれ)問題の仕様解決。確定仕様: 単一UTF-8 JSON(kind=collection)・タグ依存閉包同梱の自己完結・保証定義=過去タグ体系の厳密再現でなく現在ライブラリへの統合。タグ照合5段(永続マッピング→UUID一致+値互換検証→意味定義完全一致の自動マッピング→UUID維持新規作成→競合4択+手動マッピング)。値はstring|null(タグ定義が型の唯一の正・InvariantCulture正規形・省略不可・クランプ禁止)。画像照合4状態(パス+SHA256両一致=採用/パス一致ハッシュ不一致=競合/一意ハッシュ=移動採用/複数=曖昧)。マージは追加型・削除なし・値競合は現行維持。前提部品は既存: images.hash=SHA-256全画像NOT NULL・file_size・全PK=UUID(ポータブルID新設不要)。DB変更はtag_import_mappings+DB内ライブラリUUIDの単一migration(ECO-020前例)。tag-catalog/view-set/workspace単独可搬・自動バックアップはスコープ外(将来ECO、TagImportPlannerは再利用可能に分離)"
+    impacted_bom: ["ViewPrismUI 新画面4面=書き出し/取り込み検証/プレビュー&競合解決/結果レポート(mock=maintainer作成が先行)", "新REQ群+20-spec新節(核文+パッケージ形式/タグ照合/画像照合/マージ規則/実行規律)", "E-BOM新規(エクスポータ/TagImportPlanner/インポート適用器)", "M-BOM新規+migration 1件(tag_import_mappings+ライブラリUUID・CP-DB-006維持)", "新CP(冪等/照合分類/拒否入力/全ロールバック/画像ファイル無変更/プレビュー鮮度)", "K-BOM追加なし予測"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規unit+一時DB fixtureで事前議論の受け入れテスト一覧を固定: 2回取込冪等・UUID一致リネーム現行名維持・型変更事前競合・意味定義一致自動マッピング・名前一致範囲違い非マッピング・循環拒否・一意指紋解決・複数指紋非自動・破損/未知必須featureでDB無変更・例外/キャンセル全ロールバック・プレビュー後DB変化時の旧プラン不実行"
+    body: 60-change-order-eco-073.md
