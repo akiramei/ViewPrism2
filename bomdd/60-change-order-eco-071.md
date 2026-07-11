@@ -1,4 +1,4 @@
-# Change Order — ECO-071(implemented / golden pending): ビューアーの単一・見開きモードでホイール送りを追加する
+# Change Order — ECO-071(applied / golden approved): ビューアーの単一・見開きモードでホイール送りを追加する
 
 > maintainer要求(2026-07-12)「ビューアーにて単一や右開き・左開きでも、マウスホイールで画像を
 > 次へ・前へ切り替えたい」を`/eco-file`で受理した既存機能拡張要求。
@@ -88,8 +88,8 @@
 
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
 2. ~~CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-071`で先行赤probe→是正→機械受入。~~ → 初回完了(§8)、golden補正完了(§9)
-3. gate② golden再確認: 4modeとnormal fit3種、内部scroll/着地点/overlay、spread送り規則、端/入力体感を確認。
-4. `/eco-accept ECO-071`でCP/As-Built/register/教訓をクローズ。
+3. ~~gate② golden再確認: 4modeとnormal fit3種、内部scroll/着地点/overlay、spread送り規則、端/入力体感を確認。~~ → 合格(§10)
+4. ~~`/eco-accept ECO-071`でCP/As-Built/register/教訓をクローズ。~~ → 完了(§10)
 
 ## 7. gate①裁定(2026-07-12)
 
@@ -189,3 +189,24 @@
 3. viewport内に収まる画像を間に置き、先頭=末尾として上下どちらからも余分なpanや飛越しがない。
 4. 同じ前後移動を前/次button、PageUp/Down、矢印、seekで行い、wheel専用の末尾着地が漏れない。
 5. §8.4のFit/spread/scroll/overlay/horizontal/touchpad回帰を再確認する。
+
+## 10. gate②合格・クローズ(2026-07-12)
+
+maintainerが`/eco-accept ECO-071`で§9.4の再実機goldenを承認した。単一Width/Originalの縦長画像Aを
+下端までpanしてwheel下で進むと画像Bの先頭へ着地し、Bの上端からwheel上で戻るとAの先頭ではなく末尾へ
+着地した。viewport内に収まる画像は先頭=末尾として余分なpanを生じず、前/次button、PageUp/Down、矢印、
+seekへwheel専用着地点は漏れなかった。Fit、spread-right/left、連続scroll、設定drawer、mapping modal、
+horizontal/touchpad、端停止、見開きstep/SHIFT/空白開始/タグ制御にも回帰はない。
+
+再発防止はCP-UI-G8の潜伏履歴+golden観点、`CpUiG4ViewerTests`のproviderおよび
+mode/fit/offset/delta/landing決定表、M-UI-018の対象path+actionをload/layout確定まで保持する契約へ固定した。
+CADはViewPrismUI `153c366`(初回`ec01a73`)、製品側REQ-091/仕様§2.9/E-UI-VIEWER-024/M-UI-018/
+CP-UI-G8をfix時に同期済みで、accept時は`50-as-built.yaml`へ実機承認を追記した。新しい視覚部品・設定・
+依存はなく、Design System/Service BOMの追加改訂は不要である。
+
+教訓: スクロール端などの境界駆動ナビゲーションは「いつ遷移するか」だけでなく「遷移先のどのanchorへ
+着地するか」を対称な往復操作として一組で契約する必要がある。ECO-049の暗黙表示変換、ECO-067の表示値境界と
+同じ沈黙次元のread-acrossである。さらに非同期loadをまたぐUI入力意図は、方向だけを大域保持せず対象identityと
+組にして遅延結果の漏出を防ぐ。この一般形はBomDD方法論への教訓昇格候補とする。
+
+残課題なし。Ctrl+wheel zoom、Home/End、数字キーmode切替は明示的非採用のままで、必要性が実測された場合は別ECOとする。
