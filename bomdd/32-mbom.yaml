@@ -362,6 +362,7 @@ mbom:
       interface_contract:
         shell: "作業タブ(第3タブ)= 左作業スペースサイドバー(一覧/選択/＋=デフォルト回転/インラインリネーム/件数/276-64 折り畳み)+ ワークスペースヘッダ(名前+既定バッジ+件数)+ 中央グリッド/リスト(フラット・表示軸/パンくずなし)+ ソート + 空状態(画像タブ作業モードへの誘導)"
         browse: "(ECO-058/REQ-041 read-across)中央 grid=ItemsRepeater+UniformGridLayout / list=VirtualizingStackPanel。E-UI-BROWSE-022 と同じく可視範囲だけを実体化し、非仮想 ItemsControl 直置きを禁止"
+        viewer_launch: "(ECO-068/REQ-041/044)通常閲覧の画像ダブルクリックだけIWindowService.ShowViewerを呼ぶ。入力列は現workspace normal→tag絞り込み→現在sortの可視順、startIndexはクリック画像。single clickとタグ編集/作業/整理/削除モードは起動せず各モード意味論を優先。ViewはImageTab同型のClickCount+DoubleClickDetector補完"
         modes: "(ECO-021 β-1〜β-4)作業モード=別スペースへ移動(E-WORKSPACE-042.MoveImages)/ タグ編集(E-UI-TAGASSIGN-029 再利用)/ 整理トレイ(E-UI-SIMILARITY-035+E-UI-MERGE-036 再利用・現スペース内)/ 削除+ゴミ箱 in-tab popup(E-TRASH-038/E-UI-REPAIR-039 再利用)。修復はコレクションスコープのため非搭載。選択機構・排他隠し(ECO-014§8)は作業タブ側でオーケストレート(UQ-W06=B 隔離方式)"
         similarity_session: "(ECO-066/REQ-089)画像タブと共通のSimilaritySearchSessionを所有。現workspaceをscopeにStart、停止/整理終了/target変更/space変更/別mode/window終了でcancel+invalidate。phase/count/CTA/結果保持はIMG-020と同一"
         domain: "ドメイン操作は E-WORKSPACE-042 経由(状態遷移を UI で再実装しない)。ゴミ箱は workspace スコープ(GetDeletedImagesAsync)"

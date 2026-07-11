@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using ViewPrism2.App.ViewModels;
@@ -10,6 +11,8 @@ namespace ViewPrism2.App.Views;
 /// </summary>
 public partial class WorkTabView : UserControl
 {
+    private readonly DoubleClickDetector _doubleClick = new();
+
     public WorkTabView() => InitializeComponent();
 
     private WorkTabViewModel? Vm => DataContext as WorkTabViewModel;
@@ -44,9 +47,25 @@ public partial class WorkTabView : UserControl
         {
             var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
             var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-            vm.HandleItemClick(item, ctrl, shift);
+            // ECO-068: 作業タブも画像タブと同じ閲覧契約。ClickCountだけに依存せず、
+            // OSのダブルクリック時間内の同一項目連続押下を共有検出器で補完する。
+            var detected = _doubleClick.ObserveClick(item, (long)e.Timestamp, SystemDoubleClickTimeMs, ctrl || shift);
+            vm.HandleItemClick(item, ctrl, shift, e.ClickCount >= 2 || detected);
         }
     }
+
+    /// <summary>OSのダブルクリック時間(ms)。本アプリはWindows専用(仕様§1)。</summary>
+    private static double SystemDoubleClickTimeMs
+    {
+        get
+        {
+            try { return GetDoubleClickTime(); }
+            catch (EntryPointNotFoundException) { return 500; }
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
 
     private void OnChipPressed(object? sender, PointerPressedEventArgs e)
     {

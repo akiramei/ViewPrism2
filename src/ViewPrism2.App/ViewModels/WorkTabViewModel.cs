@@ -397,10 +397,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         }
 
         // ---- 絞り込み + ソート ----
-        var filtered = _tagFilter is null
-            ? _sourceImages
-            : _sourceImages.Where(im => ImgTagIds(im).Contains(_tagFilter)).ToList();
-        var sorted = _sorter.Sort(filtered, _sortField, _sortDir);
+        var sorted = VisibleImagesInDisplayOrder();
 
         // ---- Items ----
         bool inSelect = _editMode || _workMode || _deleteMode; // 整理は選択でなくマージ先/整理対象の割当
@@ -728,8 +725,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
         NotifyModeChanged();
     }
 
-    /// <summary>グリッド/リストのクリック処理。整理=マージ先/整理対象の割当、タグ編集・作業=選択。</summary>
-    public void HandleItemClick(ImageItemVM item, bool ctrl, bool shift)
+    /// <summary>グリッド/リストのクリック処理。閲覧ダブル=viewer、整理=マージ割当、他モード=選択。</summary>
+    public void HandleItemClick(ImageItemVM item, bool ctrl, bool shift, bool isDoubleClick = false)
     {
         if (_organizeMode)
         {
@@ -737,7 +734,37 @@ public sealed partial class WorkTabViewModel : ObservableObject
             else ToggleOrganizeTarget(item.Id);
             return;
         }
-        if (_editMode || _workMode || _deleteMode) ToggleSelect(item.Id, ctrl, shift);
+        if (_editMode || _workMode || _deleteMode)
+        {
+            ToggleSelect(item.Id, ctrl, shift);
+            return;
+        }
+        if (isDoubleClick) OpenViewer(item.Id);
+    }
+
+    /// <summary>ECO-068/REQ-041: 現workspaceの可視集合を表示と同じ絞り込み・sort順でviewerへ渡す。</summary>
+    private void OpenViewer(string id)
+    {
+        var ordered = VisibleImagesInDisplayOrder().Select(BuildImageEntry).ToList();
+        var index = ordered.FindIndex(e => string.Equals(e.Record.Id, id, StringComparison.Ordinal));
+        if (index >= 0) _windows.ShowViewer(ordered, index);
+    }
+
+    private IReadOnlyList<ImageRecord> VisibleImagesInDisplayOrder()
+    {
+        var filtered = _tagFilter is null
+            ? _sourceImages
+            : _sourceImages.Where(im => ImgTagIds(im).Contains(_tagFilter));
+        return _sorter.Sort(filtered, _sortField, _sortDir);
+    }
+
+    private ImageEntry BuildImageEntry(ImageRecord record)
+    {
+        var tags = TagsOf(record.Id)
+            .Where(it => _tagById.ContainsKey(it.TagId))
+            .Select(it => new EvalTagValue(it.TagId, _tagById[it.TagId].Type, it.Value))
+            .ToList();
+        return new ImageEntry(record, AbsolutePath(record) ?? string.Empty, tags);
     }
 
     private void NotifyModeChanged()

@@ -48,6 +48,8 @@ public sealed class CpUiG1WorkTabTests : IDisposable
 
     private sealed class StubWindowService : IWindowService
     {
+        public List<(IReadOnlyList<ImageEntry> Ordered, int StartIndex)> ViewerCalls { get; } = new();
+
         public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(true);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
@@ -59,18 +61,71 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         public Task<NodeConditionResult?> ShowNodeConditionDialogAsync(Tag tag, HierarchyConditionType? currentType, string? currentValueJson)
             => Task.FromResult<NodeConditionResult?>(null);
         public Task ShowRelinkAsync(string folderId) => Task.CompletedTask;
-        public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex) { }
+        public void ShowViewer(IReadOnlyList<ImageEntry> ordered, int startIndex)
+            => ViewerCalls.Add((ordered, startIndex));
         public Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries) => Task.CompletedTask;
         public Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources) => Task.FromResult(false);
         public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
     }
 
-    private WorkTabViewModel NewVm(AppSettings? settings = null) =>
+    private WorkTabViewModel NewVm(AppSettings? settings = null, StubWindowService? windows = null) =>
         new(new WorkspaceService(_db.Workspaces, _db.Clock), _db.Folders, _db.Tags,
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new TruePresenceProbe()),
-            new StubWindowService(), new ImageSorter(), settings ?? new AppSettings());
+            windows ?? new StubWindowService(), new ImageSorter(), settings ?? new AppSettings());
+
+    /// <summary>ECO-068: 作業タブ閲覧モードのダブルクリックは、現在の可視順でビューアーを起動する。</summary>
+    [Fact]
+    public async Task 閲覧モードのダブルクリックは絞り込みソート後の表示順と開始位置でビューアーを開く()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a", "b", "c" });
+        var windows = new StubWindowService();
+        var vm = NewVm(windows: windows);
+        await vm.InitializeAsync();
+
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), ctrl: false, shift: false, isDoubleClick: false);
+        Assert.Empty(windows.ViewerCalls); // 閲覧時single clickは無操作
+
+        vm.ClickChip(vm.Chips.Single(c => c.Id == "t-fav")); // 可視集合=a,b
+        vm.ToggleSortDirCommand.Execute(null);                // 名前降順=b,a
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), ctrl: false, shift: false, isDoubleClick: true);
+
+        var call = Assert.Single(windows.ViewerCalls);
+        Assert.Equal(new[] { "b", "a" }, call.Ordered.Select(e => e.Record.Id).ToArray());
+        Assert.Equal(1, call.StartIndex);
+    }
+
+    /// <summary>ECO-068/REQ-041: 文脈モード中のダブルクリックは既存の選択意味論を優先する。</summary>
+    [Fact]
+    public async Task 文脈モード中のダブルクリックはビューアーを開かない()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a", "b", "c" });
+        var windows = new StubWindowService();
+        var vm = NewVm(windows: windows);
+        await vm.InitializeAsync();
+
+        vm.ToggleEditCommand.Execute(null);
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), false, false, isDoubleClick: true);
+        vm.ToggleEditCommand.Execute(null);
+
+        vm.ToggleWorkCommand.Execute(null);
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), false, false, isDoubleClick: true);
+        vm.ToggleWorkCommand.Execute(null);
+
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), false, false, isDoubleClick: true);
+        vm.ToggleOrganizeCommand.Execute(null);
+
+        vm.EnterDeleteCommand.Execute(null);
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), false, false, isDoubleClick: true);
+
+        Assert.Empty(windows.ViewerCalls);
+    }
 
     [Fact]
     public async Task チップは現スペースのタグから算出_絞り込みでItemsが狭まる()
