@@ -1,4 +1,4 @@
-# Change Order — ECO-070(implemented / golden pending): FS表示でフォルダがソート対象外となり固定名前昇順で残る
+# Change Order — ECO-070(applied): FS表示でフォルダがソート対象外となり固定名前昇順で残る
 
 > maintainer要求(2026-07-12)「ファイルシステム表示ではフォルダを先、その後にファイルを表示し、
 > ソートはフォルダ・ファイルそれぞれに対して行う」を`/eco-file`で受理した既存機能品質是正要求。
@@ -144,3 +144,23 @@ foldersにも選択列と同じ比較を適用する。
    完了時に最新の明示sortがfolder/image両群へ適用されることを確認する。
 7. タグビュー軸と作業タブにfolder行が混入せず、画像double click後のviewer列が画像だけで画面の画像順と一致することを確認する。
 8. タグ編集・作業・整理・削除modeと画像タブのgrid/list仮想化・選択に回帰がないことを確認する。
+
+## 9. gate②合格・クローズ(2026-07-12)
+
+maintainerが`/eco-accept ECO-070`で§8.4の実機goldenを承認した。同階層のmixed folder/imageは
+grid/list双方で常にfolder群→画像群となり、名前の昇順/降順では両群が個別に反転した。サイズ・更新日では
+folder群が名前を同方向、画像群が選択値で並び、folderへ架空の列値やtile補助値は表示されなかった。
+folder移動・パンくず・FS tag chip後もgroup順を維持し、scan中は取込順append、完了時に最新明示sortを
+両群へ適用した。タグビュー、WorkTab、viewer画像列、タグ編集/作業/整理/削除mode、仮想化・選択にも回帰はない。
+
+再発防止はCP-UI-G1の潜伏履歴+golden観点、`CpUiG1ImageTabSelectionTests`のmixed folder/image exact、
+M-UI-IMAGETAB-035の`TryGetPreservedScanOrder`共有契約へ固定した。CADはViewPrismUI `0f303a4`、
+製品側REQ-081/仕様§2.6/E-UI-BROWSE-022/M-UI-IMAGETAB-035/CP-UI-G1をfix時に同期済みで、
+M4の追加同期は不要。新しい視覚部品はなくDesign System BOMも改訂不要である。
+
+教訓: 異種項目を同じ一覧へ合成する場合、「sort対象=表示列」だけでは不十分で、type間の一次順序と
+type内の二次比較、比較値を持たないtypeのfallback、進行中データの順序契約を一組で規定する必要がある。
+ECO-069のsurface間conformance教訓をデータ種別間へread-acrossし、テストhelperが`!IsFolder`でconsumerの
+一部だけを観測していた沈黙点をmixed fixtureへ置き換えた。
+
+残課題なし。folder size/date/tag集約値は案Aの明示的非採用であり、必要性が実測された場合は別ECOとする。
