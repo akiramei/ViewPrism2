@@ -12,7 +12,7 @@ namespace ViewPrism2.Infrastructure.Imaging;
 /// 最終縮小は SKFilterMode.Linear(双線形)を明示し Mipmap なし(Factory-A と同一)。
 /// 元画像へは一切書き込まない・一時ファイルも作らない(INV-009)。
 /// </summary>
-public sealed class PHashImageReaderScaledDecode : IPHashImageReader
+public sealed class PHashImageReaderScaledDecode : ICancellablePHashImageReader
 {
     /// <summary>中間デコードの目標長辺(px)。短辺はクランプで 32px 未満にしない。</summary>
     private const int IntermediateLongEdge = 64;
@@ -37,31 +37,51 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
 
     /// <summary>絶対パスの画像から 16hex pHash を計算する。壊れた画像・読み取り失敗は null。</summary>
     public Task<string?> ComputePHashAsync(string absoluteImagePath)
+        => ComputePHashAsync(absoluteImagePath, CancellationToken.None);
+
+    Task<string?> ICancellablePHashImageReader.ComputePHashAsync(
+        string absoluteImagePath, CancellationToken cancellationToken)
+        => ComputePHashAsync(absoluteImagePath, cancellationToken);
+
+    private Task<string?> ComputePHashAsync(string absoluteImagePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
         return Task.Run(() =>
         {
-            var pixels = DecodePixels(absoluteImagePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            var pixels = DecodePixels(absoluteImagePath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return pixels is null ? null : PerceptualHash.Compute(pixels);
-        });
+        }, cancellationToken);
     }
 
     /// <summary>8 オリエンテーション変種の pHash(仕様 §2.10.1a・[0]=identity)。失敗は null。</summary>
     public Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(string absoluteImagePath)
+        => ComputePHashVariantsAsync(absoluteImagePath, CancellationToken.None);
+
+    Task<IReadOnlyList<string>?> ICancellablePHashImageReader.ComputePHashVariantsAsync(
+        string absoluteImagePath, CancellationToken cancellationToken)
+        => ComputePHashVariantsAsync(absoluteImagePath, cancellationToken);
+
+    private Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(
+        string absoluteImagePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
         return Task.Run(() =>
         {
-            var pixels = DecodePixels(absoluteImagePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            var pixels = DecodePixels(absoluteImagePath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return pixels is null ? null : (IReadOnlyList<string>?)PHashOrientations.ComputeAll(pixels);
-        });
+        }, cancellationToken);
     }
 
     /// <summary>画像を scaled-decode 経由で 32×32 BGRA へ縮小したピクセル列を返す。失敗は null。</summary>
-    private byte[]? DecodePixels(string absoluteImagePath)
+    private byte[]? DecodePixels(string absoluteImagePath, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // K-WINFS: 他プロセスのロックと共存する読み取り専用オープン(INV-009)
             using var stream = new FileStream(
                 absoluteImagePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -81,6 +101,7 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
             // scaled-decode: フル解像度デコード→縮小を避けて codec に縮小デコードさせる
             using var bitmap = new SKBitmap(scaledInfo);
             var result = codec.GetPixels(scaledInfo, bitmap.GetPixels());
+            cancellationToken.ThrowIfCancellationRequested();
             if (result is not (SKCodecResult.Success or SKCodecResult.IncompleteInput))
             {
                 _logger?.LogWarning("pHash 用 scaled-decode に失敗しました: {Path}", absoluteImagePath);
@@ -110,11 +131,14 @@ public sealed class PHashImageReaderScaledDecode : IPHashImageReader
                     target = intermediate;
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // 最終 32×32 縮小処理は Factory-A と共通(双線形・Mipmap なし・決定性)。
                 // 入力画素が early-shrink+中間段で異なるため出力 pHash 値は Factory-A と一致しない(adapter drift)。
                 var info = new SKImageInfo(
                     PerceptualHash.Size, PerceptualHash.Size, SKColorType.Bgra8888, SKAlphaType.Unpremul);
                 using var resized = target.Resize(info, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+                cancellationToken.ThrowIfCancellationRequested();
                 if (resized is null)
                 {
                     _logger?.LogWarning("pHash 用リサイズに失敗しました: {Path}", absoluteImagePath);

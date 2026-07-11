@@ -34,3 +34,14 @@ public interface IPHashImageReader
     Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(string absoluteImagePath)
         => Task.FromResult<IReadOnlyList<string>?>(null);
 }
+
+/// <summary>
+/// ECO-066: production reader が画像単位の処理境界でも停止を観測する任意capability。
+/// 既存fake/固定Oracleが実装する IPHashImageReader の契約は変更しない。
+/// </summary>
+public interface ICancellablePHashImageReader : IPHashImageReader
+{
+    Task<string?> ComputePHashAsync(string absoluteImagePath, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(
+        string absoluteImagePath, CancellationToken cancellationToken);
+}

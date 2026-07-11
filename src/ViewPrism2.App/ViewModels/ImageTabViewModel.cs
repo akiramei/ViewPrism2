@@ -185,7 +185,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             getSimilarityScopeCandidates: ResolveSimilarityScopeCandidates,
             recompute: Recompute,
             refreshSelectionMarkers: RefreshSelectionMarkers,
-            reloadImagesAsync: ReloadImagesAsync);
+            reloadImagesAsync: ReloadImagesAsync,
+            notifySearchState: () => OnPropertyChanged(string.Empty));
     }
 
     /// <summary>
@@ -433,6 +434,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _catalogLoadCts?.Dispose();
         _catalogLoadCts = null;
         CancelContentLoad(clearState: true);
+        Organize.InvalidateSearchContext();
         _isCatalogLoading = false;
     }
 
@@ -973,6 +975,18 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool CondName { get => Organize.CondName; set { Organize.CondName = value; OnPropertyChanged(string.Empty); } }
     public bool CondDate { get => Organize.CondDate; set { Organize.CondDate = value; OnPropertyChanged(string.Empty); } }
     public bool Searching => Organize.Searching;
+    public bool SearchPreparing => Organize.SearchPreparing;
+    public bool SearchComparing => Organize.SearchComparing;
+    public bool SearchCancelling => Organize.SearchCancelling;
+    public bool ShowSearchProgress => Organize.ShowSearchProgress;
+    public bool ShowSearchSettings => Organize.ShowSearchSettings;
+    public bool ShowStartSearch => Organize.ShowStartSearch;
+    public bool ShowCancelSearch => Organize.ShowCancelSearch;
+    public bool CanCancelSearch => Organize.CanCancelSearch;
+    public string SearchCancelButtonLabel => Organize.SearchCancelButtonLabel;
+    public string SearchProgressLabel => Organize.SearchProgressLabel;
+    public double SearchProgressValue => Organize.SearchProgressValue;
+    public bool SearchProgressIndeterminate => Organize.SearchProgressIndeterminate;
     /// <summary>検索結果表示(中央ペインを候補一覧へ切替)。完了状態では出さない。</summary>
     public bool ShowSearchResults => _organizeMode && Organize.HasSearched && !Organize.OrganizeDone;
     public bool NoSearchResults => ShowSearchResults && SearchResults.Count == 0;
@@ -1356,6 +1370,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private async Task SelectCollection(string id)
     {
         if (_collectionId == id && (_loaded || _isContentLoading)) return;
+        Organize.InvalidateSearchContext();
         _collectionId = id;
         _scanNotice = null;
         _settings.LastCollectionId = id; // CR-5 書き戻し(永続化は SettingsStore / CaptureSettings)
@@ -1380,6 +1395,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenFolderManagement()
     {
+        Organize.InvalidateSearchContext();
         var keep = _collectionId;
         await _windows.ShowFolderManagementAsync().ConfigureAwait(true);
         _axis = "fs"; _viewId = null; _viewRoot = null; _viewPath.Clear();
@@ -1400,6 +1416,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectAxis(string id)
     {
+        Organize.InvalidateSearchContext();
         AxisMenuOpen = false;
         CloseColumnPicker(); // 軸/ビュー切替で表示列ピッカーを閉じる(古いビュー向けの書き戻し混線を防ぐ・ECO-025 β-2)
         _tagFilter = null; _selected.Clear(); _expandTag = null;
@@ -1580,6 +1597,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private void GoHome()
     {
+        if ((_axis == "view" && _viewPath.Count > 0) || (_axis != "view" && _fsPath.Count > 0))
+            Organize.InvalidateSearchContext();
         if (_axis == "view") _viewPath.Clear();
         else { _fsPath.Clear(); _tagFilter = null; }
         _selected.Clear();
@@ -1589,6 +1608,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private void GoCrumb(int depth)
     {
+        var pathCount = _axis == "view" ? _viewPath.Count : _fsPath.Count;
+        if (pathCount > depth + 1) Organize.InvalidateSearchContext();
         if (_axis == "view")
         {
             while (_viewPath.Count > depth + 1) _viewPath.RemoveAt(_viewPath.Count - 1);
@@ -1608,7 +1629,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (chip.IsNav)
         {
             // view 軸: 子ノードへ潜る
-            if (_currentChildren.TryGetValue(chip.Id, out var node)) { _viewPath.Add(node); _selected.Clear(); Recompute(); }
+            if (_currentChildren.TryGetValue(chip.Id, out var node)) { Organize.InvalidateSearchContext(); _viewPath.Add(node); _selected.Clear(); Recompute(); }
             return;
         }
         if (chip.IsNeutral) _tagFilter = null;
@@ -1620,7 +1641,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     {
         if (item.IsFolder)
         {
-            if (item.Target is not null) { _fsPath.Add(item.Target); _tagFilter = null; _selected.Clear(); Recompute(); }
+            if (item.Target is not null) { Organize.InvalidateSearchContext(); _fsPath.Add(item.Target); _tagFilter = null; _selected.Clear(); Recompute(); }
             return;
         }
         if (_organizeMode)
@@ -1934,6 +1955,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
         await Organize.RunSearchAsync().ConfigureAwait(true);
         // 末尾通知は子の _recompute(注入)が旧版と同位置・同回数で発行済み — 殻では重複させない(G-E36S3)
     }
+
+    [RelayCommand]
+    private void CancelSearch() => Organize.CancelSearch();
 
     /// <summary>検索結果の候補を整理対象へ追加する(マージ先が前提・モック「整理対象に追加」)。実体は Organize 子 VM。</summary>
     [RelayCommand]

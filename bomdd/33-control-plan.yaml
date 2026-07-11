@@ -218,6 +218,24 @@ control_plan:
         - "A contentをTCSで遅延中にBを選択・ready化し、その後Aを完了してもSelectedCollectionId/ItemsはBのまま"
       notes: "Task.Run境界の知覚応答と左/中央loading表示はCP-UI-G1 golden。固定ms閾値は置かず、P-01隔離profileで探索観測する。"
 
+    - id: CP-SIMSESSION-029
+      characteristic: "ECO-066/REQ-089/IMG-020 類似画像検索の単一active session、phase/count進捗、明示/自動cancel、latest-wins結果公開、途中cache再利用が両整理surfaceで一致する"
+      classification: "core + surface"
+      depth: unit
+      tolerance: "状態遷移・completed/total・結果snapshot・reader/cache呼出をexact。固定msを合否にしない"
+      fixture: tests/ViewPrism2.Tests/CpUi066SimilaritySessionTests.cs
+      fixture_note: "Trait cp=CP-SIMSESSION-029。TCS遅延readerで旧Task完了順を制御し、reflection/headlessで両タブ導線と進捗公開をpin"
+      oracle: "session state/progress/result/call countの完全一致"
+      approver: automated
+      test_vectors:
+        - "Reset/整理終了後に旧検索を完了してもHasSearched/resultsが復活しない。終了→即再入場でも旧generation非公開"
+        - "画像タブ/作業タブに独立した停止commandがあり、active時だけ停止CTA、cancelling中は停止中不活性"
+        - "Preparing→Comparing(0..Y)→CompletedでXは単調・0≤X≤Y・正常完了X=Y。cancelは0件/失敗へ遷移しない"
+        - "新検索は旧sessionをcancel+無効化し最新sessionだけpublish。target/scope/mode/lifetime変更もinvalidate"
+        - "cancelまでに完成したfeature/pair cacheは次回検索で再利用しreader呼出を繰り返さない"
+        - "条件検索は停止CTA/段階進捗の対象外。閾値/scope/score順/mergeは既存CP-SIM-017/G9を回帰"
+      notes: "知覚面=固定150px領域の置換、文言、bar、両タブ同型をCP-UI-G9/G1 golden。同期Skia primitive中は即時中断不能だがtokenをreader段階へ伝搬し、遅延結果はgenerationで必ず拒否。"
+
     - id: CP-TOOLBAR-RESPONSIVE-027
       characteristic: 画像タブ ツールバー狭幅レスポンシブ収納(IMG-014/ECO-027)の段階/回り込み状態計算と表示列モードゲートが退行しない
       classification: surface

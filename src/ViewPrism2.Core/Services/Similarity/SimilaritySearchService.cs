@@ -46,7 +46,8 @@ public sealed class SimilaritySearchService
         string baseImageId,
         int threshold,
         IProgress<int>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<SimilaritySearchProgress>? detailedProgress = null)
     {
         var baseImage = await _images.GetByIdAsync(baseImageId).ConfigureAwait(false);
         if (baseImage is null || baseImage.Status != ImageStatus.Normal)
@@ -56,7 +57,7 @@ public sealed class SimilaritySearchService
 
         // OC-16 後方互換: 明示 scope のない呼び出しは同一コレクション全体。
         var folderImages = await _images.GetByFolderAsync(baseImage.SyncFolderId).ConfigureAwait(false);
-        return await FindSimilarCoreAsync(baseImage, threshold, folderImages, progress, ct).ConfigureAwait(false);
+        return await FindSimilarCoreAsync(baseImage, threshold, folderImages, progress, ct, detailedProgress).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -68,7 +69,8 @@ public sealed class SimilaritySearchService
         int threshold,
         IReadOnlyCollection<ImageRecord> scopeCandidates,
         IProgress<int>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<SimilaritySearchProgress>? detailedProgress = null)
     {
         var baseImage = await _images.GetByIdAsync(baseImageId).ConfigureAwait(false);
         if (baseImage is null || baseImage.Status != ImageStatus.Normal)
@@ -76,7 +78,7 @@ public sealed class SimilaritySearchService
             return [];
         }
 
-        return await FindSimilarCoreAsync(baseImage, threshold, scopeCandidates, progress, ct).ConfigureAwait(false);
+        return await FindSimilarCoreAsync(baseImage, threshold, scopeCandidates, progress, ct, detailedProgress).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<SimilarResult>> FindSimilarCoreAsync(
@@ -84,7 +86,8 @@ public sealed class SimilaritySearchService
         int threshold,
         IReadOnlyCollection<ImageRecord> scopeCandidates,
         IProgress<int>? progress,
-        CancellationToken ct)
+        CancellationToken ct,
+        IProgress<SimilaritySearchProgress>? detailedProgress)
     {
         // フィルタ先行(REQ-087): scope 候補にも Core 境界を再適用し、重複 id も 1 回だけ処理する。
         var candidates = scopeCandidates
@@ -94,9 +97,13 @@ public sealed class SimilaritySearchService
             .DistinctBy(i => i.Id, StringComparer.Ordinal)
             .ToList();
 
+        var total = candidates.Count;
+        detailedProgress?.Report(new SimilaritySearchProgress(SimilaritySearchPhase.Preparing, 0, total));
+
         if (candidates.Count == 0)
         {
             progress?.Report(100);
+            detailedProgress?.Report(new SimilaritySearchProgress(SimilaritySearchPhase.Comparing, 0, 0));
             return [];
         }
 
@@ -114,8 +121,8 @@ public sealed class SimilaritySearchService
         }
 
         var results = new List<SimilarResult>();
-        var total = candidates.Count;
         var done = 0;
+        detailedProgress?.Report(new SimilaritySearchProgress(SimilaritySearchPhase.Comparing, 0, total));
         foreach (var candidate in candidates)
         {
             ct.ThrowIfCancellationRequested();
@@ -129,6 +136,7 @@ public sealed class SimilaritySearchService
 
             done++;
             progress?.Report(total == 0 ? 100 : done * 100 / total);
+            detailedProgress?.Report(new SimilaritySearchProgress(SimilaritySearchPhase.Comparing, done, total));
         }
 
         // Score 降順・同値は id 昇順(序数)で安定
@@ -208,7 +216,10 @@ public sealed class SimilaritySearchService
         if (_reader.SupportsOrientationVariants)
         {
             // 変種対応 reader: 1 回のデコードで 8 変種([0]=identity)を得る(REQ-084)
-            var variants = await _reader.ComputePHashVariantsAsync(absolutePath).ConfigureAwait(false);
+            var variants = _reader is ICancellablePHashImageReader cancellable
+                ? await cancellable.ComputePHashVariantsAsync(absolutePath, ct).ConfigureAwait(false)
+                : await _reader.ComputePHashVariantsAsync(absolutePath).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
             if (variants is null || variants.Count == 0)
             {
                 return null;
@@ -219,7 +230,10 @@ public sealed class SimilaritySearchService
         }
         else
         {
-            phash = await _reader.ComputePHashAsync(absolutePath).ConfigureAwait(false);
+            phash = _reader is ICancellablePHashImageReader cancellable
+                ? await cancellable.ComputePHashAsync(absolutePath, ct).ConfigureAwait(false)
+                : await _reader.ComputePHashAsync(absolutePath).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
             if (phash is null)
             {
                 return null;

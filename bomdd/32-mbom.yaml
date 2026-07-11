@@ -363,13 +363,14 @@ mbom:
         shell: "作業タブ(第3タブ)= 左作業スペースサイドバー(一覧/選択/＋=デフォルト回転/インラインリネーム/件数/276-64 折り畳み)+ ワークスペースヘッダ(名前+既定バッジ+件数)+ 中央グリッド/リスト(フラット・表示軸/パンくずなし)+ ソート + 空状態(画像タブ作業モードへの誘導)"
         browse: "(ECO-058/REQ-041 read-across)中央 grid=ItemsRepeater+UniformGridLayout / list=VirtualizingStackPanel。E-UI-BROWSE-022 と同じく可視範囲だけを実体化し、非仮想 ItemsControl 直置きを禁止"
         modes: "(ECO-021 β-1〜β-4)作業モード=別スペースへ移動(E-WORKSPACE-042.MoveImages)/ タグ編集(E-UI-TAGASSIGN-029 再利用)/ 整理トレイ(E-UI-SIMILARITY-035+E-UI-MERGE-036 再利用・現スペース内)/ 削除+ゴミ箱 in-tab popup(E-TRASH-038/E-UI-REPAIR-039 再利用)。修復はコレクションスコープのため非搭載。選択機構・排他隠し(ECO-014§8)は作業タブ側でオーケストレート(UQ-W06=B 隔離方式)"
+        similarity_session: "(ECO-066/REQ-089)画像タブと共通のSimilaritySearchSessionを所有。現workspaceをscopeにStart、停止/整理終了/target変更/space変更/別mode/window終了でcancel+invalidate。phase/count/CTA/結果保持はIMG-020と同一"
         domain: "ドメイン操作は E-WORKSPACE-042 経由(状態遷移を UI で再実装しない)。ゴミ箱は workspace スコープ(GetDeletedImagesAsync)"
       invariants:
         - 件数/一覧は status=normal のみ(INV-W2)。デフォルトは常に 1 つ(INV-W1)・デフォルトはリネーム不可(INV-W3)
         - Core 意味論不変(MoveImages/Merge/Trash は既存サービス再利用)。新 Core なし
         - 中央 grid/list は画面外 ImageItemVM セル/ThumbnailImage を全件実体化しない(REQ-041・FMEA-038)
-      acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-NFR-026, CP-UI-G1]
-      fmea_refs: [FMEA-038]
+      acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-NFR-026, CP-SIMSESSION-029, CP-UI-G1]
+      fmea_refs: [FMEA-038, FMEA-041]
 
     # ---------- v3.0 追加(loop-v3-similarity) ----------
     - id: M-PHASH-020
@@ -399,8 +400,8 @@ mbom:
         path_note: "+ IPHashImageReader 抽象 + src/ViewPrism2.Infrastructure/Imaging/PHashImageReader.cs + src/ViewPrism2.Infrastructure/Database/(ImageFeatureRepository.cs, ImageSimilarityRepository.cs, 新規マイグレーション)"
         type: dotnet-classlib
       interface_contract:
-        extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ(SkiaSharp は Infrastructure に閉じる)。失敗(壊れた画像)は null。ThumbnailService と同じ層分離。**(ECO-048)default interface method で非破壊拡張**: bool SupportsOrientationVariants(既定 false)+ Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(既定 null)— 既存 fake・固定オラクル実装を無改変に保つ(R6 折り合い・CHEAT-01 同系)。production 両 reader は true+8 変種を実装"
-        search: "FindSimilarAsync(baseImageId, threshold, progress, ct)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, IReadOnlyCollection<ImageRecord> scopeCandidates, progress, ct)=ECO-062/REQ-087明示候補。SimilarResult { string ImageId, int Score }。候補は status=Normal・基準自身除外・同一collectionをCoreで再検証し、フィルタ先行→キャッシュ参照→無ければ IPHashImageReader で計算し保存。閾値以上(≧)を Score 降順・同値 id 昇順。**(ECO-048/REQ-084)ペア距離=序数比較で小さい id の identity pHash × 大きい id の全 8 変種の最小ハミング距離**(対称・決定的・変種[0]=identity を含むため単調拡張。変種なし特徴量とは identity 同士のみ=後方互換)"
+        extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ。失敗は null。**(ECO-048)default interface methodで変種を後方互換追加**。**(ECO-066/REQ-089)任意capability ICancellablePHashImageReaderを追加して既存fake/固定Oracle契約を無改変維持し、productionはdecode前後/変種計算前にcancel観測(同期Skia primitive実行中そのものは中断不能)**"
+        search: "FindSimilarAsync(baseImageId, threshold, progress, ct, detailedProgress)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, scopeCandidates, progress, ct, detailedProgress)=ECO-062明示候補。候補はNormal/自身除外/同一collectionをCore再検証しfilter先行→cache→計算保存、閾値以上をScore降順/id昇順。ECO-048の8変種最小距離を維持。**(ECO-066/REQ-089)detailedProgress=Preparing→Comparing(0..total)、旧IProgress<int>は後方互換、ctはreaderまで伝搬**"
         features_repo: "IImageFeatureRepository: GetAsync(imageId)/UpsertAsync(feature)/DeleteByImageAsync。feature 取得時 file_size/modified_date/hash が現行と異なれば呼び出し側が再計算→Upsert→関与 similarity 行を連鎖削除。(ECO-048)ImageFeature.PhashVariants(8 変種の ',' 連結・NULL=旧レコード)を保存/取得"
         similarity_repo: "IImageSimilarityRepository: GetAsync(id1,id2)(正規化して照会)/UpsertAsync/DeleteInvolvingAsync(imageId)。cache_key={min}-{max}(文字列比較で正規化)"
         schema: >-
@@ -416,8 +417,9 @@ mbom:
         - since ECO-062(REQ-087) scope候補外はfeature/similarity repository・reader非接触。既存APIは固定Oracle互換で維持
         - 無効化は内容ベース(時間失効なし)+adapter 世代(P-09)+変種欠落(since ECO-048/REQ-084)+特徴量再計算で関与ペア連鎖削除
         - 非同期で UI をブロックしない。OC-16/OC-18 を公開 API に
-      acceptance_refs: [CP-SIM-017, CP-DB-006]
-      fmea_refs: [FMEA-022, FMEA-025]
+        - since ECO-066(REQ-089) phase/count progressは単調、cancel後の検索結果publicationはsurface session generationで拒否し正常cacheは再利用
+      acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DB-006]
+      fmea_refs: [FMEA-022, FMEA-025, FMEA-041]
 
     - id: M-MERGE-022
       ebom_refs: [E-MERGE-034]
@@ -615,10 +617,12 @@ mbom:
       ebom_refs: [E-UI-MODE-041]   # 整理モードのフィーチャ実体(部分)。E-UI-MERGE-036/E-SIMSEARCH/E-CRITERIA の実行面と接続(所有品目は従来どおり Core 側)
       artifact:
         path: src/ViewPrism2.App/ViewModels/ImageTabOrganizeViewModel.cs
-        path_note: "転送殻方式(§12.2): 全公開契約はホスト転送殻・トレイ VM 構築はホスト Recompute。接続面= 関数注入(getCollectionId/getSimilarityScopeCandidates(ECO-062検索時点FS/view文脈)/recompute/refreshSelectionMarkers[未使用=契約字面維持・cheat E36S3]/reloadImagesAsync)"
+        path_note: "転送殻方式(§12.2): 全公開契約はホスト転送殻・トレイ VM 構築はホスト Recompute。接続面= 関数注入(getCollectionId/getSimilarityScopeCandidates(ECO-062検索時点FS/view文脈)/recompute/refreshSelectionMarkers[未使用=契約字面維持・cheat E36S3]/reloadImagesAsync)。ECO-066=SimilaritySearchSession共通状態機械を所有"
         type: avalonia-app
-      acceptance_refs: [CP-L1-SMOKE]
-      acceptance_note: "整理挙動の受入= golden(視覚)+Core 側 CP(CP-SIM-017/CP-MERGE-018/CP-MERGE-001/CP-CRITERIA-019)で被覆 — 挙動不変 ECO につき UI 専用 CP は新設しない"
+      interface_contract:
+        similarity_session: "idle/preparing/comparing/cancelling/completed。Startは単一active generation+CTS+直前completed結果snapshot、Cancelは明示停止、Invalidateは整理/target/scope/mode/lifetime境界。TryPublishは最新generationだけtrue。phase/count/CTA派生をホストへ全通知"
+      acceptance_refs: [CP-L1-SMOKE, CP-SIMSESSION-029, CP-UI-G9]
+      acceptance_note: "整理挙動の受入= golden(視覚)+Core CP+ECO-066 session exact。画像/作業タブの転写driftを共通sessionで封止"
 
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
@@ -658,6 +662,7 @@ fmea:
   - { id: FMEA-038, unit: M-UI-WORKSPACE-029, failure_mode: "E-UI-BROWSE-022/FMEA-013 の read-across 漏れにより作業タブ中央 grid/list へ非仮想 ItemsControl を直置きする", effect: "1 万件で数 GiB のメモリ増加・タブ切替未完了・UI 応答不能", targeted_by: "CP-NFR-026+CP-UI-G1+probe P-01" }
   - { id: FMEA-039, unit: M-SCAN-005, failure_mode: "大量初回スキャンを画像1件ごとのSQLite暗黙transactionで永続化し、同じ整数百分率も全件UI通知する／ConfigureAwait(false)だけで背景化したと誤認し同期完了awaitからUI thread上でscan coreを走らせる", effect: "26万件でcommit/dispatcher負荷が件数比例しスキャンが長時間化／処理全時間UI操作不能", targeted_by: "CP-SCAN-004(ECO-059 bounded batch+rollback+progress exact+GF-059-01 caller thread分離)" }
   - { id: FMEA-040, unit: M-UI-IMAGETAB-035, failure_mode: "起動時に全collectionのnormal画像/image_tagsをeager materializeし、loading/errorを空状態と混同する／collection切替後の旧非同期結果を適用する", effect: "巨大profileでshell初期応答不能・総件数比例の時間/メモリ・偽0件表示・別collection画像の混入", targeted_by: "CP-STARTUP-028(scope exact+状態遷移+遅延結果破棄)+CP-UI-G1" }
+  - { id: FMEA-041, unit: M-UI-ORGANIZE-034, failure_mode: "類似検索のprogress/ctをsurfaceから未配線のままにし、整理終了は表示値だけresetして旧Taskを生存させる／検索連打を許し完了順で結果を書き戻す", effect: "停止不能・進捗不明・終了→再入場で旧結果復活・多重decode/DB負荷・最新でない結果表示", targeted_by: "CP-SIMSESSION-029(phase/count/cancel/single-active/latest-wins/cache再利用)+CP-UI-G9/G1" }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
   - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }

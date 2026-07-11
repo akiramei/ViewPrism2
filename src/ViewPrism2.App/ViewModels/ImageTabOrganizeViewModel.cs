@@ -26,6 +26,8 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private readonly Action _recompute;
     private readonly Action _refreshSelectionMarkers;
     private readonly Func<Task> _reloadImagesAsync;
+    private readonly Action _notifySearchState;
+    private readonly SimilaritySearchSession _searchSession = new();
 
     // ---- 整理モード状態(order §12.1。ECO-044: タグ統合トグル _includeTags は撤去=常時 ON が確定・IMG-011 裁定②) ----
     private string? _mergeTargetId;
@@ -38,7 +40,6 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private bool _condSize;
     private bool _condName;
     private bool _condDate;
-    private bool _searching;
     private bool _hasSearched;
     private bool _searchOpen; // ECO-056(v2 3 ゾーン): 下部ピンの「似た画像を探す」折りたたみ状態
     private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
@@ -59,7 +60,8 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         Func<IReadOnlyList<ImageRecord>> getSimilarityScopeCandidates,
         Action recompute,
         Action refreshSelectionMarkers,
-        Func<Task> reloadImagesAsync)
+        Func<Task> reloadImagesAsync,
+        Action? notifySearchState = null)
     {
         _similar = similar;
         _merge = merge;
@@ -70,6 +72,12 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _recompute = recompute;
         _refreshSelectionMarkers = refreshSelectionMarkers;
         _reloadImagesAsync = reloadImagesAsync;
+        _notifySearchState = notifySearchState ?? (() => { });
+        _searchSession.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(string.Empty);
+            _notifySearchState();
+        };
     }
 
     // ---- ホストの転送プロパティが読む生状態(R1: 本体は子・ホストは委譲のみ) ----
@@ -101,7 +109,19 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     public bool CondName { get => _condName; set { _condName = value; OnPropertyChanged(string.Empty); } }
     public bool CondDate { get => _condDate; set { _condDate = value; OnPropertyChanged(string.Empty); } }
     private bool HasAnyCond => _condHash || _condExt || _condSize || _condName || _condDate;
-    public bool Searching => _searching;
+    public bool Searching => _searchSession.IsActive;
+    public bool SearchPreparing => _searchSession.Preparing;
+    public bool SearchComparing => _searchSession.Comparing;
+    public bool SearchCancelling => _searchSession.Cancelling;
+    public bool ShowSearchProgress => _searchSession.ShowProgress;
+    public bool ShowSearchSettings => !_searchSession.ShowProgress;
+    public bool ShowStartSearch => !_searchSession.ShowProgress;
+    public bool ShowCancelSearch => _searchSession.ShowProgress;
+    public bool CanCancelSearch => !_searchSession.Cancelling;
+    public string SearchCancelButtonLabel => _searchSession.Cancelling ? "停止中" : "停止";
+    public string SearchProgressLabel => _searchSession.ProgressLabel;
+    public double SearchProgressValue => _searchSession.ProgressValue;
+    public bool SearchProgressIndeterminate => _searchSession.ProgressIndeterminate;
     public bool HasSearched => _hasSearched;
     /// <summary>検索実行可否(ECO-055 裁定③): 条件検索もマージ先が必須(dest と比べる意味論)+
     /// 条件 1 つ以上(空条件非実行= REQ-068)。類似は従来どおりマージ先必須。</summary>
@@ -132,7 +152,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _organizeTargets.Clear();
         _searchMethod = "similar";
         _condHash = false; _condExt = false; _condSize = false; _condName = false; _condDate = false; // ECO-055
-        _searching = false; _hasSearched = false;
+        _searchSession.Invalidate(); _hasSearched = false;
         _searchOpen = false; // ECO-056: 検索パネルは畳んだ状態で開始(v2 モック direct シナリオ)
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
@@ -143,6 +163,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     /// <summary>グリッドで残したい1枚をマージ先にする(整理対象に入っていれば外す)。呼び出し元(ホスト HandleItemClick)が _organizeMode を確認済み。</summary>
     public void SetMergeTarget(string imageId)
     {
+        InvalidateSearchContext();
         _organizeTargets.Remove(imageId);
         _mergeTargetId = imageId;
         OnPropertyChanged(string.Empty);
@@ -165,6 +186,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     /// マージ先のみ未設定へ戻す(実行・検索の不活性化は CanExecuteMerge/CanRunSearch 派生が担う)。</summary>
     public void ClearMergeTarget()
     {
+        InvalidateSearchContext();
         _mergeTargetId = null;
         OnPropertyChanged(string.Empty);
     }
@@ -195,6 +217,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     public void PromoteToMergeTarget(string imageId)
     {
         if (!_organizeTargets.Remove(imageId)) return;
+        InvalidateSearchContext();
         if (_mergeTargetId is not null) _organizeTargets.Add(_mergeTargetId);
         _mergeTargetId = imageId;
         OnPropertyChanged(string.Empty);
@@ -202,6 +225,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
 
     public void SetSearchMethod(string method)
     {
+        if (_searchSession.IsActive) return;
         _searchMethod = method == "criteria" ? "criteria" : "similar";
         OnPropertyChanged(string.Empty);
     }
@@ -215,13 +239,13 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     }
 
     /// <summary>似た画像を探す: 類似(E-SIMSEARCH-032)または条件(E-CRITERIA-037)。結果を中央ペインへ。
-    /// 途中通知(searching 表示更新)は recompute 注入で現行位置を保持する(order §12.2)。</summary>
+    /// 類似検索は世代付きセッションで管理し、キャンセル済みの遅延完了を公開しない。</summary>
     public async Task RunSearchAsync()
     {
         var collectionId = _getCollectionId();
         if (collectionId is null) return;
-        _searching = true; _recompute();
         var results = new List<(string ImageId, int Score, bool IsCriteria)>();
+        SimilaritySearchSession.Run? run = null;
         try
         {
             if (_searchMethod == "criteria")
@@ -246,18 +270,41 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
             }
             else if (_mergeTargetId is not null) // 類似は基準(マージ先)が必要
             {
+                run = _searchSession.Start();
                 var found = await _similar.FindSimilarInScopeAsync(
-                    _mergeTargetId, _similarThreshold, _getSimilarityScopeCandidates()).ConfigureAwait(true);
+                    _mergeTargetId, _similarThreshold, _getSimilarityScopeCandidates(),
+                    ct: run.Token,
+                    detailedProgress: _searchSession.CreateProgress(run)).ConfigureAwait(true);
                 foreach (var s in found) results.Add((s.ImageId, s.Score, false));
+                if (!_searchSession.TryComplete(run)) return;
             }
+        }
+        catch (OperationCanceledException) when (run?.Token.IsCancellationRequested == true)
+        {
+            return;
         }
         finally
         {
-            _searching = false;
+            if (run is not null) _searchSession.Finish(run);
         }
         _searchResults = results;
         _hasSearched = true;
         _recompute();
+    }
+
+    /// <summary>利用者操作による停止。完了済み結果は次の正常完了まで保持する。</summary>
+    public void CancelSearch() => _searchSession.Cancel();
+
+    /// <summary>整理文脈が変わったとき、実行中検索とその遅延結果を無効化する。</summary>
+    public void InvalidateSearchContext(bool clearResults = true)
+    {
+        _searchSession.Invalidate();
+        if (clearResults)
+        {
+            _hasSearched = false;
+            _searchResults = new();
+        }
+        OnPropertyChanged(string.Empty);
     }
 
     /// <summary>マージ実行: E-MERGE-034(原子・タグ union・source=deleted・物理非破壊 INV-009)。完了後にデータ再読込。</summary>

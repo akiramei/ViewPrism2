@@ -1160,3 +1160,22 @@ requirements:
       - "loading中に『画像がありません』を表示し、0件と未完了を区別できない"
       - "collection Aの遅い完了が後から選んだBを上書きする"
       - "load失敗を未選択/0件へ変換し、再試行できない"
+
+  - id: REQ-089
+    statement: "pHash類似画像検索は整理モードが所有する停止可能な単一active sessionとして実行する。状態はidle/preparing/comparing/cancelling/completedを区別し、固定高の検索設定領域を実行中だけ『基準画像を準備しています…』／『画像を比較中 X / Y（Z%）』／『停止しています…』+進捗barへ置換する。同位置CTAは『探す』→『停止』→『停止中』とし、Xは比較済み候補数、Yは開始時候補総数、Zは整数百分率で0≤X≤Y・単調増加・正常完了時X=Yとする。明示停止、整理終了、マージ先変更/解除、collection・FS folder・view node・作業space変更、別mode、新検索、window/app終了はactive検索をcancelし世代を無効化する。旧検索の遅延完了はUIへ公開せず、結果は最新sessionの正常完了後だけ原子的に公開する。初回cancelは検索前grid、再検索cancelは直前completed結果を保持し、cancelを失敗/0件として表示しない。cancelまでに正常生成した特徴量/類似度cacheは保持・再利用する。画像タブ/作業タブは同じsession意味論を用い、条件検索は停止CTA・段階進捗の対象外とする"
+    rationale: |
+      ECO-066案A裁定(maintainer 2026-07-11)。CAD=ViewPrismUI IMG-020 `487aa53`。
+      REQ-065は検索中進捗を要求していたがsurfaceはSearching boolすら描画せず、Coreのprogress/ctも両タブから未配線。
+      整理終了は表示値だけをresetし実Taskを止めず、旧Task完了が_hasSearched/resultsを無条件に書き戻すため、
+      終了→再入場の旧結果復活と連打多重実行が構造上可能だった。結果publicationはsession世代で原子化し、
+      cacheは候補単位の正しい途中成果として分離する。受入はCP-SIMSESSION-029で状態遷移・進捗・cancel・
+      latest-wins・cache再利用をexact、CTA/固定高/両タブの知覚面をCP-UI-G9/G1 goldenで確認する。
+    rationale_precision: ok
+    classification_hint: core+surface
+    external_source: "ViewPrismUI docs/screens/image_tab.md/review_points.md IMG-020 (`487aa53`) / ECO-066"
+    counterexamples:
+      - "整理終了後に旧検索が完了し、再入場した新しい整理状態へ旧結果が復活する"
+      - "検索ボタン連打で複数検索が並行し、最後に開始した検索でなく最後に完了した検索が結果を上書きする"
+      - "停止を結果0件として表示し『類似画像がありません』と誤案内する"
+      - "進捗が百分率だけで基準画像準備中と候補比較中を区別できず、停止したように見える"
+      - "cancel時に正常生成済みcacheまで破棄し、次回検索で同じdecode/pHashをやり直す"

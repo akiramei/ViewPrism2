@@ -426,7 +426,7 @@
               <Border Classes="searchPanel" IsVisible="{Binding SearchOpen}">
                 <StackPanel Spacing="12">
                   <!-- 方式タブ: 順・名称は CAD(v1 から)=「条件検索」「類似画像検索」(51ad8ee の逆順短縮が逸脱) -->
-                  <Border Classes="segmented">
+                  <Border Classes="segmented" IsEnabled="{Binding ShowSearchSettings}">
                     <Grid ColumnDefinitions="*,*">
                       <Button Grid.Column="0" Classes="segBtnText" HorizontalAlignment="Stretch"
                               Classes.active="{Binding IsCriteriaMethod}" Content="条件検索"
@@ -438,6 +438,7 @@
                   </Border>
                   <!-- 切替コンテンツは 150px 固定(GF-056-01: モック height:150px — タブ切替で高さを変えない) -->
                   <Panel Height="150">
+                    <Panel IsVisible="{Binding ShowSearchSettings}">
                     <!-- 条件: 2 列グリッド+チェック行(ECO-055 意味論=マージ先との属性一致・意匠は v2 モック) -->
                     <StackPanel Spacing="8" VerticalAlignment="Top" IsVisible="{Binding IsCriteriaMethod}">
                       <TextBlock Text="一致を判定する条件" FontSize="11" FontWeight="SemiBold"
@@ -504,14 +505,27 @@
                         <TextBlock Text="50%" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                     </StackPanel>
+                    </Panel>
+                    <StackPanel IsVisible="{Binding ShowSearchProgress}" Spacing="14"
+                                VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                      <TextBlock Text="{Binding SearchProgressLabel}" FontSize="12.5" FontWeight="SemiBold"
+                                 Foreground="{StaticResource TextPrimaryBrush}" TextAlignment="Center" />
+                      <ProgressBar Minimum="0" Maximum="100" Value="{Binding SearchProgressValue}"
+                                   IsIndeterminate="{Binding SearchProgressIndeterminate}" Height="8" />
+                    </StackPanel>
                   </Panel>
                   <!-- 探す(文言は CAD v1 から「探す」— 51ad8ee の「似た画像を探す」が逸脱) -->
                   <Button Classes="primaryAction" Classes.scanBlocked="{Binding SimilarSearchBlocked}"
-                          Height="40" IsEnabled="{Binding CanInvokeSearch}" Command="{Binding RunSearchCommand}">
+                          Height="40" IsVisible="{Binding ShowStartSearch}"
+                          IsEnabled="{Binding CanInvokeSearch}" Command="{Binding RunSearchCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                       <PathIcon Data="{StaticResource SearchIcon}" Width="14" Height="14" />
                       <TextBlock Text="探す" VerticalAlignment="Center" />
                     </StackPanel>
+                  </Button>
+                  <Button Classes="primaryAction" Height="40" IsVisible="{Binding ShowCancelSearch}"
+                          IsEnabled="{Binding CanCancelSearch}" Command="{Binding CancelSearchCommand}">
+                    <TextBlock Text="{Binding SearchCancelButtonLabel}" />
                   </Button>
                   <TextBlock Text="{Binding ScanNotice}" IsVisible="{Binding HasScanNotice}"
                              FontSize="11.5" Foreground="{StaticResource AccentBrush}"

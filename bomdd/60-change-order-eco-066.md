@@ -1,4 +1,4 @@
-# ECO-066 (staged) — 類似画像検索の停止・進捗可視化 — 整理ライフサイクルと遅延結果の整合
+# ECO-066 (implemented) — 類似画像検索の停止・進捗可視化 — 整理ライフサイクルと遅延結果の整合
 
 > maintainer 実機報告・要求(2026-07-11)を受け、`/eco-file` で工程診断した既存機能拡張+実装逸脱是正。
 > 起票段階では `src/tests` を変更しない(R1)。
@@ -150,6 +150,40 @@ maintainerが2026-07-11に**案A**を採用した。CADはViewPrismUI `487aa53`
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/C、cancel範囲、結果保持、進捗配置、条件検索への適用を確定する。~~
    → **案A採用**(2026-07-11・maintainer)。条件検索は停止/段階進捗の対象外。
 2. ~~CAD commitを先行し、製品ECOへ取り込む。~~ → ViewPrismUI `487aa53`で完了。
-3. `/eco-fix ECO-066`: 遅延結果/多重実行/progress未配線をプローブ先行で不合格化してから製造する。
-4. 機械受入: build 0 / Tests / Oracle / validate_bom 0-0 / lifecycle。
+3. ~~`/eco-fix ECO-066`: 遅延結果/多重実行/progress未配線をプローブ先行で不合格化してから製造する。~~
+   → 2026-07-11 案Aで製造・機械受入完了。
+4. ~~機械受入: build 0 / Tests / Oracle / validate_bom 0-0 / lifecycle。~~ → §7のとおり完了。
 5. gate② golden: 画像/作業タブで明示停止、自動停止、進捗、終了→再入場、再検索cancel、通常完了と整理回帰を実機確認する。
+
+## §7 実施記録(2026-07-11 / gate② golden待ち)
+
+### R5 実測裏取り
+
+`CP-SIMSESSION-029`の先行プローブを追加し、是正前に既存590件が合格したまま新規3件だけ不合格になることを確認した。
+
+- 整理終了後にgateした旧readerを解放すると`HasSearched=true`へ復活した。
+- ImageTab/WorkTabに`CancelSearchCommand`が存在しなかった。
+- preparing/comparing/cancellingとphase/count進捗の公開契約が存在しなかった。
+
+これにより真因を「単なる表示欠落」ではなく、surfaceが検索Taskを所有するsession/世代/cancel契約を持たず、完了結果を無条件公開する構造と確定した。
+
+### 製造内容と裁定理由
+
+- 案Aを採用し、`SimilaritySearchSession`を両surface共通の単一active状態機械として追加した。tokenによる停止とgenerationによる遅延結果拒否を分離し、旧Taskが停止不能区間から戻っても公開できない。
+- Coreに`SimilaritySearchProgress(phase, completed, total)`を追加し、旧`IProgress<int>` APIを維持したまま詳細進捗を併設した。
+- 既存fake/固定Oracle契約を変えない任意capability `ICancellablePHashImageReader`をproduction readerだけが実装し、decode/resize/変種計算の境界でtokenを観測する。同期Skia primitive実行中は中断不能で、最大停止遅延は現在処理中のprimitive完了までとなる。
+- 画像/作業タブの固定150px領域を設定↔phase/count/barで切り替え、同位置CTAを探す↔停止↔停止中へ切り替えた。明示停止、整理終了、target/scope/workspace/mode/new search/window終了をcancel+invalidateへ接続した。
+- 初回cancelはgrid、再検索cancelは直前completed結果を保持し、途中結果は公開しない。候補単位で正常に永続化済みのfeature/similarity cacheはrollbackしない。
+- REQ-089、spec、E/M-BOM、CP-SIMSESSION-029、FMEA-041を同期した。性能最適化・ETA・DB schema・pHash値/閾値/scope意味論は変更していない。
+
+最終diff規模は20ファイル、+783/-63。固定Oracle期待値は変更していない(R6)。
+
+### 機械受入
+
+- `dotnet build ViewPrism2.sln --no-restore`: 成功、0 warning / 0 error。
+- `dotnet test tests/ViewPrism2.Tests/ViewPrism2.Tests.csproj --no-restore`: 596 passed / 0 failed / 0 skipped。先行プローブは緑化し、progress単調・total到達、旧世代拒否、cancel前cacheの次回再利用も追加固定した。
+- `dotnet test tests/ViewPrism2.Oracle/ViewPrism2.Oracle.csproj --no-restore --no-build`: 109 passed / 0 failed / 2 skipped。固定Oracle行・期待値は無変更。
+- `python bomdd/validate_bom.py`: 0 errors / 0 warnings。
+- `git diff --check`: whitespace errorなし。
+
+残作業はhuman gate② goldenのみ。実時間短縮は利用者profileでcold/warm、decode/D4、DBを区分してから別ECO要否を裁定する。

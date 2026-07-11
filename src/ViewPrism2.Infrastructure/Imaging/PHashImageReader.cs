@@ -11,7 +11,7 @@ namespace ViewPrism2.Infrastructure.Imaging;
 /// 縮小は SKFilterMode.Linear(双線形)を明示し Mipmap なし(決定性 — ADR-0008)。
 /// 元画像へは一切書き込まない・一時ファイルも作らない(INV-009)。
 /// </summary>
-public sealed class PHashImageReader : IPHashImageReader
+public sealed class PHashImageReader : ICancellablePHashImageReader
 {
     private readonly ILogger<PHashImageReader>? _logger;
 
@@ -31,37 +31,58 @@ public sealed class PHashImageReader : IPHashImageReader
 
     /// <summary>絶対パスの画像から 16hex pHash を計算する。壊れた画像・読み取り失敗は null。</summary>
     public Task<string?> ComputePHashAsync(string absoluteImagePath)
+        => ComputePHashAsync(absoluteImagePath, CancellationToken.None);
+
+    Task<string?> ICancellablePHashImageReader.ComputePHashAsync(
+        string absoluteImagePath, CancellationToken cancellationToken)
+        => ComputePHashAsync(absoluteImagePath, cancellationToken);
+
+    private Task<string?> ComputePHashAsync(string absoluteImagePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
         return Task.Run(() =>
         {
-            var pixels = DecodePixels(absoluteImagePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            var pixels = DecodePixels(absoluteImagePath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return pixels is null ? null : PerceptualHash.Compute(pixels);
-        });
+        }, cancellationToken);
     }
 
     /// <summary>8 オリエンテーション変種の pHash(仕様 §2.10.1a・[0]=identity)。失敗は null。</summary>
     public Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(string absoluteImagePath)
+        => ComputePHashVariantsAsync(absoluteImagePath, CancellationToken.None);
+
+    Task<IReadOnlyList<string>?> ICancellablePHashImageReader.ComputePHashVariantsAsync(
+        string absoluteImagePath, CancellationToken cancellationToken)
+        => ComputePHashVariantsAsync(absoluteImagePath, cancellationToken);
+
+    private Task<IReadOnlyList<string>?> ComputePHashVariantsAsync(
+        string absoluteImagePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(absoluteImagePath);
         return Task.Run(() =>
         {
-            var pixels = DecodePixels(absoluteImagePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            var pixels = DecodePixels(absoluteImagePath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return pixels is null ? null : (IReadOnlyList<string>?)PHashOrientations.ComputeAll(pixels);
-        });
+        }, cancellationToken);
     }
 
     /// <summary>画像を 32×32 BGRA へデコード・縮小したピクセル列を返す。壊れた画像・読み取り失敗は null。</summary>
-    private byte[]? DecodePixels(string absoluteImagePath)
+    private byte[]? DecodePixels(string absoluteImagePath, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // K-WINFS: 他プロセスのロックと共存する読み取り専用オープン(INV-009)
             using var stream = new FileStream(
                 absoluteImagePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
             // K-SKIA: SKBitmap.Decode が null を返したら「壊れた画像」(例外を投げない)
             using var bitmap = SKBitmap.Decode(stream);
+            cancellationToken.ThrowIfCancellationRequested();
             if (bitmap is null)
             {
                 _logger?.LogWarning("壊れた画像のため pHash を計算できません: {Path}", absoluteImagePath);
@@ -72,6 +93,7 @@ public sealed class PHashImageReader : IPHashImageReader
             var info = new SKImageInfo(
                 PerceptualHash.Size, PerceptualHash.Size, SKColorType.Bgra8888, SKAlphaType.Unpremul);
             using var resized = bitmap.Resize(info, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+            cancellationToken.ThrowIfCancellationRequested();
             if (resized is null)
             {
                 _logger?.LogWarning("pHash 用リサイズに失敗しました: {Path}", absoluteImagePath);

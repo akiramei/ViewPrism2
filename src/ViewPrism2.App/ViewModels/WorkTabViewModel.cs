@@ -37,6 +37,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private readonly IWindowService _windows;
     private readonly ImageSorter _sorter;
     private readonly AppSettings _settings;
+    private readonly SimilaritySearchSession _searchSession = new();
 
     private readonly Dictionary<string, string> _folderPath = new(StringComparer.Ordinal);
     private Dictionary<string, Tag> _tagById = new(StringComparer.Ordinal);
@@ -79,7 +80,6 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private bool _condSize;
     private bool _condName;
     private bool _condDate;
-    private bool _searching;
     private bool _hasSearched;
     private bool _searchOpen; // ECO-056(v2 3 ゾーン): 下部ピンの「似た画像を探す」折りたたみ状態
     private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
@@ -106,6 +106,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _windows = windows;
         _sorter = sorter;
         _settings = settings;
+        _searchSession.PropertyChanged += (_, _) => OnPropertyChanged(string.Empty);
     }
 
     public ObservableCollection<WorkspaceRowVM> Workspaces { get; } = new();
@@ -215,7 +216,19 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public bool CondName { get => _condName; set { _condName = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
     public bool CondDate { get => _condDate; set { _condDate = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunSearch)); } }
     private bool HasAnyCond => _condHash || _condExt || _condSize || _condName || _condDate;
-    public bool Searching => _searching;
+    public bool Searching => _searchSession.IsActive;
+    public bool SearchPreparing => _searchSession.Preparing;
+    public bool SearchComparing => _searchSession.Comparing;
+    public bool SearchCancelling => _searchSession.Cancelling;
+    public bool ShowSearchProgress => _searchSession.ShowProgress;
+    public bool ShowSearchSettings => !_searchSession.ShowProgress;
+    public bool ShowStartSearch => !_searchSession.ShowProgress;
+    public bool ShowCancelSearch => _searchSession.ShowProgress;
+    public bool CanCancelSearch => !_searchSession.Cancelling;
+    public string SearchCancelButtonLabel => _searchSession.Cancelling ? "停止中" : "停止";
+    public string SearchProgressLabel => _searchSession.ProgressLabel;
+    public double SearchProgressValue => _searchSession.ProgressValue;
+    public bool SearchProgressIndeterminate => _searchSession.ProgressIndeterminate;
     public bool ShowSearchResults => _organizeMode && _hasSearched && !_organizeDone;
     public bool NoSearchResults => ShowSearchResults && SearchResults.Count == 0;
     /// <summary>検索実行可否(ECO-055 裁定③): 条件検索もマージ先必須+条件 1 つ以上。類似は従来どおり。</summary>
@@ -616,6 +629,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private async Task SelectWorkspace(string id)
     {
         if (string.IsNullOrEmpty(id) || id == _currentWorkspaceId) return;
+        InvalidateSearchContext();
         _currentWorkspaceId = id;
         _renameId = null; _tagFilter = null; _selected.Clear(); MoveMenuOpen = false;
         await ReloadWorkspacesAsync(preferDefault: false).ConfigureAwait(true);
@@ -624,6 +638,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     [RelayCommand]
     private async Task AddWorkspace()
     {
+        InvalidateSearchContext();
         var fresh = await _workspaces.CreateRotatingDefaultAsync().ConfigureAwait(true);
         _currentWorkspaceId = fresh.Id;
         _renameId = null; _tagFilter = null; _selected.Clear(); MoveMenuOpen = false;
@@ -694,6 +709,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         var deletingCurrent = id == _currentWorkspaceId;
         if (deletingCurrent)
         {
+            InvalidateSearchContext();
             _currentWorkspaceId = null;
             _renameId = null; _tagFilter = null; _selected.Clear(); MoveMenuOpen = false;
         }
@@ -857,7 +873,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _organizeTargets.Clear();
         _searchMethod = "similar";
         _condHash = false; _condExt = false; _condSize = false; _condName = false; _condDate = false; // ECO-055
-        _searching = false; _hasSearched = false;
+        _searchSession.Invalidate(); _hasSearched = false;
         _searchOpen = false; // ECO-056: 検索パネルは畳んだ状態で開始(v2 モック direct シナリオ)
         _searchResults = new();
         _organizeDone = false; _doneSourceCount = 0;
@@ -869,6 +885,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private void SetMergeTarget(string imageId)
     {
         if (!_organizeMode) return;
+        InvalidateSearchContext();
         _organizeTargets.Remove(imageId);
         _mergeTargetId = imageId;
         RefreshSelectionMarkers();
@@ -893,6 +910,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private void ClearMergeTarget()
     {
         if (!_organizeMode) return;
+        InvalidateSearchContext();
         _mergeTargetId = null;
         RefreshSelectionMarkers(); // タイルの宛先マーカー+トレイ(BuildContextPanels)
         OnPropertyChanged(string.Empty);
@@ -931,6 +949,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private void PromoteToMergeTarget(string imageId)
     {
         if (!_organizeTargets.Remove(imageId)) return;
+        InvalidateSearchContext();
         if (_mergeTargetId is not null) _organizeTargets.Add(_mergeTargetId);
         _mergeTargetId = imageId;
         RefreshSelectionMarkers();
@@ -939,6 +958,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     [RelayCommand]
     private void SetSearchMethod(string method)
     {
+        if (_searchSession.IsActive) return;
         _searchMethod = method == "criteria" ? "criteria" : "similar";
         OnPropertyChanged(nameof(IsSimilarMethod));
         OnPropertyChanged(nameof(IsCriteriaMethod));
@@ -953,8 +973,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private async Task RunSearch()
     {
         if (!_organizeMode) return;
-        _searching = true; OnPropertyChanged(nameof(Searching));
         var results = new List<(string ImageId, int Score, bool IsCriteria)>();
+        SimilaritySearchSession.Run? run = null;
         try
         {
             if (_searchMethod == "criteria")
@@ -979,16 +999,44 @@ public sealed partial class WorkTabViewModel : ObservableObject
             else if (_mergeTargetId is not null) // 類似は基準(マージ先)が必要
             {
                 // ECO-062: 結果後段 filter ではなく、現 workspace を pHash/cache 前の明示候補にする。
+                run = _searchSession.Start();
                 var found = await _similar.FindSimilarInScopeAsync(
-                    _mergeTargetId, _similarThreshold, _sourceImages).ConfigureAwait(true);
+                    _mergeTargetId, _similarThreshold, _sourceImages,
+                    ct: run.Token,
+                    detailedProgress: _searchSession.CreateProgress(run)).ConfigureAwait(true);
                 foreach (var s in found) results.Add((s.ImageId, s.Score, false));
+                if (!_searchSession.TryComplete(run)) return;
             }
         }
-        finally { _searching = false; }
+        catch (OperationCanceledException) when (run?.Token.IsCancellationRequested == true)
+        {
+            return;
+        }
+        finally
+        {
+            if (run is not null) _searchSession.Finish(run);
+        }
         _searchResults = results;
         _hasSearched = true;
         Recompute();
     }
+
+    [RelayCommand]
+    private void CancelSearch() => _searchSession.Cancel();
+
+    private void InvalidateSearchContext(bool clearResults = true)
+    {
+        _searchSession.Invalidate();
+        if (clearResults)
+        {
+            _hasSearched = false;
+            _searchResults = new();
+        }
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>window 終了時に実行中検索を停止し、遅延結果を無効化する。</summary>
+    public void CancelOperations() => InvalidateSearchContext();
 
     /// <summary>検索結果の候補を整理対象へ追加する(マージ先が前提)。</summary>
     [RelayCommand]
