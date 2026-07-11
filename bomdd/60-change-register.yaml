@@ -1083,3 +1083,15 @@ changes:
     verification: "R5赤=HomeTagId保存済み二段viewを画像タブ選択→HomeActive expected false/actual true、584中1fail。是正=NodeGraphBuilder.ResolveHomePath(root除外path・null/参照切れ空・複製DFS先頭)+既存ResolveHome facade維持、LoadViewAsyncが_viewPathへ適用。CP-GRAPH nested/textual exact+CP-UI-G1 view選択/collection再load。build 0 warning/0 error、Tests 585/585、Oracle 109+既知2skip、validate 0/0、diff-check clean"
     body: 60-change-order-eco-063.md
     notes: "クローズ済み。NodeGraphBuilderへ既存ResolveHome互換を維持したResolveHomePath追加、LoadViewAsyncで検索時ではなくview open/reload時の_viewPath初期化。ImageTab独自DFSなし。E-UI-AXIS-NAV-040にREQ-037接点、M-GRAPH/M-UI-IMAGETAB/CP-GRAPH同期。acceptでCP-UI-G1/G6の設定→消費往復観点と50-as-built goldenを同期。DB/schema/CAD/XAML/タグタブ保存/i18n不変。残ゲートなし"
+
+  - id: ECO-064
+    title: "大規模コレクションで初期起動をブロックせず読み込み状態を表示する"
+    type: 既存機能拡張(起動ライフサイクル/性能境界。CADのVP-UI-005=loading状態が未確定で、現行eager loadは既存BOM違反と断定不可。gate①が先)
+    status: staged
+    golden: pending
+    baseline: "main bba67b4"
+    findings: "maintainer要求2026-07-11=巨大collectionでもUIをブロックせずshell先行起動しcollection等をloading表示。工程診断=CAD image_tab状態表は未スキャン/scan中/完了のみ、起動loading/error/retry/操作可否なし。review_points VP-UI-005がloading状態共通化を明示未確定。REQ/E/M-BOM/CPもshell-first・catalog/content段階・全件eager禁止を持たない。実装はApp window.Opened→MainWindow.InitializeAsync→ImageTab.InitializeAsync単一路で、GetAllNormalAsync+GetAllImageTagsAsyncにより全collectionのnormal/image_tagsを取得、UI continuation上で辞書化/件数集計後に選択collection entriesを構築。混入=6f7b4f9(M3a初版)、Opened初期化=1446321。仮想化ECO-026/058は描画実体数だけでDB全件取得を防がず、P-01もDB取得/集約/VM再構築/初回描画の区分計測は別ECOとしていた。壁時計/支配区間は未計測"
+    impacted_bom: ["ViewPrismUI image_tab/review_points VP-UI-005/integrated spec", "10-requirements/20-spec(新REQ)", "E-UI-SHELL-021/E-UI-BROWSE-022", "M-UI-013/M-UI-IMAGETAB-035/M-DB-007", "CP-NFR-026+新startup CP/CP-UI-G1/CP-L1-SMOKE", "新FMEA/P-01/M-GOLDEN-HARNESS-039"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規probeで全collection image/tag materialization拒否、catalog→selected content scope exact、loading/ready/error遷移、遅延結果破棄、UI thread非占有境界を固定。実規模応答性は隔離fixture+golden"
+    body: 60-change-order-eco-064.md
+    notes: "gate①待ち。推奨案A=shell-first+catalog/content二段+aggregate count+選択collection限定image/tag+generation/cancellation(中〜大、根本性能上限)。案B=monolithic eager load background化+全体overlay(小〜中、総件数比例の時間/メモリを温存する暫定)。共通=loadingを未選択/0件/未scan/scan中と分離、error/retry、LastCollection/home/scan/virtualization回帰維持。src/tests変更なし"
