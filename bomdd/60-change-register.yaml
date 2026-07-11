@@ -1068,4 +1068,4 @@ changes:
     impacted_bom: ["ViewPrismUI image_tab CAD/review_points", "REQ-064/20-spec §2.10.4/OC-16", "E-SIMSEARCH-032/M-SIMSEARCH-021", "E-UI-SIMILARITY-035/M-UI-ORGANIZE-034/M-UI-IMAGETAB-035", "E-UI-WORKSPACE-043/M-UI-WORKSPACE-029(read-across)", "CP-SIM-017/CP-UI-G9/CP-UI-G1/FMEA-022+性能probe"]
     oracle: "既存固定Oracle行は変更しない(R6)。候補scope外のreader/cache非接触、FS folder境界、view current-node、workspace先行限定、collection件数非比例を新規受入で固定。DB schema/pHash adapter不変予測"
     body: 60-change-order-eco-062.md
-    notes: "gate①待ち。推奨=A+V1+検索時点snapshot: FS=同一folder直下(現在表示母集合と一致・subfolder除外)、view=現在選択node pathの表示母集合(複数leaf曖昧なし)、WorkTab=現workspace候補をCore前段で限定。代替FS B=subtree/C=UI toggle、view V2=一致全leaf和/V3=leaf選択。共通不変=Normal/自己除外/同一collection防御とfilter先行、閾値/順序/変種/cache意味論不変、criteria検索不変。裁定後CAD先行→/eco-fixでプローブ先行"
+    notes: "gate①完了(2026-07-11 maintainer): 推奨A+V1+検索時点snapshotを採用。CAD ViewPrismUI eef89bb。FS=同一folder直下(現在表示母集合と一致・subfolder除外、タグchipはscope非影響、nav後にmerge targetが現folder外なら候補0)、view=検索時点の現在選択node path表示母集合(複数leaf逆算なし)、WorkTab=現workspace候補をCore前段で限定。共通不変=Normal/自己除外/同一collection防御とfilter先行、閾値/順序/変種/cache意味論不変、criteria検索不変。次=/eco-fixでoracle-first+プローブ先行"
