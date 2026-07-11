@@ -217,7 +217,8 @@ service_bom:
       reinspect_on_change:
         - { cp_ref: CP-UI-G1, fixture: "実アプリ+フィクスチャ画像(コレクション 2 つ以上) — 承認者目視" }
         - { cp_ref: CP-L1-SMOKE, fixture: "Release ビルド+起動→スキャン→グリッド→ビューア→ja/en 切替→タグ作成(golden 対象経路を最低 1 回)" }
-      ai_model_drift: "再製造時は多重起動 Mutex・ウィンドウ状態保存・タブ/コレクションスコープ(v1.3)を要再確認"
+        - { cp_ref: CP-STARTUP-028, fixture: "ECO-064 repository spy+loading/error/retry+遅延結果probe — startup全件API 0/選択folder exact" }
+      ai_model_drift: "再製造時は多重起動 Mutex・ウィンドウ状態保存・タブ/コレクションスコープ(v1.3)+shell-first catalog/content二段loading(REQ-088)を要再確認"
       replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
 
     - id: SB-UI-BROWSE-022
@@ -232,7 +233,8 @@ service_bom:
         - { cp_ref: CP-UI-G1, fixture: "実アプリ — レスポンシブ列・Ctrl/SHIFT 選択(v1.3)" }
         - { cp_ref: CP-UI-G2, fixture: "実アプリ — リスト表示の列構成・行選択" }
         - { cp_ref: CP-L1-SMOKE, fixture: "起動→スキャン→グリッド表示(仮想化が崩れていないか= 1 万件相当で確認は P-01 プローブ)" }
-      ai_model_drift: "再製造時は仮想化方式(行リスト化)維持・列数 clamp(⌊幅/220⌋,2,8)・SHIFT union を要再確認"
+        - { cp_ref: CP-STARTUP-028, fixture: "選択collection限定normal/image_tags+空/loading/error排他+generation破棄" }
+      ai_model_drift: "再製造時は仮想化方式(行リスト化)維持・列数 clamp(⌊幅/220⌋,2,8)・SHIFT union・選択collection限定startup queryを要再確認"
       replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
 
     - id: SB-UI-AXIS-NAV-040

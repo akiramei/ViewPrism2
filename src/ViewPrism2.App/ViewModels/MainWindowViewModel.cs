@@ -115,6 +115,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ImageTab.CaptureSettings();
     }
 
+    /// <summary>ECO-064: window終了後に初期loadの遅延結果をsurfaceへ反映しない。</summary>
+    public void CancelLoading() => ImageTab.CancelLoading();
+
     [RelayCommand]
     private void ShowTagsTab() => SelectedTabIndex = 0;
 

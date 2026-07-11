@@ -183,10 +183,16 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
     {
         var collectionId = _getCollectionId();
         if (collectionId is null) { _trashCount = 0; OnPropertyChanged(string.Empty); return; }
-        var all = await _images.GetByFolderAsync(collectionId).ConfigureAwait(true);
-        _trashCount = all.Count(r => r.Status == ImageStatus.Deleted);
+        _trashCount = await _images.CountByFolderAndStatusAsync(collectionId, ImageStatus.Deleted).ConfigureAwait(true);
         // 通知は本メソッドが自前で発行する(golden 所見 G-E36S1-1 の是正): 旧 god-VM ではホストの
         // OnPropertyChanged(string.Empty) 一括通知が肩代わりしていたが、分割後はホスト通知は子に届かない。
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>ECO-064: background content snapshotで取得済みのbadge件数をUIへ原子的に公開する。</summary>
+    public void SetCount(int count)
+    {
+        _trashCount = count;
         OnPropertyChanged(string.Empty);
     }
 

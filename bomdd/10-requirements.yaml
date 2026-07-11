@@ -1141,3 +1141,22 @@ requirements:
       - "a/ と a2/ を前方一致で同一フォルダ扱いし、別フォルダ候補が混入する"
       - "タグチップの一時絞り込みで候補まで狭まり、同一フォルダの類似画像を見落とす"
       - "作業スペース外の画像を計算した後で結果だけ除外し、計算量がコレクション件数に比例する"
+
+  - id: REQ-088
+    statement: "巨大コレクションを含むprofileの起動はshell-firstとし、window shellを初期データロード完了前に描画してタブ・設定・window移動/resize/終了を応答可能に保つ。画像タブはcollection catalogと選択collection contentを二段で非同期ロードする: catalogは同期フォルダ行+status=normal件数のDB集約のみ(件数算出のためImageRecord全件をmaterializeしない)、contentは保存済み選択collectionのstatus=normal画像+その画像のimage_tagsだけを取得する。catalog/contentは独立したloading→ready|error+再試行を持ち、loading/errorを未選択・0件・未スキャン・スキャン中へ黙って変換しない。collection切替・catalog再load・window終了は世代/cancellationで旧結果を無効化し、遅延完了した旧collectionが現在選択を上書きしない。REQ-052 LastCollection復元、REQ-037 home、REQ-086 scan段階公開、REQ-041仮想化は維持する"
+    rationale: |
+      ECO-064案A裁定(maintainer 2026-07-11)。CAD=ViewPrismUI IMG-019 `84d1e2d`。
+      現行M3a初版(6f7b4f9)はwindow.Opened後にGetAllNormalAsync+GetAllImageTagsAsyncで全collectionを
+      eager materializeし、UI continuation上で件数/辞書を構築してから選択collectionを公開していた。
+      ECO-026/058の仮想化はvisual実体数だけを抑え、DB全件取得とstartup状態を検出しない。
+      受入は壁時計だけにせず、全件API非呼出・catalog集約1回・選択folder id exact・loading/error/retry・
+      遅延結果破棄をCP-STARTUP-028で決定論固定し、知覚応答と表示は隔離profileのCP-UI-G1 goldenで確認する。
+    rationale_precision: ok
+    classification_hint: surface+repository
+    external_source: "ViewPrismUI docs/screens/image_tab.md/review_points.md IMG-019 (`84d1e2d`) / ECO-064"
+    counterexamples:
+      - "window表示前またはOpened直後に全collectionのnormal画像/画像タグを一括取得し、巨大profileでshellが応答しない"
+      - "catalog件数のためImageRecord全件を読み、選択していないcollectionのサイズに起動処理量が比例する"
+      - "loading中に『画像がありません』を表示し、0件と未完了を区別できない"
+      - "collection Aの遅い完了が後から選んだBを上書きする"
+      - "load失敗を未選択/0件へ変換し、再試行できない"

@@ -85,6 +85,17 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private string _panelTab = "current";
     private string? _expandTag;
     private bool _loaded;
+    // ECO-064/IMG-019: shell-first startup。catalog と選択 collection content は独立状態を持つ。
+    private bool _catalogLoaded;
+    private bool _isCatalogLoading;
+    private bool _isContentLoading;
+    private string? _catalogError;
+    private string? _contentError;
+    private long _catalogLoadGeneration;
+    private long _contentLoadGeneration;
+    private CancellationTokenSource? _catalogLoadCts;
+    private CancellationTokenSource? _contentLoadCts;
+    private bool _loadingStopped;
     private readonly ScanCoordinator? _scans;
     private readonly HashSet<string> _scanningCollections = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _scanOrderByCollection = new(StringComparer.Ordinal);
@@ -235,51 +246,194 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // =====================================================================
     public async Task InitializeAsync(string? preferredCollectionId = null)
     {
-        _collections = (await _folders.GetAllAsync().ConfigureAwait(true)).ToList();
-        _collectionPath.Clear();
-        foreach (var c in _collections) _collectionPath[c.Id] = c.Path;
-
-        _allNormal = (await _images.GetAllNormalAsync().ConfigureAwait(true)).ToList();
-        _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
-        _collectionCounts.Clear();
-        foreach (var g in _allNormal.GroupBy(r => r.SyncFolderId, StringComparer.Ordinal))
-            _collectionCounts[g.Key] = g.Count();
-
-        _tagById = (await _tags.GetAllAsync().ConfigureAwait(true)).ToDictionary(t => t.Id, StringComparer.Ordinal);
-        await RefreshImageTagsAsync().ConfigureAwait(true);
-        _allViews = (await _views.GetAllAsync().ConfigureAwait(true)).ToList();
-
         // 表示モード復元(REQ-052 v1.3/CR-6)
         _layout = string.Equals(_settings.DisplayMode, "list", StringComparison.Ordinal) ? "list" : "grid";
+        // Opened event の同じ dispatcher turn でDB処理へ入らず、shellの初回描画を先に許可する。
+        _isCatalogLoading = true;
+        _catalogError = null;
+        OnPropertyChanged(string.Empty);
+        await Task.Yield();
+        await LoadCatalogAsync(preferredCollectionId ?? _settings.LastCollectionId).ConfigureAwait(true);
+    }
 
-        // 選択コレクション復元(REQ-053/REQ-052 v1.3/CR-5)。引数優先(harness 併走中はシェルが
-        // 検証済 id を渡す)、無ければ settings から復元する。解決不能なら未選択(REQ-053 の選択を
-        // 促す空状態)へフォールバックし、無効 id は settings からも除去する。先頭への自動選択はしない。
-        var restoreId = preferredCollectionId ?? _settings.LastCollectionId;
-        if (restoreId is not null && _collections.Any(c => string.Equals(c.Id, restoreId, StringComparison.Ordinal)))
-        {
-            _collectionId = restoreId;
-            _settings.LastCollectionId = restoreId;
-        }
-        else
-        {
-            _collectionId = null;
-            _settings.LastCollectionId = null;
-        }
+    private async Task LoadCatalogAsync(string? restoreId)
+    {
+        _loadingStopped = false;
+        var generation = Interlocked.Increment(ref _catalogLoadGeneration);
+        _catalogLoadCts?.Cancel();
+        _catalogLoadCts?.Dispose();
+        _catalogLoadCts = new CancellationTokenSource();
+        var ct = _catalogLoadCts.Token;
 
-        BuildEntries();
-        if (_scans is not null)
+        // catalog再読込は進行中contentを無効化する。旧結果を新catalogへ適用しない。
+        CancelContentLoad(clearState: true);
+        _catalogLoaded = false;
+        _loaded = false;
+        _isCatalogLoading = true;
+        _catalogError = null;
+        _contentError = null;
+        _collectionId = null;
+        ClearContentData();
+        _tagById = new Dictionary<string, Tag>(StringComparer.Ordinal);
+        _allViews = [];
+        OnPropertyChanged(string.Empty);
+
+        try
         {
-            _scanningCollections.RemoveWhere(id => !_scans.IsScanning(id));
-            foreach (var collection in _collections.Where(c => _scans.IsScanning(c.Id)))
+            // Microsoft.Data.Sqlite/Dapper の await が同期完了してもUI threadを占有しない明示境界。
+            var catalog = await Task.Run(async () =>
             {
-                _scanningCollections.Add(collection.Id);
-                EnsureScanOrder(collection.Id);
+                var folders = await _folders.GetAllAsync().ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                var counts = await _images.GetNormalCountsByFolderAsync(ct).ConfigureAwait(false);
+                return (Folders: folders.ToList(), Counts: counts);
+            }, ct).ConfigureAwait(true);
+
+            if (_loadingStopped || generation != _catalogLoadGeneration || ct.IsCancellationRequested)
+                return;
+
+            _collections = catalog.Folders;
+            _collectionPath.Clear();
+            foreach (var collection in _collections) _collectionPath[collection.Id] = collection.Path;
+            _collectionCounts.Clear();
+            foreach (var pair in catalog.Counts) _collectionCounts[pair.Key] = pair.Value;
+
+            _collectionId = restoreId is not null && _collections.Any(c =>
+                string.Equals(c.Id, restoreId, StringComparison.Ordinal))
+                ? restoreId
+                : null;
+            _settings.LastCollectionId = _collectionId;
+
+            if (_scans is not null)
+            {
+                _scanningCollections.RemoveWhere(id => !_scans.IsScanning(id));
+                foreach (var collection in _collections.Where(c => _scans.IsScanning(c.Id)))
+                {
+                    _scanningCollections.Add(collection.Id);
+                    EnsureScanOrder(collection.Id);
+                }
             }
+
+            _catalogLoaded = true;
+            _isCatalogLoading = false;
+            Recompute();
+
+            if (_collectionId is { } collectionId)
+                await LoadContentAsync(collectionId).ConfigureAwait(true);
         }
-        await Trash.RefreshCountAsync().ConfigureAwait(true); // ⋯「ゴミ箱」バッジ(ECO-018)
-        _loaded = true;
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // 新しいcatalog loadまたは終了が旧結果を無効化した正常系。
+        }
+        catch (Exception)
+        {
+            if (_loadingStopped || generation != _catalogLoadGeneration) return;
+            _isCatalogLoading = false;
+            _catalogError = "コレクションを読み込めませんでした。";
+            _catalogLoaded = false;
+            OnPropertyChanged(string.Empty);
+        }
+    }
+
+    private async Task LoadContentAsync(string collectionId)
+    {
+        var generation = Interlocked.Increment(ref _contentLoadGeneration);
+        _contentLoadCts?.Cancel();
+        _contentLoadCts?.Dispose();
+        _contentLoadCts = new CancellationTokenSource();
+        var ct = _contentLoadCts.Token;
+
+        _loaded = false;
+        _isContentLoading = true;
+        _contentError = null;
+        ClearContentData();
         Recompute();
+
+        try
+        {
+            var content = await Task.Run(async () =>
+            {
+                var images = await _images.GetNormalByFolderAsync(collectionId, ct).ConfigureAwait(false);
+                var imageTags = await _tags.GetImageTagsByFolderAsync(collectionId, ct).ConfigureAwait(false);
+                var tags = await _tags.GetAllAsync().ConfigureAwait(false);
+                var views = await _views.GetAllAsync().ConfigureAwait(false);
+                var trashCount = await _images.CountByFolderAndStatusAsync(
+                    collectionId, ImageStatus.Deleted, ct).ConfigureAwait(false);
+                return (Images: images.ToList(), ImageTags: imageTags.ToList(), Tags: tags.ToList(),
+                    Views: views.ToList(), TrashCount: trashCount);
+            }, ct).ConfigureAwait(true);
+
+            if (_loadingStopped || generation != _contentLoadGeneration || ct.IsCancellationRequested ||
+                !string.Equals(_collectionId, collectionId, StringComparison.Ordinal))
+                return;
+
+            _allNormal = content.Images;
+            _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
+            _imageTags = content.ImageTags.GroupBy(it => it.ImageId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+            _tagById = content.Tags.ToDictionary(tag => tag.Id, StringComparer.Ordinal);
+            _allViews = content.Views;
+            _collectionCounts[collectionId] = _allNormal.Count;
+            BuildEntries();
+            Trash.SetCount(content.TrashCount);
+
+            _loaded = true;
+            _isContentLoading = false;
+            if (_axis == "view" && _viewId is not null)
+                await LoadViewAsync(_viewId).ConfigureAwait(true);
+            else
+                Recompute();
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // collection切替または終了による正常な破棄。
+        }
+        catch (Exception)
+        {
+            if (_loadingStopped || generation != _contentLoadGeneration ||
+                !string.Equals(_collectionId, collectionId, StringComparison.Ordinal)) return;
+            _isContentLoading = false;
+            _contentError = "画像を読み込めませんでした。";
+            _loaded = false;
+            OnPropertyChanged(string.Empty);
+        }
+    }
+
+    private void ClearContentData()
+    {
+        _allNormal = [];
+        _normalIds = new HashSet<string>(StringComparer.Ordinal);
+        _imageTags = new Dictionary<string, List<ImageTag>>(StringComparer.Ordinal);
+        _entries = [];
+        _selected.Clear();
+        _fsPath.Clear();
+        _tagFilter = null;
+        _expandTag = null;
+    }
+
+    private void CancelContentLoad(bool clearState)
+    {
+        Interlocked.Increment(ref _contentLoadGeneration);
+        _contentLoadCts?.Cancel();
+        _contentLoadCts?.Dispose();
+        _contentLoadCts = null;
+        if (clearState)
+        {
+            _isContentLoading = false;
+            _contentError = null;
+        }
+    }
+
+    /// <summary>window終了後に遅延load結果をUIへ反映しない。</summary>
+    public void CancelLoading()
+    {
+        _loadingStopped = true;
+        Interlocked.Increment(ref _catalogLoadGeneration);
+        _catalogLoadCts?.Cancel();
+        _catalogLoadCts?.Dispose();
+        _catalogLoadCts = null;
+        CancelContentLoad(clearState: true);
+        _isCatalogLoading = false;
     }
 
     /// <summary>
@@ -316,7 +470,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     private async Task RefreshImageTagsAsync()
     {
-        var all = await _tags.GetAllImageTagsAsync().ConfigureAwait(true);
+        if (_collectionId is null)
+        {
+            _imageTags = new Dictionary<string, List<ImageTag>>(StringComparer.Ordinal);
+            return;
+        }
+        var all = await _tags.GetImageTagsByFolderAsync(_collectionId).ConfigureAwait(true);
         _imageTags = all.GroupBy(it => it.ImageId, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
     }
@@ -555,14 +714,22 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- REQ-053: コレクション=選択スコープ(ECO-013 で原典 MainWindowViewModel から移管・等価維持) ----
     public string? SelectedCollectionId => _collectionId;
     public bool IsCollectionSelected => _collectionId is not null;
+    public bool IsCatalogLoading => _isCatalogLoading;
+    public bool IsContentLoading => _isContentLoading;
+    public bool HasCatalogError => _catalogError is not null;
+    public bool HasContentError => _contentError is not null;
+    public string CatalogErrorMessage => _catalogError ?? "";
+    public string ContentErrorMessage => _contentError ?? "";
+    public bool ShowCatalogLoading => _isCatalogLoading && !HasCatalogError;
+    public bool ShowContentLoading => _catalogLoaded && _collectionId is not null && _isContentLoading && !HasContentError;
     /// <summary>未選択時に中央へ「コレクションを選択」プロンプトを出す(REQ-053)。</summary>
-    public bool ShowCollectionPrompt => _loaded && _collectionId is null;
+    public bool ShowCollectionPrompt => _catalogLoaded && !_isCatalogLoading && !HasCatalogError && _collectionId is null;
     /// <summary>グリッドペイン表示(コレクション選択済み かつ グリッドモード)。</summary>
-    public bool ShowGridPane => IsCollectionSelected && IsGrid;
+    public bool ShowGridPane => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && IsGrid;
     /// <summary>リストペイン表示(コレクション選択済み かつ リストモード)。</summary>
-    public bool ShowListPane => IsCollectionSelected && IsList;
+    public bool ShowListPane => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && IsList;
     /// <summary>画像 0 件の空状態(コレクション選択済みのときのみ・未選択はプロンプトを優先)。</summary>
-    public bool ShowEmptyMessage => IsCollectionSelected && Items.Count == 0;
+    public bool ShowEmptyMessage => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && Items.Count == 0;
     /// <summary>ECO-060: 選択中collectionのbackground scan状態。</summary>
     public bool IsSelectedCollectionScanning =>
         _collectionId is not null && _scanningCollections.Contains(_collectionId);
@@ -842,18 +1009,26 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // =====================================================================
     private void Recompute()
     {
-        if (!_loaded) return;
+        // ECO-064: catalogはcontentより先に公開する。content未readyでもcollection行だけは描画する。
+        Collections.Clear();
+        foreach (var collection in _collections)
+            Collections.Add(new CollectionRowVM(collection.Id, collection.Name, collection.Path,
+                _collectionCounts.GetValueOrDefault(collection.Id), collection.Id == _collectionId,
+                _scanningCollections.Contains(collection.Id)));
+        if (!_loaded)
+        {
+            Items.Clear();
+            Crumbs.Clear();
+            Chips.Clear();
+            AxisOptions.Clear();
+            CountLabel = "";
+            OnPropertyChanged(string.Empty);
+            return;
+        }
 
         // 文脈モード中は「表示列」入口を隠す(ShowColumnsEntry)ため、開いていた列ピッカーは閉じておく
         // (プレースメント対象が消えたポップアップの浮き残り防止・IMG-014)。
         if (InAnyMode) ColumnPickerOpen = false;
-
-        // ---- collections ----
-        Collections.Clear();
-        foreach (var c in _collections)
-            Collections.Add(new CollectionRowVM(c.Id, c.Name, c.Path,
-                _collectionCounts.GetValueOrDefault(c.Id), c.Id == _collectionId,
-                _scanningCollections.Contains(c.Id)));
 
         // ---- AxisOptions(FS + 保存ビュー) ----
         AxisOptions.Clear();
@@ -1180,16 +1355,19 @@ public sealed partial class ImageTabViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectCollection(string id)
     {
-        if (_collectionId == id) return;
+        if (_collectionId == id && (_loaded || _isContentLoading)) return;
         _collectionId = id;
         _scanNotice = null;
         _settings.LastCollectionId = id; // CR-5 書き戻し(永続化は SettingsStore / CaptureSettings)
         _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
-        BuildEntries();
-        // view 軸なら新コレクション scope で NodeGraph(値ノード)を再構築する。
-        if (_axis == "view" && _viewId is not null) await LoadViewAsync(_viewId);
-        else Recompute();
+        await LoadContentAsync(id).ConfigureAwait(true);
     }
+
+    [RelayCommand]
+    private Task RetryCatalog() => InitializeAsync(_settings.LastCollectionId);
+
+    [RelayCommand]
+    private Task RetryContent() => _collectionId is { } id ? LoadContentAsync(id) : Task.CompletedTask;
 
     [RelayCommand]
     private void ToggleSidebar() { _collapsed = !_collapsed; Recompute(); }
@@ -1939,11 +2117,14 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>マージ後またはscan完了後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
     private async Task ReloadImagesAsync()
     {
-        _allNormal = (await _images.GetAllNormalAsync().ConfigureAwait(true)).ToList();
+        if (_collectionId is null)
+        {
+            ClearContentData();
+            return;
+        }
+        _allNormal = (await _images.GetNormalByFolderAsync(_collectionId).ConfigureAwait(true)).ToList();
         _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
-        _collectionCounts.Clear();
-        foreach (var g in _allNormal.GroupBy(r => r.SyncFolderId, StringComparer.Ordinal))
-            _collectionCounts[g.Key] = g.Count();
+        _collectionCounts[_collectionId] = _allNormal.Count;
         await RefreshImageTagsAsync().ConfigureAwait(true);
         BuildEntries();
     }

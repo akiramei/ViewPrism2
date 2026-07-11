@@ -355,7 +355,7 @@ ebom:
       name: シェル UI(メインウィンドウ・タブナビゲーション(タグ/画像/作業+設定)・コレクション選択スコープ(一覧=名前+画像数+スキャン中)・スキャン実行/結果表示)— v1.3 コレクションファースト(ECO-002 CR-2/5/8)+ ECO-020 作業タブ(第3タブ)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-010, REQ-015, REQ-052, REQ-053]
+      requirement_refs: [REQ-010, REQ-015, REQ-052, REQ-053, REQ-088]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-SCAN-005, E-SETTINGS-013, E-I18N-014]
@@ -365,14 +365,15 @@ ebom:
         - (ECO-012/I03) 画像タブのコレクションペインは折り畳み可(展開 276px / rail 64px)。コレクション行はパスを tooltip 表示し、行は名前+件数に簡潔化(CR-8 踏襲・タグタブ UQ-E1 の行簡潔方針と整合)
         - (ECO-013/IMG-009) コレクションペインの「追加(+)」(展開ヘッダ「コレクション」見出し右 + 折り畳みレール)は**コレクション管理(追加・スキャン・削除)ビューを開く単一入口**。原典 view-prism の行別スキャン(⟳)・独立「管理」導線は本入口へ集約する(モック準拠・VP-UI-006)。コレクション行は閲覧(選択)に専念しクロムを静かに保つ。削除は同期フォルダ登録の解除のみで実ファイル非破壊(INV-009)
         - (ECO-013) 画像タブ surface を新 ImageTabView 一本へ統合し、原典 MainWindow の画像タブ Grid・harness トグル・legacy 画像タブ実装を撤去する。これに伴い**コレクション選択スコープ(REQ-053・コレクションファースト/横断なし)・選択コレクションと表示モードの永続化と復元(REQ-052 CR-5/CR-6)・未選択プロンプト・保存コレクション消失時の未選択フォールバック**は画像タブの独立した状態/操作ロジックが担う(原典と等価維持・golden 承認済 REQ-053 を退行させない)。CP-UI-G1(REQ-053 カバレッジ)は新契約へ移行
-      acceptance_refs: [CP-UI-G1, CP-L1-SMOKE]
+        - (ECO-064/REQ-088/IMG-019) shell-firstでwindowを先に描画し、collection catalog(行+normal集約count)→保存済み選択collection content(当該normal画像+image_tags)を二段loading。全collection画像/tagの起動時一括materialize禁止。catalog/contentは独立loading/ready/error+retry、空/未scan/scan中と排他。切替/再load/終了で旧generationを破棄しshell操作を阻害しない
+      acceptance_refs: [CP-UI-G1, CP-L1-SMOKE, CP-STARTUP-028]
 
     - id: E-UI-BROWSE-022
       name: 画像ブラウズ表示(グリッド/リスト・レスポンシブ自動列・仮想化・選択・空状態)— 旧 E-UI-GRID-022 から ECO-016 で分割
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-041, REQ-042, REQ-081, REQ-086]
+      requirement_refs: [REQ-041, REQ-042, REQ-081, REQ-086, REQ-088]
       external_source_ref: K-AVALONIA   # ECO-029: 合成値を分離(参照欄は単一 ID・注記は note へ)
       external_source_note: "モック権威: ViewPrismUI:資料/画像タブ/ViewPrism2 ファイル一覧v2 (standalone).html(ECO-025 β 列描画+ソート・CAD 権威=docs/screens/file_list.md v2 3e820b8)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]

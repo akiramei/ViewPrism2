@@ -1087,11 +1087,12 @@ changes:
   - id: ECO-064
     title: "大規模コレクションで初期起動をブロックせず読み込み状態を表示する"
     type: 既存機能拡張(起動ライフサイクル/性能境界。CADのVP-UI-005=loading状態が未確定で、現行eager loadは既存BOM違反と断定不可。gate①が先)
-    status: staged
+    status: implemented   # 2026-07-11 fix完了。CS1061赤probe→shell-first二段loading+選択scope repository+error/retry+generation破棄→機械受入全緑。gate②待ち
     golden: pending
     baseline: "main bba67b4"
     findings: "maintainer要求2026-07-11=巨大collectionでもUIをブロックせずshell先行起動しcollection等をloading表示。工程診断=CAD image_tab状態表は未スキャン/scan中/完了のみ、起動loading/error/retry/操作可否なし。review_points VP-UI-005がloading状態共通化を明示未確定。REQ/E/M-BOM/CPもshell-first・catalog/content段階・全件eager禁止を持たない。実装はApp window.Opened→MainWindow.InitializeAsync→ImageTab.InitializeAsync単一路で、GetAllNormalAsync+GetAllImageTagsAsyncにより全collectionのnormal/image_tagsを取得、UI continuation上で辞書化/件数集計後に選択collection entriesを構築。混入=6f7b4f9(M3a初版)、Opened初期化=1446321。仮想化ECO-026/058は描画実体数だけでDB全件取得を防がず、P-01もDB取得/集約/VM再構築/初回描画の区分計測は別ECOとしていた。壁時計/支配区間は未計測"
     impacted_bom: ["ViewPrismUI image_tab/review_points VP-UI-005/integrated spec", "10-requirements/20-spec(新REQ)", "E-UI-SHELL-021/E-UI-BROWSE-022", "M-UI-013/M-UI-IMAGETAB-035/M-DB-007", "CP-NFR-026+新startup CP/CP-UI-G1/CP-L1-SMOKE", "新FMEA/P-01/M-GOLDEN-HARNESS-039"]
     oracle: "既存固定Oracle行は変更しない(R6)。新規probeで全collection image/tag materialization拒否、catalog→selected content scope exact、loading/ready/error遷移、遅延結果破棄、UI thread非占有境界を固定。実規模応答性は隔離fixture+golden"
+    verification: "R5赤=IsCatalogLoading/IsContentLoading/error状態不在でCS1061 6件。是正=Task.Yield shell-first+Task.Run DB境界、normal GROUP BY count、selected normal/image_tags、catalog/content別loading/error/retry、generation+CTS+closing cancel、遅延A破棄。build 0 warning/0 error、Tests 590/590、Oracle 109+既知2skip、validate 0/0、diff-check clean"
     body: 60-change-order-eco-064.md
-    notes: "gate①=案A採用(2026-07-11 maintainer)。CAD ViewPrismUI 84d1e2d=IMG-019 shell-first+catalog/content二段+aggregate count+選択collection限定image/tag+generation/cancellation、独立loading/ready/error+retry、未選択/0件/未scan/scan中と分離。VP-UI-005は画像タブ起動範囲だけ部分決定、全画面共通化は継続。案B(monolithic eager background+overlay)は総件数比例を温存するため不採用。次=/eco-fix ECO-064でR5プローブ先行。LastCollection/home/scan/virtualization回帰維持。src/tests変更なし"
+    notes: "fix完了・gate②待ち。gate①=案A/CAD 84d1e2d。Repository=normal count GROUP BY+selected normal/image_tags+status count、全件APIはstartup呼出0。VM=Task.Yield shell-first+Task.Run明示background、catalog/content別loading/error/retry、generation+CTS、closing cancel、catalog先行行公開。XAML=左/中央領域内loading/error(全体overlayなし)。REQ-088/E/M-BOM/CP-STARTUP-028/FMEA-040/Service BOM同期。DB schema/CAD/settings/scan/pHash/merge/thumbnail/Oracle不変。goldenは隔離大規模profileでshell応答+二段表示+切替裏面+既存復元を確認"

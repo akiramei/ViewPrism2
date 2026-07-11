@@ -50,6 +50,12 @@ public interface ITagRepository
     /// <summary>全付与行(条件評価 OC-1 の入力構築用)。</summary>
     Task<IReadOnlyList<ImageTag>> GetAllImageTagsAsync();
 
+    /// <summary>
+    /// ECO-064/IMG-019: 選択 collection の画像に付与されたタグ行だけを読む。
+    /// 起動時に別 collection の image_tags を materialize しないための content 境界。
+    /// </summary>
+    Task<IReadOnlyList<ImageTag>> GetImageTagsByFolderAsync(string syncFolderId, CancellationToken ct = default);
+
     /// <summary>タグ id → 使用数(COUNT(DISTINCT image_id)、REQ-029)。</summary>
     Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync();
 

@@ -202,6 +202,22 @@ control_plan:
         - "(ECO-058) WorkTab中央ブラウズは256項目・固定viewportでgrid/list各surfaceの実体化セル数が全件の半数未満(可視範囲+overscanのみ)。非仮想ItemsControlによる全件実体化をheadless実レイアウトで拒否"
       notes: "画面外非実体化は本CPの決定論ガード、実1万件の応答性/スクロール/メモリは探索プローブ P-01 + maintainer実機 golden で受入。golden入力/起動は M-GOLDEN-HARNESS-039 を用い、Release build成功後に一意TEMPのVIEWPRISM2_DATA_DIRへ隔離する(通常profile起動は不適格=GF-058-01)。既存mutex拒否+ready window検査でUI未起動の偽合格を禁止。壁時計をunit合否にしない。"
 
+    - id: CP-STARTUP-028
+      characteristic: "ECO-064/REQ-088 大規模profile起動=shell-first + collection catalog/content二段loading + 選択collection限定query + error/retry + 遅延結果破棄"
+      classification: surface
+      depth: unit
+      tolerance: "起動/切替でGetAllNormalAsync・GetAllImageTagsAsync呼出0、normal count集約1回、GetNormalByFolder/GetImageTagsByFolderのfolder id exact。catalog/content loading/ready/errorと空状態の排他、retry転化、A遅延→B完了後もB不変をexact検査"
+      fixture: tests/ViewPrism2.Tests/CpUiG1CollectionScopeTests.cs
+      fixture_note: "Trait cp=CP-UI-G1内のECO064 5本。repository DispatchProxy spy/fail-once/TCS遅延で壁時計に依存せずscope・状態・順序を固定"
+      oracle: "repository method+argument/call count、公開bool/collection/itemsの完全一致"
+      approver: automated
+      test_vectors:
+        - "InitializeAsync直後はCatalogLoadingまたはContentLoading、prompt/emptyはfalse。完了後loading/error=falseで保存選択のnormalだけ表示"
+        - "startup/collection切替は全件画像/tag API 0、catalog count集約は初回1回、content APIはA/B各folder id exact"
+        - "catalog failはpromptへ化けずHasCatalogError、RetryCatalog後にcollection行+prompt。content failはemptyへ化けずHasContentError、RetryContent後に同collection画像"
+        - "A contentをTCSで遅延中にBを選択・ready化し、その後Aを完了してもSelectedCollectionId/ItemsはBのまま"
+      notes: "Task.Run境界の知覚応答と左/中央loading表示はCP-UI-G1 golden。固定ms閾値は置かず、P-01隔離profileで探索観測する。"
+
     - id: CP-TOOLBAR-RESPONSIVE-027
       characteristic: 画像タブ ツールバー狭幅レスポンシブ収納(IMG-014/ECO-027)の段階/回り込み状態計算と表示列モードゲートが退行しない
       classification: surface

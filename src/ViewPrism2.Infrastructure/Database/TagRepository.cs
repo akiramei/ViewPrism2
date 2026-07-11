@@ -260,6 +260,24 @@ public sealed class TagRepository : ITagRepository
         });
     }
 
+    public Task<IReadOnlyList<ImageTag>> GetImageTagsByFolderAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        return _db.RunAsync<IReadOnlyList<ImageTag>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<ImageTag>(
+                """
+                SELECT it.image_id AS ImageId, it.tag_id AS TagId, it.value AS Value
+                FROM image_tags it
+                JOIN images i ON i.id = it.image_id
+                WHERE i.sync_folder_id = @SyncFolderId AND i.status = 'normal'
+                ORDER BY it.image_id, it.tag_id
+                """,
+                new { SyncFolderId = syncFolderId }).ConfigureAwait(false);
+            return rows.ToList();
+        }, ct);
+    }
+
     public Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync()
     {
         // 使用数 = COUNT(DISTINCT image_id)(REQ-029)。

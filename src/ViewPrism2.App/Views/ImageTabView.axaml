@@ -88,6 +88,21 @@
             </ItemsControl>
           </ScrollViewer>
         </DockPanel>
+
+        <!-- ECO-064/IMG-019: catalog loading/error は未選択・0件と別状態。左ペイン内だけを覆い shell は操作可能。 -->
+        <Border IsVisible="{Binding ShowCatalogLoading}" Background="{StaticResource AppBackgroundBrush}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="12">
+            <TextBlock Text="コレクションを読み込み中…" TextAlignment="Center" TextWrapping="Wrap"
+                       Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+        </Border>
+        <Border IsVisible="{Binding HasCatalogError}" Background="{StaticResource AppBackgroundBrush}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="12">
+            <TextBlock Text="{Binding CatalogErrorMessage}" TextAlignment="Center" TextWrapping="Wrap"
+                       Foreground="{StaticResource TextMutedBrush}" />
+            <Button Content="再試行" Command="{Binding RetryCatalogCommand}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
       </Panel>
     </Border>
 
@@ -938,6 +953,18 @@
 
       <!-- 本体: グリッド or リスト(コレクション未選択時はプロンプト=REQ-053) -->
       <Panel>
+        <!-- ECO-064/IMG-019: 選択collection contentのloading/error。catalogやshellとは独立。 -->
+        <StackPanel IsVisible="{Binding ShowContentLoading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <PathIcon Data="{StaticResource ImageIcon}" Width="40" Height="40" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="画像を読み込み中…" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding HasContentError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <TextBlock Text="{Binding ContentErrorMessage}" Foreground="{StaticResource TextMutedBrush}"
+                     TextAlignment="Center" TextWrapping="Wrap" />
+          <Button Content="再試行" Command="{Binding RetryContentCommand}" HorizontalAlignment="Center" />
+        </StackPanel>
+
         <!-- 未選択プロンプト(REQ-053): コレクションを選ぶまで横断表示しない -->
         <StackPanel IsVisible="{Binding ShowCollectionPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
           <PathIcon Data="{StaticResource FolderIcon}" Width="44" Height="44" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />

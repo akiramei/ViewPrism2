@@ -21,6 +21,19 @@ public interface IImageRepository
     /// <summary>status=normal の全画像(INV-010: 既定の画像一覧・ビュー評価の対象)。表示系の供給元。</summary>
     Task<IReadOnlyList<ImageRecord>> GetAllNormalAsync();
 
+    /// <summary>
+    /// ECO-064/IMG-019: collection catalog 用の status=normal 件数集約。
+    /// ImageRecord 全件を materialize せず folder id→件数だけを返す。
+    /// </summary>
+    Task<IReadOnlyDictionary<string, int>> GetNormalCountsByFolderAsync(CancellationToken ct = default);
+
+    /// <summary>ECO-064/IMG-019: 選択 collection の status=normal 画像だけを読む。</summary>
+    Task<IReadOnlyList<ImageRecord>> GetNormalByFolderAsync(string syncFolderId, CancellationToken ct = default);
+
+    /// <summary>ECO-064: collection行/ゴミ箱badge等の集約用。画像行をmaterializeしない。</summary>
+    Task<int> CountByFolderAndStatusAsync(
+        string syncFolderId, ImageStatus status, CancellationToken ct = default);
+
     /// <summary>スキャン規則 (2): hash/file_size/modified_date のみ更新(status は変更しない)。</summary>
     Task UpdateFileMetaAsync(string id, string hash, long fileSize, string modifiedDate);
 

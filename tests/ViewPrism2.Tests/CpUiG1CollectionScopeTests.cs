@@ -1,8 +1,11 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using CommunityToolkit.Mvvm.Input;
 using ViewPrism2.App.Services;
 using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
 using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
@@ -84,16 +87,58 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
     }
 
     /// <summary>実 ImageTabViewModel(ECO-013 後の画像タブ surface の唯一の VM)を実 Core サービスで組む。</summary>
-    private ImageTabViewModel NewImageTab(AppSettings settings)
+    private ImageTabViewModel NewImageTab(
+        AppSettings settings,
+        IImageRepository? images = null,
+        ITagRepository? tags = null)
     {
+        images ??= _db.Images;
+        tags ??= _db.Tags;
         var views = new ViewService(_db.Views, _db.Clock);
         return new ImageTabViewModel(
-            _db.Folders, _db.Images, _db.Tags, new ImageSorter(), views,
+            _db.Folders, images, tags, new ImageSorter(), views,
             new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
-            new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
-            new MergeService(_db.Images, _db.Tags, _db.Merges),
-            new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
+            new SimilaritySearchService(_db.Folders, images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
+            new MergeService(images, tags, _db.Merges),
+            new TrashService(images, _db.Folders, new FilePresenceProbe()),
             new StubWindowService(), settings, new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
+    }
+
+    private class RepositorySpy<T> : DispatchProxy where T : class
+    {
+        public T Inner { get; set; } = null!;
+        public ConcurrentQueue<(string Name, object?[] Arguments)> Calls { get; } = new();
+        public Func<MethodInfo, object?[], (bool Handled, object? Result)>? Interceptor { get; set; }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            Assert.NotNull(targetMethod);
+            var arguments = args ?? [];
+            Calls.Enqueue((targetMethod.Name, arguments.ToArray()));
+            if (Interceptor?.Invoke(targetMethod, arguments) is { Handled: true } intercepted)
+                return intercepted.Result;
+            return targetMethod.Invoke(Inner, arguments);
+        }
+
+        public int Count(string methodName) => Calls.Count(call => call.Name == methodName);
+
+        public IEnumerable<object?[]> Arguments(string methodName)
+            => Calls.Where(call => call.Name == methodName).Select(call => call.Arguments);
+    }
+
+    private static T Spy<T>(T inner, out RepositorySpy<T> spy) where T : class
+    {
+        var proxy = DispatchProxy.Create<T, RepositorySpy<T>>();
+        spy = (RepositorySpy<T>)(object)proxy;
+        spy.Inner = inner;
+        return proxy;
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 500 && !condition(); attempt++)
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        Assert.True(condition(), "condition did not become true within 5 seconds");
     }
 
     private async Task<(SyncFolder A, SyncFolder B)> SeedTwoCollectionsAsync()
@@ -302,5 +347,149 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
         Assert.False(vm.IsCollectionSelected);
         Assert.True(vm.ShowCollectionPrompt);
         Assert.Null(settings.LastCollectionId); // 無効 id は設定からも除去される
+    }
+
+    [Fact]
+    public async Task ECO064_起動はcatalogと選択contentのloading状態を別々に公開する()
+    {
+        var (a, _) = await SeedTwoCollectionsAsync();
+        var vm = NewImageTab(new AppSettings { LastCollectionId = a.Id });
+
+        var initializing = vm.InitializeAsync();
+
+        // shell-first CAD(IMG-019): 未ロードを空状態へ化けさせず、catalog/content を別状態で公開する。
+        Assert.True(vm.IsCatalogLoading || vm.IsContentLoading);
+        Assert.False(vm.ShowCollectionPrompt);
+        Assert.False(vm.ShowEmptyMessage);
+
+        await initializing;
+
+        Assert.False(vm.IsCatalogLoading);
+        Assert.False(vm.IsContentLoading);
+        Assert.False(vm.HasCatalogError);
+        Assert.False(vm.HasContentError);
+        Assert.Equal(a.Id, vm.SelectedCollectionId);
+        Assert.Equal(["a1.jpg", "a2.jpg"], ImageNames(vm));
+    }
+
+    [Fact]
+    public async Task ECO064_起動と切替は全件APIを使わず選択collectionだけを読む()
+    {
+        var (a, b) = await SeedTwoCollectionsAsync();
+        var imageRepo = Spy<IImageRepository>(_db.Images, out var imageSpy);
+        var tagRepo = Spy<ITagRepository>(_db.Tags, out var tagSpy);
+        var vm = NewImageTab(new AppSettings { LastCollectionId = a.Id }, imageRepo, tagRepo);
+
+        await vm.InitializeAsync();
+
+        Assert.Equal(0, imageSpy.Count(nameof(IImageRepository.GetAllNormalAsync)));
+        Assert.Equal(0, tagSpy.Count(nameof(ITagRepository.GetAllImageTagsAsync)));
+        Assert.Equal(1, imageSpy.Count(nameof(IImageRepository.GetNormalCountsByFolderAsync)));
+        Assert.Contains(imageSpy.Arguments(nameof(IImageRepository.GetNormalByFolderAsync)),
+            args => Equals(args[0], a.Id));
+        Assert.Contains(tagSpy.Arguments(nameof(ITagRepository.GetImageTagsByFolderAsync)),
+            args => Equals(args[0], a.Id));
+
+        await vm.SelectCollectionCommand.ExecuteAsync(b.Id);
+
+        Assert.Equal(1, imageSpy.Count(nameof(IImageRepository.GetNormalCountsByFolderAsync)));
+        Assert.Contains(imageSpy.Arguments(nameof(IImageRepository.GetNormalByFolderAsync)),
+            args => Equals(args[0], b.Id));
+        Assert.Contains(tagSpy.Arguments(nameof(ITagRepository.GetImageTagsByFolderAsync)),
+            args => Equals(args[0], b.Id));
+        Assert.Equal(["b1.jpg"], ImageNames(vm));
+    }
+
+    [Fact]
+    public async Task ECO064_catalog失敗は空状態へ化けず再試行できる()
+    {
+        await SeedTwoCollectionsAsync();
+        var imageRepo = Spy<IImageRepository>(_db.Images, out var imageSpy);
+        var failOnce = true;
+        imageSpy.Interceptor = (method, _) =>
+        {
+            if (method.Name == nameof(IImageRepository.GetNormalCountsByFolderAsync) && failOnce)
+            {
+                failOnce = false;
+                return (true, Task.FromException<IReadOnlyDictionary<string, int>>(
+                    new InvalidOperationException("probe catalog failure")));
+            }
+            return (false, null);
+        };
+        var vm = NewImageTab(new AppSettings(), imageRepo);
+
+        await vm.InitializeAsync();
+
+        Assert.True(vm.HasCatalogError);
+        Assert.False(vm.ShowCollectionPrompt);
+        Assert.Empty(vm.Collections);
+
+        await vm.RetryCatalogCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasCatalogError);
+        Assert.True(vm.ShowCollectionPrompt);
+        Assert.Equal(2, vm.Collections.Count);
+    }
+
+    [Fact]
+    public async Task ECO064_content失敗は0件へ化けず同じcollectionを再試行できる()
+    {
+        var (a, _) = await SeedTwoCollectionsAsync();
+        var imageRepo = Spy<IImageRepository>(_db.Images, out var imageSpy);
+        var failOnce = true;
+        imageSpy.Interceptor = (method, _) =>
+        {
+            if (method.Name == nameof(IImageRepository.GetNormalByFolderAsync) && failOnce)
+            {
+                failOnce = false;
+                return (true, Task.FromException<IReadOnlyList<ImageRecord>>(
+                    new InvalidOperationException("probe content failure")));
+            }
+            return (false, null);
+        };
+        var vm = NewImageTab(new AppSettings { LastCollectionId = a.Id }, imageRepo);
+
+        await vm.InitializeAsync();
+
+        Assert.True(vm.HasContentError);
+        Assert.False(vm.ShowEmptyMessage);
+        Assert.Equal(a.Id, vm.SelectedCollectionId);
+
+        await vm.RetryContentCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasContentError);
+        Assert.Equal(["a1.jpg", "a2.jpg"], ImageNames(vm));
+    }
+
+    [Fact]
+    public async Task ECO064_遅れて完了した旧collection結果は現在選択を上書きしない()
+    {
+        var (a, b) = await SeedTwoCollectionsAsync();
+        var aImages = await _db.Images.GetNormalByFolderAsync(a.Id, TestContext.Current.CancellationToken);
+        var imageRepo = Spy<IImageRepository>(_db.Images, out var imageSpy);
+        var delayedA = new TaskCompletionSource<IReadOnlyList<ImageRecord>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        imageSpy.Interceptor = (method, args) =>
+        {
+            if (method.Name == nameof(IImageRepository.GetNormalByFolderAsync) && Equals(args[0], a.Id))
+                return (true, delayedA.Task);
+            return (false, null);
+        };
+        var vm = NewImageTab(new AppSettings(), imageRepo);
+        await vm.InitializeAsync();
+
+        var selectA = vm.SelectCollectionCommand.ExecuteAsync(a.Id);
+        await WaitUntilAsync(() => imageSpy.Arguments(nameof(IImageRepository.GetNormalByFolderAsync))
+            .Any(args => Equals(args[0], a.Id)));
+
+        await vm.SelectCollectionCommand.ExecuteAsync(b.Id);
+        Assert.Equal(b.Id, vm.SelectedCollectionId);
+        Assert.Equal(["b1.jpg"], ImageNames(vm));
+
+        delayedA.SetResult(aImages);
+        await selectA;
+
+        Assert.Equal(b.Id, vm.SelectedCollectionId);
+        Assert.Equal(["b1.jpg"], ImageNames(vm));
     }
 }

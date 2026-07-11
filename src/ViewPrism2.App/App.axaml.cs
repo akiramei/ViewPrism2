@@ -73,7 +73,11 @@ public partial class App : Application
             _provider.GetRequiredService<WindowService>().Owner = window;
 
             RestoreWindowState(window, _settings);
-            window.Closing += (_, _) => SaveWindowState(window);
+            window.Closing += (_, _) =>
+            {
+                SaveWindowState(window);
+                _mainViewModel.CancelLoading();
+            };
             window.Opened += async (_, _) => await _mainViewModel.InitializeAsync();
 
             desktop.MainWindow = window;

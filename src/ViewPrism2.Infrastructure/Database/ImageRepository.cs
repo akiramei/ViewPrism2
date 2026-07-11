@@ -114,6 +114,50 @@ public sealed class ImageRepository : IImageRepository
         });
     }
 
+    public Task<IReadOnlyDictionary<string, int>> GetNormalCountsByFolderAsync(CancellationToken ct = default)
+    {
+        return _db.RunAsync<IReadOnlyDictionary<string, int>>(async conn =>
+        {
+            var rows = await conn.QueryAsync(
+                "SELECT sync_folder_id AS FolderId, COUNT(*) AS NormalCount FROM images WHERE status = 'normal' GROUP BY sync_folder_id")
+                .ConfigureAwait(false);
+            var result = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var row in rows)
+            {
+                var values = (IDictionary<string, object?>)row;
+                if (values["FolderId"] is string folderId)
+                {
+                    result[folderId] = Convert.ToInt32(values["NormalCount"], System.Globalization.CultureInfo.InvariantCulture);
+                }
+            }
+            return result;
+        }, ct);
+    }
+
+    public Task<IReadOnlyList<ImageRecord>> GetNormalByFolderAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        return _db.RunAsync<IReadOnlyList<ImageRecord>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<Row>(
+                $"{SelectColumns} WHERE sync_folder_id = @SyncFolderId AND status = 'normal' ORDER BY id",
+                new { SyncFolderId = syncFolderId }).ConfigureAwait(false);
+            return rows.Select(r => ToEntity(r)!).ToList();
+        }, ct);
+    }
+
+    public Task<int> CountByFolderAndStatusAsync(
+        string syncFolderId, ImageStatus status, CancellationToken ct = default)
+    {
+        return _db.RunAsync(async conn =>
+        {
+            var count = await conn.ExecuteScalarAsync<long>(
+                "SELECT COUNT(*) FROM images WHERE sync_folder_id = @SyncFolderId AND status = @Status",
+                new { SyncFolderId = syncFolderId, Status = status.ToDb() }).ConfigureAwait(false);
+            return checked((int)count);
+        }, ct);
+    }
+
     public Task UpdateFileMetaAsync(string id, string hash, long fileSize, string modifiedDate)
     {
         // スキャン規則 (2): status は変更しない(REQ-012)

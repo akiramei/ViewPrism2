@@ -121,7 +121,7 @@ mbom:
       interface_contract:
         open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
         schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE"
-        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value"
+        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない"
         scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。通常の単行repository APIは非スキャンconsumer向けに維持"
         cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
       invariants:
@@ -218,6 +218,7 @@ mbom:
       interface_contract:
         trace_status: "ECO-024(M4)で as-built へ同期: シェルは薄いホスト(MainWindowViewModel=タブ切替+TagsTab/ImageTab/WorkTab 保持+ローカライズ+設定確定)。原典画像タブ Grid・harness・legacy VM(Browser/Detail/Tagging/FolderPane シェル・TreeRoots)は撤去済(ImageTabView 一本化)。画像タブの表示軸/モード/選択の逐条は E-UI-BROWSE-022 / E-UI-AXIS-NAV-040 / E-UI-MODE-041(+ViewPrismUI UI-IR)が権威。ECO-010〜021 の evolved design 全面 prose 同期は継続課題"
         shell: "上部タブ『タグ(0)』『画像(1)』『作業(2)』+右端『設定』(ECO-020 で作業タブ追加)。タグタブ=3 ペイン(ビュー管理/階層エディタ(バッチ保存)/タグパレット+作成ダイアログ)。画像タブ=ImageTabView 単一 surface(コレクションペイン折り畳み+表示軸セレクタ(FS フォルダ/タグビュー)+チップ+パンくず / ツールバー(表示軸・ソート・グリッド⇔リスト・タグ編集/整理/作業/⋯)/ 中央グリッド・リスト / 文脈モード時のみ右ペイン(タグ編集 or 整理トレイ))。作業タブ=WorkTabView(E-UI-WORKSPACE-043)"
+        startup: "ECO-064/REQ-088: App window.Opened→MainWindow.InitializeAsyncはImageTabのcatalog loadingを同期公開してTask.Yieldで初回shell描画を許可。DB query/materializeはTask.Run明示境界。window.ClosingはCaptureSettings後ImageTab.CancelLoadingでgeneration/cancellationを無効化"
         viewmodels: "画像タブの選択(Ctrl トグル・SHIFT 範囲・選択順)・空状態・表示軸ナビ・ノード評価呼び出し・文脈モード(タグ編集/整理/作業/削除)は ImageTabViewModel が自己完結で所有し unit 検査可能(OC 系を UI から呼ぶだけにする)。シェル(MainWindowViewModel)はタブ切替と stale 反映(TagsTab.DataChanged→ImageTab.ReloadTagCatalogAsync)のみ"
         design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ(ImageTabViewModel の日本語ラベルは surface 内定数=モック CAD 準拠)"
         column_picker: "(ECO-025 β-2/DRY・SC-COLUMN-PICKER-001)表示列の列ピッカーは共通 VM ColumnPickerViewModel(ViewColumnModel[進化モデル=名前固定 VE-001/最大5 VE-002/タグ母集合限定/kind/display_columns 直列化]を消費・選択済み列/追加元/追加・削除・並べ替え/件数・上限バッジ/ラベル解決・編集ごとに Changed 発火)。**2 surface が同一 VM を消費しビューだけ golden 承認レイアウトを保つ**: (α)ViewEditDialog=モーダル・追加元 2 カラム(BasicSources チップ無し/TagSources チップ有り)・保存で反映(ViewEditDialogViewModel が Columns を合成)。(β-2)ファイル一覧「表示列」ポップオーバー(ColumnPickerView・モーダル型クローム/フッター無し=ライブ編集)・追加元は単一マージ(AvailableColumns・基本にも「基本」チップ)。ImageTabViewModel が view 軸+ビュー選択時のみ「表示列」ボタンを出し(CanEditColumns)、Changed→ViewService.UpdateAsync で display_columns を書き戻す(VE-003)→Recompute で列/ソート再構築(除去列がソート中なら解除)。CAD file_list.md L68 の docked フッターはモックに無く=ライブ編集のためフッター無し(CAD 是正済)"
@@ -248,12 +249,13 @@ mbom:
         textual: "候補値ドロップダウン(predefined_values 順・インライン値チップ)+自由入力"
         mode_dispatch: "文脈モード(タグ編集/整理/作業/削除)の排他とグリッドクリック意味論のディスパッチ(E-UI-MODE-041)。フィーチャ実体は子 VM(032/033/034)"
         scan_lifecycle: "ScanCoordinator started/batch/completed → 選択collectionのfully-hashed normalを取込順append。sort条件は保持し完了時だけ全体へ適用。類似方式はscanning gate"
+        startup: "ECO-064/REQ-088: InitializeAsync=Task.Yield→catalog(全folder+normal GROUP BY count)→保存済み選択content(当該normal+image_tags+tag定義/view定義+deleted count)。IsCatalogLoading/IsContentLoading+error/retryを別公開し、未ready時Recomputeはcollection行だけ公開。collection切替はcontent generation+CTSで旧結果を破棄。XAMLは左/中央の領域内loading/errorを空状態と排他表示"
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
         - 子 VM はホスト型を参照しない(関数注入)。通知は消費者(XAML/tests=ホスト公開契約)に対し旧実装と同一回数・同一位置(51 通知トポロジー 3 則)
         - (ECO-060) スキャン中のsort操作は条件だけ更新しItems順を変えない。completionでDB再読込後に最新条件を一度適用する
-      acceptance_refs: [CP-TAGUI-013, CP-NFR-026, CP-UI-G7]
-      fmea_refs: [FMEA-013, FMEA-014]
+      acceptance_refs: [CP-TAGUI-013, CP-NFR-026, CP-STARTUP-028, CP-UI-G7]
+      fmea_refs: [FMEA-013, FMEA-014, FMEA-040]
 
     - id: M-UI-014
       ebom_refs: [E-UI-VIEWER-024]
@@ -655,6 +657,7 @@ fmea:
   - { id: FMEA-014, unit: M-UI-IMAGETAB-035,    failure_mode: "連番が選択順でなく id 順に振られる/範囲外値で部分適用が残る",   effect: "意図しないタグ値・REQ-027 違反",        targeted_by: CP-TAGUI-013 }
   - { id: FMEA-038, unit: M-UI-WORKSPACE-029, failure_mode: "E-UI-BROWSE-022/FMEA-013 の read-across 漏れにより作業タブ中央 grid/list へ非仮想 ItemsControl を直置きする", effect: "1 万件で数 GiB のメモリ増加・タブ切替未完了・UI 応答不能", targeted_by: "CP-NFR-026+CP-UI-G1+probe P-01" }
   - { id: FMEA-039, unit: M-SCAN-005, failure_mode: "大量初回スキャンを画像1件ごとのSQLite暗黙transactionで永続化し、同じ整数百分率も全件UI通知する／ConfigureAwait(false)だけで背景化したと誤認し同期完了awaitからUI thread上でscan coreを走らせる", effect: "26万件でcommit/dispatcher負荷が件数比例しスキャンが長時間化／処理全時間UI操作不能", targeted_by: "CP-SCAN-004(ECO-059 bounded batch+rollback+progress exact+GF-059-01 caller thread分離)" }
+  - { id: FMEA-040, unit: M-UI-IMAGETAB-035, failure_mode: "起動時に全collectionのnormal画像/image_tagsをeager materializeし、loading/errorを空状態と混同する／collection切替後の旧非同期結果を適用する", effect: "巨大profileでshell初期応答不能・総件数比例の時間/メモリ・偽0件表示・別collection画像の混入", targeted_by: "CP-STARTUP-028(scope exact+状態遷移+遅延結果破棄)+CP-UI-G1" }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
   - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }

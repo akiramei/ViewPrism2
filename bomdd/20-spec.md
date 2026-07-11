@@ -290,6 +290,14 @@ numeric ノード=condition_type に応じ equals または between(range の場
 276/64 折り畳み(E-UI-SHELL-021 と同骨格)。旧・左 NodeGraph ツリー(ECO-006/BL-001)+ビュー一覧の左ペイン常設は
 ECO-024 で原典 Grid ごと撤去済(ビュー選択は表示軸セレクタへ集約)。
 
+**起動時の段階読み込み(REQ-088 / IMG-019 / ECO-064)**: shellを先に描画し、画像タブは
+`catalog loading→ready|error` と `selected content loading→ready|error` を別状態で公開する。catalogは
+同期フォルダ行+normal件数の集約だけを読み、全画像を件数算出のためにmaterializeしない。保存済み選択を解決後、
+当該collectionのnormal画像+image_tagsだけをbackground境界で読み、準備完了後に中央contentへ公開する。
+loading/errorは未選択・0件・未スキャン・スキャン中と排他。各errorは領域内の「再試行」で同じ段階を再実行する。
+collection切替/再load/終了ではgeneration+cancellationにより旧結果を破棄する。shell/tab/設定/window操作はloading中も
+利用可。LastCollection/home/scan段階公開/grid-list仮想化の既存契約は維持する。
+
 **表示軸ナビ(中央上部 — E-UI-AXIS-NAV-040)**: 表示軸ナビは左ペインの NodeGraph ツリーでなく、中央上部の
 **表示軸セレクタ+チップ+パンくず**で行う(原典のフォルダ+パンくず流儀・二軸ブラウズ=design-intent I-01/I-02、
 ECO-010/I01・ECO-011/I04。AND パス意味論は不変):
