@@ -220,3 +220,40 @@ CADはViewPrismUI `b686b37`で補正済み。関係分類/100%境界/pHash粗候
 - 結果は`実質同一 9x%`等で同関係内の差が分かる。`類似（重複ではありません）`にも40〜49%を併記する。
 - pHash距離0の非同一画像は100%にならず、画像内容一致/実質同一にも昇格しない。
 - 条件検索は従来どおり`条件一致`で、候補しきい値/一致度%の対象外。
+
+## §9 GF-067-02 是正(2026-07-11 / golden再確認待ち)
+
+### 9.1 不合格所見と診断
+
+maintainer実機で`実質同一 99%`は意味が重複し、親切のために関係語彙と数値を併記した結果、どちらを
+判断軸にすべきか分からないと観測した。さらにGF-067-01は検索設定をpHash候補score、結果を検証器candidate
+scoreとする二軸設計だったため、`70% 以上`の検索結果に`48%`が現れ得た。添付スクリーンショットは商用画像を
+含むためrepoへ収載せず、匿名化した所見だけを記録する。
+
+CADはViewPrismUI `df560cf`でGF-067-01を置換した。利用者向けの判断軸を検証器一致度%ひとつに統一する:
+
+- 結果badge=`N%`のみ。`実質同一 / 類似`等の関係語彙とpHash scoreは表示しない。
+- 検索設定=`一致度 N% 以上`。結果と同じcandidate scoreへ適用し、70%検索には70%以上だけを出す。
+- pHashは内部固定50の粗候補gate、関係分類は100%境界/削除安全性/cacheの内部契約として維持する。
+- 100%は正規化表示画素exactだけ、部分重複/類似の自動削除・自動投入禁止も維持する。
+
+### 9.2 R5先行不合格と是正
+
+既存600件合格のまま、新probeだけが不合格となった:
+
+- verifier candidate scoreが48のpairをthreshold 70で検索: expected 0件 / actual 1件。
+
+`SimilaritySearchService`のproduction経路を、pHash内部固定50→検証→candidate score利用者thresholdの順へ変更し、
+candidate score降順/id昇順へ統一した。verifier未注入の固定Oracle経路は従来pHash契約を維持する。両タブのbadgeを
+`N%`だけ、方式表示を`一致度 · N% 以上`、設定見出しを`一致度のしきい値`へ変更した。DB schema、verifier、
+一致度帯、100%境界は無変更。
+
+### 9.3 機械受入と再golden基準
+
+- Tests 601/601。新probeはthreshold70で48を除外し、テスト専用threshold40で返すこと、およびbadgeが`48%`/`94%`
+  の数値だけであることを固定した。
+- build 0 warning / 0 error、Oracle 109 pass+既知2skip、validator 0 error / 0 warning、diff-check clean。
+- 再golden: 画像/作業タブとも結果badgeは`99%`等の数値だけで、関係語彙を併記しない。
+- 70%検索の全結果が70%以上、80%検索の全結果が80%以上であり、70%へ戻すと同じscope/cache条件を再現する。
+- pHash距離0の非同一画像は100%にならず、UI最小50%未満なら通常検索結果へ現れない。
+- 条件検索は従来どおり`条件一致`。候補scope、停止/進捗/cancel、候補追加、merge/Undo、scan gateに回帰がない。

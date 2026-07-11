@@ -14,6 +14,8 @@ namespace ViewPrism2.Core.Services.Similarity;
 /// </summary>
 public sealed class SimilaritySearchService
 {
+    // GF-067-02: pHashは利用者しきい値と別の内部recall gate。既存UI範囲の下限50を固定。
+    private const int CoarsePHashThreshold = 50;
     private readonly ISyncFolderRepository _folders;
     private readonly IImageRepository _images;
     private readonly IImageFeatureRepository _features;
@@ -132,13 +134,27 @@ public sealed class SimilaritySearchService
 
             var pair = await GetOrComputePairAsync(
                 baseImage, baseFeature, candidate, folder.Path, ct).ConfigureAwait(false);
-            if (pair is { SimilarityScore: var score } && score >= threshold)
+            if (pair is { SimilarityScore: var score })
             {
+                // verifier未注入の固定Oracle/後方互換経路は従来どおりpHash score軸。
+                if (_duplicateVerifier is null)
+                {
+                    if (score >= threshold)
+                    {
+                        results.Add(new SimilarResult
+                        {
+                            ImageId = candidate.Id, Score = score, CandidateScore = score,
+                        });
+                    }
+                    goto Progress;
+                }
+
+                // productionはpHashを固定の粗候補gateにだけ使い、利用者しきい値は検証器一致度へ適用。
+                if (score < CoarsePHashThreshold) goto Progress;
                 var relationship = pair.DuplicateRelationship;
                 var candidateScore = pair.CandidateScore ?? score;
-                if (_duplicateVerifier is not null
-                    && (relationship is null
-                        || !string.Equals(pair.VerifierAdapter, _duplicateVerifier.AdapterId, StringComparison.Ordinal)))
+                if (relationship is null
+                    || !string.Equals(pair.VerifierAdapter, _duplicateVerifier.AdapterId, StringComparison.Ordinal))
                 {
                     var verified = string.Equals(baseImage.Hash, candidate.Hash, StringComparison.Ordinal)
                         ? new DuplicateVerificationResult
@@ -158,7 +174,7 @@ public sealed class SimilaritySearchService
                 }
 
                 // NonSimilarはpHashの粗い候補にすぎず、整理結果へ公開しない。
-                if (relationship is not DuplicateRelationship.NonSimilar)
+                if (relationship is not DuplicateRelationship.NonSimilar && candidateScore >= threshold)
                 {
                     results.Add(new SimilarResult
                     {
@@ -170,16 +186,15 @@ public sealed class SimilaritySearchService
                 }
             }
 
+        Progress:
             done++;
             progress?.Report(total == 0 ? 100 : done * 100 / total);
             detailedProgress?.Report(new SimilaritySearchProgress(SimilaritySearchPhase.Comparing, done, total));
         }
 
-        // 重複関係(precision)→同関係内候補score→旧pHash score→id の安定順。
+        // GF-067-02: 利用者向けの単一軸(candidate score)→idで安定順。関係は内部安全契約。
         return results
-            .OrderByDescending(r => r.Relationship is null ? -1 : (int)r.Relationship.Value)
-            .ThenByDescending(r => r.CandidateScore)
-            .ThenByDescending(r => r.Score)
+            .OrderByDescending(r => r.CandidateScore)
             .ThenBy(r => r.ImageId, StringComparer.Ordinal)
             .ToList();
     }

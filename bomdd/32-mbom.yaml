@@ -401,8 +401,8 @@ mbom:
         type: dotnet-classlib
       interface_contract:
         extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ。失敗は null。**(ECO-048)default interface methodで変種を後方互換追加**。**(ECO-066/REQ-089)任意capability ICancellablePHashImageReaderを追加して既存fake/固定Oracle契約を無改変維持し、productionはdecode前後/変種計算前にcancel観測(同期Skia primitive実行中そのものは中断不能)**"
-        search: "FindSimilarAsync(baseImageId, threshold, progress, ct, detailedProgress)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, scopeCandidates, progress, ct, detailedProgress)=ECO-062明示候補。候補はNormal/自身除外/同一collectionをCore再検証しfilter先行→cache→計算保存、閾値以上をScore降順/id昇順。ECO-048の8変種最小距離を維持。**(ECO-066/REQ-089)detailedProgress=Preparing→Comparing(0..total)、旧IProgress<int>は後方互換、ctはreaderまで伝搬**"
-        duplicate_verifier: "IDuplicateRelationshipVerifier.VerifyAsync(pathA,pathB,ct)→DuplicateVerificationResult。production adapter=skia-duplicate-relationship-v1。byte/正規化sRGB BGRA exact→D4全8変種64x64 RGBA局所差→55%以上crop重複。結果は関係強度/candidateScore/pHash score/idで安定順、NonSimilarは非公開"
+        search: "FindSimilarAsync(baseImageId, threshold, progress, ct, detailedProgress)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, scopeCandidates, progress, ct, detailedProgress)=ECO-062明示候補。候補はNormal/自身除外/同一collectionをCore再検証しfilter先行→cache→計算保存。productionはpHash score>=内部固定50だけを検証候補とし、利用者thresholdは検証器candidateScoreへ適用、candidateScore降順/id昇順。verifier未注入の固定Oracle経路だけ従来pHash threshold/scoreを維持。ECO-048の8変種最小距離を維持。**(ECO-066/REQ-089)detailedProgress=Preparing→Comparing(0..total)、旧IProgress<int>は後方互換、ctはreaderまで伝搬**"
+        duplicate_verifier: "IDuplicateRelationshipVerifier.VerifyAsync(pathA,pathB,ct)→DuplicateVerificationResult。production adapter=skia-duplicate-relationship-v1。byte/正規化sRGB BGRA exact→D4全8変種64x64 RGBA局所差→55%以上crop重複。結果はcandidateScore/idで安定順、関係は内部安全契約、NonSimilarは非公開"
         features_repo: "IImageFeatureRepository: GetAsync(imageId)/UpsertAsync(feature)/DeleteByImageAsync。feature 取得時 file_size/modified_date/hash が現行と異なれば呼び出し側が再計算→Upsert→関与 similarity 行を連鎖削除。(ECO-048)ImageFeature.PhashVariants(8 変種の ',' 連結・NULL=旧レコード)を保存/取得"
         similarity_repo: "IImageSimilarityRepository: GetAsync/UpsertAsync/UpsertVerificationAsync/DeleteInvolvingAsync。cache_key={min}-{max}。migration007のduplicate_relationship/candidate_score/verifier_adapterで検証cache、旧NULL/adapter不一致は再検証"
         schema: >-
@@ -421,6 +421,7 @@ mbom:
         - 非同期で UI をブロックしない。OC-16/OC-18 を公開 API に
         - since ECO-066(REQ-089) phase/count progressは単調、cancel後の検索結果publicationはsurface session generationで拒否し正常cacheは再利用
         - since ECO-067(REQ-090) pHash scoreは候補抽出専用。距離0だけで画像内容一致/実質同一/100%を確定しない
+        - since GF-067-02 productionの利用者thresholdと表示/順位は同じcandidateScore軸。pHashは内部固定50の粗候補gate。固定Oracleのverifierなし経路は旧契約を維持
       acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-DB-006]
       fmea_refs: [FMEA-022, FMEA-025, FMEA-041, FMEA-042]
 

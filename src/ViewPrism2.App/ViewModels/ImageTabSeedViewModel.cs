@@ -923,9 +923,7 @@ public sealed class OrganizeResultVM
     public int Score { get; }
     public bool IsCriteria { get; }
     public DuplicateRelationship? Relationship { get; }
-    /// <summary>GF-067-01: 条件検索は条件一致、重複候補は関係語彙+検証器一致度%。旧pHash scoreは渡さない。</summary>
-    public string ScoreText => IsCriteria ? "条件一致" : Relationship is { } relationship
-        ? $"{relationship.ToDisplayLabel()} {Score}%"
-        : $"候補 {Score}%";
+    /// <summary>GF-067-02: 条件検索以外は検証器一致度%だけ。関係語彙/pHash scoreは表示しない。</summary>
+    public string ScoreText => IsCriteria ? "条件一致" : $"{Score}%";
     public bool Added { get; }
 }

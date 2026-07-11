@@ -176,8 +176,11 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
             db.Folders, db.Images, db.Features, db.Similarities,
             new PHashImageReaderScaledDecode(), db.Clock, verifier);
 
-        var result = Assert.Single(await service.FindSimilarAsync(
+        // GF-067-02: 利用者のしきい値と結果%は同じ軸。70%検索へ48%候補を出さない。
+        Assert.Empty(await service.FindSimilarAsync(
             a.Id, 70, ct: TestContext.Current.CancellationToken));
+        var result = Assert.Single(await service.FindSimilarAsync(
+            a.Id, 40, ct: TestContext.Current.CancellationToken));
         Assert.Equal(b.Id, result.ImageId);
         Assert.Equal(DuplicateRelationship.Similar, result.Relationship);
         var cached = await db.Similarities.GetAsync(a.Id, b.Id);
@@ -186,11 +189,11 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
 
         var vm = new OrganizeResultVM(b.Id, b.FileName, bPath, "1 KB", result.CandidateScore,
             isCriteria: false, added: false, result.Relationship);
-        Assert.Equal($"類似（重複ではありません） {result.CandidateScore}%", vm.ScoreText);
+        Assert.Equal($"{result.CandidateScore}%", vm.ScoreText);
 
         var substantial = new OrganizeResultVM("s", "same.jpg", null, "1 KB", 94,
             isCriteria: false, added: false, DuplicateRelationship.SubstantiallySame);
-        Assert.Equal("実質同一 94%", substantial.ScoreText); // GF-067-01: 同関係内の差を失わない
+        Assert.Equal("94%", substantial.ScoreText); // GF-067-02: 利用者向け判断軸は数値ひとつ
     }
 
     private static async Task<ImageRecord> SeedImageAsync(TempDb db, string folderId, string name, string id)

@@ -504,10 +504,10 @@ control_plan:
       characteristic: "ECO-067/REQ-090/IMG-021 pHash粗候補と同一原画像由来の重複関係検証を分離し、100%境界・局所差・削除安全性を守る"
       classification: "core + surface"
       depth: "unit + L2(schema) + golden"
-      tolerance: "関係分類/順位/表示語彙 exact。pHash距離0非同一は100%/重複禁止。migration007はLatestDdl同値"
+      tolerance: "内部関係分類/一致度順位/表示N% exact。検索しきい値と表示は同じ軸。pHash距離0非同一は100%/重複禁止。migration007はLatestDdl同値"
       fixture: tests/ViewPrism2.Tests/CpDuplicateQuality030Tests.cs
       fixture_note: "Trait cp=CP-DUPQUALITY-030。テスト内生成PNG/JPEGのみ。商用画像・利用者画像・固定binary fixtureなし"
-      oracle: "SameFile/ImageContentMatch/SubstantiallySame/PartialOverlap/Similar/NonSimilar、pair cache adapter、UI badgeの完全一致"
+      oracle: "SameFile/ImageContentMatch/SubstantiallySame/PartialOverlap/Similar/NonSimilar、pair cache adapter、UI一致度badgeの完全一致"
       approver: automated
       test_vectors:
         - "同一file copy→同一ファイル。PNG終端metadata差などbyte差+同一表示画素→画像内容一致"
@@ -515,10 +515,10 @@ control_plan:
         - "55%以上のtrim共有→部分重複。自動削除対象にしない"
         - "同構図の局所色/内容置換→類似(重複でない)。全体平均で実質同一へ希釈しない"
         - "8bit grayscale同値の赤/緑局所置換でproduction pHash距離0を再現しても、類似・100%禁止"
-        - "検索E2Eは関係/candidate scoreをmigration007 pair cacheへverifier adapter付き保存し、UIは関係+一致度%を表示。pHash粗scoreを結果%へ渡さない"
-        - "GF-067-01: 候補しきい値は70%/80%をexact再指定でき、画像/作業タブで同じ数値。結果は実質同一94%等、同関係内candidate score差を保持"
-        - "順位: 同一file>画像内容一致>実質同一>部分重複>類似、同関係はcandidate score→pHash score→id"
-      notes: "goldenは画像/作業タブで数値候補しきい値、関係+一致度% badge、表情差=類似(重複でない)、部分重複の慎重表示、既存session/scope/merge回帰を確認"
+        - "検索E2Eは関係/candidate scoreをmigration007 pair cacheへverifier adapter付き保存し、UIはcandidate scoreのN%だけを表示。pHash粗score/関係語彙を表示しない"
+        - "GF-067-02: threshold70はcandidateScore48を除外し、threshold40(テスト専用・UI最小未満)では返す。UI badgeは48%/94%で語彙を併記しない"
+        - "順位: candidate score降順→id。同一file/画像内容一致/実質同一/部分重複/類似の内部帯は逆転しない"
+      notes: "goldenは画像/作業タブで単一一致度% badge、70%/80%のしきい値と結果下限の一致、100%境界、既存session/scope/merge回帰を確認"
 
     - id: CP-MERGE-018
       characteristic: マージ計算・マージサービスのタグ集約・status 遷移・原子性が仕様 §2.10.5・OC-17 と一致する

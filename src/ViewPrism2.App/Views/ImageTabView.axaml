@@ -491,12 +491,12 @@
                         </ToggleButton>
                       </Grid>
                     </StackPanel>
-                    <!-- GF-067-01: pHash候補しきい値は同条件を再現できる数値%として表示 -->
+                    <!-- GF-067-02: 表示結果と同じ検証器一致度%をしきい値にする -->
                     <StackPanel Spacing="4" VerticalAlignment="Top" IsVisible="{Binding IsSimilarMethod}">
                       <DockPanel>
                         <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel, StringFormat='{}{0} 以上'}"
                                    FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <TextBlock Text="候補しきい値" FontSize="11" FontWeight="SemiBold"
+                        <TextBlock Text="一致度のしきい値" FontSize="11" FontWeight="SemiBold"
                                    Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                       <Slider Minimum="50" Maximum="100" Value="{Binding SimilarThreshold}" />

@@ -135,7 +135,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン: 畳んで整理対象リストに場所を譲る)。</summary>
     public bool SearchOpen => _searchOpen;
     /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
-    public string SearchMethodLabel => _searchMethod == "similar" ? $"重複候補検索 · {_similarThreshold}% 以上" : "条件検索";
+    public string SearchMethodLabel => _searchMethod == "similar" ? $"一致度 · {_similarThreshold}% 以上" : "条件検索";
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
 
