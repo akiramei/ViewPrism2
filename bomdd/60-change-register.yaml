@@ -1162,3 +1162,16 @@ changes:
     golden_detail: "CP-UI-G1承認(2026-07-12 maintainer実機)。grid/listのv2基本3列、popup内方向、chip解除、tile補助値、grid-list-viewer順共有、tag絞り込み、再起動時sort解除+WorkTab表示形式保持、各modeとImageTab回帰なし"
     body: 60-change-order-eco-069.md
     notes: "クローズ済み。案A=v2基本3列parityをListColumnBuilder/ViewColumnSorter/既存v2 VMの再利用で実装。grid=並び替え+badge+popup方向+chip解除+tile値、list=固定3列clickable header+chip解除、grid/list/viewer状態共有、未sort名前昇順。旧固定menu+別方向button廃止。表示列編集/タグ列/schema/DB/Core/DS/i18n/既存Oracle不変。REQ/spec/E/M-BOM/CP同期、CAD=3d76313。教訓=defer差分には所有者+後続order+両surface conformance CPを同時付与する"
+
+  - id: ECO-070
+    title: "FS表示でフォルダがソート対象外となり固定名前昇順で残る"
+    type: 既存機能品質是正(CAD/REQ/BOMのfolder行sort意味論欠落。folder-firstは実装済みだがfolder群は固定名前昇順、files群だけFL-003列sort。size/date/tag時のfolder比較キーをgate①で裁定)
+    status: staged
+    golden: pending
+    baseline: "main 03c35c44ddaa"
+    findings: "maintainer要求2026-07-12=FS表示はfolder先/file後、両群を個別sort。現ImageTabはBuildItemsFromMatchedでfolders→filesを満たす一方、FS解決でfilesだけSortFiles、foldersはName OrdinalIgnoreCase固定昇順。名前降順でもfolder群不変。Seed旧実装は群別sort+concat、実データ版45a6c77で固定昇順化、ECO-025 v2 72e47c3はfile列sortだけを刷新。CAD file_list v2/REQ-081/E-UI-BROWSE/M-UI-013/CPはfolder行のgroup順・比較キーを未定義、testsも!IsFolderだけを検査。IMG-015 scan中append/完了sortとの合成が必要"
+    impacted_bom: ["ViewPrismUI file_list/image_tab/FL-003", "REQ-081・20-spec §2.6", "E-UI-BROWSE-022/E-UI-AXIS-NAV-040", "M-UI-013", "ImageTabViewModel FS group sort", "CP-UI-G1/CpUiG1ImageTabSelectionTests/CpUiEco060ProgressiveScanTests read-across"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規unit/VM/headlessでfolder-first、folder/file群別の名前昇降順、size/date/tag時folder規則、grid-list共有、パンくず、scan中append→完了sortをexact固定"
+    verification: "2026-07-12 /eco-file工程診断のみ。src/tests変更なし。gate①案A/B/C待ち"
+    body: 60-change-order-eco-070.md
+    notes: "推奨案A=type-primary(folder先)+folderは名前を現在方向で独立sort、filesは選択列/方向。架空のfolder size/date/tag値やOS metadata I/Oなし。案B=folder集約値新設、案C=現状追認。CAD裁定後にfix"
