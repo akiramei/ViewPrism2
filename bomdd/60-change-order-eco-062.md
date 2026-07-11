@@ -1,4 +1,4 @@
-# ECO-062 (staged) — 類似画像検索を閲覧コンテキストへ限定 — FS 同一フォルダ／タグビュー現ノード／作業スペース
+# ECO-062 (applied) — 類似画像検索を閲覧コンテキストへ限定 — FS 同一フォルダ／タグビュー現ノード／作業スペース
 
 > ECO-060 golden 後の maintainer 性能所見と 2026-07-11 の要求を受けて起票・工程診断した機能拡張。
 > 起票段階では `src/tests` を変更しない(R1)。
@@ -184,4 +184,37 @@ golden 再検査範囲:
 
 ## §8 残ゲート(fix 後)
 
-- **gate②(golden)** のみ。§5 の操作を maintainer 実機で確認後、`/eco-accept ECO-062` でクローズする。
+- **gate②(golden)**: 完了(maintainer 実機、2026-07-11)。
+
+## §9 クローズ(2026-07-11)
+
+### 9.1 golden 結果
+
+maintainer が `/eco-accept ECO-062` で §5 の golden を合格承認した。
+
+- FS: 同一フォルダ直下だけを候補とし、subfolder/兄弟 folder を除外。tag chip の一時絞り込みは候補へ影響しない。
+- FS navigation: マージ先選択後に別 folder へ移動した場合は候補 0 件。
+- view: 検索実行時の current node 母集合だけを候補とし、別枝へ広がらない。
+- WorkTab: 現 workspace 内だけを Core 前段候補とし、大規模 collection 全体の計算待ちを再発させない。
+- 裏面回帰: 閾値・結果順・候補追加・マージ/Undo・スキャン中 gate は正常。
+
+### 9.2 再発防止
+
+- **CP-SIM-017**: scope 外/非 normal/別 collection の reader/feature/similarity cache 非接触と、reader 呼出数が
+  `base + scope内候補` に一致することを unit exact で固定。
+- **CP-UI-G9**: 画像タブ FS/view の検索時文脈境界と整理トレイの裏面回帰を、26万件全走査の潜伏実績つきで明記。
+- **CP-UI-G1**: WorkTab が結果後段 filter へ退行せず、現 workspace を Core 前段候補にする read-across を明記。
+- As-Built `golden_2026_07_11_eco062` に承認内容を記録。
+
+### 9.3 教訓
+
+性能問題の境界は「結果に何を表示したか」ではなく、**高価な処理へ入る前に何を候補から除いたか**で定義する。
+WorkTab は従来も結果だけは workspace 内だったが、pHash 計算後の filter だったため性能契約を満たさなかった。
+ECO-058 の read-across 漏れと同様、共有機能を別 surface へ再利用するときは結果意味論だけでなく、計算境界・仮想化・
+キャッシュ接触を含む非機能契約も同時に移植する。また、NodeGraph のような非排他的分類では対象から「所属 leaf」を
+逆算せず、ユーザーが選択した閲覧コンテキストを明示入力にすることで曖昧さと全域探索を同時に避けられる。
+
+### 9.4 残課題
+
+- 本 ECO に起因する残ゲートなし。
+- IMG-016/017(スキャン中表示詳細・再スキャン異常系)は既存の別課題で、本 ECO の候補スコープとは独立。
