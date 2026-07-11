@@ -1135,3 +1135,16 @@ changes:
     verification: "2026-07-11 fix完了: 初回CP-DUPQUALITY-030赤→自作fixture5本緑。GF-067-01数値欠落赤→緑。GF-067-02二軸矛盾赤→緑。GF-067-03小面積局所差/帯域契約赤→緑。GF-067-04=小面積表情差expected70-95/actual49、pHash距離0局所差expected70-94/actual48の対象2failを先行実測→関係非依存detail+min(pHash,detail)+verifier v3で対象7/7・全603/603緑。build 0/0、Oracle 109 pass+既知2skip、validate 0-0。商用画像/スクリーンショット非収載"
     body: 60-change-order-eco-067.md
     notes: "クローズ済み。第0段SHA/正規化画素exact+第1段pHash粗候補/大局score+第2段64x64 D4/RGBA局所差/crop関係+連続detail。表示/threshold/順位=min(pHash,detail)、exactのみ100。関係は非表示の削除安全性で数値を強制しない。verifier v3でv2 cache再検証。部分重複/類似の自動削除/投入なし。GF-067-01〜04で語彙のみ→関係+%→固定帯→連続scoreへ収束。CAD=bb9623b+b686b37+df560cf+e6a8078。CP-UI-G9/G1+50-as-builtへgolden承認記録"
+
+  - id: ECO-068
+    title: "作業タブの画像ダブルクリックでビューアーが起動しない"
+    type: 欠陥是正(作業タブsurfaceの実装転写漏れ+M-BOM/CP検査欠測。CAD正典/REQ-041/044は確定済みで裁定不要、IMG-004は同契約への追随同期)
+    status: staged
+    golden: pending
+    baseline: "main 40a352c405b3"
+    findings: "maintainer実機2026-07-11=作業タブgrid/list画像をダブルクリックしても無反応、期待=現在の絞り込み/ソート表示順でビューア起動。CAD work_tab L14/L83は画像タブ中央を同一部品/同一意味論、image_tab L47/L580は閲覧時ダブルクリック起動。REQ-041/044/spec§2.6、E-UI-WORKSPACE-043(REQ-041参照)も定義済み。実装はWorkTabViewがClickCount/DoubleClickDetectorを渡さずVM HandleItemClickも閲覧分岐なし、IWindowService.ShowViewer呼出0。ImageTab側は同経路あり。混入=f211fa9(2026-06-29 WorkTab導入)から潜伏。M-UI-WORKSPACE-029/CP-UI-G1/CpUiG1WorkTabTestsは作業タブ固有のviewer起動をpinせず、Stub ShowViewer空実装。CAD review_points IMG-004の通常クリック想定/モック外はscreen正典への追随漏れ"
+    impacted_bom: ["ViewPrismUI review_points IMG-004(doc追随。screen意味不変)", "REQ-041/044・20-spec §2.6(健全/不変)", "E-UI-WORKSPACE-043/E-UI-BROWSE-022(健全)", "M-UI-WORKSPACE-029", "WorkTabView.axaml.cs/WorkTabViewModel.cs", "CP-UI-G1/CpUiG1WorkTabTests+surface配線probe"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規unit/headlessで通常ダブル=ShowViewer 1回、単クリック/各文脈モード=0、タグ絞り込み+sort後のordered/startIndex exact、ViewのDoubleClickDetector/ClickCount転送を固定"
+    verification: "(staged — 製造前。/eco-fixで先行赤probe)"
+    body: 60-change-order-eco-068.md
+    notes: "起票のみ。工程帰属=実装転写漏れ+検査欠測。gate①不要。Viewer/Core/DB/schema/i18n不変予測。/eco-fixでImageTab同型の検出配線、WorkTab閲覧分岐、可視順ImageEntry構築をプローブ先行で是正し、M-BOM/CP/IMG-004を同期"
