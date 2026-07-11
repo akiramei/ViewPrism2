@@ -70,9 +70,13 @@
   全collection総件数ではなくcollection数+選択collection件数へ限定できる見込みだが、プローブで呼出数と状態遷移を固定する。
 - 初期ロード中のtab切替、collection再選択、終了が競合した場合のキャンセル/世代無効化要否はCAD裁定後にprobeする。
 
-## §4 是正方針(gate①の案)
+## §4 是正方針(gate①裁定済み — 2026-07-11)
 
-### 案A(推奨): shell-first + catalog/content二段ロード + 選択collection限定
+maintainerが2026-07-11に**案A**を採用した。CADはViewPrismUI `84d1e2d`
+(`decide(IMG-019): 起動をshell-first二段loadingへ`)で先行改訂済み。`docs/screens/image_tab.md`を挙動正本とし、
+VP-UI-005は画像タブ起動に必要な範囲だけ部分決定、全画面共通component化は継続課題として本ECOへ混ぜない。
+
+### 案A(採用): shell-first + catalog/content二段ロード + 選択collection限定
 
 1. window/shellを先に描画し、collection catalogと画像contentに別々のloading状態を持たせる。
 2. catalogはcollection行とnormal件数の集約だけを取得し、全ImageRecordを件数計算のためにmaterializeしない。
@@ -86,7 +90,7 @@
   連打/戻り、エラー表示を確認。巨大profileでも全件完了を待たずshellが応答することを確認。
 - 利点: 総collection件数比例のeager loadを除去し、今回の性能原因そのものへ上限を置ける。
 
-### 案B(最小): monolithic eager loadをbackground化 + 全体loading overlay
+### 案B(不採用): monolithic eager loadをbackground化 + 全体loading overlay
 
 - 現在の`GetAllNormalAsync`/`GetAllImageTagsAsync`/全件集約は維持し、単一初期化をUI thread外へ移して完了まで画像tab全体を
   loading overlayにする。
@@ -124,9 +128,9 @@
 
 ## §6 残ゲート
 
-1. **gate① ViewPrismUI裁定**: 案A(推奨) / 案B、loadingの表示範囲、error/retry、loading中に許可する操作を確定する。
-2. CAD commitを先行し、製品ECOへ取り込む。
+1. ~~**gate① ViewPrismUI裁定**: 案A / 案B、loadingの表示範囲、error/retry、loading中に許可する操作を確定する。~~
+   → **案A採用**(2026-07-11・maintainer)。
+2. ~~CAD commitを先行し、製品ECOへ取り込む。~~ → ViewPrismUI `84d1e2d`で完了。
 3. `/eco-fix ECO-064`: プローブ先行で現行eager scope/UI-thread境界を不合格化してから製造する。
 4. 機械受入: build 0 / Tests / Oracle / validate_bom 0-0 / lifecycle。
 5. gate② golden: 隔離大規模profileでshell-first、loading状態、応答性、ready/error遷移、既存復元回帰を実機確認する。
-
