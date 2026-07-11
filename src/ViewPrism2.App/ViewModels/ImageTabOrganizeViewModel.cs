@@ -98,7 +98,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         get => _similarThreshold;
         set { _similarThreshold = Math.Clamp(value, 50, 100); OnPropertyChanged(); OnPropertyChanged(nameof(SimilarThresholdLabel)); }
     }
-    public string SimilarThresholdLabel => _similarThreshold < 65 ? "広め" : _similarThreshold < 85 ? "標準" : "絞る";
+    public string SimilarThresholdLabel => $"{_similarThreshold}%";
     /// <summary>類似検索はマージ先(基準画像)が必要。</summary>
     public bool CanRunSimilar => _mergeTargetId is not null;
     // ECO-055: マージ先との属性一致トグル(順序はモック condDefs: hash/ext/size/name/date)。
@@ -135,7 +135,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン: 畳んで整理対象リストに場所を譲る)。</summary>
     public bool SearchOpen => _searchOpen;
     /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
-    public string SearchMethodLabel => _searchMethod == "similar" ? "重複候補検索" : "条件検索";
+    public string SearchMethodLabel => _searchMethod == "similar" ? $"重複候補検索 · {_similarThreshold}% 以上" : "条件検索";
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
 
@@ -275,7 +275,8 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
                     _mergeTargetId, _similarThreshold, _getSimilarityScopeCandidates(),
                     ct: run.Token,
                     detailedProgress: _searchSession.CreateProgress(run)).ConfigureAwait(true);
-                foreach (var s in found) results.Add((s.ImageId, s.Score, false, s.Relationship));
+                // GF-067-01: pHash粗scoreでなく、関係内の差を表す検証器candidate scoreをUIへ渡す。
+                foreach (var s in found) results.Add((s.ImageId, s.CandidateScore, false, s.Relationship));
                 if (!_searchSession.TryComplete(run)) return;
             }
         }

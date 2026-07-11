@@ -80,7 +80,7 @@ design_system_bom:
     states: [idle, preparing, comparing, cancelling, completed]
     visual_contract: "固定150px設定領域をphase/count/barへ置換し、同位置CTAを探す→停止→停止中へ切替。cancelは0件/失敗表示にしない"
     lifecycle_contract: "明示停止、整理終了、target/scope/mode/new search/window終了でcancel+generation無効化。first cancel=grid、re-search cancel=直前completed保持"
-    result_contract: "ECO-067: pHash数値%を表示せず、同一ファイル/画像内容一致/実質同一/部分重複/類似(重複でない)の関係badge。設定は候補の広さ=広め/標準/絞る"
+    result_contract: "ECO-067/GF-067-01: 設定は再現可能な候補しきい値N%。結果は同一ファイル/画像内容一致/実質同一/部分重複/類似(重複でない)の関係+検証器一致度% badge。結果%は重複確率/旧pHash scoreでない"
     control_plan_refs: [CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-UI-G1, CP-UI-G9]
 
   source_cad_refs:

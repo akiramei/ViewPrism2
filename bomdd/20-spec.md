@@ -764,9 +764,11 @@ OC-16 後方互換のため同一コレクション全体を候補とする。
   関係強度は`同一file > 画像内容一致 > 実質同一 > 部分重複 > 類似`。pHash距離0だけで上位3関係を確定しない。
   `部分重複 / 類似`は自動削除/重複group自動投入をしない。検証結果はverifier adapter世代付きpair cacheへ保存し、
   内容変化/adapter不一致で再検証する。
-- UI: 一覧/グリッドで画像 1 枚を選択して起動。内部pHash閾値(50〜100・既定70)は`候補の広さ`として
-  `広め / 標準 / 絞る`だけを表示し、数値百分率を見せない。結果badgeは`同一ファイル / 画像内容一致 /
-  実質同一 / 部分重複 / 類似（重複ではありません）`を表示する。結果 0 件は空状態を表示する。
+- UI: 一覧/グリッドで画像 1 枚を選択して起動。pHash粗候補閾値(50〜100・既定70)は検索条件再現用の
+  `候補しきい値 N%`として数値表示する。結果badgeは`同一ファイル / 画像内容一致 / 実質同一 /
+  部分重複 / 類似（重複ではありません）`に検証器の決定的一致度%を併記する(例`実質同一 94%`)。
+  一致度は重複確率/旧pHash scoreではなく、関係内の差を示す。帯はexact関係=100、実質同一=90〜99、
+  部分重複=70〜79、類似=40〜49。結果 0 件は空状態を表示する(GF-067-01/CAD `b686b37`)。
 - **検索session (REQ-089 / IMG-020 / ECO-066)**: pHash類似方式は整理モード所有の単一active session。
   `idle→preparing→comparing→completed`、停止時は`preparing|comparing→cancelling→idle`を区別する。
   150px固定の検索設定領域を実行中だけphase表示+barへ置換し、CTAを同位置で「探す」→「停止」→「停止中」へ切替える。
@@ -1175,7 +1177,7 @@ OC-16 後方互換のため同一コレクション全体を候補とする。
 | REQ-060 | §2.6 | unit: 条件サマリ整形ベクタ+golden G-1/G-6 | 50-as-built.yaml golden_findings GF-01〜05(v2.0 追加・承認者裁定) |
 | REQ-086 | §2.1/§2.6 | unit: commit後batch通知+段階append/完了sort/類似gate、golden G-1/G-9 | ViewPrismUI image_tab.md `1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f` / ECO-060 |
 | REQ-089 | §2.6/§2.10.4 | unit: session状態/単調進捗/cancel/latest-wins/cache再利用、golden G-1/G-9 | ViewPrismUI IMG-020 `487aa53` / ECO-066 |
-| REQ-090 | §2.10.4 | unit/L2: 関係fixture・pHash距離0非同一・pair検証cache、golden G-1/G-9 | ViewPrismUI IMG-021 `bb9623b` / ECO-067 |
+| REQ-090 | §2.10.4 | unit/L2: 関係fixture・pHash距離0非同一・pair検証cache、golden G-1/G-9 | ViewPrismUI IMG-021 `bb9623b`+GF補正`b686b37` / ECO-067 |
 | REQ-061 | §2.10.1 | unit: OC-14 決定性+合成/性質ベクタ | phash-utils.ts(DCT 32×32→8×8 64bit。ビット一致不要=CPOL-103。v3.0 追加) |
 | REQ-062 | §2.10.2 | unit: OC-15 段階式境界ベクタ | similarity-evaluator.ts(popcount・段階式変換。v3.0 追加) |
 | REQ-063 | §2.10.3 | unit/L2: OC-18 再計算/正規化/CASCADE+スキーマ | migration 007/008, similarity-cache.service.ts(時間失効は不採用=意図的差分。v3.0 追加) |

@@ -34,6 +34,7 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
             new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
 
         Assert.Equal(70, vm.SimilarThreshold); // REQ-064/065: 既定 70(範囲 50〜100)
+        Assert.Equal("70%", vm.SimilarThresholdLabel); // GF-067-01: 同じ検索条件を数値で再現可能
 
         // クランプ 50〜100(REQ-064/065 — ECO-051: 撤去した旧モーダル VM 検査からの移行)
         vm.SimilarThreshold = 10;
@@ -42,6 +43,7 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
         Assert.Equal(100, vm.SimilarThreshold);
         vm.SimilarThreshold = 80;
         Assert.Equal(80, vm.SimilarThreshold);
+        Assert.Equal("80%", vm.SimilarThresholdLabel);
     }
 
     [Fact]
@@ -55,6 +57,7 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
             new StubWindowService(), new ImageSorter(), new AppSettings());
 
         Assert.Equal(70, vm.SimilarThreshold); // REQ-064/065: 既定 70(整理トレイと同値=転写ドリフト防止)
+        Assert.Equal("70%", vm.SimilarThresholdLabel); // GF-067-01: 画像/作業タブで同じ数値契約
 
         // クランプ 50〜100(REQ-064/065 — ECO-051: 撤去した旧モーダル VM 検査からの移行)
         vm.SimilarThreshold = 10;

@@ -449,18 +449,18 @@
                         </ToggleButton>
                       </Grid>
                     </StackPanel>
-                    <!-- ECO-067: pHash内部値を一致率表示せず、候補抽出の広さとして扱う -->
+                    <!-- GF-067-01: pHash候補しきい値は同条件を再現できる数値%として表示 -->
                     <StackPanel Spacing="4" VerticalAlignment="Top" IsVisible="{Binding IsSimilarMethod}">
                       <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel}"
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel, StringFormat='{}{0} 以上'}"
                                    FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <TextBlock Text="候補の広さ" FontSize="11" FontWeight="SemiBold"
+                        <TextBlock Text="候補しきい値" FontSize="11" FontWeight="SemiBold"
                                    Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                       <Slider Minimum="50" Maximum="100" Value="{Binding SimilarThreshold}" />
                       <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="絞る" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
-                        <TextBlock Text="広め" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
+                        <TextBlock DockPanel.Dock="Right" Text="100%" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
+                        <TextBlock Text="50%" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                     </StackPanel>
                     </Panel>

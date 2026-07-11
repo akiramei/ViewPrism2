@@ -588,7 +588,7 @@ ebom:
 
     # ---------- v3.0 表面(loop-v3-similarity) ----------
     - id: E-UI-SIMILARITY-035
-      name: 重複候補検索 UI(候補の広さ・関係badge・進捗・空状態)— v3.0 新設+ECO-014/067
+      name: 重複候補検索 UI(数値候補しきい値・関係+一致度badge・進捗・空状態)— v3.0 新設+ECO-014/067
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-065, REQ-064, REQ-086, REQ-087, REQ-089, REQ-090]
@@ -603,7 +603,7 @@ ebom:
         - (ECO-060/REQ-086) 選択中collectionがスキャン中なら類似方式の検索を実行せず「スキャン完了後に利用できます」と理由を表示する。条件検索は公開済みnormal画像に対し利用可能
         - (ECO-062/REQ-087/IMG-018) 類似方式の候補は検索時点の閲覧文脈。FS=マージ先と同一親folder直下(タグchip非影響・subfolder除外・現folder外targetは0)、view=現在node path表示母集合、WorkTab=現workspace。Core呼出前から限定し結果後段filterだけで済ませない。条件検索は不変
         - (ECO-066/REQ-089/IMG-020) pHash類似検索は整理所有の単一session。150px固定領域をpreparing/comparing/cancellingのphase+件数+barへ置換しCTA=探す→停止→停止中。明示停止/整理終了/target・scope・mode・新検索・window終了でcancel+generation無効化。初回cancel=grid、再検索cancel=直前completed保持、途中結果非公開、正常cache保持。画像/作業タブ同一、条件検索は対象外
-        - (ECO-067/REQ-090/IMG-021) pHash数値を一致率表示しない。設定は候補の広さ(広め/標準/絞る)、結果は同一file/画像内容一致/実質同一/部分重複/類似(重複でない)の関係badge。部分重複/類似は自動削除・重複投入なし
+        - (ECO-067/REQ-090/IMG-021/GF-067-01) 設定は再現可能なpHash候補しきい値N%。結果は同一file/画像内容一致/実質同一/部分重複/類似(重複でない)の関係+検証器一致度% badge。結果%を重複確率/旧pHash scoreと呼ばない。部分重複/類似は自動削除・重複投入なし
       acceptance_refs: [CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-UI-G9]
 
     - id: E-UI-MERGE-036

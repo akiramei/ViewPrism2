@@ -515,9 +515,10 @@ control_plan:
         - "55%以上のtrim共有→部分重複。自動削除対象にしない"
         - "同構図の局所色/内容置換→類似(重複でない)。全体平均で実質同一へ希釈しない"
         - "8bit grayscale同値の赤/緑局所置換でproduction pHash距離0を再現しても、類似・100%禁止"
-        - "検索E2Eは関係をmigration007 pair cacheへverifier adapter付き保存し、UI ScoreTextに%を出さず関係語彙を表示"
+        - "検索E2Eは関係/candidate scoreをmigration007 pair cacheへverifier adapter付き保存し、UIは関係+一致度%を表示。pHash粗scoreを結果%へ渡さない"
+        - "GF-067-01: 候補しきい値は70%/80%をexact再指定でき、画像/作業タブで同じ数値。結果は実質同一94%等、同関係内candidate score差を保持"
         - "順位: 同一file>画像内容一致>実質同一>部分重複>類似、同関係はcandidate score→pHash score→id"
-      notes: "goldenは画像/作業タブで候補の広さ(数値%なし)、関係badge、表情差=類似(重複でない)、部分重複の慎重表示、既存session/scope/merge回帰を確認"
+      notes: "goldenは画像/作業タブで数値候補しきい値、関係+一致度% badge、表情差=類似(重複でない)、部分重複の慎重表示、既存session/scope/merge回帰を確認"
 
     - id: CP-MERGE-018
       characteristic: マージ計算・マージサービスのタグ集約・status 遷移・原子性が仕様 §2.10.5・OC-17 と一致する

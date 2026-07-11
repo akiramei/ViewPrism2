@@ -184,10 +184,13 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
         Assert.Equal(DuplicateRelationship.Similar, cached!.DuplicateRelationship);
         Assert.Equal(verifier.AdapterId, cached.VerifierAdapter);
 
-        var vm = new OrganizeResultVM(b.Id, b.FileName, bPath, "1 KB", result.Score,
+        var vm = new OrganizeResultVM(b.Id, b.FileName, bPath, "1 KB", result.CandidateScore,
             isCriteria: false, added: false, result.Relationship);
-        Assert.Equal("類似（重複ではありません）", vm.ScoreText);
-        Assert.DoesNotContain('%', vm.ScoreText);
+        Assert.Equal($"類似（重複ではありません） {result.CandidateScore}%", vm.ScoreText);
+
+        var substantial = new OrganizeResultVM("s", "same.jpg", null, "1 KB", 94,
+            isCriteria: false, added: false, DuplicateRelationship.SubstantiallySame);
+        Assert.Equal("実質同一 94%", substantial.ScoreText); // GF-067-01: 同関係内の差を失わない
     }
 
     private static async Task<ImageRecord> SeedImageAsync(TempDb db, string folderId, string name, string id)

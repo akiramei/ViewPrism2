@@ -241,7 +241,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン)。</summary>
     public bool SearchOpen => _searchOpen;
     /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
-    public string SearchMethodLabel => _searchMethod == "similar" ? $"類似画像検索 · {_similarThreshold}% 以上" : "条件検索";
+    public string SearchMethodLabel => _searchMethod == "similar" ? $"重複候補検索 · {_similarThreshold}% 以上" : "条件検索";
     public string SearchResultsSubLabel => $"マージ先「{MergeTarget?.Name}」に似た画像 · {SearchResults.Count} 件";
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
@@ -1004,7 +1004,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
                     _mergeTargetId, _similarThreshold, _sourceImages,
                     ct: run.Token,
                     detailedProgress: _searchSession.CreateProgress(run)).ConfigureAwait(true);
-                foreach (var s in found) results.Add((s.ImageId, s.Score, false, s.Relationship));
+                // GF-067-01: 画像タブと同じ検証器candidate scoreを表示用に渡す。
+                foreach (var s in found) results.Add((s.ImageId, s.CandidateScore, false, s.Relationship));
                 if (!_searchSession.TryComplete(run)) return;
             }
         }
