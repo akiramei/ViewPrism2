@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ViewPrism2.App.ViewModels"
              xmlns:c="using:ViewPrism2.App.Controls"
+             xmlns:cv="using:ViewPrism2.App.Converters"
              xmlns:media="clr-namespace:Avalonia.Media;assembly=Avalonia.Base"
              x:Class="ViewPrism2.App.Views.WorkTabView"
              x:DataType="vm:WorkTabViewModel">
@@ -548,54 +549,78 @@
               BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
         <DockPanel VerticalAlignment="Center">
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <Panel>
+            <!-- ECO-069/FL-003案A: ImageTab v2を基本3列へ射影。listはheader、gridは単一menu。 -->
+            <Border IsVisible="{Binding ShowSortChip}" Background="#EAF1FE" BorderBrush="#CFE0FC" BorderThickness="1"
+                    CornerRadius="14" Padding="10,3" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource ArrowUpIcon}" Width="12" Height="12" Foreground="{StaticResource AccentBrush}"
+                          RenderTransformOrigin="50%,50%">
+                  <PathIcon.RenderTransform><RotateTransform Angle="{Binding ColumnSortArrowAngle}" /></PathIcon.RenderTransform>
+                </PathIcon>
+                <TextBlock Text="{Binding ColumnSortLabel}" FontSize="12.5" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextPrimaryBrush}" />
+                <Button Command="{Binding ClearColumnSortCommand}" Background="Transparent" Padding="2"
+                        ToolTip.Tip="ソートを解除" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CloseIcon}" Width="11" Height="11" Foreground="{StaticResource TextMutedBrush}" />
+                </Button>
+              </StackPanel>
+            </Border>
+            <Panel IsVisible="{Binding IsGrid}">
                 <Button x:Name="SortTrigger" Classes="toolbarBtn" Command="{Binding ToggleSortMenuCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource SortIcon}" Foreground="{StaticResource FaintTextBrush}" />
-                    <TextBlock Text="{Binding SortLabel}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="並び替え" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <Border Background="{StaticResource CardSelectedBgBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SortButtonBadge}" FontSize="11.5" Foreground="{StaticResource AccentBrush}" />
+                    </Border>
                     <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
                   </StackPanel>
                 </Button>
                 <Popup PlacementTarget="{Binding #SortTrigger}" Placement="BottomEdgeAlignedRight"
                        VerticalOffset="6" IsOpen="{Binding SortMenuOpen}" IsLightDismissEnabled="True"
                        Closed="OnSortMenuClosed">
-                  <Border Classes="popupMenu" Width="180">
+                  <Border Classes="popupMenu" Width="248">
                     <StackPanel>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="name">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortNameActive}" />
-                          <TextBlock Text="名前" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="date">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortDateActive}" />
-                          <TextBlock Text="更新日" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
-                      <Button Classes="menuRow" Command="{Binding SelectSortCommand}" CommandParameter="size">
-                        <DockPanel>
-                          <PathIcon DockPanel.Dock="Right" Data="{StaticResource CheckIcon}" Width="16" Height="16"
-                                    Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding SortSizeActive}" />
-                          <TextBlock Text="サイズ" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </DockPanel>
-                      </Button>
+                      <StackPanel Margin="12,10,12,6">
+                        <TextBlock Text="並び替え" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <TextBlock Text="基本情報から選択" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
+                      </StackPanel>
+                      <ItemsControl x:Name="SortColumnsList" ItemsSource="{Binding SortColumns}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:SortOptionVM">
+                            <Button Classes="menuRow sortOpt" Classes.active="{Binding IsActive}"
+                                    Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).SelectColumnSortCommand}"
+                                    CommandParameter="{Binding Key}">
+                              <DockPanel>
+                                <PathIcon DockPanel.Dock="Right" Data="{StaticResource ArrowUpIcon}" Width="13" Height="13"
+                                          Foreground="{StaticResource AccentBrush}" IsVisible="{Binding IsActive}"
+                                          RenderTransformOrigin="50%,50%" VerticalAlignment="Center">
+                                  <PathIcon.RenderTransform><RotateTransform Angle="{Binding ArrowAngle}" /></PathIcon.RenderTransform>
+                                </PathIcon>
+                                <Border DockPanel.Dock="Right" Background="{StaticResource CardSelectedBgBrush}" CornerRadius="4"
+                                        Padding="5,1" Margin="6,0" VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding KindChip}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                                </Border>
+                                <TextBlock Text="{Binding Label}" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                              </DockPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <Border Classes="segmented" Margin="12,6,12,10">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                          <Button Classes="segBtn" Classes.active="{Binding SortAscActive}" Command="{Binding SetSortAscCommand}">
+                            <TextBlock Text="昇順" FontSize="12.5" />
+                          </Button>
+                          <Button Classes="segBtn" Classes.active="{Binding SortDescActive}" Command="{Binding SetSortDescCommand}">
+                            <TextBlock Text="降順" FontSize="12.5" />
+                          </Button>
+                        </StackPanel>
+                      </Border>
                     </StackPanel>
                   </Border>
                 </Popup>
-              </Panel>
-              <Button Classes="sortDirBtn" IsEnabled="{Binding SortEnabled}" Command="{Binding ToggleSortDirCommand}"
-                      ToolTip.Tip="昇順 / 降順">
-                <PathIcon Data="{StaticResource ArrowUpIcon}" RenderTransformOrigin="50%,50%">
-                  <PathIcon.RenderTransform>
-                    <RotateTransform Angle="{Binding SortArrowAngle}" />
-                  </PathIcon.RenderTransform>
-                </PathIcon>
-              </Button>
-            </StackPanel>
+            </Panel>
             <Border Classes="segmented">
               <StackPanel Orientation="Horizontal" Spacing="2">
                 <Button Classes="segBtn" Classes.active="{Binding IsGrid}" Command="{Binding SetGridCommand}" ToolTip.Tip="グリッド">
@@ -834,6 +859,13 @@
                     </Panel>
                   </Border>
                   <TextBlock Classes="thumbName" Text="{Binding Name}" HorizontalAlignment="Center" />
+                  <StackPanel IsVisible="{Binding ShowSortItem}" Orientation="Horizontal" Spacing="4"
+                              HorizontalAlignment="Center" Margin="0,1,0,0">
+                    <TextBlock Text="{Binding SortItemLabel}" FontSize="10.5" VerticalAlignment="Center"
+                               Foreground="{StaticResource FaintTextBrush}" />
+                    <TextBlock Text="{Binding SortItemCell.Text}" FontSize="10.5" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
                  </StackPanel>
                 </Border>
               </DataTemplate>
@@ -841,14 +873,54 @@
           </ItemsRepeater>
         </ScrollViewer>
 
-        <!-- リスト -->
+        <!-- リスト(ECO-069: 固定基本3列をv2 header/cell共通templateで描画) -->
         <DockPanel IsVisible="{Binding ShowBrowseList}">
+          <DockPanel.Styles>
+            <Style Selector="Button.listHeaderBtn">
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="Padding" Value="6,2" />
+              <Setter Property="HorizontalAlignment" Value="Stretch" />
+              <Setter Property="HorizontalContentAlignment" Value="Left" />
+              <Setter Property="Cursor" Value="Hand" />
+              <Setter Property="CornerRadius" Value="4" />
+            </Style>
+            <Style Selector="Button.listHeaderBtn:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="{StaticResource CardSelectedBgBrush}" />
+            </Style>
+            <Style Selector="Button.listHeaderBtn.active"><Setter Property="FontWeight" Value="SemiBold" /></Style>
+          </DockPanel.Styles>
           <Border DockPanel.Dock="Top" Classes="imageListHeader">
             <DockPanel VerticalAlignment="Center">
-              <TextBlock Text="" Width="34" DockPanel.Dock="Left" />
-              <TextBlock Text="更新日" Width="150" DockPanel.Dock="Right" />
-              <TextBlock Text="サイズ" Width="120" DockPanel.Dock="Right" />
-              <TextBlock Text="名前" />
+              <Border DockPanel.Dock="Left" Width="44" />
+              <ItemsControl ItemsSource="{Binding ListColumns}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <Grid cv:GridColumnsBinder.Template="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).ColumnTemplate}" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                  <Style Selector="ContentPresenter" x:DataType="vm:ListColumnHeaderVM">
+                    <Setter Property="Grid.Column" Value="{Binding ColumnIndex}" />
+                  </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ListColumnHeaderVM">
+                    <Button Classes="listHeaderBtn" Classes.active="{Binding IsSortActive}"
+                            Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).SelectColumnSortCommand}"
+                            CommandParameter="{Binding Key}">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                        <TextBlock Text="▲" FontSize="9" Foreground="{StaticResource AccentBrush}"
+                                   IsVisible="{Binding IsSortActive}">
+                          <TextBlock.RenderTransform><RotateTransform Angle="{Binding ArrowAngle}" /></TextBlock.RenderTransform>
+                        </TextBlock>
+                        <TextBlock Text="⇅" FontSize="10" Foreground="{StaticResource FaintTextBrush}"
+                                   IsVisible="{Binding !IsSortActive}" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </DockPanel>
           </Border>
           <ScrollViewer>
@@ -871,9 +943,24 @@
                                     IsVisible="{Binding IsPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Panel>
                       </Border>
-                      <TextBlock DockPanel.Dock="Right" Classes="listMeta" Width="150" Text="{Binding DateLabel}" />
-                      <TextBlock DockPanel.Dock="Right" Classes="listMeta" Width="120" Text="{Binding SizeLabel}" />
-                      <TextBlock Classes="listName" Text="{Binding Name}" />
+                      <ItemsControl ItemsSource="{Binding Cells}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <Grid cv:GridColumnsBinder.Template="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).ColumnTemplate}" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.Styles>
+                          <Style Selector="ContentPresenter" x:DataType="vm:ListCell">
+                            <Setter Property="Grid.Column" Value="{Binding ColumnIndex}" />
+                          </Style>
+                        </ItemsControl.Styles>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ListCell">
+                            <TextBlock IsVisible="{Binding IsBasic}" Text="{Binding Text}" Margin="6,0"
+                                       Classes="listMeta" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
                     </DockPanel>
                   </Border>
                 </DataTemplate>

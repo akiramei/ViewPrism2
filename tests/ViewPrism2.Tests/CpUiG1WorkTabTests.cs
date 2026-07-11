@@ -90,7 +90,8 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         Assert.Empty(windows.ViewerCalls); // 閲覧時single clickは無操作
 
         vm.ClickChip(vm.Chips.Single(c => c.Id == "t-fav")); // 可視集合=a,b
-        vm.ToggleSortDirCommand.Execute(null);                // 名前降順=b,a
+        vm.SelectColumnSortCommand.Execute("name");          // 名前昇順を明示
+        vm.SelectColumnSortCommand.Execute("name");          // 同列再選択=降順=b,a
         vm.HandleItemClick(vm.Items.Single(i => i.Id == "a"), ctrl: false, shift: false, isDoubleClick: true);
 
         var call = Assert.Single(windows.ViewerCalls);
@@ -480,6 +481,86 @@ public sealed class CpUiG1WorkTabTests : IDisposable
                 window.Close();
             }
         }, CancellationToken.None);
+    }
+
+    /// <summary>ECO-069先行probe: WorkTabのsort chromeがImageTab v2基本3列射影になっていること。</summary>
+    [Fact]
+    public async Task ソートUIはv2並び替えbadgeとクリック可能な基本3列headerを使う()
+    {
+        var vm = NewVm();
+
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            // VMの描画用collection/brushはAvalonia UI threadで構築する。
+            vm.ClickChip(ChipVM.Neutral("クリア", active: true));
+            vm.WsEmpty = false;
+            var view = new WorkTabView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1366, Height = 900 };
+            try
+            {
+                window.Show();
+                RunLayoutJobs();
+
+                var sortTrigger = view.FindControl<Button>("SortTrigger");
+                Assert.NotNull(sortTrigger);
+                var triggerTexts = sortTrigger.GetVisualDescendants().OfType<TextBlock>()
+                    .Select(t => t.Text).Where(t => !string.IsNullOrEmpty(t)).ToArray();
+                Assert.Contains("並び替え", triggerTexts);
+                Assert.Contains("なし", triggerTexts);
+                Assert.DoesNotContain(window.GetVisualDescendants().OfType<Button>(),
+                    b => b.Classes.Contains("sortDirBtn")); // 方向はpopup内segmentへ統合
+
+                vm.SetListCommand.Execute(null);
+                RunLayoutJobs();
+                Assert.Equal(3, window.GetVisualDescendants().OfType<Button>()
+                    .Count(b => b.Classes.Contains("listHeaderBtn")));
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, CancellationToken.None);
+    }
+
+    /// <summary>ECO-069/FL-003案A: WorkTabはv2を基本3列限定で消費し、grid/listで状態共有する。</summary>
+    [Fact]
+    public async Task v2ソートは基本3候補と未ソート解除と表示形式間共有を固定する()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a", "b", "c" });
+        var vm = NewVm();
+        await vm.InitializeAsync();
+
+        Assert.Equal(new[] { "name", "size", "modified_date" }, vm.SortColumns.Select(c => c.Key).ToArray());
+        Assert.Equal(new[] { "name", "size", "modified_date" }, vm.ListColumns.Select(c => c.Key).ToArray());
+        Assert.False(vm.ShowSortChip);
+        Assert.Equal("なし", vm.SortButtonBadge);
+        Assert.Equal(new[] { "a", "b", "c" }, vm.Items.Select(i => i.Id).ToArray()); // 未sort=名前昇順
+
+        vm.SelectColumnSortCommand.Execute("name"); // 別列扱い=昇順
+        Assert.True(vm.ShowSortChip);
+        Assert.Equal("名前（昇順）", vm.ColumnSortLabel);
+        Assert.True(vm.SortAscActive);
+
+        vm.SelectColumnSortCommand.Execute("name"); // 同列=降順
+        Assert.Equal(new[] { "c", "b", "a" }, vm.Items.Select(i => i.Id).ToArray());
+        Assert.True(vm.SortDescActive);
+
+        vm.SetListCommand.Execute(null);
+        Assert.True(vm.IsColumnSorted);              // grid/list共有
+        Assert.True(vm.ListColumns.Single(c => c.Key == "name").IsSortActive);
+
+        vm.SelectColumnSortCommand.Execute("size");
+        Assert.Equal("サイズ", vm.SortButtonBadge);
+        Assert.All(vm.Items, i => Assert.True(i.ShowSortItem)); // gridへ戻っても同じVMに補助値
+        Assert.All(vm.Items, i => Assert.Equal("サイズ", i.SortItemLabel));
+
+        vm.ClearColumnSortCommand.Execute(null);
+        Assert.False(vm.IsColumnSorted);
+        Assert.False(vm.ShowSortChip);
+        Assert.Equal("なし", vm.SortButtonBadge);
+        Assert.All(vm.Items, i => Assert.False(i.ShowSortItem));
     }
 
     private static void RunLayoutJobs()

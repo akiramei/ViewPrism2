@@ -48,8 +48,9 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private string? _currentWorkspaceId;
     private string? _renameId;
     private string? _wsDeleteId;   // 削除確認モーダルの対象スペース
-    private SortField _sortField = SortField.Name;
-    private SortDirection _sortDir = SortDirection.Asc;
+    // ECO-069/FL-003案A: WorkTabはactive viewを持たないためv2 sortを基本3列へ限定して消費する。
+    private string? _sortColKey;
+    private SortDirection _sortColDir = SortDirection.Asc;
     private string _layout = "grid";
     private bool _initialized;
 
@@ -284,21 +285,23 @@ public sealed partial class WorkTabViewModel : ObservableObject
         }
     }
 
-    // ---- ソート ----
+    private static readonly IReadOnlyList<ListColumnDef> BasicSortColumns =
+        ListColumnBuilder.Build(null, new Dictionary<string, Tag>(), BasicColLabel);
+
+    // ---- ソート(ECO-069: ImageTab v2の基本3列射影) ----
     [ObservableProperty] private bool _sortMenuOpen;
-    public string SortLabel => _sortField switch
-    {
-        SortField.Name => "名前",
-        SortField.FileSize => "サイズ",
-        SortField.ModifiedDate => "更新日",
-        _ => "名前",
-    };
-    public bool SortNoneActive => false;
-    public bool SortNameActive => _sortField == SortField.Name;
-    public bool SortDateActive => _sortField == SortField.ModifiedDate;
-    public bool SortSizeActive => _sortField == SortField.FileSize;
-    public bool SortEnabled => true;
-    public double SortArrowAngle => _sortDir == SortDirection.Desc ? 180 : 0;
+    public ObservableCollection<ListColumnHeaderVM> ListColumns { get; } = new();
+    public ObservableCollection<SortOptionVM> SortColumns { get; } = new();
+    public string ColumnTemplate { get; } = ListColumnBuilder.ColumnTemplate(BasicSortColumns);
+    public bool IsColumnSorted => _sortColKey is not null;
+    public bool ShowSortChip => IsColumnSorted;
+    public string ColumnSortLabel { get; private set; } = string.Empty;
+    public double ColumnSortArrowAngle => _sortColDir == SortDirection.Desc ? 180 : 0;
+    public string SortButtonBadge => _sortColKey is null
+        ? "なし"
+        : BasicSortColumns.First(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal)).Label;
+    public bool SortAscActive => _sortColDir == SortDirection.Asc;
+    public bool SortDescActive => _sortColDir == SortDirection.Desc;
 
     public async Task InitializeAsync()
     {
@@ -397,27 +400,36 @@ public sealed partial class WorkTabViewModel : ObservableObject
         }
 
         // ---- 絞り込み + ソート ----
-        var sorted = VisibleImagesInDisplayOrder();
+        BuildSortModels();
+        var sorted = VisibleEntriesInDisplayOrder();
+        var sortItemIndex = _sortColKey is null or ViewColumnModel.NameKey
+            ? -1
+            : BasicSortColumns.ToList().FindIndex(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal));
+        var sortItemLabel = sortItemIndex >= 0 ? BasicSortColumns[sortItemIndex].Label : null;
 
         // ---- Items ----
         bool inSelect = _editMode || _workMode || _deleteMode; // 整理は選択でなくマージ先/整理対象の割当
         var selSet = new HashSet<string>(_selected);
         var orgSet = new HashSet<string>(_organizeTargets, StringComparer.Ordinal);
         Items.Clear();
-        foreach (var r in sorted)
+        foreach (var entry in sorted)
         {
+            var r = entry.Record;
             bool selected = selSet.Contains(r.Id);
             int? order = selected ? _selected.IndexOf(r.Id) + 1 : null;
             var tagsOf = ImgTagIds(r);
             var dots = tagsOf.Take(3)
                 .Select(tid => (IBrush)Solid(TagColor(_tagById.GetValueOrDefault(tid)))).ToList();
+            var cells = ListColumnBuilder.BuildCells(entry, BasicSortColumns, FmtSize, FmtDate);
+            var sortItemCell = sortItemIndex >= 0 ? cells[sortItemIndex] : null;
             Items.Add(new ImageItemVM(r.Id, r.FileName, isFolder: false, isPlaceholder: false, hasThumb: false,
                 thumbBrush: null, selectable: inSelect, isSelected: selected,
                 hasTagDots: !inSelect && tagsOf.Count > 0, tagDots: dots,
                 sizeLabel: FmtSize(r.FileSize), dateLabel: FmtDate(r.ModifiedDate),
                 target: null, absolutePath: AbsolutePath(r), selectionOrder: order,
                 isMergeTarget: _organizeMode && string.Equals(r.Id, _mergeTargetId, StringComparison.Ordinal),
-                isOrganizeTarget: _organizeMode && orgSet.Contains(r.Id)));
+                isOrganizeTarget: _organizeMode && orgSet.Contains(r.Id), cells: cells,
+                sortItemLabel: sortItemCell is not null ? sortItemLabel : null, sortItemCell: sortItemCell));
         }
 
         CountLabel = $"{Items.Count} 項目";
@@ -745,17 +757,24 @@ public sealed partial class WorkTabViewModel : ObservableObject
     /// <summary>ECO-068/REQ-041: 現workspaceの可視集合を表示と同じ絞り込み・sort順でviewerへ渡す。</summary>
     private void OpenViewer(string id)
     {
-        var ordered = VisibleImagesInDisplayOrder().Select(BuildImageEntry).ToList();
+        var ordered = VisibleEntriesInDisplayOrder().ToList();
         var index = ordered.FindIndex(e => string.Equals(e.Record.Id, id, StringComparison.Ordinal));
         if (index >= 0) _windows.ShowViewer(ordered, index);
     }
 
-    private IReadOnlyList<ImageRecord> VisibleImagesInDisplayOrder()
+    private IReadOnlyList<ImageEntry> VisibleEntriesInDisplayOrder()
     {
         var filtered = _tagFilter is null
             ? _sourceImages
             : _sourceImages.Where(im => ImgTagIds(im).Contains(_tagFilter));
-        return _sorter.Sort(filtered, _sortField, _sortDir);
+        var entries = filtered.Select(BuildImageEntry).ToList();
+        if (_sortColKey is { } key)
+            return ViewColumnSorter.Sort(entries, ViewSortColumn.ForBasic(key), _sortColDir);
+
+        // 未sortは画像タブv2と同じ決定的な名前昇順。
+        var byId = entries.ToDictionary(e => e.Record.Id, StringComparer.Ordinal);
+        return _sorter.Sort(entries.Select(e => e.Record), SortField.Name, SortDirection.Asc)
+            .Select(r => byId[r.Id]).ToList();
     }
 
     private ImageEntry BuildImageEntry(ImageRecord record)
@@ -766,6 +785,33 @@ public sealed partial class WorkTabViewModel : ObservableObject
             .ToList();
         return new ImageEntry(record, AbsolutePath(record) ?? string.Empty, tags);
     }
+
+    private void BuildSortModels()
+    {
+        var arrow = ColumnSortArrowAngle;
+        ListColumns.Clear();
+        SortColumns.Clear();
+        for (var i = 0; i < BasicSortColumns.Count; i++)
+        {
+            var column = BasicSortColumns[i];
+            var active = string.Equals(_sortColKey, column.Key, StringComparison.Ordinal);
+            ListColumns.Add(new ListColumnHeaderVM(i, column.Key, column.Label, active, active ? arrow : 0));
+            SortColumns.Add(new SortOptionVM(column.Key, column.Label,
+                ListColumnBuilder.KindChipLabel(column.Kind), null, active, active ? arrow : 0));
+        }
+
+        ColumnSortLabel = _sortColKey is { } key
+            ? $"{BasicSortColumns.First(c => string.Equals(c.Key, key, StringComparison.Ordinal)).Label}（{(_sortColDir == SortDirection.Desc ? "降順" : "昇順")}）"
+            : string.Empty;
+    }
+
+    private static string BasicColLabel(string key) => key switch
+    {
+        ViewColumnModel.NameKey => "名前",
+        ViewColumnModel.SizeKey => "サイズ",
+        ViewColumnModel.ModifiedDateKey => "更新日",
+        _ => key,
+    };
 
     private void NotifyModeChanged()
     {
@@ -1359,25 +1405,33 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private void ToggleSortMenu() => SortMenuOpen = !SortMenuOpen;
 
     [RelayCommand]
-    private void SelectSort(string key)
+    private void SelectColumnSort(string? key)
     {
-        _sortField = key switch
-        {
-            "name" => SortField.Name,
-            "date" => SortField.ModifiedDate,
-            "size" => SortField.FileSize,
-            _ => SortField.Name,
-        };
-        SortMenuOpen = false;
-        NotifySort();
+        if (key is null || !BasicSortColumns.Any(c => string.Equals(c.Key, key, StringComparison.Ordinal))) return;
+        if (string.Equals(_sortColKey, key, StringComparison.Ordinal))
+            _sortColDir = _sortColDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc;
+        else { _sortColKey = key; _sortColDir = SortDirection.Asc; }
         Recompute();
     }
 
     [RelayCommand]
-    private void ToggleSortDir()
+    private void SetSortAsc()
     {
-        _sortDir = _sortDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc;
-        NotifySort();
+        if (_sortColKey is not null && _sortColDir != SortDirection.Asc)
+        { _sortColDir = SortDirection.Asc; Recompute(); }
+    }
+
+    [RelayCommand]
+    private void SetSortDesc()
+    {
+        if (_sortColKey is not null && _sortColDir != SortDirection.Desc)
+        { _sortColDir = SortDirection.Desc; Recompute(); }
+    }
+
+    [RelayCommand]
+    private void ClearColumnSort()
+    {
+        _sortColKey = null;
         Recompute();
     }
 
@@ -1386,7 +1440,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private void SetGrid() { _layout = "grid"; _settings.WorkTabDisplayMode = "grid"; NotifyLayout(); }
 
     [RelayCommand]
-    private void SetList() { _layout = "list"; _settings.WorkTabDisplayMode = "list"; NotifyLayout(); }
+    private void SetList() { _layout = "list"; _settings.WorkTabDisplayMode = "list"; SortMenuOpen = false; NotifyLayout(); }
 
     /// <summary>Popup の light-dismiss から呼ぶメニュー閉じ。</summary>
     public void CloseMenusFromDismiss()
@@ -1394,15 +1448,6 @@ public sealed partial class WorkTabViewModel : ObservableObject
         SortMenuOpen = false;
         MoveMenuOpen = false;
         MoreMenuOpen = false; // ⋯メニューも light-dismiss で false に戻す(二度押し防止)
-    }
-
-    private void NotifySort()
-    {
-        OnPropertyChanged(nameof(SortLabel));
-        OnPropertyChanged(nameof(SortNameActive));
-        OnPropertyChanged(nameof(SortDateActive));
-        OnPropertyChanged(nameof(SortSizeActive));
-        OnPropertyChanged(nameof(SortArrowAngle));
     }
 
     private void NotifyLayout()

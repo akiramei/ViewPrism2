@@ -1,4 +1,4 @@
-# Change Order — ECO-069(staged): ECO-025 v2ソートが作業タブへ展開されず旧固定UIが残る
+# Change Order — ECO-069(implemented / golden pending): ECO-025 v2ソートが作業タブへ展開されず旧固定UIが残る
 
 > maintainer所見(2026-07-12)「画像タブと作業タブのソートボタンが異なり、画像タブが正しいはず」を
 > `/eco-file`で受理し、ECO-025のread-across範囲を工程診断した既存機能拡張/品質是正要求。
@@ -99,7 +99,7 @@ workspaceごとの表示列構成または候補母集合を新設し、ImageTab
 ## 6. 残ゲート
 
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
-2. CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-069`で先行赤probe→是正→機械受入。
+2. ~~CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-069`で先行赤probe→是正→機械受入。~~ → 完了(§8)
 3. gate② golden: 選択案の操作契約を画像タブと並置確認。
 4. `/eco-accept ECO-069`でCP/As-Built/register/教訓をクローズ。
 
@@ -113,3 +113,48 @@ workspaceごとの表示列構成または候補母集合を新設し、ImageTab
 - FL-002=S-a、FL-004=D-b、FL-001の不変条件は維持。
 - ViewPrismUI CAD反映: `3d76313` (`work_tab.md`、FL-002/004裁定追補、FL-003 review/live spec)。
 - gate①完了。次の明示入口は`/eco-fix ECO-069`。この裁定コミットではsrc/testsを変更しない。
+
+## 8. 実施記録(2026-07-12 — 機械受入完了・golden待ち)
+
+### 8.1 先行probe(R5)
+
+- `CpUiG1WorkTabTests`へheadless surface検査を製品コード変更前に追加した。`SortTrigger`が
+  `並び替え`+`なし`badgeを持ち、別体`sortDirBtn`が無く、listにクリック可能な基本3列headerがあることを要求した。
+- 是正前実測は`ViewPrism2.Tests` **606件中1件不合格**。triggerの実文字列は`[名前]`で、期待した
+  `並び替え`が存在しなかった。旧固定UIが実surfaceに残る起票診断を赤で確定してから製品コードへ着手した。
+- VM契約probeとして、候補exact=`name/size/modified_date`、未sort=名前昇順、同列再選択=方向反転、
+  clear、grid/list状態共有、名前以外のtile補助値を追加した。ECO-068 viewer順の既存検査も新sort入口へ移行した。
+
+### 8.2 是正裁定とdiff
+
+- `WorkTabViewModel`はImageTab既存の`ListColumnBuilder`、`ViewColumnSorter`、`SortOptionVM`、
+  `ListColumnHeaderVM`、`ImageItemVM.Cells/SortItem`を再利用する。WorkTab adapterはactive viewを作らず、
+  基本3列だけを供給する。未sortは従来どおり決定的な名前昇順、clear時はsort keyをnullへ戻す。
+- 表示とviewer列を`VisibleEntriesInDisplayOrder()`へ集約し、tag絞り込み後の同じ列/方向をgrid/list/viewerで共有する。
+- `WorkTabView.axaml`はgridを単一`並び替え`+badge+popup内候補/方向+chip/解除+tile補助値へ、listを
+  動的な固定3列header+共通cellへ変更した。旧`SelectSort`/`ToggleSortDir`と別体方向buttonは廃止した。
+- REQ-074、仕様§2.6、E-UI-WORKSPACE-043、M-UI-WORKSPACE-029、CP-UI-G1へ案Aの同じ契約と
+  認識済みdefer残留履歴を同期した。CADはgate①時のViewPrismUI `3d76313`で同期済み。
+- 表示列編集、タグ列sort、workspace schema、DB/Core/Design System BOM/i18n/既存Oracle期待値は変更していない。
+
+### 8.3 機械受入
+
+- 先行probeを含む`ViewPrism2.Tests`: **607/607 pass**(filter指定はMTPで無視されたため全件実行)。
+- `dotnet build ViewPrism2.sln --no-restore`: **0 warning / 0 error**。
+- `ViewPrism2.Oracle`: **109 pass / 2 known skip**。既存固定期待値変更なし(R6)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+- `git diff --check`: clean。
+
+### 8.4 gate②操作
+
+1. 作業タブで画像が複数あるworkspaceをgrid表示し、sort入口が`並び替え`、初期badgeが`なし`、
+   旧来の別体方向buttonが無いことを画像タブと並置確認する。
+2. popupの候補が`名前/サイズ/更新日`の3つだけで、昇順/降順がpopup内にあることを確認する。
+   サイズまたは更新日を選び、要約chip、方向、名前以外のtile補助値が同じ内容になることを確認する。
+3. listへ切替え、固定3列headerがクリック可能で、active列/方向と要約chipがgridから共有されることを確認する。
+   同じheaderを再クリックすると方向が反転し、gridへ戻っても同じ順序/方向を維持する。
+4. chipの✕で解除し、badge=`なし`、名前昇順へ戻り、tile補助値が消えることを確認する。
+5. tag chipで絞り込んだ後も3列sortし、grid/listの表示順と画像double click後のviewer前後順が一致することを確認する。
+6. タグ編集・作業・整理・削除の各modeへ入り、sort表示/順序と従来の選択・マージ割当を壊さないことを確認する。
+7. 画像タブの表示列sort(基本列+タグ列)、grid/list、chip/解除に回帰がないことを確認する。
+8. アプリを再起動するとWorkTabのsortは解除される一方、WorkTabのgrid/list表示形式は従来どおり独立永続することを確認する。
