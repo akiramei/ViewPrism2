@@ -1057,3 +1057,15 @@ changes:
     oracle: "既存固定Oracle行は変更しない(R6)。製品src/tests不変=製品CP影響なし予測。受入は陽性対照(手編集appliedのfail)+変異テスト5種(fixなし/順序逆転/存在しないSHA/別系統ブランチ/状態飛び越し)"
     body: 60-change-order-eco-061.md
     notes: "受入条件7項(許可/禁止遷移の明文化・明示的trailer/tag/証拠フィールド・実在/祖先/順序検査・陽性対照・変異テスト・既存60件の移行/除外/スキーマ版を黙って除外しない・eco-accept post-condition)=maintainer裁定2026-07-11。gate①=案a(trailer)裁定済み2026-07-11 — acceptコミット自己参照はtrailer携行で回避。実装=validate_bom E14〜E19(純粋層/git抽出層分離)+hooks/commit-msg+--commit-msg/--selftest-lifecycleモード+register lifecycle_evidence宣言(legacy 60件は明示免除)+change-management §4.1遷移表+SKILL2本(前提の実行可能化・post-condition)"
+
+  - id: ECO-062
+    title: "類似画像検索を閲覧コンテキストへ限定 — FS同一フォルダ／タグビュー現ノード／作業スペース"
+    type: 機能拡張(性能要求+候補スコープ意味論。現行の同一コレクション全体はREQ-064/OC-16どおりで実装逸脱なし。CAD追補とgate①裁定が先)
+    status: staged
+    golden: pending
+    baseline: "main 7d198fe"
+    findings: "ECO-060 goldenで約262,046件collectionの初回類似検索が表示folder約701件でなくcollection全体を直列pHash生成して長時間と実測・同ECO範囲外として分離候補化。2026-07-11 maintainer要求=FSは対象画像と同一folder、subfolder含有も候補、階層viewは同一node/leaf。工程診断=REQ-064/§2.10.4/OC-16/E-SIMSEARCH/M-SIMSEARCHは同一collection全体を明示しSimilaritySearchServiceもGetByFolderAsync全normalを候補化=現仕様に適合。CAD image_tabはFS/view閲覧+類似UIを定義するが候補scope未定義。ImageTabは_fsPath/_viewPath/_matchedFilesを保持するがOrganizeへcollection idしか渡さない。WorkTabも結果はworkspace限定だがcollection全体計算後にID filter=CAD既定scopeの性能配線不足。NodeGraphは排他的所属でなく画像が複数child/leafに一致可能なため対象画像から一意leaf逆算は曖昧"
+    impacted_bom: ["ViewPrismUI image_tab CAD/review_points", "REQ-064/20-spec §2.10.4/OC-16", "E-SIMSEARCH-032/M-SIMSEARCH-021", "E-UI-SIMILARITY-035/M-UI-ORGANIZE-034/M-UI-IMAGETAB-035", "E-UI-WORKSPACE-043/M-UI-WORKSPACE-029(read-across)", "CP-SIM-017/CP-UI-G9/CP-UI-G1/FMEA-022+性能probe"]
+    oracle: "既存固定Oracle行は変更しない(R6)。候補scope外のreader/cache非接触、FS folder境界、view current-node、workspace先行限定、collection件数非比例を新規受入で固定。DB schema/pHash adapter不変予測"
+    body: 60-change-order-eco-062.md
+    notes: "gate①待ち。推奨=A+V1+検索時点snapshot: FS=同一folder直下(現在表示母集合と一致・subfolder除外)、view=現在選択node pathの表示母集合(複数leaf曖昧なし)、WorkTab=現workspace候補をCore前段で限定。代替FS B=subtree/C=UI toggle、view V2=一致全leaf和/V3=leaf選択。共通不変=Normal/自己除外/同一collection防御とfilter先行、閾値/順序/変種/cache意味論不変、criteria検索不変。裁定後CAD先行→/eco-fixでプローブ先行"
