@@ -491,18 +491,18 @@
                         </ToggleButton>
                       </Grid>
                     </StackPanel>
-                    <!-- 類似: しきい値(+モックの 50%/100% 目盛ラベル) -->
+                    <!-- ECO-067: pHash内部値を一致率表示せず、候補抽出の広さとして扱う -->
                     <StackPanel Spacing="4" VerticalAlignment="Top" IsVisible="{Binding IsSimilarMethod}">
                       <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel, StringFormat='{}{0} 以上'}"
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel}"
                                    FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <TextBlock Text="類似度のしきい値" FontSize="11" FontWeight="SemiBold"
+                        <TextBlock Text="候補の広さ" FontSize="11" FontWeight="SemiBold"
                                    Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                       <Slider Minimum="50" Maximum="100" Value="{Binding SimilarThreshold}" />
                       <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="100%" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
-                        <TextBlock Text="50%" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
+                        <TextBlock DockPanel.Dock="Right" Text="絞る" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
+                        <TextBlock Text="広め" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                     </StackPanel>
                     </Panel>

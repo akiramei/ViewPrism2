@@ -1,4 +1,5 @@
 using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Services.Similarity;
 
 namespace ViewPrism2.Core.Repositories;
 
@@ -14,6 +15,11 @@ public interface IImageSimilarityRepository
 
     /// <summary>UPSERT(cache_key PK)。引数のペアは正規化して保存する。</summary>
     Task UpsertAsync(string idA, string idB, int score, string lastCompared);
+
+    /// <summary>ECO-067: pHash候補scoreと重複関係検証結果を同じ正規化pairへ保存する。</summary>
+    Task UpsertVerificationAsync(
+        string idA, string idB, int score, DuplicateRelationship relationship,
+        int candidateScore, string verifierAdapter, string lastCompared);
 
     /// <summary>当該画像が image_id1 または image_id2 に含まれる行を削除する(連鎖無効化)。</summary>
     Task DeleteInvolvingAsync(string imageId);

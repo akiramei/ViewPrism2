@@ -20,6 +20,7 @@ public sealed class SimilaritySearchService
     private readonly IImageSimilarityRepository _similarities;
     private readonly IPHashImageReader _reader;
     private readonly IClock _clock;
+    private readonly IDuplicateRelationshipVerifier? _duplicateVerifier;
 
     public SimilaritySearchService(
         ISyncFolderRepository folders,
@@ -27,7 +28,8 @@ public sealed class SimilaritySearchService
         IImageFeatureRepository features,
         IImageSimilarityRepository similarities,
         IPHashImageReader reader,
-        IClock clock)
+        IClock clock,
+        IDuplicateRelationshipVerifier? duplicateVerifier = null)
     {
         _folders = folders;
         _images = images;
@@ -35,6 +37,7 @@ public sealed class SimilaritySearchService
         _similarities = similarities;
         _reader = reader;
         _clock = clock;
+        _duplicateVerifier = duplicateVerifier;
     }
 
     /// <summary>
@@ -127,11 +130,44 @@ public sealed class SimilaritySearchService
         {
             ct.ThrowIfCancellationRequested();
 
-            var score = await ComputePairScoreAsync(
+            var pair = await GetOrComputePairAsync(
                 baseImage, baseFeature, candidate, folder.Path, ct).ConfigureAwait(false);
-            if (score is { } s && s >= threshold)
+            if (pair is { SimilarityScore: var score } && score >= threshold)
             {
-                results.Add(new SimilarResult { ImageId = candidate.Id, Score = s });
+                var relationship = pair.DuplicateRelationship;
+                var candidateScore = pair.CandidateScore ?? score;
+                if (_duplicateVerifier is not null
+                    && (relationship is null
+                        || !string.Equals(pair.VerifierAdapter, _duplicateVerifier.AdapterId, StringComparison.Ordinal)))
+                {
+                    var verified = string.Equals(baseImage.Hash, candidate.Hash, StringComparison.Ordinal)
+                        ? new DuplicateVerificationResult
+                        {
+                            Relationship = DuplicateRelationship.SameFile,
+                            CandidateScore = 100,
+                        }
+                        : await _duplicateVerifier.VerifyAsync(
+                            AbsolutePath(folder.Path, baseImage.RelativePath),
+                            AbsolutePath(folder.Path, candidate.RelativePath), ct,
+                            bytesKnownDifferent: true).ConfigureAwait(false);
+                    relationship = verified.Relationship;
+                    candidateScore = verified.CandidateScore;
+                    await _similarities.UpsertVerificationAsync(
+                        baseImage.Id, candidate.Id, score, relationship.Value, candidateScore,
+                        _duplicateVerifier.AdapterId, _clock.UtcNowIso()).ConfigureAwait(false);
+                }
+
+                // NonSimilarはpHashの粗い候補にすぎず、整理結果へ公開しない。
+                if (relationship is not DuplicateRelationship.NonSimilar)
+                {
+                    results.Add(new SimilarResult
+                    {
+                        ImageId = candidate.Id,
+                        Score = score, // 後方互換/内部診断。UIへ百分率表示しない。
+                        Relationship = relationship,
+                        CandidateScore = candidateScore,
+                    });
+                }
             }
 
             done++;
@@ -139,22 +175,24 @@ public sealed class SimilaritySearchService
             detailedProgress?.Report(new SimilaritySearchProgress(SimilaritySearchPhase.Comparing, done, total));
         }
 
-        // Score 降順・同値は id 昇順(序数)で安定
+        // 重複関係(precision)→同関係内候補score→旧pHash score→id の安定順。
         return results
-            .OrderByDescending(r => r.Score)
+            .OrderByDescending(r => r.Relationship is null ? -1 : (int)r.Relationship.Value)
+            .ThenByDescending(r => r.CandidateScore)
+            .ThenByDescending(r => r.Score)
             .ThenBy(r => r.ImageId, StringComparer.Ordinal)
             .ToList();
     }
 
     /// <summary>基準と候補のペア類似度。キャッシュ参照→無ければ計算し保存(フィルタは呼び出し側で適用済み)。</summary>
-    private async Task<int?> ComputePairScoreAsync(
+    private async Task<ImageSimilarity?> GetOrComputePairAsync(
         ImageRecord baseImage, ImageFeature baseFeature, ImageRecord candidate, string folderPath, CancellationToken ct)
     {
         // キャッシュヒット: 同一ペアの 2 回目は再計算しない
         var cached = await _similarities.GetAsync(baseImage.Id, candidate.Id).ConfigureAwait(false);
         if (cached is not null)
         {
-            return cached.SimilarityScore;
+            return cached;
         }
 
         var candidateFeature = await GetOrComputeFeatureAsync(candidate, folderPath, ct).ConfigureAwait(false);
@@ -172,7 +210,12 @@ public sealed class SimilaritySearchService
         var score = SimilarityScore.FromDistance(distance);
         await _similarities.UpsertAsync(baseImage.Id, candidate.Id, score, _clock.UtcNowIso())
             .ConfigureAwait(false);
-        return score;
+        var (id1, id2) = SimilarityPairKey.Normalize(baseImage.Id, candidate.Id);
+        return new ImageSimilarity
+        {
+            CacheKey = $"{id1}-{id2}", ImageId1 = id1, ImageId2 = id2,
+            SimilarityScore = score, LastCompared = _clock.UtcNowIso(),
+        };
     }
 
     /// <summary>
@@ -195,6 +238,9 @@ public sealed class SimilaritySearchService
 
         return best;
     }
+
+    private static string AbsolutePath(string folderPath, string relativePath)
+        => Path.Combine(folderPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
     /// <summary>
     /// 画像の特徴量を取得する。特徴量が無い、または stale(内容変化/adapter 世代不一致/変種欠落 —

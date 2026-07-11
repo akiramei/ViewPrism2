@@ -60,12 +60,13 @@ service_bom:
       pinned_version: "3.119.4"
       pin_status: exact
       drift_source: "Skia のデコード/リサイズ/エンコード挙動・ネイティブアセット・サンプリング既定値の変化"
-      reinspect_depth: L2  # 出力寸法・形式の成果物メタデータ検査(CP-THUMB-007)
+      reinspect_depth: L2  # サムネ成果物+重複関係fixture(CP-THUMB-007/CP-DUPQUALITY-030)
       known_traps:
         - "Dispose 漏れ=ネイティブメモリリーク(大量サムネイルでクラッシュ)。SKBitmap/SKImage/SKData は using で確実に破棄"
         - "フィット丸め(Round half away from zero・最小 1px・拡大禁止)を規定しないと工場間で寸法 1px ずれ → L2 不安定"
         - "壊れた画像は Decode が null(例外でなく)。null=『壊れた画像』扱いの契約を維持"
-      affected_parts: [E-THUMB-020]
+        - "ECO-067: decode/resize/色space/alpha/D4 samplingのdriftは重複関係を変えるため、Skia更新時はCP-DUPQUALITY-030全fixtureを再認証"
+      affected_parts: [E-THUMB-020, E-PHASH-031, E-SIMSEARCH-032]
 
     - kbom: K-SQLITE
       dependency: "Microsoft.Data.Sqlite + Dapper"

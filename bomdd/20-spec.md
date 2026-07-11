@@ -740,9 +740,9 @@ pHash は決定的な DCT ベースのアルゴリズムで算出する。原典
 Core が再検証し、スコープ除外は特徴量生成・ペアキャッシュ照会より先に行う。明示候補を渡さない既存 Core API は
 OC-16 後方互換のため同一コレクション全体を候補とする。
 
-- エンジン: 基準画像 1 枚に対し、**同一コレクション内**(REQ-053)の **status=normal の画像のみ**を候補とし
+- エンジン: 基準画像 1 枚に対し、**同一コレクション内**(REQ-053)の **status=normal の画像のみ**を粗い候補とし
   (基準画像自身は除外)、各候補との pHash 類似度を算出して**閾値以上(≧)**(既定 70・範囲 50〜100・整数刻み)を
-  **類似度降順(同値時は id 昇順で安定)**で返す。
+  pHash閾値通過後に下記の重複関係検証を適用し、**関係強度→内部候補score→id昇順**で安定して返す。
   **候補の status フィルタ(normal のみ)はキャッシュ参照より先に適用**し、非候補(deleted/missing/pending)は
   キャッシュ値があっても結果に含めない。フィルタ後の候補について特徴量・ペア類似度をキャッシュ(2.10.3)で
   参照し、無ければ計算して保存する。検索は UI をブロックしない(非同期実行・進捗通知が可能)
@@ -754,10 +754,19 @@ OC-16 後方互換のため同一コレクション全体を候補とする。
   - **候補を normal に限定する根拠(v3.0 — G2 補正)**: V3 のユースケースは「重複 normal 画像を見つけて統合」。
     missing は物理ファイルが無く pHash を新規計算できない。pending/missing を候補にする検索は relink 修復の
     用途であり後続ループ(V4)へ defer(§6)。これにより INV-010(既定の表示・抽出は normal のみ)とも整合する
-- UI: 一覧/グリッドで画像 1 枚を選択して起動。閾値スライダー(50〜100・整数・既定 70)を持つ。
-  **本実装の照合は pHash のみ**であり、原典が持つ精度モード(simple=pHash / detailed=pHash+ORB)の**選択肢は
-  表示しない**(RVP-REPAIR-005/§裁定記録 4 — 効かない設定の誤解防止。ORB は後続ループ)。
-  結果は類似度%付きで降順に一覧表示し選択できる。結果 0 件は空状態を表示する。
+- **重複関係検証(REQ-090 / IMG-021 / ECO-067)**:
+  1. 第0段はSHA-256/byte exactと、EXIF方向を正立化しsRGB BGRAへdecodeした表示画素exactで
+     `同一ファイル / 画像内容一致`を決定する。100%を表示できるのは表示画素exactだけ(主表示は関係語彙)。
+  2. 第1段pHashはrecall重視の候補抽出専用。距離/距離0/区分線形scoreを一致率・100%・最終重複判定へ直結しない。
+  3. 第2段は64x64 sRGB RGBA上でD4全8変種を位置合わせし、channel差の平均、変更画素率(max channel差>20)、
+     強差画素率(>60)、8x8局所block最大平均を併用する。全体整合なら`実質同一`、55%以上のcrop領域が整合すれば
+     `部分重複`、大局は近いが局所precision条件を満たさなければ`類似`、それ以外は候補外。
+  関係強度は`同一file > 画像内容一致 > 実質同一 > 部分重複 > 類似`。pHash距離0だけで上位3関係を確定しない。
+  `部分重複 / 類似`は自動削除/重複group自動投入をしない。検証結果はverifier adapter世代付きpair cacheへ保存し、
+  内容変化/adapter不一致で再検証する。
+- UI: 一覧/グリッドで画像 1 枚を選択して起動。内部pHash閾値(50〜100・既定70)は`候補の広さ`として
+  `広め / 標準 / 絞る`だけを表示し、数値百分率を見せない。結果badgeは`同一ファイル / 画像内容一致 /
+  実質同一 / 部分重複 / 類似（重複ではありません）`を表示する。結果 0 件は空状態を表示する。
 - **検索session (REQ-089 / IMG-020 / ECO-066)**: pHash類似方式は整理モード所有の単一active session。
   `idle→preparing→comparing→completed`、停止時は`preparing|comparing→cancelling→idle`を区別する。
   150px固定の検索設定領域を実行中だけphase表示+barへ置換し、CTAを同位置で「探す」→「停止」→「停止中」へ切替える。
@@ -1166,6 +1175,7 @@ OC-16 後方互換のため同一コレクション全体を候補とする。
 | REQ-060 | §2.6 | unit: 条件サマリ整形ベクタ+golden G-1/G-6 | 50-as-built.yaml golden_findings GF-01〜05(v2.0 追加・承認者裁定) |
 | REQ-086 | §2.1/§2.6 | unit: commit後batch通知+段階append/完了sort/類似gate、golden G-1/G-9 | ViewPrismUI image_tab.md `1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f` / ECO-060 |
 | REQ-089 | §2.6/§2.10.4 | unit: session状態/単調進捗/cancel/latest-wins/cache再利用、golden G-1/G-9 | ViewPrismUI IMG-020 `487aa53` / ECO-066 |
+| REQ-090 | §2.10.4 | unit/L2: 関係fixture・pHash距離0非同一・pair検証cache、golden G-1/G-9 | ViewPrismUI IMG-021 `bb9623b` / ECO-067 |
 | REQ-061 | §2.10.1 | unit: OC-14 決定性+合成/性質ベクタ | phash-utils.ts(DCT 32×32→8×8 64bit。ビット一致不要=CPOL-103。v3.0 追加) |
 | REQ-062 | §2.10.2 | unit: OC-15 段階式境界ベクタ | similarity-evaluator.ts(popcount・段階式変換。v3.0 追加) |
 | REQ-063 | §2.10.3 | unit/L2: OC-18 再計算/正規化/CASCADE+スキーマ | migration 007/008, similarity-cache.service.ts(時間失効は不採用=意図的差分。v3.0 追加) |

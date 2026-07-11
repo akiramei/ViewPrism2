@@ -122,7 +122,10 @@ public static class DatabaseSchema
             image_id1        TEXT    NOT NULL REFERENCES images(id) ON DELETE CASCADE,
             image_id2        TEXT    NOT NULL REFERENCES images(id) ON DELETE CASCADE,
             similarity_score INTEGER NULL,
-            last_compared    TEXT    NULL
+            last_compared    TEXT    NULL,
+            duplicate_relationship TEXT NULL,
+            candidate_score   INTEGER NULL,
+            verifier_adapter  TEXT    NULL
         );
         CREATE INDEX idx_image_similarity_image_id1 ON image_similarity(image_id1);
         CREATE INDEX idx_image_similarity_image_id2 ON image_similarity(image_id2);
@@ -249,5 +252,13 @@ public static class DatabaseSchema
         // ALTER ADD COLUMN は末尾に列を足す。LatestDdl も image_features 末尾へ同じ列を定義しスキーマ同値を保つ(CP-DB-006)。
         new("006-image-features-phash-variants",
             "ALTER TABLE image_features ADD COLUMN phash_variants TEXT NULL;"),
+
+        // ECO-067(IMG-021): pHash候補scoreとは別に、重複関係検証結果と検証器世代をpair cacheへ保持。
+        // 旧行はNULL=次回候補検索で再検証。特徴量再計算時のpair連鎖削除で同時に無効化される。
+        new("007-duplicate-relationship-verification", """
+            ALTER TABLE image_similarity ADD COLUMN duplicate_relationship TEXT NULL;
+            ALTER TABLE image_similarity ADD COLUMN candidate_score INTEGER NULL;
+            ALTER TABLE image_similarity ADD COLUMN verifier_adapter TEXT NULL;
+            """),
     ];
 }

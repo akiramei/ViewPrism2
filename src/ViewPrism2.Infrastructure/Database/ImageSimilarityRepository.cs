@@ -26,7 +26,11 @@ public sealed class ImageSimilarityRepository : IImageSimilarityRepository
         {
             var row = await conn.QuerySingleOrDefaultAsync<Row>("""
                 SELECT cache_key AS CacheKey, image_id1 AS ImageId1, image_id2 AS ImageId2,
-                       similarity_score AS SimilarityScore, last_compared AS LastCompared
+                       similarity_score AS SimilarityScore,
+                       duplicate_relationship AS DuplicateRelationship,
+                       candidate_score AS CandidateScore,
+                       verifier_adapter AS VerifierAdapter,
+                       last_compared AS LastCompared
                 FROM image_similarity WHERE cache_key = @CacheKey
                 """,
                 new { CacheKey = key }).ConfigureAwait(false);
@@ -42,9 +46,45 @@ public sealed class ImageSimilarityRepository : IImageSimilarityRepository
             INSERT INTO image_similarity (cache_key, image_id1, image_id2, similarity_score, last_compared)
             VALUES (@CacheKey, @ImageId1, @ImageId2, @Score, @LastCompared)
             ON CONFLICT(cache_key) DO UPDATE SET
-                similarity_score = excluded.similarity_score, last_compared = excluded.last_compared
+                similarity_score = excluded.similarity_score,
+                duplicate_relationship = NULL,
+                candidate_score = NULL,
+                verifier_adapter = NULL,
+                last_compared = excluded.last_compared
             """,
             new { CacheKey = key, ImageId1 = id1, ImageId2 = id2, Score = score, LastCompared = lastCompared }));
+    }
+
+    public Task UpsertVerificationAsync(
+        string idA, string idB, int score, DuplicateRelationship relationship,
+        int candidateScore, string verifierAdapter, string lastCompared)
+    {
+        var (id1, id2) = SimilarityPairKey.Normalize(idA, idB);
+        var key = $"{id1}-{id2}";
+        return _db.RunAsync(conn => conn.ExecuteAsync("""
+            INSERT INTO image_similarity
+                (cache_key, image_id1, image_id2, similarity_score, duplicate_relationship,
+                 candidate_score, verifier_adapter, last_compared)
+            VALUES
+                (@CacheKey, @ImageId1, @ImageId2, @Score, @Relationship,
+                 @CandidateScore, @VerifierAdapter, @LastCompared)
+            ON CONFLICT(cache_key) DO UPDATE SET
+                similarity_score = excluded.similarity_score,
+                duplicate_relationship = excluded.duplicate_relationship,
+                candidate_score = excluded.candidate_score,
+                verifier_adapter = excluded.verifier_adapter,
+                last_compared = excluded.last_compared
+            """, new
+            {
+                CacheKey = key,
+                ImageId1 = id1,
+                ImageId2 = id2,
+                Score = score,
+                Relationship = relationship.ToString(),
+                CandidateScore = candidateScore,
+                VerifierAdapter = verifierAdapter,
+                LastCompared = lastCompared,
+            }));
     }
 
     public Task DeleteInvolvingAsync(string imageId)
@@ -57,7 +97,8 @@ public sealed class ImageSimilarityRepository : IImageSimilarityRepository
 
     // SQLite の INTEGER は Int64 で返るため Row 側は long?(Dapper の positional ctor 型一致のため)
     private sealed record Row(
-        string CacheKey, string ImageId1, string ImageId2, long? SimilarityScore, string? LastCompared);
+        string CacheKey, string ImageId1, string ImageId2, long? SimilarityScore,
+        string? DuplicateRelationship, long? CandidateScore, string? VerifierAdapter, string? LastCompared);
 
     private static ImageSimilarity? ToEntity(Row? row)
     {
@@ -69,6 +110,11 @@ public sealed class ImageSimilarityRepository : IImageSimilarityRepository
                 ImageId1 = row.ImageId1,
                 ImageId2 = row.ImageId2,
                 SimilarityScore = (int)(row.SimilarityScore ?? 0),
+                DuplicateRelationship = Enum.TryParse<DuplicateRelationship>(row.DuplicateRelationship, out var relationship)
+                    ? relationship
+                    : null,
+                CandidateScore = row.CandidateScore is null ? null : (int)row.CandidateScore.Value,
+                VerifierAdapter = row.VerifierAdapter,
                 LastCompared = row.LastCompared ?? string.Empty,
             };
     }

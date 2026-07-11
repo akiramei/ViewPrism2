@@ -397,13 +397,14 @@ mbom:
       ebom_refs: [E-SIMSEARCH-032, E-SIMCACHE-033]
       artifact:
         path: src/ViewPrism2.Core/Services/Similarity/SimilaritySearchService.cs
-        path_note: "+ IPHashImageReader 抽象 + src/ViewPrism2.Infrastructure/Imaging/PHashImageReader.cs + src/ViewPrism2.Infrastructure/Database/(ImageFeatureRepository.cs, ImageSimilarityRepository.cs, 新規マイグレーション)"
+        path_note: "+ IPHashImageReader/IDuplicateRelationshipVerifier抽象 + Infrastructure Imaging(PHashImageReader/DuplicateRelationshipVerifier) + Database(ImageFeatureRepository/ImageSimilarityRepository/migrations)"
         type: dotnet-classlib
       interface_contract:
         extractor: "IPHashImageReader(Core 抽象): Task<string?> ComputePHashAsync(string absoluteImagePath)。実装 PHashImageReader(Infrastructure)が K-SKIA v3.0 で 32×32 BGRA を取得し Core の PerceptualHash.Compute を呼ぶ。失敗は null。**(ECO-048)default interface methodで変種を後方互換追加**。**(ECO-066/REQ-089)任意capability ICancellablePHashImageReaderを追加して既存fake/固定Oracle契約を無改変維持し、productionはdecode前後/変種計算前にcancel観測(同期Skia primitive実行中そのものは中断不能)**"
         search: "FindSimilarAsync(baseImageId, threshold, progress, ct, detailedProgress)=OC-16後方互換(collection全体) + FindSimilarInScopeAsync(baseImageId, threshold, scopeCandidates, progress, ct, detailedProgress)=ECO-062明示候補。候補はNormal/自身除外/同一collectionをCore再検証しfilter先行→cache→計算保存、閾値以上をScore降順/id昇順。ECO-048の8変種最小距離を維持。**(ECO-066/REQ-089)detailedProgress=Preparing→Comparing(0..total)、旧IProgress<int>は後方互換、ctはreaderまで伝搬**"
+        duplicate_verifier: "IDuplicateRelationshipVerifier.VerifyAsync(pathA,pathB,ct)→DuplicateVerificationResult。production adapter=skia-duplicate-relationship-v1。byte/正規化sRGB BGRA exact→D4全8変種64x64 RGBA局所差→55%以上crop重複。結果は関係強度/candidateScore/pHash score/idで安定順、NonSimilarは非公開"
         features_repo: "IImageFeatureRepository: GetAsync(imageId)/UpsertAsync(feature)/DeleteByImageAsync。feature 取得時 file_size/modified_date/hash が現行と異なれば呼び出し側が再計算→Upsert→関与 similarity 行を連鎖削除。(ECO-048)ImageFeature.PhashVariants(8 変種の ',' 連結・NULL=旧レコード)を保存/取得"
-        similarity_repo: "IImageSimilarityRepository: GetAsync(id1,id2)(正規化して照会)/UpsertAsync/DeleteInvolvingAsync(imageId)。cache_key={min}-{max}(文字列比較で正規化)"
+        similarity_repo: "IImageSimilarityRepository: GetAsync/UpsertAsync/UpsertVerificationAsync/DeleteInvolvingAsync。cache_key={min}-{max}。migration007のduplicate_relationship/candidate_score/verifier_adapterで検証cache、旧NULL/adapter不一致は再検証"
         schema: >-
           新規マイグレーション(既存の続き番号)で 2 テーブル作成:
           image_features(image_id TEXT PK, phash TEXT, file_size INTEGER, modified_date TEXT, hash TEXT, last_calculated TEXT,
@@ -412,14 +413,16 @@ mbom:
           FOREIGN KEY(image_id1) REFERENCES images(id) ON DELETE CASCADE, FOREIGN KEY(image_id2) REFERENCES images(id) ON DELETE CASCADE)。
           索引: idx_image_similarity_image_id1/image_id2。ORB 列(orb_descriptors/orb_keypoints)は作らない(ORB defer)。
           (ECO-048)migration 006 で image_features に phash_variants TEXT NULL を追加(LatestDdl 同値=CP-DB-006)
+          (ECO-067)migration 007 で image_similarity に duplicate_relationship TEXT/candidate_score INTEGER/verifier_adapter TEXT NULLを追加
       invariants:
         - 候補=Normal 限定・フィルタ先行(仕様 §2.10.4)。コレクション境界(REQ-053)
         - since ECO-062(REQ-087) scope候補外はfeature/similarity repository・reader非接触。既存APIは固定Oracle互換で維持
         - 無効化は内容ベース(時間失効なし)+adapter 世代(P-09)+変種欠落(since ECO-048/REQ-084)+特徴量再計算で関与ペア連鎖削除
         - 非同期で UI をブロックしない。OC-16/OC-18 を公開 API に
         - since ECO-066(REQ-089) phase/count progressは単調、cancel後の検索結果publicationはsurface session generationで拒否し正常cacheは再利用
-      acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DB-006]
-      fmea_refs: [FMEA-022, FMEA-025, FMEA-041]
+        - since ECO-067(REQ-090) pHash scoreは候補抽出専用。距離0だけで画像内容一致/実質同一/100%を確定しない
+      acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-DB-006]
+      fmea_refs: [FMEA-022, FMEA-025, FMEA-041, FMEA-042]
 
     - id: M-MERGE-022
       ebom_refs: [E-MERGE-034]
@@ -663,6 +666,7 @@ fmea:
   - { id: FMEA-039, unit: M-SCAN-005, failure_mode: "大量初回スキャンを画像1件ごとのSQLite暗黙transactionで永続化し、同じ整数百分率も全件UI通知する／ConfigureAwait(false)だけで背景化したと誤認し同期完了awaitからUI thread上でscan coreを走らせる", effect: "26万件でcommit/dispatcher負荷が件数比例しスキャンが長時間化／処理全時間UI操作不能", targeted_by: "CP-SCAN-004(ECO-059 bounded batch+rollback+progress exact+GF-059-01 caller thread分離)" }
   - { id: FMEA-040, unit: M-UI-IMAGETAB-035, failure_mode: "起動時に全collectionのnormal画像/image_tagsをeager materializeし、loading/errorを空状態と混同する／collection切替後の旧非同期結果を適用する", effect: "巨大profileでshell初期応答不能・総件数比例の時間/メモリ・偽0件表示・別collection画像の混入", targeted_by: "CP-STARTUP-028(scope exact+状態遷移+遅延結果破棄)+CP-UI-G1" }
   - { id: FMEA-041, unit: M-UI-ORGANIZE-034, failure_mode: "類似検索のprogress/ctをsurfaceから未配線のままにし、整理終了は表示値だけresetして旧Taskを生存させる／検索連打を許し完了順で結果を書き戻す", effect: "停止不能・進捗不明・終了→再入場で旧結果復活・多重decode/DB負荷・最新でない結果表示", targeted_by: "CP-SIMSESSION-029(phase/count/cancel/single-active/latest-wins/cache再利用)+CP-UI-G9/G1" }
+  - { id: FMEA-042, unit: M-SIMSEARCH-021, failure_mode: "pHash距離/距離0を一致率・100%・最終重複判定へ直接変換し、全体平均だけで局所編集を希釈する", effect: "表情・文字・物体差のある別画像を重複と誤認し削除判断を誘発", targeted_by: "CP-DUPQUALITY-030(自作fixture関係分類+pHash距離0非同一+cache/UI語彙)+CP-UI-G9/G1" }
   # ---- v2.0 追加(REQ-054〜060 の counterexamples 由来) ----
   - { id: FMEA-015, unit: M-VIEWERCORE-017, failure_mode: "右開きの矢印キー/クリックを論理方向(→=次)で実装(慣習の典型分岐 — 事前ずる列挙 #39/40)", effect: "紙の本と逆の操作感・読書体験の破壊", targeted_by: "CP-VIEWER-014(OC-10 ベクタ)+CP-UI-G8" }
   - { id: FMEA-016, unit: M-UI-018,    failure_mode: "scroll で全件一括 Base64/原寸読み込み・ウィンドウ外 Bitmap 未破棄(ItemsControl 直置き=非仮想化)", effect: "1,000 枚でフリーズ/メモリ枯渇", targeted_by: "CP-UI-G8+probe P-05。V2 Run1 で顕在化(P-05 実測 8〜48GB 常駐)→ Run2 で BOM 強化(仮想化必須)+再製造で是正" }

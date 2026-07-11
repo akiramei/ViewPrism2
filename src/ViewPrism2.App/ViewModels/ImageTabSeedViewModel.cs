@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ViewPrism2.Core.Services.Similarity;
 
 namespace ViewPrism2.App.ViewModels;
 
@@ -911,8 +912,9 @@ public sealed class OrganizeSlotVM
 /// <summary>整理モードの検索結果候補(中央ペイン・一致率付き)(ECO-014)。</summary>
 public sealed class OrganizeResultVM
 {
-    public OrganizeResultVM(string id, string name, string? absolutePath, string sizeLabel, int score, bool isCriteria, bool added)
-    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; Score = score; IsCriteria = isCriteria; Added = added; }
+    public OrganizeResultVM(string id, string name, string? absolutePath, string sizeLabel, int score,
+        bool isCriteria, bool added, DuplicateRelationship? relationship = null)
+    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; Score = score; IsCriteria = isCriteria; Added = added; Relationship = relationship; }
     public string Id { get; }
     public string Name { get; }
     public string? AbsolutePath { get; }
@@ -920,7 +922,8 @@ public sealed class OrganizeResultVM
     public string SizeLabel { get; }
     public int Score { get; }
     public bool IsCriteria { get; }
-    /// <summary>一致率表示。条件検索は「条件一致」、類似は「N%」。</summary>
-    public string ScoreText => IsCriteria ? "条件一致" : $"{Score}%";
+    public DuplicateRelationship? Relationship { get; }
+    /// <summary>ECO-067: 条件検索は条件一致、重複候補は関係語彙。pHash内部値を百分率表示しない。</summary>
+    public string ScoreText => IsCriteria ? "条件一致" : Relationship?.ToDisplayLabel() ?? "候補";
     public bool Added { get; }
 }

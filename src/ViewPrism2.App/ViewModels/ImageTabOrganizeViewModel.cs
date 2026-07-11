@@ -42,7 +42,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     private bool _condDate;
     private bool _hasSearched;
     private bool _searchOpen; // ECO-056(v2 3 ゾーン): 下部ピンの「似た画像を探す」折りたたみ状態
-    private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
+    private List<(string ImageId, int Score, bool IsCriteria, DuplicateRelationship? Relationship)> _searchResults = new();
     private bool _organizeDone;
     private int _doneSourceCount;
     // ECO-044(IMG-011 裁定③): 直近マージの操作ログ id と取り消し可否・不可理由
@@ -83,7 +83,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     // ---- ホストの転送プロパティが読む生状態(R1: 本体は子・ホストは委譲のみ) ----
     public string? MergeTargetId => _mergeTargetId;
     public IReadOnlyList<string> Targets => _organizeTargets;
-    public IReadOnlyList<(string ImageId, int Score, bool IsCriteria)> SearchResults => _searchResults;
+    public IReadOnlyList<(string ImageId, int Score, bool IsCriteria, DuplicateRelationship? Relationship)> SearchResults => _searchResults;
 
     public bool HasMergeTarget => _mergeTargetId is not null;
     public bool HasOrganizeTargets => _organizeTargets.Count > 0;
@@ -98,7 +98,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         get => _similarThreshold;
         set { _similarThreshold = Math.Clamp(value, 50, 100); OnPropertyChanged(); OnPropertyChanged(nameof(SimilarThresholdLabel)); }
     }
-    public string SimilarThresholdLabel => $"{_similarThreshold}%";
+    public string SimilarThresholdLabel => _similarThreshold < 65 ? "広め" : _similarThreshold < 85 ? "標準" : "絞る";
     /// <summary>類似検索はマージ先(基準画像)が必要。</summary>
     public bool CanRunSimilar => _mergeTargetId is not null;
     // ECO-055: マージ先との属性一致トグル(順序はモック condDefs: hash/ext/size/name/date)。
@@ -135,7 +135,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン: 畳んで整理対象リストに場所を譲る)。</summary>
     public bool SearchOpen => _searchOpen;
     /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
-    public string SearchMethodLabel => _searchMethod == "similar" ? $"類似画像検索 · {_similarThreshold}% 以上" : "条件検索";
+    public string SearchMethodLabel => _searchMethod == "similar" ? "重複候補検索" : "条件検索";
     public bool OrganizeDone => _organizeDone;
     public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
 
@@ -244,7 +244,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     {
         var collectionId = _getCollectionId();
         if (collectionId is null) return;
-        var results = new List<(string ImageId, int Score, bool IsCriteria)>();
+        var results = new List<(string ImageId, int Score, bool IsCriteria, DuplicateRelationship? Relationship)>();
         SimilaritySearchSession.Run? run = null;
         try
         {
@@ -263,7 +263,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
                         foreach (var r in recs)
                         {
                             if (string.Equals(r.Id, _mergeTargetId, StringComparison.Ordinal)) continue; // マージ先自身は候補に出さない
-                            results.Add((r.Id, 100, true));
+                            results.Add((r.Id, 100, true, null));
                         }
                     }
                 }
@@ -275,7 +275,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
                     _mergeTargetId, _similarThreshold, _getSimilarityScopeCandidates(),
                     ct: run.Token,
                     detailedProgress: _searchSession.CreateProgress(run)).ConfigureAwait(true);
-                foreach (var s in found) results.Add((s.ImageId, s.Score, false));
+                foreach (var s in found) results.Add((s.ImageId, s.Score, false, s.Relationship));
                 if (!_searchSession.TryComplete(run)) return;
             }
         }

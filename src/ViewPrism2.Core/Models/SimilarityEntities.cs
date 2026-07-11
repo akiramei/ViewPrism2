@@ -1,3 +1,5 @@
+using ViewPrism2.Core.Services.Similarity;
+
 namespace ViewPrism2.Core.Models;
 
 /// <summary>
@@ -57,6 +59,15 @@ public sealed record ImageSimilarity
     /// <summary>類似度%(0〜100、OC-15)。</summary>
     public int SimilarityScore { get; init; }
 
+    /// <summary>ECO-067: 重複関係検証結果。NULL=未検証/旧cache。</summary>
+    public DuplicateRelationship? DuplicateRelationship { get; init; }
+
+    /// <summary>同一関係内の内部候補順位値。利用者向け百分率ではない。</summary>
+    public int? CandidateScore { get; init; }
+
+    /// <summary>重複関係検証器の世代。現行と不一致なら再検証する。</summary>
+    public string? VerifierAdapter { get; init; }
+
     /// <summary>比較日時(ISO 8601 UTC)。</summary>
     public required string LastCompared { get; init; }
 }
@@ -68,4 +79,10 @@ public sealed record SimilarResult
 
     /// <summary>類似度%(0〜100)。</summary>
     public int Score { get; init; }
+
+    /// <summary>ECO-067: 利用者へ表示する重複関係。NULLは検証器を注入しない互換経路のみ。</summary>
+    public DuplicateRelationship? Relationship { get; init; }
+
+    /// <summary>内部順位値。確率/一致率として表示しない。</summary>
+    public int CandidateScore { get; init; }
 }

@@ -238,8 +238,8 @@ ebom:
       name: 類似検索エンジン(候補=normal 限定・閾値・降順安定・キャッシュ協調)— v3.0 新設
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-064, REQ-084, REQ-087, REQ-089]
-      kbom_refs: []
+      requirement_refs: [REQ-064, REQ-084, REQ-087, REQ-089, REQ-090]
+      kbom_refs: [K-SKIA]
       depends_on: [E-PHASH-031, E-SIMCACHE-033, E-DOMAIN-001]
       invariants:
         - 候補は status=normal のみ(基準画像・他 status を除外)。フィルタはキャッシュ参照に先行(仕様 §2.10.4)
@@ -248,13 +248,14 @@ ebom:
         - since ECO-048(REQ-084) ペア距離=小 id の identity × 大 id の全変種の最小(対称・決定的・単調拡張)。変種なし特徴量とは identity 同士のみ(後方互換)
         - since ECO-062(REQ-087) 明示候補集合を受け、normal・自身除外・同一collectionを再検証してから特徴量/ペアcacheへ進む。候補未指定の既存APIはOC-16後方互換でcollection全体
         - since ECO-066(REQ-089) preparing/comparingのphase+completed/totalを通知し、候補間と画像reader段階でcancelを観測する。cancel済みsessionの結果はsurfaceへ公開しないが正常生成済みcacheは保持する
-      acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029]
+        - since ECO-067(REQ-090) pHashは粗候補抽出のみ。byte/正規化表示画素exact+D4位置合わせRGBA局所差+crop重複で関係分類し、pHash距離0だけで100%/重複を確定しない
+      acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DUPQUALITY-030]
 
     - id: E-SIMCACHE-033
       name: 特徴量・類似度の永続化と無効化(image_features / image_similarity)— v3.0 新設
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-063, REQ-084]
+      requirement_refs: [REQ-063, REQ-084, REQ-090]
       kbom_refs: [K-SQLITE]
       depends_on: [E-DB-010, E-PHASH-031]
       graph_edges:
@@ -267,6 +268,7 @@ ebom:
         - 画像削除時は FK CASCADE で両テーブルの関連行を削除
         - since ECO-048(REQ-084) phash_variants 列(migration 006)= 8 変種 pHash の ',' 連結 TEXT・NULL=旧レコード。hash_adapter は世代交代しない(identity 値不変)
         - since ECO-054 production adapter= skia-scaled-decode-v2(経路一貫性= K-SKIA v4.1 の一様中間段。世代交代は P-09 の正規伝搬=旧特徴量の自動再計算・連鎖無効化・this-build golden 再凍結手続き)
+        - since ECO-067 image_similarity migration 007にduplicate_relationship/candidate_score/verifier_adapter。旧NULL/adapter不一致は再検証、特徴量連鎖削除で同時無効化
       acceptance_refs: [CP-SIM-017, CP-DB-006]
 
     - id: E-MERGE-034
@@ -586,10 +588,10 @@ ebom:
 
     # ---------- v3.0 表面(loop-v3-similarity) ----------
     - id: E-UI-SIMILARITY-035
-      name: 類似検索 UI(起動・閾値スライダー・精度モード非表示・結果一覧(類似度%降順)・進捗・空状態)— v3.0 新設+ECO-014(整理トレイの find へ統合)
+      name: 重複候補検索 UI(候補の広さ・関係badge・進捗・空状態)— v3.0 新設+ECO-014/067
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-065, REQ-064, REQ-086, REQ-087, REQ-089]
+      requirement_refs: [REQ-065, REQ-064, REQ-086, REQ-087, REQ-089, REQ-090]
       external_source_ref: K-ORIGIN
       external_source_note: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
@@ -601,7 +603,8 @@ ebom:
         - (ECO-060/REQ-086) 選択中collectionがスキャン中なら類似方式の検索を実行せず「スキャン完了後に利用できます」と理由を表示する。条件検索は公開済みnormal画像に対し利用可能
         - (ECO-062/REQ-087/IMG-018) 類似方式の候補は検索時点の閲覧文脈。FS=マージ先と同一親folder直下(タグchip非影響・subfolder除外・現folder外targetは0)、view=現在node path表示母集合、WorkTab=現workspace。Core呼出前から限定し結果後段filterだけで済ませない。条件検索は不変
         - (ECO-066/REQ-089/IMG-020) pHash類似検索は整理所有の単一session。150px固定領域をpreparing/comparing/cancellingのphase+件数+barへ置換しCTA=探す→停止→停止中。明示停止/整理終了/target・scope・mode・新検索・window終了でcancel+generation無効化。初回cancel=grid、再検索cancel=直前completed保持、途中結果非公開、正常cache保持。画像/作業タブ同一、条件検索は対象外
-      acceptance_refs: [CP-SIMSESSION-029, CP-UI-G9]
+        - (ECO-067/REQ-090/IMG-021) pHash数値を一致率表示しない。設定は候補の広さ(広め/標準/絞る)、結果は同一file/画像内容一致/実質同一/部分重複/類似(重複でない)の関係badge。部分重複/類似は自動削除・重複投入なし
+      acceptance_refs: [CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-UI-G9]
 
     - id: E-UI-MERGE-036
       name: マージ UI(マージ先/元選択・統合タグプレビュー・非破壊明示)+マージ元 deleted の最小トラッシュ表示 — v3.0 新設+ECO-014(整理トレイの merge へ統合)

@@ -1255,13 +1255,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
         }
         SearchResults.Clear();
         var inTray = new HashSet<string>(Organize.Targets, StringComparer.Ordinal);
-        foreach (var (id, score, isCrit) in Organize.SearchResults)
+        foreach (var (id, score, isCrit, relationship) in Organize.SearchResults)
         {
             var e = EntryById(id);
             if (e is null) continue; // マージ後に deleted 化した候補等は除外
             bool added = inTray.Contains(id) || id == mergeTargetId;
             SearchResults.Add(new OrganizeResultVM(id, e.Record.FileName, e.AbsolutePath,
-                FmtSize(e.Record.FileSize), score, isCrit, added));
+                FmtSize(e.Record.FileSize), score, isCrit, added, relationship));
         }
     }
 

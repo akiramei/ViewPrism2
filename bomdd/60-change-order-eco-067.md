@@ -122,8 +122,68 @@ diff規模は**大**。ViewPrismUI、REQ/spec、E/M/K-BOM、score/cache schema/v
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/C、100%を保証する同一性境界、表示語彙、局所差の受入fixture階層、精度/性能/配布制約を確定する。~~
    → **案Aを重複関係検証として修正採用**(2026-07-11・maintainer)。関係分類、100%境界、削除安全性、fixture/順位/不変条件を確定。
 2. ~~CAD commitを製品側ECOへ取り込む。~~ → ViewPrismUI `bb9623b`で完了。
-3. 明示の `/eco-fix ECO-067` 指示後、商用画像を使わない合成/自作fixtureで現行collisionを先行不合格化し、候補指標を比較してから最小製造する。
-4. 機械受入: build 0 / Tests / Oracle新規行 / validate_bom 0-0 / lifecycle。既存固定Oracle行は不変(R6)。
+3. ~~明示の `/eco-fix ECO-067` 指示後、商用画像を使わない合成/自作fixtureで現行collisionを先行不合格化し、候補指標を比較してから最小製造する。~~
+   → 2026-07-11 CP-DUPQUALITY-030を先行不合格化し、決定的同一性+D4/RGBA局所差+crop重複で製造完了(§7)。
+4. ~~機械受入: build 0 / Tests / Oracle新規行 / validate_bom 0-0 / lifecycle。既存固定Oracle行は不変(R6)。~~ → §7.3のとおり完了。
 5. gate② golden: 画像/作業タブで同一、再エンコード、回転鏡像、同構図の局所差、無関係画像の順位/表示と検索時間を実機確認する。
 
-**次工程は明示の `/eco-fix ECO-067` 指示があるまで開始しない**。現時点では製品コードを修正しない。
+**残作業はhuman gate② goldenだけ**。合格後、明示の `/eco-accept ECO-067` でクローズする。
+
+## §7 実施記録(2026-07-11 / gate② golden待ち)
+
+### 7.1 R5 先行不合格と方式比較
+
+商用画像を使わず、テスト内で生成・終了時削除する`CP-DUPQUALITY-030`を先に追加した。是正前は既存596件の
+製品コードに`DuplicateRelationshipVerifier`/`DuplicateRelationship`が存在せず、CS0246/CS0103で新規probeだけが
+コンパイル不合格となった。これにより真因をpHash曲線の単純調整でなく、候補抽出後の重複関係検証層と表示関係語彙の不在と裏取りした。
+
+fixtureは同一file、byte差+同一表示画素、JPEG再encode、小解像度、90度回転、鏡像、center trim、局所内容置換、
+無関係、および8bit grayscaleが同値の赤/緑局所置換(pHash距離0の非同一pair)を自作する。
+
+比較の結果、一般意味embedding単独/全体平均SSIM単独/案CのpHash曲線変更はCADのprecision契約を直接満たさないため不採用。
+新規依存なしのSkia経路で、次を組み合わせる案を採用した。
+
+1. byte SHA-256 exact→`同一ファイル`、EXIF正立+sRGB BGRAの寸法/画素exact→`画像内容一致`。
+2. pHashは従来どおり高速な粗候補抽出だけに使用する。
+3. 64x64 sRGB RGBAでD4全8変種を位置合わせし、channel差の平均、変更画素率、強差画素率、8x8局所block最大平均を併用。
+4. 寸法差がありfull-frame precisionを満たさない候補だけ、55%以上のcrop領域を両方向に探索して`部分重複`を判定。
+5. 大局は近いが局所precisionを満たさない候補は`類似（重複ではありません）`、無関係は結果非公開。
+
+crop探索は寸法差、full-frame平均差、局所block差のいずれかがcrop兆候を示す候補だけに限定する。SHA-256はDBの既存`ImageRecord.Hash`一致ならI/Oなしで
+`同一ファイル`を確定し、非一致と既知のpairはverifier側のbyte再hashを省略する。
+
+### 7.2 製造内容
+
+- Core: `DuplicateRelationship` 6分類、表示語彙、`IDuplicateRelationshipVerifier`抽象、`SimilarResult`の関係/内部候補scoreを追加。
+- Infrastructure: `DuplicateRelationshipVerifier`を追加。読取専用decodeで元画像/一時fileを変更しない(INV-009)。
+- 検索: pHash閾値通過後だけ重複関係を検証し、関係強度→内部candidate score→旧pHash score→idで安定順。
+  `NonSimilar`は非公開。pHash scoreは後方互換/診断用に保持するがUIへ渡して百分率表示しない。
+- DB: migration 007で`image_similarity`へ`duplicate_relationship/candidate_score/verifier_adapter`を追加。
+  旧NULL/adapter不一致は再検証し、feature再計算の既存pair連鎖削除で同時無効化。fresh/migration schema同値をCP-DB-006で確認。
+- UI: 画像/作業タブとも`類似度のしきい値 50%〜100%`を`候補の広さ 広め/標準/絞る`へ変更。
+  結果badgeは`同一ファイル / 画像内容一致 / 実質同一 / 部分重複 / 類似（重複ではありません）`とし、数値%を廃止。
+- BOM: REQ-090、E/M-BOM、CP-DUPQUALITY-030、FMEA-042、design-system/service BOM、仕様§2.10.4を同期。
+  新規NuGet/モデル依存なし。既存固定Oracle行は無変更(R6)。商用画像/スクリーンショット/ファイル名は非収載。
+
+最終diffはECO記録を含む24ファイル規模。第2段方式を`SimilaritySearchService`へ直接埋めずCore抽象/Infrastructure実装へ分け、
+画像/作業タブは同じservice結果と関係語彙を消費するためsurface間driftを増やさない。
+
+### 7.3 機械受入
+
+- `dotnet build ViewPrism2.sln --no-restore`: 成功、0 warning / 0 error。
+- `dotnet test tests/ViewPrism2.Tests/ViewPrism2.Tests.csproj --no-restore --no-build`: 601 passed / 0 failed / 0 skipped。
+  新規5本でfixture分類、pHash距離0非同一、production検索→pair cache→UI関係語彙、schema同値を固定。
+- `dotnet test tests/ViewPrism2.Oracle/ViewPrism2.Oracle.csproj --no-restore --no-build`: 109 passed / 0 failed / 2 skipped。
+  固定pHash/score/search期待値は変更していない(R6)。
+- `python bomdd/validate_bom.py`: 0 errors / 0 warnings。
+- `git diff --check`: whitespace errorなし。
+
+### 7.4 gate② golden基準
+
+1. 自作/権利上利用可能な同一画像のfile copy、lossless形式変換、JPEG再圧縮、縮小、回転/鏡像、trim、局所編集/表情差を同一scopeへ用意する。
+2. 画像タブで整理→マージ先→類似画像検索を開き、設定が`候補の広さ`と`広め/標準/絞る`で、50%/100%や一致率を表示しない。
+3. copy=`同一ファイル`、同一表示画素=`画像内容一致`、再圧縮/縮小/回転鏡像=`実質同一`、trim=`部分重複`となる。
+4. 表情差・目口/文字/物体等の局所編集は`類似（重複ではありません）`となり、100%/画像内容一致/実質同一にならない。
+5. 同一原画像由来候補が表情差/局所編集/同題材別画像より上位。無関係画像は候補外。
+6. `部分重複`/`類似`を見て自動削除されたり、自動で整理対象へ入ったりしない。追加は利用者操作だけ。
+7. 作業タブでも同じ分類/語彙/順序。候補scope、停止/進捗/cancel、条件検索、候補追加、merge/Undo、scan gateに回帰がない。

@@ -82,7 +82,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private bool _condDate;
     private bool _hasSearched;
     private bool _searchOpen; // ECO-056(v2 3 ゾーン): 下部ピンの「似た画像を探す」折りたたみ状態
-    private List<(string ImageId, int Score, bool IsCriteria)> _searchResults = new();
+    private List<(string ImageId, int Score, bool IsCriteria, DuplicateRelationship? Relationship)> _searchResults = new();
     private bool _organizeDone;
     private int _doneSourceCount;
 
@@ -491,12 +491,12 @@ public sealed partial class WorkTabViewModel : ObservableObject
         }
         SearchResults.Clear();
         var inTray = new HashSet<string>(_organizeTargets, StringComparer.Ordinal);
-        foreach (var (id, score, isCrit) in _searchResults)
+        foreach (var (id, score, isCrit, relationship) in _searchResults)
         {
             var r = _sourceImages.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
             if (r is null) continue; // マージ後に deleted 化した候補等は除外
             bool added = inTray.Contains(id) || id == _mergeTargetId;
-            SearchResults.Add(new OrganizeResultVM(id, r.FileName, AbsolutePath(r), FmtSize(r.FileSize), score, isCrit, added));
+            SearchResults.Add(new OrganizeResultVM(id, r.FileName, AbsolutePath(r), FmtSize(r.FileSize), score, isCrit, added, relationship));
         }
 
         OnPropertyChanged(nameof(HasCurrentTags));
@@ -973,7 +973,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private async Task RunSearch()
     {
         if (!_organizeMode) return;
-        var results = new List<(string ImageId, int Score, bool IsCriteria)>();
+        var results = new List<(string ImageId, int Score, bool IsCriteria, DuplicateRelationship? Relationship)>();
         SimilaritySearchSession.Run? run = null;
         try
         {
@@ -992,7 +992,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
                     foreach (var id in ids)
                     {
                         if (string.Equals(id, _mergeTargetId, StringComparison.Ordinal)) continue;
-                        results.Add((id, 100, true));
+                        results.Add((id, 100, true, null));
                     }
                 }
             }
@@ -1004,7 +1004,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
                     _mergeTargetId, _similarThreshold, _sourceImages,
                     ct: run.Token,
                     detailedProgress: _searchSession.CreateProgress(run)).ConfigureAwait(true);
-                foreach (var s in found) results.Add((s.ImageId, s.Score, false));
+                foreach (var s in found) results.Add((s.ImageId, s.Score, false, s.Relationship));
                 if (!_searchSession.TryComplete(run)) return;
             }
         }

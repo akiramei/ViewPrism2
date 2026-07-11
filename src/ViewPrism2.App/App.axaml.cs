@@ -159,13 +159,15 @@ public partial class App : Application
         // 旧 full-decode で永続化された pHash は hash_adapter 不一致で自動再計算される(混在なし)。
         services.AddSingleton<IPHashImageReader>(sp => new PHashImageReaderScaledDecode(
             sp.GetRequiredService<ILogger<PHashImageReaderScaledDecode>>()));
+        services.AddSingleton<IDuplicateRelationshipVerifier>(_ => new DuplicateRelationshipVerifier());
         services.AddSingleton(sp => new SimilaritySearchService(
             sp.GetRequiredService<ISyncFolderRepository>(),
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<IImageFeatureRepository>(),
             sp.GetRequiredService<IImageSimilarityRepository>(),
             sp.GetRequiredService<IPHashImageReader>(),
-            sp.GetRequiredService<IClock>()));
+            sp.GetRequiredService<IClock>(),
+            sp.GetRequiredService<IDuplicateRelationshipVerifier>()));
         services.AddSingleton(sp => new MergeService(
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<ITagRepository>(),
