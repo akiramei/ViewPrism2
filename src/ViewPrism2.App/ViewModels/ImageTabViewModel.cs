@@ -557,10 +557,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     {
         // ECO-060: スキャン中はsort条件を保持するだけで、取込順を固定する。
         // sort未設定で完了した場合も、完了遷移に伴う追加sortを行わず最終取込順を保つ。
-        if (_collectionId is { } collectionId &&
-            (_scanningCollections.Contains(collectionId)
-                ? _scanOrderByCollection.TryGetValue(collectionId, out var scanOrder)
-                : _sortColKey is null && _completedScanOrderByCollection.TryGetValue(collectionId, out scanOrder)))
+        if (TryGetPreservedScanOrder(out var scanOrder))
         {
             var positions = scanOrder
                 .Select((id, index) => (id, index))
@@ -583,6 +580,35 @@ public sealed partial class ImageTabViewModel : ObservableObject
         var byId = files.ToDictionary(e => e.Record.Id, StringComparer.Ordinal);
         var sorted = _sorter.Sort(files.Select(e => e.Record), SortField.Name, SortDirection.Asc);
         return sorted.Select(r => byId[r.Id]).ToList();
+    }
+
+    /// <summary>
+    /// ECO-070案A: FS軸はfolder群→image群を保ち、両群を個別sortする。
+    /// folderには列値を新設せず名前だけを現在方向で比較する。scan中/完了後未sortはIMG-015の取込順を優先。
+    /// </summary>
+    private List<(string Name, int Count)> SortFolders(List<(string Name, int Count)> folders)
+    {
+        if (TryGetPreservedScanOrder(out _)) return folders;
+
+        return _sortColKey is not null && _sortColDir == SortDirection.Desc
+            ? folders.OrderByDescending(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList()
+            : folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private bool TryGetPreservedScanOrder(out IReadOnlyList<string> scanOrder)
+    {
+        scanOrder = [];
+        if (_collectionId is not { } collectionId) return false;
+        if (_scanningCollections.Contains(collectionId))
+        {
+            if (!_scanOrderByCollection.TryGetValue(collectionId, out var activeOrder)) return false;
+            scanOrder = activeOrder;
+            return true;
+        }
+        if (_sortColKey is not null ||
+            !_completedScanOrderByCollection.TryGetValue(collectionId, out var completedOrder)) return false;
+        scanOrder = completedOrder;
+        return true;
     }
 
     /// <summary>列 key(basic or タグ id)から比較列を解決(ECO-025 β)。タグ型は _tagById から。</summary>
@@ -1084,7 +1110,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
             // ---- FS 軸 ----
             var ctx = ResolveFs();
             files = SortFiles(ctx.Files);
-            folders = ctx.Folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            folders = SortFolders(ctx.Folders);
             crumbNames = _fsPath.ToList();
             HomeActive = _fsPath.Count == 0;
             if (ctx.AnyTagged)

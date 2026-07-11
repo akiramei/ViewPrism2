@@ -249,12 +249,13 @@ mbom:
         textual: "候補値ドロップダウン(predefined_values 順・インライン値チップ)+自由入力"
         mode_dispatch: "文脈モード(タグ編集/整理/作業/削除)の排他とグリッドクリック意味論のディスパッチ(E-UI-MODE-041)。フィーチャ実体は子 VM(032/033/034)"
         scan_lifecycle: "ScanCoordinator started/batch/completed → 選択collectionのfully-hashed normalを取込順append。sort条件は保持し完了時だけ全体へ適用。類似方式はscanning gate"
+        sort: "(ECO-070/REQ-081/FL-003案A)ImageTabViewModelのFS adapterはResolveFs後にfolder/filesを分離維持。TryGetPreservedScanOrderを両群で共有し、通常時SortFolders=名前+現在方向、SortFiles=選択列+方向、BuildItemsFromMatched=folder全件→file全件。folder列値/集約なし。scan中/明示sortなし完了時は両群の取込順を保持"
         startup: "ECO-064/REQ-088: InitializeAsync=Task.Yield→catalog(全folder+normal GROUP BY count)→保存済み選択content(当該normal+image_tags+tag定義/view定義+deleted count)。IsCatalogLoading/IsContentLoading+error/retryを別公開し、未ready時Recomputeはcollection行だけ公開。collection切替はcontent generation+CTSで旧結果を破棄。XAMLは左/中央の領域内loading/errorを空状態と排他表示"
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
         - 子 VM はホスト型を参照しない(関数注入)。通知は消費者(XAML/tests=ホスト公開契約)に対し旧実装と同一回数・同一位置(51 通知トポロジー 3 則)
         - (ECO-060) スキャン中のsort操作は条件だけ更新しItems順を変えない。completionでDB再読込後に最新条件を一度適用する
-      acceptance_refs: [CP-TAGUI-013, CP-NFR-026, CP-STARTUP-028, CP-UI-G7]
+      acceptance_refs: [CP-TAGUI-013, CP-NFR-026, CP-STARTUP-028, CP-UI-G1, CP-UI-G7]
       fmea_refs: [FMEA-013, FMEA-014, FMEA-040]
 
     - id: M-UI-014

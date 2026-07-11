@@ -85,6 +85,26 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
     private static string[] FileNames(ImageTabViewModel vm)
         => vm.Items.Where(i => !i.IsFolder).Select(i => i.Name).ToArray();
 
+    private static string[] ItemOrder(ImageTabViewModel vm)
+        => vm.Items.Select(i => $"{(i.IsFolder ? "F" : "I")}:{i.Name}").ToArray();
+
+    /// <summary>ECO-070先行probe: FS軸はfolder群→image群を保ち、両群へ現在方向を個別適用する。</summary>
+    [Fact]
+    public async Task FS表示はフォルダ先頭を保ちフォルダと画像を群別ソートする()
+    {
+        var (vm, _) = await NewWithImagesAsync("zeta/z.jpg", "alpha/a.jpg", "c.jpg", "a.jpg");
+
+        Assert.Equal(["F:alpha", "F:zeta", "I:a.jpg", "I:c.jpg"], ItemOrder(vm));
+
+        vm.SelectColumnSortCommand.Execute("name"); // 名前昇順を明示
+        vm.SelectColumnSortCommand.Execute("name"); // 名前降順
+        Assert.Equal(["F:zeta", "F:alpha", "I:c.jpg", "I:a.jpg"], ItemOrder(vm));
+
+        vm.SelectColumnSortCommand.Execute("size"); // 別列=昇順
+        vm.SetSortDescCommand.Execute(null);        // size降順でもfolderは名前降順
+        Assert.Equal(["F:zeta", "F:alpha", "I:a.jpg", "I:c.jpg"], ItemOrder(vm));
+    }
+
     /// <summary>ECO-025 β: リスト列ヘッダーソートの配線(SelectColumnSort→SortFiles→ViewColumnSorter)。</summary>
     [Fact]
     public async Task リスト列ヘッダーソートは列比較器で並べ替えトグルとクリアが効く()

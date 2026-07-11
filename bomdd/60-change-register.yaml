@@ -1166,12 +1166,12 @@ changes:
   - id: ECO-070
     title: "FS表示でフォルダがソート対象外となり固定名前昇順で残る"
     type: 既存機能品質是正(CAD/REQ/BOMのfolder行sort意味論欠落をgate①案Aで裁定。type-primaryでfolder先、folderは選択列にかかわらず名前+現在方向、filesはFL-003列+方向。CAD=0f303a4)
-    status: staged
+    status: implemented
     golden: pending
     baseline: "main 03c35c44ddaa"
     findings: "maintainer要求2026-07-12=FS表示はfolder先/file後、両群を個別sort。現ImageTabはBuildItemsFromMatchedでfolders→filesを満たす一方、FS解決でfilesだけSortFiles、foldersはName OrdinalIgnoreCase固定昇順。名前降順でもfolder群不変。Seed旧実装は群別sort+concat、実データ版45a6c77で固定昇順化、ECO-025 v2 72e47c3はfile列sortだけを刷新。CAD file_list v2/REQ-081/E-UI-BROWSE/M-UI-013/CPはfolder行のgroup順・比較キーを未定義、testsも!IsFolderだけを検査。IMG-015 scan中append/完了sortとの合成が必要"
     impacted_bom: ["ViewPrismUI file_list/image_tab/FL-003", "REQ-081・20-spec §2.6", "E-UI-BROWSE-022/E-UI-AXIS-NAV-040", "M-UI-013", "ImageTabViewModel FS group sort", "CP-UI-G1/CpUiG1ImageTabSelectionTests/CpUiEco060ProgressiveScanTests read-across"]
     oracle: "既存固定Oracle行は変更しない(R6)。新規unit/VM/headlessでfolder-first、folder/file群別の名前昇降順、size/date/tag時folder規則、grid-list共有、パンくず、scan中append→完了sortをexact固定"
-    verification: "2026-07-12 gate①案A裁定・ViewPrismUI 0f303a4反映。製造前/staged。src/tests変更なし"
+    verification: "2026-07-12 /eco-fix完了。先行赤=Tests 608件中1 fail(expected F:zeta/actual F:alpha、607 pass)。是正後Tests 608/608、build 0 warning/0 error、Oracle 109 pass/2 known skip(R6不変)、BOM validator 0/0、diff-check clean。gate② golden待ち"
     body: 60-change-order-eco-070.md
-    notes: "gate①完了: 案A=type-primary(folder先)+folderは名前を現在方向で独立sort、filesは選択列/方向。架空のfolder size/date/tag値やOS metadata I/Oなし。スキャン中はIMG-015取込順を優先し、明示sortは完了時適用。タグビュー/WorkTab/viewer/FL-001/002/004不変。CAD=0f303a4。/eco-fix待ち"
+    notes: "機械受入済み/golden待ち。案A=type-primary(folder先)を維持しSortFoldersで名前+現在方向、SortFilesで選択列+方向。TryGetPreservedScanOrderを両群共有しscan中/明示sortなし完了時の取込順を保持。架空folder値/集約/OS I/Oなし。タグビュー/WorkTab/viewer/DB/Core/schema/XAML/i18n/DS/Oracle不変。REQ/spec/E/M-BOM/CP同期、CAD=0f303a4"

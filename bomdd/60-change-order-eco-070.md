@@ -1,4 +1,4 @@
-# Change Order — ECO-070(staged): FS表示でフォルダがソート対象外となり固定名前昇順で残る
+# Change Order — ECO-070(implemented / golden pending): FS表示でフォルダがソート対象外となり固定名前昇順で残る
 
 > maintainer要求(2026-07-12)「ファイルシステム表示ではフォルダを先、その後にファイルを表示し、
 > ソートはフォルダ・ファイルそれぞれに対して行う」を`/eco-file`で受理した既存機能品質是正要求。
@@ -87,7 +87,7 @@ foldersにも選択列と同じ比較を適用する。
 ## 6. 残ゲート
 
 1. ~~**gate① ViewPrismUI裁定**: 案A/B/Cから選択。推奨は案A。~~ → 案A採用・完了(§7)
-2. CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-070`で先行赤probe→是正→機械受入。
+2. ~~CAD裁定コミットを製品へ取り込んだ後、`/eco-fix ECO-070`で先行赤probe→是正→機械受入。~~ → 完了(§8)
 3. gate② golden: FS軸のfolder-first、群別sort、grid/list、パンくず、scan lifecycleを確認。
 4. `/eco-accept ECO-070`でCP/As-Built/register/教訓をクローズ。
 
@@ -102,3 +102,45 @@ foldersにも選択列と同じ比較を適用する。
 - タグビュー軸、作業タブ、viewer列、FL-001/002/004は不変。
 - ViewPrismUI CAD反映: `0f303a4` (`file_list.md`、`image_tab.md`、FL-003 review point)。
 - gate①完了。次の明示入口は`/eco-fix ECO-070`。本裁定ではsrc/testsを変更しない。
+
+## 8. 実施記録(2026-07-12 — 機械受入完了・golden待ち)
+
+### 8.1 先行probe(R5)
+
+- `CpUiG1ImageTabSelectionTests`へ、同階層に`alpha/zeta` folderと`a.jpg/c.jpg`画像を置くmixed fixtureを追加した。
+- 初期順=`F:alpha,F:zeta,I:a.jpg,I:c.jpg`、名前降順=`F:zeta,F:alpha,I:c.jpg,I:a.jpg`、
+  size降順時もfolder=`zeta,alpha`・同値画像は既存タイブレークで`a,c`を要求した。
+- 是正前実測は`ViewPrism2.Tests` **608件中1件不合格(607 pass)**。名前降順の先頭が
+  expected=`F:zeta` / actual=`F:alpha`となり、folder群だけ固定昇順の真因を確認してから製品コードへ着手した。
+
+### 8.2 是正裁定とdiff
+
+- `ImageTabViewModel`に`SortFolders`を追加し、明示sort中はfolder名を現在方向で整列する。
+  未sort通常時は名前昇順。folderのsize/date/tag値・集約値・OS metadata I/Oは追加していない。
+- ECO-060/IMG-015の条件を`TryGetPreservedScanOrder`へ集約し、`SortFiles`と`SortFolders`の両方が
+  同じ判定を消費する。scan中と、明示sortなしでscan完了した列は両群とも取込順を保持する。
+- `BuildItemsFromMatched`のfolder全件→image全件というtype-primary構造は既存のまま維持し、比較だけを補完した。
+- REQ-081、仕様§2.6、E-UI-BROWSE-022、M-UI-IMAGETAB-035、CP-UI-G1へ案Aと潜伏履歴を同期した。
+  CADはgate①のViewPrismUI `0f303a4`で同期済み。
+- XAML、DB/Core/schema、タグビュー、WorkTab、viewer、i18n、Design System BOM、既存Oracle期待値は変更していない。
+
+### 8.3 機械受入
+
+- 先行probeを含む`ViewPrism2.Tests`: **608/608 pass**(filter指定はMTPで無視されたため全件実行)。
+- `dotnet build ViewPrism2.sln --no-restore`: **0 warning / 0 error**。
+- `ViewPrism2.Oracle`: **109 pass / 2 known skip**。既存固定期待値変更なし(R6)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+- `git diff --check`: clean。
+
+### 8.4 gate②操作
+
+1. 同じ階層に名前順が判別できるfolderを2件以上、画像を2件以上置き、gridで常にfolder群→画像群となることを確認する。
+2. 名前を昇順/降順へ切替え、folder群と画像群がそれぞれ反転し、降順でもfolderが先頭群に残ることを確認する。
+3. サイズ・更新日を昇順/降順へ切替え、folder群は名前を同じ方向で、画像群は選択値で並ぶことを確認する。
+   folderに架空のサイズ/更新日やソート項目tileが表示されないことも確認する。
+4. listへ切替え、同じgroup順・方向を維持し、列header操作後にgridへ戻しても同じ順序になることを確認する。
+5. folderへ潜る/パンくずで戻る、FS tag chip絞り込みを行い、各再構築後もfolder先+群別sortを維持する。
+6. スキャン中に公開済みfolder/画像が取込順で末尾appendされ、sort方向を変えても完了までは再配列せず、
+   完了時に最新の明示sortがfolder/image両群へ適用されることを確認する。
+7. タグビュー軸と作業タブにfolder行が混入せず、画像double click後のviewer列が画像だけで画面の画像順と一致することを確認する。
+8. タグ編集・作業・整理・削除modeと画像タブのgrid/list仮想化・選択に回帰がないことを確認する。
