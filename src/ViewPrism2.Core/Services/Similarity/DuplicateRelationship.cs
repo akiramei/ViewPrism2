@@ -14,17 +14,41 @@ public enum DuplicateRelationship
     SameFile = 5,
 }
 
-/// <summary>重複関係検証の結果。CandidateScore は同一関係内の内部順位専用(表示百分率ではない)。</summary>
+/// <summary>重複関係検証の結果。CandidateScore はUIの一致度%と検索しきい値に使う決定値。</summary>
 public sealed record DuplicateVerificationResult
 {
     public required DuplicateRelationship Relationship { get; init; }
 
-    /// <summary>0〜100 の内部候補順位値。確率・一致率として表示しない。</summary>
+    /// <summary>0〜100 の決定的一致度。確率ではなく、関係帯域内の順位・表示・検索に共通利用する。</summary>
     public int CandidateScore { get; init; }
 
     /// <summary>100%表示が許されるのは、決定的に表示画素一致を含む関係だけ。</summary>
     public bool CanDisplayOneHundredPercent
         => Relationship is DuplicateRelationship.SameFile or DuplicateRelationship.ImageContentMatch;
+}
+
+/// <summary>
+/// ECO-067/GF-067-03: 検証器の画像測定値を利用者向け一致度帯へ写像する単一正本。
+/// 関係ごとの帯域を跨がせず、検索しきい値・表示・順位の同一軸を保つ。
+/// </summary>
+public static class DuplicateCandidateScore
+{
+    public static int FromMean(DuplicateRelationship relationship, double mean) => relationship switch
+    {
+        DuplicateRelationship.SameFile or DuplicateRelationship.ImageContentMatch => 100,
+        DuplicateRelationship.SubstantiallySame => InBand(99, 90, mean, 12),
+        DuplicateRelationship.PartialOverlap => InBand(79, 70, mean, 40),
+        DuplicateRelationship.Similar => InBand(49, 40, mean, 55),
+        _ => 0,
+    };
+
+    private static int InBand(int ceiling, int floor, double value, double acceptedMaximum)
+    {
+        var normalized = Math.Clamp(value / acceptedMaximum, 0, 1);
+        return Math.Clamp(
+            (int)Math.Round(ceiling - (normalized * (ceiling - floor)), MidpointRounding.AwayFromZero),
+            floor, ceiling);
+    }
 }
 
 /// <summary>

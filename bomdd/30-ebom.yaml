@@ -248,7 +248,7 @@ ebom:
         - since ECO-048(REQ-084) ペア距離=小 id の identity × 大 id の全変種の最小(対称・決定的・単調拡張)。変種なし特徴量とは identity 同士のみ(後方互換)
         - since ECO-062(REQ-087) 明示候補集合を受け、normal・自身除外・同一collectionを再検証してから特徴量/ペアcacheへ進む。候補未指定の既存APIはOC-16後方互換でcollection全体
         - since ECO-066(REQ-089) preparing/comparingのphase+completed/totalを通知し、候補間と画像reader段階でcancelを観測する。cancel済みsessionの結果はsurfaceへ公開しないが正常生成済みcacheは保持する
-        - since ECO-067(REQ-090) pHashは粗候補抽出のみ。byte/正規化表示画素exact+D4位置合わせRGBA局所差+crop重複で関係分類し、pHash距離0だけで100%/重複を確定しない
+        - since ECO-067(REQ-090/GF-067-03) pHashは粗候補抽出のみ。byte/正規化表示画素exact+D4位置合わせRGBA局所差(平均/面積/強度/block最大/上位6 block集中率)+crop重複で関係分類し、pHash距離0や全体meanだけで100%/重複を確定しない。一致度写像は関係帯域を跨がない
       acceptance_refs: [CP-SIM-017, CP-SIMSESSION-029, CP-DUPQUALITY-030]
 
     - id: E-SIMCACHE-033

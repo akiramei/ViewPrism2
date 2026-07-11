@@ -107,12 +107,61 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
         }
 
         var verifier = new DuplicateRelationshipVerifier();
-        Assert.Equal(DuplicateRelationship.PartialOverlap,
-            (await verifier.VerifyAsync(png, crop, TestContext.Current.CancellationToken)).Relationship);
-        Assert.Equal(DuplicateRelationship.PartialOverlap,
-            (await verifier.VerifyAsync(png, cropSameSize, TestContext.Current.CancellationToken)).Relationship);
+        var cropResult = await verifier.VerifyAsync(png, crop, TestContext.Current.CancellationToken);
+        Assert.Equal(DuplicateRelationship.PartialOverlap, cropResult.Relationship);
+        Assert.InRange(cropResult.CandidateScore, 70, 79); // GF-067-03: 部分重複の表示帯域契約
+        var sameSizeCropResult = await verifier.VerifyAsync(
+            png, cropSameSize, TestContext.Current.CancellationToken);
+        Assert.Equal(DuplicateRelationship.PartialOverlap, sameSizeCropResult.Relationship);
+        Assert.InRange(sameSizeCropResult.CandidateScore, 70, 79);
         Assert.Equal(DuplicateRelationship.Similar,
             (await verifier.VerifyAsync(png, localEdit, TestContext.Current.CancellationToken)).Relationship);
+    }
+
+    [Theory]
+    [InlineData(DuplicateRelationship.SameFile, 55, 100)]
+    [InlineData(DuplicateRelationship.ImageContentMatch, 55, 100)]
+    [InlineData(DuplicateRelationship.SubstantiallySame, 0, 99)]
+    [InlineData(DuplicateRelationship.SubstantiallySame, 12, 90)]
+    [InlineData(DuplicateRelationship.PartialOverlap, 0, 79)]
+    [InlineData(DuplicateRelationship.PartialOverlap, 16, 75)]
+    [InlineData(DuplicateRelationship.PartialOverlap, 40, 70)]
+    [InlineData(DuplicateRelationship.Similar, 0, 49)]
+    [InlineData(DuplicateRelationship.Similar, 55, 40)]
+    public void 一致度scoreは関係ごとの帯域を跨がない(
+        DuplicateRelationship relationship, double mean, int expected)
+    {
+        Assert.Equal(expected, DuplicateCandidateScore.FromMean(relationship, mean));
+    }
+
+    [Fact]
+    public async Task 小面積の目口相当差分も実質同一へ希釈しない()
+    {
+        var baseline = PathOf("subtle-base.png");
+        var expressionEdit = PathOf("subtle-expression-edit.png");
+        using (var image = CreateStructured())
+        {
+            Save(image, baseline, SKEncodedImageFormat.Png, 100);
+            using var edited = image.Copy();
+            using var canvas = new SKCanvas(edited);
+            using var paint = new SKPaint
+            {
+                Color = new SKColor(128, 62, 76),
+                IsAntialias = true,
+                StrokeWidth = 2,
+                Style = SKPaintStyle.Stroke,
+            };
+            // 160x120上の小さな瞼/口線。64x64正規化後も上位少数blockへ集中する。
+            canvas.DrawLine(57, 55, 69, 57, paint);
+            canvas.DrawLine(95, 57, 107, 55, paint);
+            canvas.DrawLine(76, 87, 88, 84, paint);
+            Save(edited, expressionEdit, SKEncodedImageFormat.Png, 100);
+        }
+
+        var result = await new DuplicateRelationshipVerifier().VerifyAsync(
+            baseline, expressionEdit, TestContext.Current.CancellationToken);
+        Assert.Equal(DuplicateRelationship.Similar, result.Relationship);
+        Assert.InRange(result.CandidateScore, 40, 49);
     }
 
     [Fact]
@@ -147,7 +196,7 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
     }
 
     [Fact]
-    public async Task production検索は重複関係をcacheしUIへ百分率でなく関係語彙を渡す()
+    public async Task production検索はv1cacheを再検証しUIと検索へ同じ一致度を渡す()
     {
         using var db = new TempDb();
         var folder = new SyncFolder { Id = "dup-folder", Name = "dup", Path = _dir };
@@ -179,6 +228,11 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
         // GF-067-02: 利用者のしきい値と結果%は同じ軸。70%検索へ48%候補を出さない。
         Assert.Empty(await service.FindSimilarAsync(
             a.Id, 70, ct: TestContext.Current.CancellationToken));
+        await db.Similarities.UpsertVerificationAsync(
+            a.Id, b.Id, 100, DuplicateRelationship.SubstantiallySame, 99,
+            "skia-duplicate-relationship-v1", db.Clock.UtcNowIso());
+        Assert.Empty(await service.FindSimilarAsync(
+            a.Id, 70, ct: TestContext.Current.CancellationToken)); // v1 cacheをv2で再検証
         var result = Assert.Single(await service.FindSimilarAsync(
             a.Id, 40, ct: TestContext.Current.CancellationToken));
         Assert.Equal(b.Id, result.ImageId);
@@ -186,6 +240,7 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
         var cached = await db.Similarities.GetAsync(a.Id, b.Id);
         Assert.Equal(DuplicateRelationship.Similar, cached!.DuplicateRelationship);
         Assert.Equal(verifier.AdapterId, cached.VerifierAdapter);
+        Assert.Equal("skia-duplicate-relationship-v2", cached.VerifierAdapter);
 
         var vm = new OrganizeResultVM(b.Id, b.FileName, bPath, "1 KB", result.CandidateScore,
             isCriteria: false, added: false, result.Relationship);

@@ -517,6 +517,9 @@ control_plan:
         - "8bit grayscale同値の赤/緑局所置換でproduction pHash距離0を再現しても、類似・100%禁止"
         - "検索E2Eは関係/candidate scoreをmigration007 pair cacheへverifier adapter付き保存し、UIはcandidate scoreのN%だけを表示。pHash粗score/関係語彙を表示しない"
         - "GF-067-02: threshold70はcandidateScore48を除外し、threshold40(テスト専用・UI最小未満)では返す。UI badgeは48%/94%で語彙を併記しない"
+        - "GF-067-03: 160x120の小面積・中差分の瞼/口線3か所は64x64後も上位6/64 block集中率で検出しSimilar 40〜49。強い大矩形fixtureだけで代用しない"
+        - "GF-067-03: CandidateScore境界はmean 0/上限で実質同一99/90、部分重複79/70、類似49/40。関係帯域を跨がない"
+        - "GF-067-03: skia-duplicate-relationship-v1のpair cacheはv2検索で再検証・保存し、旧99%を再利用しない"
         - "順位: candidate score降順→id。同一file/画像内容一致/実質同一/部分重複/類似の内部帯は逆転しない"
       notes: "goldenは画像/作業タブで単一一致度% badge、70%/80%のしきい値と結果下限の一致、100%境界、既存session/scope/merge回帰を確認"
 

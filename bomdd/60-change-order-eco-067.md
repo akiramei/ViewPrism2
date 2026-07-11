@@ -257,3 +257,47 @@ candidate score降順/id昇順へ統一した。verifier未注入の固定Oracle
 - 70%検索の全結果が70%以上、80%検索の全結果が80%以上であり、70%へ戻すと同じscope/cache条件を再現する。
 - pHash距離0の非同一画像は100%にならず、UI最小50%未満なら通常検索結果へ現れない。
 - 条件検索は従来どおり`条件一致`。候補scope、停止/進捗/cancel、候補追加、merge/Undo、scan gateに回帰がない。
+
+## §10 GF-067-03 是正(2026-07-11 / golden再確認待ち)
+
+### 10.1 実機所見の再診断
+
+GF-067-01画面で表情違いが`実質同一 98〜99%`だった事実から、旧pHash値ではなく検証器v1の
+`CandidateScore`が高一致を返していたと確定した。旧pHash-only cacheは関係NULL/adapter不一致なら再検証されるため、
+「旧ビルドまたは旧cacheの可能性が高い」という仮説は棄却した。既存fixtureの局所編集は160x120上の34x22シアン矩形で、
+実際の瞼/口線より面積・色差が大きく、64x64正規化後の小面積差分を代表していなかった。
+
+同時に、部分重複の許容mean上限40に対し旧score式のrangeが16で、宣言帯域70〜79を構造的に保証しないこと、
+`CandidateScore`のコードコメントがGF-067-02後も「表示しない」のまま残る契約追随漏れを確認した。
+
+### 10.2 R5先行不合格
+
+商用画像を使わず、既存合成画像へ小面積・中程度色差の瞼/口線3か所を描くfixtureを追加した。是正前は
+expected `Similar` / actual `SubstantiallySame`で、全602件中この新規1件だけが不合格となった。
+
+帯域は画像差分の偶然の組合せでprivate式へ到達させず、関係別CandidateScore写像をCore決定契約として切り出すprobeを
+追加した。是正前は`DuplicateCandidateScore`欠落のCS0103で不合格。境界は部分重複mean 0→79、16→75、40→70を固定する。
+
+### 10.3 是正
+
+- 64x64/8x8 blockの差分総量を降順化し、上位6/64 block(約9.4%)の集中率を追加。80%以上かつ
+  changed fraction 0.1%以上、max block mean 1以上なら局所編集として`実質同一`から除外する。
+- 既存mean/changed/severe/max block/D4/crop判定は維持し、集中率は補助指標としてのみ追加した。
+- `DuplicateCandidateScore.FromMean`をCoreの単一正本とし、exact=100、実質同一90〜99、部分重複70〜79、
+  類似40〜49から逸脱しない写像へ変更。コメントもUI表示/検索しきい値との共通軸へ同期した。
+- verifier adapterを`skia-duplicate-relationship-v2`へ更新。v1 pair cacheを実検索で再検証してv2保存するprobeを追加した。
+  DB schema/migration/pHash adapterは変更なし。
+
+対象CPは15/15、全製品テストは611/611へ転じた。商用画像・スクリーンショット・固定binary fixtureは収載していない。
+
+機械受入は`dotnet build` 0 warning / 0 error、Tests 611/611、固定Oracle 109 pass / 既知2 skip、
+`validate_bom.py` 0 error / 0 warning。既存固定Oracle行、DB schema、migration、pHash adapterは無変更。
+
+### 10.4 残ゲート
+
+fix commit後、maintainerが実機で次を確認する:
+
+1. 同一scopeの表情違い画像が既定70%検索へ出ない(または70%未満)こと。
+2. 同一file/同一画素は100%、再圧縮・小resize・回転鏡像は90〜99%、trimは70〜79%で残ること。
+3. 旧検索済みprofileでも再検索によりv1 cacheが使い回されず、旧98〜99%が残らないこと。
+4. 画像/作業タブで表示としきい値が単一のN%軸、70→80→70が再現し、条件検索・停止・merge/Undoに回帰がないこと。

@@ -15,7 +15,7 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
     private const int CanonicalSize = 64;
     private const int BlockSize = 8;
 
-    public string AdapterId => "skia-duplicate-relationship-v1";
+    public string AdapterId => "skia-duplicate-relationship-v2";
 
     public async Task<DuplicateVerificationResult> VerifyAsync(
         string absolutePathA,
@@ -69,11 +69,18 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
                 bestFull = Metrics.Better(bestFull, Compare(aCanonical, variant));
             }
 
-            // 再圧縮/resize/回転鏡像: 全体は整合し、局所置換の強いblockを持たない。
-            if (bestFull.Mean <= 12.0 && bestFull.SevereFraction <= 0.015
+            // GF-067-03: 差分総量の80%以上が上位6/64 blockへ集中する小面積編集を、
+            // 全体meanの小ささだけで実質同一へ希釈しない。最低量条件で単一pixel noiseは除外する。
+            var localizedEdit = bestFull.TopSixBlockFraction >= 0.80
+                && bestFull.ChangedFraction >= 0.001
+                && bestFull.MaxBlockMean >= 1.0;
+
+            // 再圧縮/resize/回転鏡像: 全体は整合し、局所置換の強い/集中したblockを持たない。
+            if (!localizedEdit && bestFull.Mean <= 12.0 && bestFull.SevereFraction <= 0.015
                 && bestFull.ChangedFraction <= 0.12 && bestFull.MaxBlockMean <= 30.0)
             {
-                return Result(DuplicateRelationship.SubstantiallySame, Score(99, bestFull.Mean, 12));
+                return Result(DuplicateRelationship.SubstantiallySame,
+                    DuplicateCandidateScore.FromMean(DuplicateRelationship.SubstantiallySame, bestFull.Mean));
             }
 
             var geometryChanged = a.Width != b.Width || a.Height != b.Height;
@@ -99,7 +106,8 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
                 && bestCrop.Mean <= 40.0 && bestCrop.SevereFraction <= 0.20
                 && bestCrop.ChangedFraction <= 0.50 && bestCrop.MaxBlockMean <= 150.0)
             {
-                return Result(DuplicateRelationship.PartialOverlap, Score(79, bestCrop.Mean, 16));
+                return Result(DuplicateRelationship.PartialOverlap,
+                    DuplicateCandidateScore.FromMean(DuplicateRelationship.PartialOverlap, bestCrop.Mean));
             }
 
             // pHash候補として大局的に近くても上記precision条件を満たさないものは「類似」。
@@ -107,7 +115,8 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
             if (bestFull.Mean <= 55.0 || bestCrop.Mean <= 42.0)
             {
                 var metric = Math.Min(bestFull.Mean, bestCrop.Mean);
-                return Result(DuplicateRelationship.Similar, Score(49, metric, 55));
+                return Result(DuplicateRelationship.Similar,
+                    DuplicateCandidateScore.FromMean(DuplicateRelationship.Similar, metric));
             }
 
             return Result(DuplicateRelationship.NonSimilar, 0);
@@ -241,13 +250,12 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
         }
 
         var pixels = CanonicalSize * CanonicalSize;
-        var maxBlock = 0.0;
-        foreach (var sum in blockSums) maxBlock = Math.Max(maxBlock, sum / (BlockSize * BlockSize));
-        return new Metrics(total / pixels, (double)changed / pixels, (double)severe / pixels, maxBlock);
+        var orderedBlockSums = blockSums.Cast<double>().OrderByDescending(sum => sum).ToArray();
+        var maxBlock = orderedBlockSums[0] / (BlockSize * BlockSize);
+        var topSixFraction = total <= double.Epsilon ? 0 : orderedBlockSums.Take(6).Sum() / total;
+        return new Metrics(total / pixels, (double)changed / pixels, (double)severe / pixels,
+            maxBlock, topSixFraction);
     }
-
-    private static int Score(int ceiling, double mean, double range)
-        => Math.Clamp((int)Math.Round(ceiling - (mean / Math.Max(1, range) * 9), MidpointRounding.AwayFromZero), 1, ceiling);
 
     private static DuplicateVerificationResult Result(DuplicateRelationship relationship, int score)
         => new() { Relationship = relationship, CandidateScore = score };
@@ -257,9 +265,14 @@ public sealed class DuplicateRelationshipVerifier : IDuplicateRelationshipVerifi
         foreach (var bitmap in bitmaps) bitmap.Dispose();
     }
 
-    private readonly record struct Metrics(double Mean, double ChangedFraction, double SevereFraction, double MaxBlockMean)
+    private readonly record struct Metrics(
+        double Mean,
+        double ChangedFraction,
+        double SevereFraction,
+        double MaxBlockMean,
+        double TopSixBlockFraction)
     {
-        public static Metrics Worst => new(double.MaxValue, 1, 1, double.MaxValue);
+        public static Metrics Worst => new(double.MaxValue, 1, 1, double.MaxValue, 0);
         public static Metrics Better(Metrics a, Metrics b)
         {
             // まず局所差を含む総合risk、同値ならmeanを優先。
