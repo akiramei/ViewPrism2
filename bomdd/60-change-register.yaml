@@ -1096,3 +1096,16 @@ changes:
     verification: "R5赤=IsCatalogLoading/IsContentLoading/error状態不在でCS1061 6件。是正=Task.Yield shell-first+Task.Run DB境界、normal GROUP BY count、selected normal/image_tags、catalog/content別loading/error/retry、generation+CTS+closing cancel、遅延A破棄。build 0 warning/0 error、Tests 590/590、Oracle 109+既知2skip、validate 0/0、diff-check clean"
     body: 60-change-order-eco-064.md
     notes: "クローズ済み。gate①=案A/CAD 84d1e2d。Repository=normal count GROUP BY+selected normal/image_tags+status count、全件APIはstartup呼出0。VM=Task.Yield shell-first+Task.Run明示background、catalog/content別loading/error/retry、generation+CTS、closing cancel、catalog先行行公開。XAML=左/中央領域内loading/error。REQ-088/E/M-BOM/CP-STARTUP-028/FMEA-040/Service BOMはfix同期、acceptでCP-UI-G1/P-01/50-as-built goldenを同期。DB schema/settings/scan/pHash/merge/thumbnail/Oracle不変。残ゲートなし"
+
+  - id: ECO-065
+    title: "50-as-built(承認証拠面)が validator 検査外 — 無効記録が無音通過する fail-open"
+    type: 検査基盤是正(validator 拡張。ECO-061 スコープ外所見の昇格 — クローズ/監査証拠が未検査面に依存するため候補待ちにしない。gate①でスコープ裁定が先)
+    status: staged
+    golden: n/a
+    baseline: "main 11efce1"
+    findings: "実測2026-07-11: 50-as-built.yamlはvalidate_bom.pyに一切ロードされない(対象=30/32/60/00のみ)。構文パース・E13重複キー・register引用golden_*キーの実在突合・エントリ最小スキーマすべて未検査。注入実験=不正YAML追記→0 error/0 warning・exit 0(復元済み)。依存=registerが32箇所でas-builtを承認記録として引用、ECO-062/063/064のacceptクローズ条件が「50-as-builtへ承認記録」を含む。現状突合はgolden_2026_07_11_eco062/063/064の3/3実在=腐敗未発生(潜在)。E13「全YAML台帳」の文言は50/52/53を含むように読める余地(検査一覧には行なし=文言の曖昧さ)。同族=52-metrics/53-service-bomも非ロード(スコープはgate裁定)。BomDD一般形=対象欠落チャレンジ/silence §16(a)のファイル粒度版"
+    impacted_bom: ["bomdd/validate_bom.py", "bomdd/50-as-built.yaml(スキーマ明文化時)", "bomdd/change-management.md(規律明文化時)"]
+    oracle: "既存固定Oracle行・CP・コード不変予測(validatorと台帳のみ)。受入=注入実験(不正YAML/golden_*欠落)がFAILへ転化+正常台帳0 error維持+selftest収載"
+    verification: "(staged — 製造前)"
+    body: 60-change-order-eco-065.md
+    notes: "起票のみ。gate①=是正方針1〜5のスコープ裁定(as-builtロード+E13/register→as-built参照整合の新E検査/最小スキーマ深さ/52・53同族の同時是正か候補分離か/注入実験のselftest収載)。出自=ECO-061スコープ外所見+BomDD transfer-04還元作業での昇格条件判定(maintainer事前指示: クローズ証拠が未検査面に依存する場合は候補待ちにせず即昇格)"
