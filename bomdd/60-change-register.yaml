@@ -1023,12 +1023,12 @@ changes:
   - id: ECO-060
     title: "スキャン中コレクションの段階的公開 — fully-hashed batchの先行利用"
     type: 機能拡張(ECO-059後続/R3分離。案A=fully-hashed batch公開+完了時sort+類似検索gate)
-    status: implemented
-    golden: pending
+    status: applied   # 2026-07-11 maintainer実機golden合格。約262,046件で最初の画像利用可能まで10秒以内、段階公開・完了時sort・類似gate解除を確認してクローズ
+    golden: "approved(2026-07-11 maintainer実機: 隔離profileの実HDD約262,046件で先行画像が10秒以内に利用可能。管理window close後も段階公開、スキャン中sort保留→完了時適用、類似検索gate→完了後入口解禁を確認。完了後の初回類似検索がcollection全体を対象に長時間となる既存性能所見は本ECOの受入範囲外)"
     baseline: "main 2c485a3"
     findings: "maintainer要求=26万件35分の途中成果を利用可能にする。CAD image_tab.mdは追加/スキャン/削除入口のみで未スキャン/スキャン中/部分利用/完了の状態表示・操作行列・途中sort未定義。実装はECO-059で512件原子commit済みだがFileSystemEnumerable.ToListで全列挙後処理、batch eventなし、scan状態はmodal window-local VM、ImageTabはdialog close直後1回だけInitializeするため途中/完了を公開しない。ThumbnailImageは可視セル時lazy、類似pHashは検索時on-demand。images.hashはNOT NULLかつScanJudge/criteria/relink/feature freshnessが消費"
     impacted_bom: ["ViewPrismUI image_tab CAD/review_points", "REQ-010/015/053 or new REQ", "E-SCAN-005/E-DB-010/E-UI-SHELL-021/E-UI-BROWSE-022/E-UI-SIMILARITY-035", "M-SCAN-005/M-DB-007/M-UI-IMAGETAB-035/M-UI-ORGANIZE-034", "CP-SCAN-004/CP-DB-006/CP-UI-G1/CP-UI-G9"]
     oracle: "既存固定Oracle行は変更しない(R6)。CP-SCAN-004へcommit後batch通知、CP-UI-G1/G9 unit部分へ段階append・完了sort・類似gateの新規probeを追加"
     verification: "R5先行赤=ScanBatchCommitted/ScanCoordinator欠落で新規probe compile error。是正後: 513画像をcommit後[512,1]通知・全normal/64hex/DB存在/重複なし、commit失敗は通知0/DB0。UI probeは第2batch停止中に512件先行表示・scan中sort保留・類似gate案内、完了後513件へ最新sort適用。build 0 warning/0 error、Tests 580/580、Oracle 109+既知2skip、validate 0/0"
     body: 60-change-order-eco-060.md
-    notes: "製造済み・golden待ち。maintainer裁定=案Aから実施・sortは完了時。CAD ViewPrismUI 1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f。ScanService streaming+commit後ScanBatchCommitted、singleton ScanCoordinator、ImageTab増分append/完了sort/スキャン中表示/類似gateを実装。batchごとの全Items再構築は避け新規行だけ追加。metadata-first/hash NULL・特殊値/hash_state/遅延SHAは非採用。IMG-016/017の未設計詳細は別途管理"
+    notes: "クローズ済み。maintainer裁定=案Aから実施・sortは完了時。CAD ViewPrismUI 1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f。ScanService streaming+commit後ScanBatchCommitted、singleton ScanCoordinator、ImageTab増分append/完了sort/スキャン中表示/類似gateを実装。batchごとの全Items再構築は避け新規行だけ追加。metadata-first/hash NULL・特殊値/hash_state/遅延SHAは非採用。IMG-016/017の未設計詳細は別途管理。golden探索所見=初回類似検索は表示フォルダ701件ではなくcollection全体262,046件を直列pHash生成し長時間。本ECOは検索開始gateのみのため非阻害・既存性能課題として分離候補"
