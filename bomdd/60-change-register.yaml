@@ -1189,3 +1189,14 @@ changes:
     verification: "2026-07-12 /eco-fix初回=先行赤Tests 609件中1 fail(OnViewerWheelChanged null、608 pass)→609/609。golden不合格補正=先行赤Tests 610件中1 fail(ResolveWheelLandingOffset null、609 pass)→610/610。build 0 warning/0 error、Oracle 109 pass/2 known skip(R6不変)、BOM validator 0/0、diff-check clean。maintainer実機再golden合格、CP-UI-G8 approved"
     body: 60-change-order-eco-071.md
     notes: "クローズ済み。ViewerBody Tunnel provider+ResolveWheelAction決定表。wheel下=logical Next/上=Prev。Fit/spreadはpage、Width/Originalはevent前offsetでpan優先+既に端の外向きeventだけpage。Width/Originalのwheel Next先頭/Prev末尾へ対象path+actionをload/layout確定まで保持し、button/key/seekには漏らさない。scroll/drawer/mapping modalはcontent scroll、horizontal無視。既存Next/Prevへ委譲しspread step/SHIFT/空白開始/tag-control plan維持。Core/XAML描画/DB/schema/i18n/settings/DS/Oracle不変。REQ-091/spec/E/M-BOM/CP/50-as-built同期、CAD=153c366(初回ec01a73)。教訓=境界遷移は発火条件と遷移先anchorを一組で契約し、非同期loadでは入力意図を対象identityへ束縛する"
+
+  - id: ECO-072
+    title: "カタログDBスナップショットの作成・検証・時点復元(バックアップA層)"
+    type: 新機能(maintainer要求のバックアップ2層構成のうちA層=全体時点復元。B層=コレクション論理書き出し/取り込みはECO-073へ分離。gate①=復元方式裁定+CAD mock作成待ち)
+    status: staged
+    golden: "pending(gate①=復元方式裁定+CAD mock作成→/eco-fix後に実機確認。観点=作成/検証/時点復元の一連UI・「画像ファイルは含まれません」明示・復元失敗時の退避DBフォールバック起動)"
+    baseline: "main 941693bfd5c3"
+    findings: "maintainer要求2026-07-12=タグ/階層ビュー/コレクションのバックアップ。事前議論で2層構成確定、A層=カタログ・メタデータの時点復元(マージなし・画像実体含まず両UIに明示)。CADにバックアップ画面なし(SettingsWindowは言語のみの最小ダイアログ)、REQ/spec/E/M/CPすべて未宣言=純新規。i18n settings.backup.*(en.json:376-482)がV1由来の実装未接続語彙として残存し自動バックアップ/世代管理まで含む(本ECOは手動のみ、語彙再利用はCAD裁定)。DB前提は健全: WAL単一ファイル・全テーブル明示TEXT PK(VACUUM安全)・migrationsテーブル内包で互換性判定はサイドカー不要・MigrationRunnerが復元後前進を担う。単一共有SqliteConnection+SemaphoreSlimのため復元は全接続クローズ前提=復元予約→再起動時差し替えが案A(推奨)"
+    impacted_bom: ["ViewPrismUI 新画面(mock=maintainer作成、docs/screens追加が先行)", "新REQ群+20-spec新節(A層/B層役割分担の核文)", "E-BOM新規(スナップショット作成器/検証器/復元ブートストラップ)", "M-BOM新規(Infrastructure SnapshotService+App起動シーケンス+バックアップUI)", "新CP(partial非昇格/検証失敗非掲載/復元失敗フォールバック/migration前進/未知migration拒否)", "K-BOM追加なし・DBスキーマ変更なし"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規unit+一時DB fixtureでVACUUM INTO→quick_check/foreign_key_check→checksum→アトミックリネーム、中断時.partial残置、復元9手順の退避/差し替え/失敗復帰、未知migration ID拒否を固定"
+    body: 60-change-order-eco-072.md
