@@ -1176,3 +1176,16 @@ changes:
     golden_detail: "CP-UI-G1承認(2026-07-12 maintainer実機)。FS grid/listのfolder群→画像群、名前/size/dateの群別方向、folder架空値なし、folder移動/パンくず/tag chip、scan中append→完了sort、タグビュー/WorkTab/viewer/各mode回帰なし"
     body: 60-change-order-eco-070.md
     notes: "クローズ済み。案A=type-primary(folder先)を維持しSortFoldersで名前+現在方向、SortFilesで選択列+方向。TryGetPreservedScanOrderを両群共有しscan中/明示sortなし完了時の取込順を保持。架空folder値/集約/OS I/Oなし。タグビュー/WorkTab/viewer/DB/Core/schema/XAML/i18n/DS/Oracle不変。REQ/spec/E/M-BOM/CP同期、CAD=0f303a4。教訓=異種一覧はtype一次順+type内比較+値なしfallback+進行中順序を一組で契約しmixed fixtureで検査する"
+
+  - id: ECO-071
+    title: "ビューアーの単一・見開きモードでホイール送りを追加する"
+    type: 既存機能拡張(Loop V2で明示除外したnormal/spread wheel page turnの追加。normal Width/Original内部scrollとの優先順位をgate①で裁定)
+    status: staged
+    golden: pending
+    baseline: "main 01286e6b611e"
+    findings: "maintainer要求2026-07-12=viewer単一/右開き/左開きでもwheelで次/前。CAD image_viewer interaction、REQ-044/057、spec§2.9はbutton/key/clickのみ。M-UI-018 excludedはnormal/spread wheel=何もしないを初版415cecaから明示。ViewerWindowにPointerWheel handlerなし。normal Fitは内部scrollなし、Width/OriginalはNormalScroll、scroll mode/設定drawer/mapping modalもwheel content scrollを消費するため優先順位未定義。既存Next/Prevは端停止、spread step/SHIFT/空白開始/tag-control planを一元処理し再利用可能。CP-UI-G8/testsはwheel provider配線を欠測"
+    impacted_bom: ["ViewPrismUI image_viewer/review point", "REQ-044/054/057・20-spec §2.9", "E-UI-VIEWER-024", "M-UI-018", "ViewerWindow.axaml(.cs)/ViewerViewModel", "CP-UI-G8/CpUiG4ViewerTests+headless wheel routing"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規unit/headlessでwheel down=Next/up=Prev、normal fit/width/original優先順位、spread-right/left論理方向+step/SHIFT/tag-control、scroll/drawer/modal非横取り、端停止を固定"
+    verification: "2026-07-12 /eco-file工程診断のみ。src/tests変更なし。gate①案A/B/C待ち"
+    body: 60-change-order-eco-071.md
+    notes: "推奨案A=context-aware: Fit/spreadはwheel page、Width/Originalは内部pan優先+既に端で次eventだけpage、scroll/drawer/modalはcontent scroll。案B=常時page専有、案C=Fit/spreadのみ。CAD裁定後にfix"
