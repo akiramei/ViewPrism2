@@ -1,4 +1,4 @@
-# ECO-066 (implemented) — 類似画像検索の停止・進捗可視化 — 整理ライフサイクルと遅延結果の整合
+# ECO-066 (applied) — 類似画像検索の停止・進捗可視化 — 整理ライフサイクルと遅延結果の整合
 
 > maintainer 実機報告・要求(2026-07-11)を受け、`/eco-file` で工程診断した既存機能拡張+実装逸脱是正。
 > 起票段階では `src/tests` を変更しない(R1)。
@@ -186,4 +186,31 @@ maintainerが2026-07-11に**案A**を採用した。CADはViewPrismUI `487aa53`
 - `python bomdd/validate_bom.py`: 0 errors / 0 warnings。
 - `git diff --check`: whitespace errorなし。
 
-残作業はhuman gate② goldenのみ。実時間短縮は利用者profileでcold/warm、decode/D4、DBを区分してから別ECO要否を裁定する。
+fix時点の残作業はhuman gate② goldenのみだった(§8で承認済み)。実時間短縮は利用者profileでcold/warm、decode/D4、DBを区分してから別ECO要否を裁定する。
+
+## §8 クローズ(2026-07-11)
+
+### 8.1 golden結果
+
+- maintainer実機で画像タブ/作業タブ双方の類似検索を開始し、固定150px領域が「基準画像を準備しています…」から「画像を比較中 X / Y（Z%）」+barへ遷移することを確認。
+- 同位置CTAが「探す」→「停止」→「停止中」となり、明示停止で途中結果や0件/失敗通知を表示しないことを確認。
+- 初回検索cancelは検索前grid、完了結果からの再検索cancelは直前completed結果を保持することを確認。
+- 検索中の整理終了→即再入場、マージ先変更/解除、collection・FS folder・view node・workspace変更、別mode、新検索、window終了で旧結果・検索中表示が復活しないことを確認。
+- 条件検索と検索パネル非表示の裏面に停止状態/停止CTAが残らないことを確認。
+- 通常完了、閾値、結果順、候補追加、merge/Undo、scan gateに回帰がないことを確認。
+
+### 8.2 再発防止
+
+- `CP-SIMSESSION-029`: session世代、単一active、phase/count単調性、cancel後の遅延結果拒否、正常cache再利用を決定論固定。
+- `CP-UI-G9`: 画像タブの固定領域置換、CTA、全cancel trigger、first/re-search cancel、条件検索/非表示裏面を潜伏実績付きgolden観点化。
+- `CP-UI-G1`: 作業タブの同一意味論とworkspace/mode/window境界を、複製実装の潜伏実績付きでread-across。
+- `35-design-system-bom.yaml`: 両surfaceが消費する`SC-SIMILARITY-SESSION-002`をrealized部品としてM4同期。
+- `50-as-built.yaml`: `golden_2026_07_11_eco066`へmaintainer承認証拠を記録。
+
+### 8.3 教訓
+
+非同期処理の`Task`と表示用`Searching` boolが存在しても、**処理の所有者・停止契約・結果公開世代**が同じsession境界に無ければ、画面resetは実行中処理を止めず、遅延完了が新しい文脈へ侵入する。長時間処理はtokenによる資源停止とgenerationによる結果拒否を別の不変条件として持ち、開始/終了だけでなくtarget・scope・mode・windowの全ライフサイクル境界を検査する。これはECO-064の遅延load世代拒否を類似検索へread-acrossし、ECO-038のsurface間通知driftを共通状態機械で構造的に封止した一般形である。
+
+### 8.4 残差
+
+ECO-066に帰属する停止・進捗・整理ライフサイクルの残件なし。正確なETA、無制限並列化、pHash/閾値/schema変更は対象外。実時間短縮は利用者profileでcold/warm、decode/D4、DBを区分計測し、独立最適化が必要なら別ECOで扱う。

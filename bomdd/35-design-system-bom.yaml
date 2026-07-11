@@ -45,8 +45,8 @@ design_system_bom:
     lifecycle: candidate
     surface_layers:
       material: [E-DESIGN-028, K-DESIGN]
-      shared_component: [SC-CARD-001, SC-CTA-BUTTON-001, SC-TYPE-CHIP-001, SC-CONDITION-CHIP-001, SC-VALUE-CHIP-001, SC-BADGE-001, SC-ICON-BUTTON-001, SC-SECTION-HEADER-001, SC-HELP-BOX-001, SC-DRAG-HANDLE-001, SC-COLUMN-PICKER-001]
-      screen_surface: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-SHELL-021, E-UI-TAGASSIGN-029, E-UI-TAGS-026, E-UI-NODEGRAPH-025, E-UI-REPAIR-039]
+      shared_component: [SC-CARD-001, SC-CTA-BUTTON-001, SC-TYPE-CHIP-001, SC-CONDITION-CHIP-001, SC-VALUE-CHIP-001, SC-BADGE-001, SC-ICON-BUTTON-001, SC-SECTION-HEADER-001, SC-HELP-BOX-001, SC-DRAG-HANDLE-001, SC-COLUMN-PICKER-001, SC-SIMILARITY-SESSION-002]
+      screen_surface: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-SHELL-021, E-UI-TAGASSIGN-029, E-UI-TAGS-026, E-UI-NODEGRAPH-025, E-UI-REPAIR-039, E-UI-SIMILARITY-035, E-UI-WORKSPACE-043]
 
   # ECO-025(表示列モデル・段階 α/β/β-2)で導入した共有部品。
   # 列ピッカー = 選択済み列(順序・上下移動/削除・ソースチップ・色ドット)+ 追加元カード(基本/ビュー内タグ・種別チップ)
@@ -67,6 +67,20 @@ design_system_bom:
     consumed_by: [E-UI-TAGS-026, E-UI-BROWSE-022]
     control_plan_refs: [CP-COLPICKER-025]
     dry_gate: "両 surface(ビュー編集モーダル α / 表示列ポップオーバー β-2)が golden 済み(2026-07-02)→ 統合完了(ECO-021 の isolate now, DRY later と同運用)"
+
+  # ECO-066 M4: 画像/作業タブの整理surfaceが同じ検索session状態機械と表示意味論を消費する実体部品。
+  similarity_search_session_candidate:
+    id: SC-SIMILARITY-SESSION-002
+    name: 類似画像検索セッション(設定↔進捗置換 + 探す↔停止CTA + lifecycle cancel)
+    part_kind: shared-component-sub-bom
+    lifecycle: realized
+    realized_by: "src/ViewPrism2.App/ViewModels/SimilaritySearchSession.cs + ImageTabView.axaml/WorkTabView.axaml"
+    introduced_by: ECO-066
+    consumed_by: [E-UI-SIMILARITY-035, E-UI-WORKSPACE-043]
+    states: [idle, preparing, comparing, cancelling, completed]
+    visual_contract: "固定150px設定領域をphase/count/barへ置換し、同位置CTAを探す→停止→停止中へ切替。cancelは0件/失敗表示にしない"
+    lifecycle_contract: "明示停止、整理終了、target/scope/mode/new search/window終了でcancel+generation無効化。first cancel=grid、re-search cancel=直前completed保持"
+    control_plan_refs: [CP-SIMSESSION-029, CP-UI-G1, CP-UI-G9]
 
   source_cad_refs:
     # ECO-032(a) 2026-07-03: テンプレート起こし時のプレースホルダ残置を実出所で補正。

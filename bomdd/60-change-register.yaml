@@ -1113,12 +1113,12 @@ changes:
   - id: ECO-066
     title: "類似画像検索の停止・進捗可視化 — 整理ライフサイクルと遅延結果の整合"
     type: 既存機能拡張+実装逸脱是正(REQ-065/E-BOMは進捗を要求するがsurface未配線。停止/自動cancel/単一session/cancel結果保持はCAD・要求・BOM未定義だったがgate①案A+IMG-020で確定)
-    status: implemented
-    golden: pending
+    status: applied
+    golden: "approved(2026-07-11 maintainer実機: 画像/作業タブでpreparing→comparing件数・bar、探す→停止→停止中、明示/整理終了/target・scope・mode・再検索・window終了のcancel、初回cancel=grid、再検索cancel=直前completed保持、旧結果非復活、条件検索/非表示裏面、通常完了・閾値・順序・merge回帰なし)"
     baseline: "main fc66e98"
     findings: "maintainer実機2026-07-11=類似検索を停止できず、整理終了後も継続して見え、段階/処理済み/総候補が不明。工程診断=CAD image_tab/work_tabは整理トレイ『探す』→結果と終了を定義するがrunning/cancelling、停止CTA、自動cancel行列、cancel時grid/旧結果を未定義。REQ-064は非同期+progress可能、REQ-065/spec§2.10.4/E-UI-SIMILARITYは検索中進捗を要求=この部分は実装逸脱。Core FindSimilar(InScope)Asyncはprogress/ct受口+候補間ThrowIfCancellationRequested/百分率通知を持つが、両surfaceはどちらも渡さない。ToggleOrganize/ResetStateは表示値だけresetし旧Taskを止めず、完了時は_searchResults/_hasSearchedを無条件公開、CanRunSearchはSearchingを除外しないため、終了→再入場の旧結果混入と連打多重実行が構造上可能。IPHashImageReader/repositoryはctなしで単一画像decode中は停止不能。P-07旧値1000枚cold1633ms/warm11.5msは現adapter/8変種/scope/実画像の支配区分ではない"
     impacted_bom: ["ViewPrismUI image_tab/work_tab/review_points", "REQ-064/065・20-spec §2.10.4", "E-UI-SIMILARITY-035/E-SIMSEARCH-032", "M-SIMSEARCH-021/M-UI-ORGANIZE-034/M-UI-IMAGETAB-035/M-UI-WORKSPACE-029", "CP-SIM-017+新session CP/CP-UI-G9/CP-UI-G1/FMEA-022", "P-07探索probe"]
     oracle: "既存固定Oracle行は変更しない(R6)。新規exactで単一active、progress単調phase/count、明示/自動cancel、latest-wins、終了→再入場の旧結果非公開、first/re-search cancel結果、途中cache再利用を固定。固定msは合否にせず区分計測、知覚面は両タブgolden"
-    verification: "2026-07-11 fix: build 0 warning/0 error、Tests 596/596、Oracle 109 pass/2 skip(固定期待値無変更)、validate_bom 0-0、CP-SIMSESSION-029 red→green。human gate② golden待ち"
+    verification: "2026-07-11 applied: fix時build 0 warning/0 error、Tests 596/596、Oracle 109 pass/2 skip(固定期待値無変更)、validate_bom 0-0、CP-SIMSESSION-029 red→green。maintainer実機でCP-UI-G1/G9承認。accept後validator+selftest-lifecycleで履歴証拠を再検査"
     body: 60-change-order-eco-066.md
-    notes: "是正+機械受入完了・golden待ち。案A=共通SimilaritySearchSession、詳細phase/count進捗、production reader任意cancel capability、両タブ停止CTA/自動cancel/generation無効化、first/re-search cancel結果意味論を製造。性能最適化/ETA/schema/pHash意味論は対象外。"
+    notes: "クローズ済み。案A=共通SimilaritySearchSession、詳細phase/count進捗、production reader任意cancel capability、両タブ停止CTA/自動cancel/generation無効化、first/re-search cancel結果意味論を製造。REQ/spec/E/M/CP/FMEA、35-design-system-bomのSC-SIMILARITY-SESSION-002、50-as-built承認記録までM4同期。性能最適化/ETA/schema/pHash意味論は対象外。"
