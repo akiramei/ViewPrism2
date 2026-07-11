@@ -1,4 +1,4 @@
-# ECO-063 (staged) — タグビューのホームノード初期遷移が画像タブで無視される
+# ECO-063 (applied) — タグビューのホームノード初期遷移が画像タブで無視される
 
 > maintainer 実機報告(2026-07-11)を受け、`/eco-file` で工程診断した欠陥是正。
 > 起票段階では `src/tests` を変更しない(R1)。
@@ -142,4 +142,29 @@ golden再検査:
 
 ## §8 残ゲート(fix後)
 
-- gate②(golden)のみ。§5の設定→画像タブ消費往復をmaintainer実機確認後、`/eco-accept ECO-063`。
+- gate② golden: **approved**(2026-07-11、maintainer実機)。
+
+## §9 クローズ(2026-07-11)
+
+### 9.1 golden結果
+
+- nested nodeをホーム設定・保存し、画像タブで当該viewを選択するとhomeまでのパンくず、該当画像集合、下位chipから開始することを確認。
+- パンくずhomeでrootへ戻れることを確認。
+- ホーム解除後はrootから開始することを確認。
+- view軸のcollection切替・再load後もhomeが再適用されることを確認。
+- 既存のタグビュー編集・画像タブ遷移に回帰がないことを確認。
+
+### 9.2 再発防止
+
+- `CP-GRAPH-002`: root除外home pathのnested/textual exact、null/参照切れfallbackを機械検査。
+- `CP-UI-G1`: view選択とcollection再loadのconsumer surface接続を機械検査・golden観点化。
+- `CP-UI-G6`: タグタブの設定・保存から画像タブの消費までを往復golden観点化。
+- `50-as-built.yaml`: maintainer実機承認を `golden_2026_07_11_eco063` に記録。
+
+### 9.3 教訓
+
+producer側の単体unitが緑でもconsumerへの配線を証明しない。surface置換時はCore契約だけでなく「設定→保存→消費」の受入経路を移管する。ECO-041の未配線UI、ECO-062の計算境界と同じく、境界を跨ぐ機能は端点ごとの検査だけでなくend-to-endの接続probeを恒久化する。
+
+### 9.4 残差
+
+ECO-063に帰属する残件なし。CAD、DB schema、外部method repositoryの変更なし。
