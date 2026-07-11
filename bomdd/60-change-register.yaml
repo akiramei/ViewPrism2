@@ -1032,3 +1032,15 @@ changes:
     verification: "R5先行赤=ScanBatchCommitted/ScanCoordinator欠落で新規probe compile error。是正後: 513画像をcommit後[512,1]通知・全normal/64hex/DB存在/重複なし、commit失敗は通知0/DB0。UI probeは第2batch停止中に512件先行表示・scan中sort保留・類似gate案内、完了後513件へ最新sort適用。build 0 warning/0 error、Tests 580/580、Oracle 109+既知2skip、validate 0/0"
     body: 60-change-order-eco-060.md
     notes: "クローズ済み。maintainer裁定=案Aから実施・sortは完了時。CAD ViewPrismUI 1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f。ScanService streaming+commit後ScanBatchCommitted、singleton ScanCoordinator、ImageTab増分append/完了sort/スキャン中表示/類似gateを実装。batchごとの全Items再構築は避け新規行だけ追加。metadata-first/hash NULL・特殊値/hash_state/遅延SHAは非採用。IMG-016/017の未設計詳細は別途管理。golden探索所見=初回類似検索は表示フォルダ701件ではなくcollection全体262,046件を直列pHash生成し長時間。本ECOは検索開始gateのみのため非阻害・既存性能課題として分離候補"
+
+  - id: ECO-061
+    title: "ECO ライフサイクル遷移の状態不変条件検査 — validator 検査次元の追加+eco-accept post-condition"
+    type: 検査器/台帳の欠陥是正(工程ハーネス。製品コード不変)
+    status: staged
+    golden: "pending(gate①=遷移証拠機構の裁定待ち。gate②=変異テスト5種全検出+既存60件遡及検査の初回結果をmaintainer確認)"
+    baseline: "main c4e3a28"
+    findings: "ECO-060運用中に担当AI(GPT-5.6 Sol・ハーネス未記録)が自然文了承を/eco-fix・/eco-acceptの実行へ昇格させ、fixコミット不在のままregisterをapplied・As-Builtを承認済みへ変更(早期クローズ)。この間validate_bom.pyは0/0=検査次元の不在を実測。検出はmaintainer指摘のみ。復旧は別逸脱(fixコミット保留)との偶然の相殺。一次資料reports/incident-eco060-lifecycle-2026-07-11.md+51-cheat-log。方法論還元済み(BomDD FINDINGS §11.3/playbook §13/silence §12)"
+    impacted_bom: ["bomdd/validate_bom.py", "bomdd/60-change-register.yaml(遷移表/スキーマ版)", "bomdd/change-management.md §3.3-4", ".claude/skills/eco-accept", ".claude/skills/eco-fix"]
+    oracle: "既存固定Oracle行は変更しない(R6)。製品src/tests不変=製品CP影響なし予測。受入は陽性対照(手編集appliedのfail)+変異テスト5種(fixなし/順序逆転/存在しないSHA/別系統ブランチ/状態飛び越し)"
+    body: 60-change-order-eco-061.md
+    notes: "受入条件7項(許可/禁止遷移の明文化・明示的trailer/tag/証拠フィールド・実在/祖先/順序検査・陽性対照・変異テスト・既存60件の移行/除外/スキーマ版を黙って除外しない・eco-accept post-condition)=maintainer裁定2026-07-11。gate①=遷移証拠機構の方式裁定(案a trailer/案b tag/案c 二段階コミット — acceptコミット自己参照の回避)"

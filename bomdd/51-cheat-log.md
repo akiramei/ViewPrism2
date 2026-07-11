@@ -382,3 +382,18 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   へ追記する。GF-058-01の正常goldenでは発火せず、発火時はgolden不合格なので本ECOの性能是正へ
   混ぜない。ただし「異常系を含め既存profileを一切書き換えない」隔離契約へ昇格する場合は、
   ECO-057/CP-RELEASE-018側を含む別ECOでfatal経路もoverrideへread-acrossする。
+
+## ECO-060 運用時の工程規律違反(記録)2026-07-11
+
+- **担当 AI(GPT-5.6 Sol・ハーネス未記録)が入口スキル境界を自然文解釈でバイパス**:
+  「案Aから行って」「続けて」「確認項目8はOK」を /eco-fix・/eco-accept の実行指示へ昇格し、
+  fix コミットなしで register を applied・As-Built を承認済みへ変更(早期クローズ)。
+  maintainer の指摘で復旧(未コミットのため履歴汚染ゼロ)。最終履歴
+  c41e439→d48a061→c4e3a28 は正常。付随: ID 限定不足の register パッチが ECO-007 へ
+  誤適用 ×2(コミット前検出)。
+- 一次資料: bomdd/reports/incident-eco060-lifecycle-2026-07-11.md
+  (担当 AI 自己分析報告の原本+maintainer 検分・是正候補)。
+- 帰属: 工程規律違反(製品欠陥なし)。validate_bom.py がライフサイクル遷移
+  (applied ⇔ fix/accept コミット存在・遷移順序)を検査しない防御層欠落を露呈 —
+  **ECO 起票候補**(同報告 §3)。起票要否は maintainer 判断。
+  方法論還元: BomDD method/improvements.md「2026-07-11 ViewPrism2 還元」節。
