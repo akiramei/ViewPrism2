@@ -50,6 +50,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private readonly Dictionary<string, int> _collectionCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _collectionPath = new(StringComparer.Ordinal);
     private List<ImageRecord> _allNormal = new();
+    private HashSet<string> _normalIds = new(StringComparer.Ordinal);
     private Dictionary<string, List<ImageTag>> _imageTags = new(StringComparer.Ordinal);
     private Dictionary<string, Tag> _tagById = new(StringComparer.Ordinal);
     private List<ImageEntry> _entries = new();
@@ -84,6 +85,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private string _panelTab = "current";
     private string? _expandTag;
     private bool _loaded;
+    private readonly ScanCoordinator? _scans;
+    private readonly HashSet<string> _scanningCollections = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _scanOrderByCollection = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _completedScanOrderByCollection = new(StringComparer.Ordinal);
+    private string? _scanNotice;
 
     // ---- 整理モード(ECO-014: 類似+マージ統合「整理トレイ」)----
     // タグ編集モードと排他の文脈モード。マージ先(残す1枚)と整理対象(統合し削除対象)を選び、
@@ -127,7 +133,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         IWindowService windows,
         AppSettings settings,
         WorkspaceService workspaces,
-        LocalizationService localization)
+        LocalizationService localization,
+        ScanCoordinator? scanCoordinator = null)
     {
         _folders = folders;
         _images = images;
@@ -142,6 +149,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _settings = settings;
         Work = new ImageTabWorkViewModel(workspaces);
         _localization = localization;
+        _scans = scanCoordinator;
+        if (_scans is not null)
+        {
+            _scans.Updated += OnScanUpdated;
+        }
         Trash = new ImageTabTrashViewModel(
             images,
             trash,
@@ -197,6 +209,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         foreach (var c in _collections) _collectionPath[c.Id] = c.Path;
 
         _allNormal = (await _images.GetAllNormalAsync().ConfigureAwait(true)).ToList();
+        _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
         _collectionCounts.Clear();
         foreach (var g in _allNormal.GroupBy(r => r.SyncFolderId, StringComparer.Ordinal))
             _collectionCounts[g.Key] = g.Count();
@@ -224,6 +237,15 @@ public sealed partial class ImageTabViewModel : ObservableObject
         }
 
         BuildEntries();
+        if (_scans is not null)
+        {
+            _scanningCollections.RemoveWhere(id => !_scans.IsScanning(id));
+            foreach (var collection in _collections.Where(c => _scans.IsScanning(c.Id)))
+            {
+                _scanningCollections.Add(collection.Id);
+                EnsureScanOrder(collection.Id);
+            }
+        }
         await Trash.RefreshCountAsync().ConfigureAwait(true); // ⋯「ゴミ箱」バッジ(ECO-018)
         _loaded = true;
         Recompute();
@@ -341,6 +363,24 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     private List<ImageEntry> SortFiles(List<ImageEntry> files)
     {
+        // ECO-060: スキャン中はsort条件を保持するだけで、取込順を固定する。
+        // sort未設定で完了した場合も、完了遷移に伴う追加sortを行わず最終取込順を保つ。
+        if (_collectionId is { } collectionId &&
+            (_scanningCollections.Contains(collectionId)
+                ? _scanOrderByCollection.TryGetValue(collectionId, out var scanOrder)
+                : _sortColKey is null && _completedScanOrderByCollection.TryGetValue(collectionId, out scanOrder)))
+        {
+            var positions = scanOrder
+                .Select((id, index) => (id, index))
+                .ToDictionary(x => x.id, x => x.index, StringComparer.Ordinal);
+            return files
+                .Select((entry, index) => (entry, index))
+                .OrderBy(x => positions.GetValueOrDefault(x.entry.Record.Id, int.MaxValue))
+                .ThenBy(x => x.index)
+                .Select(x => x.entry)
+                .ToList();
+        }
+
         // ECO-025 β/FL-003 v2: ソート対象=ビュー表示列・状態(sortCol/dir)は grid/list で共有。
         // 列ソート中は列比較器(空値末尾・型別・安定タイブレーク)。未ソートは既定順(名前昇順・決定的)。
         if (_sortColKey is { } key)
@@ -492,6 +532,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool ShowListPane => IsCollectionSelected && IsList;
     /// <summary>画像 0 件の空状態(コレクション選択済みのときのみ・未選択はプロンプトを優先)。</summary>
     public bool ShowEmptyMessage => IsCollectionSelected && Items.Count == 0;
+    /// <summary>ECO-060: 選択中collectionのbackground scan状態。</summary>
+    public bool IsSelectedCollectionScanning =>
+        _collectionId is not null && _scanningCollections.Contains(_collectionId);
+    public string? ScanNotice => _scanNotice;
+    public bool HasScanNotice => !string.IsNullOrEmpty(_scanNotice);
 
     public bool IsViewAxis => _axis == "view";
     public bool IsFsActive => _axis == "fs";
@@ -734,7 +779,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool ShowSearchResults => _organizeMode && Organize.HasSearched && !Organize.OrganizeDone;
     public bool NoSearchResults => ShowSearchResults && SearchResults.Count == 0;
     /// <summary>検索実行可否: 条件検索は常に / 類似はマージ先(基準)が要る。</summary>
-    public bool CanRunSearch => Organize.CanRunSearch;
+    public bool SimilarSearchBlocked => IsSimilarMethod && IsSelectedCollectionScanning;
+    /// <summary>意味上の検索実行可否。スキャン中の類似方式はfalse。</summary>
+    public bool CanRunSearch => Organize.CanRunSearch && !SimilarSearchBlocked;
+    /// <summary>scan gate中も理由表示のclickを受けるため、ボタン自体は基礎条件だけで活性化する。</summary>
+    public bool CanInvokeSearch => Organize.CanRunSearch;
     /// <summary>中央ブラウズグリッド: 検索結果表示中は譲る(整理モードでもグリッドで対象を選ぶため出す)。</summary>
     public bool ShowBrowseGrid => ShowGridPane && !ShowSearchResults;
     public bool ShowBrowseList => ShowListPane && !ShowSearchResults;
@@ -772,7 +821,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Collections.Clear();
         foreach (var c in _collections)
             Collections.Add(new CollectionRowVM(c.Id, c.Name, c.Path,
-                _collectionCounts.GetValueOrDefault(c.Id), c.Id == _collectionId));
+                _collectionCounts.GetValueOrDefault(c.Id), c.Id == _collectionId,
+                _scanningCollections.Contains(c.Id)));
 
         // ---- AxisOptions(FS + 保存ビュー) ----
         AxisOptions.Clear();
@@ -885,26 +935,35 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 cells: [new ListCell(0, ListCellKind.BasicName, name, 0, null, true)]));
         foreach (var e in _matchedFiles)
         {
-            bool selected = selSet.Contains(e.Record.Id);
-            int? order = selected ? _selected.IndexOf(e.Record.Id) + 1 : null; // 選択順バッジ(1 起点・REQ-041 CR-3)
-            var tagsOf = ImgTagIds(e);
-            bool inSelect = _editMode || _workMode || _deleteMode; // ECO-017/018: 作業・削除モードでも選択可(選択機構の再利用)
-            var dots = (!inSelect && tagsOf.Count > 0)
-                ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
-                : new List<IBrush>();
-            var cells = ListColumnBuilder.BuildCells(e, _listColumnDefs, FmtSize, FmtDate);
-            var sortItemCell = sortItemIndex >= 0 && sortItemIndex < cells.Count ? cells[sortItemIndex] : null;
-            Items.Add(new ImageItemVM(e.Record.Id, e.Record.FileName, isFolder: false, isPlaceholder: false,
-                hasThumb: true, thumbBrush: null, selectable: inSelect, isSelected: selected,
-                hasTagDots: !inSelect && tagsOf.Count > 0, tagDots: dots,
-                sizeLabel: FmtSize(e.Record.FileSize), dateLabel: FmtDate(e.Record.ModifiedDate),
-                target: null, absolutePath: e.AbsolutePath, selectionOrder: order,
-                isMergeTarget: _organizeMode && string.Equals(e.Record.Id, Organize.MergeTargetId, StringComparison.Ordinal),
-                isOrganizeTarget: _organizeMode && Organize.Targets.Contains(e.Record.Id),
-                cells: cells,
-                sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
-                sortItemCell: sortItemCell));
+            Items.Add(CreateImageItem(e, selSet, sortItemIndex, sortItemLabel));
         }
+    }
+
+    private ImageItemVM CreateImageItem(
+        ImageEntry entry,
+        HashSet<string> selectedIds,
+        int sortItemIndex = -1,
+        string? sortItemLabel = null)
+    {
+        bool selected = selectedIds.Contains(entry.Record.Id);
+        int? order = selected ? _selected.IndexOf(entry.Record.Id) + 1 : null;
+        var tagsOf = ImgTagIds(entry);
+        bool inSelect = _editMode || _workMode || _deleteMode;
+        var dots = (!inSelect && tagsOf.Count > 0)
+            ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
+            : new List<IBrush>();
+        var cells = ListColumnBuilder.BuildCells(entry, _listColumnDefs, FmtSize, FmtDate);
+        var sortItemCell = sortItemIndex >= 0 && sortItemIndex < cells.Count ? cells[sortItemIndex] : null;
+        return new ImageItemVM(entry.Record.Id, entry.Record.FileName, isFolder: false, isPlaceholder: false,
+            hasThumb: true, thumbBrush: null, selectable: inSelect, isSelected: selected,
+            hasTagDots: !inSelect && tagsOf.Count > 0, tagDots: dots,
+            sizeLabel: FmtSize(entry.Record.FileSize), dateLabel: FmtDate(entry.Record.ModifiedDate),
+            target: null, absolutePath: entry.AbsolutePath, selectionOrder: order,
+            isMergeTarget: _organizeMode && string.Equals(entry.Record.Id, Organize.MergeTargetId, StringComparison.Ordinal),
+            isOrganizeTarget: _organizeMode && Organize.Targets.Contains(entry.Record.Id),
+            cells: cells,
+            sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
+            sortItemCell: sortItemCell);
     }
 
     /// <summary>
@@ -1092,6 +1151,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     {
         if (_collectionId == id) return;
         _collectionId = id;
+        _scanNotice = null;
         _settings.LastCollectionId = id; // CR-5 書き戻し(永続化は SettingsStore / CaptureSettings)
         _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
         BuildEntries();
@@ -1272,6 +1332,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void SelectColumnSort(string? key)
     {
         if (key is null) return;
+        if (_collectionId is not null) _completedScanOrderByCollection.Remove(_collectionId);
         if (string.Equals(_sortColKey, key, StringComparison.Ordinal))
             _sortColDir = _sortColDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc;
         else { _sortColKey = key; _sortColDir = SortDirection.Asc; }
@@ -1280,7 +1341,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     /// <summary>ソート概要の「クリア」(ECO-025 β)。列ヘッダーソートを解除し元順へ。</summary>
     [RelayCommand]
-    private void ClearColumnSort() { _sortColKey = null; Recompute(); }
+    private void ClearColumnSort()
+    {
+        _sortColKey = null;
+        if (_collectionId is not null) _completedScanOrderByCollection.Remove(_collectionId);
+        Recompute();
+    }
 
     // (ECO-026/#2) 表示形式切替は同一データ(Items)を作り直さない=表示状態のフリップのみ。
     // grid/list は同じ ImageItemVM(cells + ソート項目)を別レイアウトで描画するだけで、母集合・列・ソートは不変。
@@ -1634,6 +1700,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private void SetSearchMethod(string method)
     {
         Organize.SetSearchMethod(method);
+        if (!Organize.IsSimilarMethod) _scanNotice = null;
         // GF-056-02: Recompute()(Items 全再構築)はグリッドをちらつかせる。検索方式はグリッド内容と
         // 無関係のため、転送殻の全通知のみで足りる(51ad8ee 以来の過剰再構築の是正)
         OnPropertyChanged(string.Empty);
@@ -1645,6 +1712,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private async Task RunSearch()
     {
         if (!_organizeMode || _collectionId is null) return;
+        if (SimilarSearchBlocked)
+        {
+            _scanNotice = "スキャン完了後に利用できます";
+            OnPropertyChanged(string.Empty);
+            return;
+        }
+        _scanNotice = null;
         await Organize.RunSearchAsync().ConfigureAwait(true);
         // 末尾通知は子の _recompute(注入)が旧版と同位置・同回数で発行済み — 殻では重複させない(G-E36S3)
     }
@@ -1687,10 +1761,152 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
-    /// <summary>マージ後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
+    private void EnsureScanOrder(string folderId)
+    {
+        if (_scanOrderByCollection.ContainsKey(folderId)) return;
+        _scanOrderByCollection[folderId] = _allNormal
+            .Where(image => string.Equals(image.SyncFolderId, folderId, StringComparison.Ordinal))
+            .Select(image => image.Id)
+            .ToList();
+    }
+
+    /// <summary>
+    /// ECO-060: batchごとの全Items再構築(O(total×batch数))を避け、現在文脈に現れる新規行だけを末尾へ追加する。
+    /// 初回画像はタグを持たないためFSタグfilter中は非表示。view軸は新規batchだけを既存条件で評価する。
+    /// </summary>
+    private void AppendPublishedToCurrentView(IReadOnlyList<ImageEntry> published)
+    {
+        if (_collectionId is null || published.Count == 0) return;
+        var visible = new List<ImageEntry>();
+        if (_axis == "view" && _viewRoot is not null)
+        {
+            var fullPath = new List<GraphNode> { _viewRoot };
+            fullPath.AddRange(_viewPath);
+            visible.AddRange(ViewMatched(fullPath, published));
+        }
+        else
+        {
+            var prefix = _fsPath.Count == 0 ? "" : string.Join("/", _fsPath) + "/";
+            foreach (var entry in published)
+            {
+                var relative = entry.Record.RelativePath;
+                if (prefix.Length > 0 && !relative.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                var remainder = prefix.Length > 0 ? relative[prefix.Length..] : relative;
+                var slash = remainder.IndexOf('/');
+                if (slash >= 0)
+                {
+                    var folderName = remainder[..slash];
+                    if (_matchedFolders.All(folder => !string.Equals(folder.Name, folderName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _matchedFolders.Add((folderName, 1));
+                        var insertAt = Items.TakeWhile(item => item.IsFolder).Count();
+                        Items.Insert(insertAt, new ImageItemVM(folderName, folderName, isFolder: true,
+                            isPlaceholder: false, hasThumb: false, thumbBrush: null, selectable: false,
+                            isSelected: false, hasTagDots: false, tagDots: [], sizeLabel: "—", dateLabel: "—",
+                            target: folderName,
+                            cells: [new ListCell(0, ListCellKind.BasicName, folderName, 0, null, true)]));
+                    }
+                    continue;
+                }
+
+                // 新規scan画像にタグは無いため、既存タグfilter選択中には一致しない。
+                if (_tagFilter is null) visible.Add(entry);
+            }
+        }
+
+        var selected = new HashSet<string>(_selected, StringComparer.Ordinal);
+        foreach (var entry in visible)
+        {
+            _matchedFiles.Add(entry);
+            Items.Add(CreateImageItem(entry, selected));
+        }
+
+        CountLabel = $"{_matchedFolders.Count + _matchedFiles.Count} 項目";
+    }
+
+    private void RebuildCollectionRows()
+    {
+        Collections.Clear();
+        foreach (var collection in _collections)
+        {
+            Collections.Add(new CollectionRowVM(
+                collection.Id,
+                collection.Name,
+                collection.Path,
+                _collectionCounts.GetValueOrDefault(collection.Id),
+                collection.Id == _collectionId,
+                _scanningCollections.Contains(collection.Id)));
+        }
+    }
+
+    private async void OnScanUpdated(object? sender, CollectionScanUpdate update)
+    {
+        try
+        {
+            switch (update.Phase)
+            {
+                case CollectionScanPhase.Started:
+                    _scanningCollections.Add(update.FolderId);
+                    _completedScanOrderByCollection.Remove(update.FolderId);
+                    EnsureScanOrder(update.FolderId);
+                    _scanNotice = null;
+                    if (_loaded) Recompute();
+                    break;
+
+                case CollectionScanPhase.BatchCommitted:
+                    _scanningCollections.Add(update.FolderId);
+                    EnsureScanOrder(update.FolderId);
+                    var order = _scanOrderByCollection[update.FolderId];
+                    var appended = new List<ImageEntry>();
+                    foreach (var image in update.Images)
+                    {
+                        if (image.Status != ImageStatus.Normal || !_normalIds.Add(image.Id)) continue;
+                        _allNormal.Add(image);
+                        order.Add(image.Id);
+                        _collectionCounts[image.SyncFolderId] = _collectionCounts.GetValueOrDefault(image.SyncFolderId) + 1;
+                        if (string.Equals(_collectionId, image.SyncFolderId, StringComparison.Ordinal))
+                        {
+                            var entry = BuildEntry(image);
+                            _entries.Add(entry);
+                            appended.Add(entry);
+                        }
+                    }
+                    if (_loaded)
+                    {
+                        RebuildCollectionRows();
+                        AppendPublishedToCurrentView(appended);
+                        BuildContextPanels(new HashSet<string>(_selected, StringComparer.Ordinal));
+                        OnPropertyChanged(string.Empty);
+                    }
+                    break;
+
+                case CollectionScanPhase.Completed:
+                    _scanningCollections.Remove(update.FolderId);
+                    if (_scanOrderByCollection.Remove(update.FolderId, out var finalOrder) && _sortColKey is null)
+                    {
+                        _completedScanOrderByCollection[update.FolderId] = finalOrder;
+                    }
+                    else
+                    {
+                        _completedScanOrderByCollection.Remove(update.FolderId);
+                    }
+                    _scanNotice = null;
+                    await ReloadImagesAsync().ConfigureAwait(true);
+                    if (_loaded) Recompute();
+                    break;
+            }
+        }
+        catch (Exception)
+        {
+            // scan通知の描画反映失敗でbackground scan自体を落とさない。完了時のDB再読込で再同期可能。
+        }
+    }
+
+    /// <summary>マージ後またはscan完了後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
     private async Task ReloadImagesAsync()
     {
         _allNormal = (await _images.GetAllNormalAsync().ConfigureAwait(true)).ToList();
+        _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
         _collectionCounts.Clear();
         foreach (var g in _allNormal.GroupBy(r => r.SyncFolderId, StringComparer.Ordinal))
             _collectionCounts[g.Key] = g.Count();

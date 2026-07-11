@@ -1,4 +1,4 @@
-# Change Order — ECO-060(staged): スキャン中コレクションの段階的公開 — 確定済み画像の先行利用と未確定hashモデル
+# Change Order — ECO-060(implemented / golden pending): スキャン中コレクションの段階的公開 — fully-hashed batchの先行利用
 
 > ECO-059 golden後のmaintainer提案を受け、2026-07-11に起票・工程診断した機能拡張。
 > 本ECO起票では`src/tests`を変更しない。ECO-059は狭義目標（大規模スキャンのDBバッチ化・
@@ -97,11 +97,72 @@
 - CP: CP-SCAN-004（batch event/order/restart）、CP-DB-006（schema同値/CHECK）、CP-UI-G1（collection state/partial browse）、CP-UI-G9（類似検索gate）。
 - 固定Oracle: 案Bでhash意味論・状態遷移を変える場合のみ新規行追加。既存行は改変しない（R6）。
 
-## 6. 残ゲート
+## 6. gate①裁定（2026-07-11・完了）
 
-- **gate① CAD/方式裁定が必要**。maintainer確定済みは「スキャン中の類似画像検索を無効化し『スキャン完了後に利用できます』表示」のみ。
-- 未裁定①: 公開パイプライン=A（fully-hashed batch段階公開）／B（metadata-first＋hash後処理）。lean推奨=Aを先に実装・time-to-first-useを測り、不足時にBを別phase化。
-- 未裁定②（Bの場合）: hash未確定表現=B1〜B4。特殊値を候補から除外しない。lean安全候補=B3（状態列+値域外sentinel+CHECK）。
-- 未裁定③: スキャン中の並び（取込順append→完了時sort／現在sortへ逐次反映）と、許可操作行列の最終CAD。
-- 裁定後にViewPrismUIを先行改訂し、`/eco-fix eco-060`でBOM/プローブ/実装へ進む。
+maintainerは**案Aから実施し、sortは完了時**と裁定した。ViewPrismUIはこの裁定を
+`1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f`でCAD原器へ反映済み。
 
+- SHA-256計算とScanJudge判定を完了したnormal画像だけを、最大512変更のDB commit成功後にbatch公開する。
+- スキャン中は公開batchを取込順で末尾へappendし、sort条件を変更しても再配列しない。
+- 完了時に最新のsort条件を全画像へ1回適用する。sort未設定なら既定順へ追加sortしない。
+- 公開済み画像の閲覧・タグ編集・整理・作業・条件検索は利用可能。類似画像検索だけを無効化し、
+  操作時に「スキャン完了後に利用できます」と表示する。
+- 進捗ポップアップを閉じてもスキャンとbatch公開は継続し、画像タブ内にスキャン中表示を残す。
+- サムネイルは既存の可視セル遅延生成を維持し、batch公開条件に含めない。
+- metadata-first、hash NULL/特殊値、`hash_state`、公開後の遅延SHA-256は本ECOで採らない。
+
+CAD側の残課題IMG-016（表示部品・位置・進捗粒度・再表示導線）とIMG-017（再スキャン差分、
+キャンセル、失敗/再試行、複数競合）のうち、製造に必要な最小表示はgoldenで確認する。
+IMG-017の意味論は未設計のため、本ECOで新規に確定・製造しない。
+
+## 7. 製造境界と受入
+
+- DB schemaと`images.hash NOT NULL`は不変。
+- ECO-059の`ApplyScanBatchAsync`成功直後を唯一の公開境界とし、commit失敗batchは通知しない。
+- 初回スキャンはファイル列挙をstreaming化し、全件列挙完了を最初の公開より前提にしない。
+- application-level `ScanCoordinator`がstarted/batch/completedをfan-outし、管理windowの寿命から切り離す。
+- 画像タブは選択中collectionのbatchだけを増分反映し、完了通知でDBを再読込して最新sortを適用する。
+- 自動受入はCP-SCAN-004（commit後通知・順序・失敗非公開）とCP-UI-G1/G9 unit部分
+  （段階append・完了sort・類似gate）を追加する。既存固定Oracle行は変更しない。
+
+## 8. 製造結果（2026-07-11・golden pending）
+
+### 8.1 実装
+
+- `ScanService`の対象列挙を`ToList()`からstreamingへ変更し、SHA-256と判定を直列のまま実行する。
+  総件数を先に確定しないため、管理windowの進捗バーはindeterminateとし、既存percent契約は完了時100を維持する。
+- `ScanBatchCommitted`を追加し、`ApplyScanBatchAsync`成功後だけ、そのtransactionに含まれたnormal追加行を
+  取込順で通知する。rollback/例外batchとpendingは通知しない。
+- singleton `ScanCoordinator`がscan状態をwindowから分離し、started/batch/completedを画像タブへ配信する。
+  管理windowを閉じてもcommand continuationとcoordinatorは生存し、scanと公開を継続する。
+- 画像タブは新規batchだけを`ObservableCollection`末尾へ追加する。batchごとの全Items再構築は行わず、
+  既存一覧・スクロール位置・選択を保持する。開始時と完了時だけ全体を再計算する。
+- スキャン中のsort操作は条件だけ更新する。completedでDBを再読込し、最新sortがあれば全体へ適用する。
+  sortなしなら最終取込順を保持する。
+- コレクション行と中央ペインに「スキャン中」を表示する。類似方式の検索ボタンは無効相当の視覚を持ちつつ
+  clickを受け、「スキャン完了後に利用できます」と表示する。条件方式はgateしない。
+
+### 8.2 R5プローブと機械受入
+
+- 先行赤: `ScanBatchCommitted`/`ScanCoordinator`が存在せず、新規プローブはcompile errorとなった。
+- CP-SCAN-004追加: 513画像が`[512,1]`の2通知、全行64hex/normal/commit済み、重複なし。
+  commit例外batchは通知0・DB行0。
+- CP-UI-G1/G9追加: 第2batchを停止した状態で先行512件を表示。名前降順を選んでも順序不変、
+  類似検索は実行せず案内表示。解放後513件へ増え、completedで名前降順を全件適用。
+- `dotnet build --no-restore`: **0 warning / 0 error**。
+- `ViewPrism2.Tests`: **580/580 pass**（ECO-060新規3件）。
+- `ViewPrism2.Oracle`: **109 pass / 既知2 skip**。既存固定Oracle行は無変更。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+
+### 8.3 golden gate（maintainerが行うこと）
+
+1. 未スキャンの大規模collectionでスキャンを開始し、管理windowを閉じる。
+2. 画像タブで「スキャン中」表示が残り、最初の512件commit以降、件数と画像が段階的に増えることを確認する。
+3. 公開済み画像で閲覧・タグ編集・整理・作業ができ、UIが操作不能にならないことを確認する。
+4. スキャン中に名前降順などへsort条件を変更し、その場では既存項目が動かず、完了時に全件が選択条件で
+   並ぶことを確認する。
+5. スキャン中に整理→類似画像検索を操作し、「スキャン完了後に利用できます」と表示され検索が始まらないこと、
+   完了後は同じ入口から類似検索できることを確認する。
+6. 可能なら実HDD約26万件で、スキャン開始から最初の画像利用可能までの時間と、完了件数を記録する。
+
+以上の目視・操作確認までは`implemented / golden pending`とし、`applied`へ移行しない。

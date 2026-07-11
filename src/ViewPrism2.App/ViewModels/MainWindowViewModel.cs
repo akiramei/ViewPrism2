@@ -43,7 +43,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IWindowService windows,
         TagsTabViewModel tagsTab,
         WorkspaceService workspaces,
-        ILogger<MainWindowViewModel>? logger = null)
+        ILogger<MainWindowViewModel>? logger = null,
+        ScanCoordinator? scanCoordinator = null)
     {
         _localization = localization;
         _settings = settings;
@@ -53,7 +54,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         TagsTab = tagsTab;
 
         // 画像タブ実 VM(モック準拠 surface)。注入済みリポジトリ/サービスを共有する。
-        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings, workspaces, localization);
+        ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings, workspaces, localization, scanCoordinator);
 
         // 作業タブ surface(第3タブ・ECO-020)。
         WorkTab = new WorkTabViewModel(workspaces, folders, tags, similar, merge, trash, windows, sorter, settings);

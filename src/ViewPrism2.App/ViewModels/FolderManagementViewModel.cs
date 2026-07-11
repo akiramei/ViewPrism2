@@ -110,18 +110,18 @@ public sealed partial class FolderRowViewModel : ObservableObject
 public sealed partial class FolderManagementViewModel : ObservableObject
 {
     private readonly ISyncFolderRepository _folders;
-    private readonly ScanService _scan;
+    private readonly ScanCoordinator _scans;
     private readonly LocalizationService _localization;
     private readonly IWindowService _windows;
 
     public FolderManagementViewModel(
         ISyncFolderRepository folders,
-        ScanService scan,
+        ScanCoordinator scans,
         LocalizationService localization,
         IWindowService windows)
     {
         _folders = folders;
-        _scan = scan;
+        _scans = scans;
         _localization = localization;
         _windows = windows;
         Loc = new LocalizationProxy(localization);
@@ -203,7 +203,7 @@ public sealed partial class FolderManagementViewModel : ObservableObject
         try
         {
             var progress = new Progress<int>(p => row.ScanProgress = p);
-            var result = await _scan.ScanAsync(row.Folder.Id, progress, CancellationToken.None);
+            var result = await _scans.ScanAsync(row.Folder.Id, progress, CancellationToken.None);
             if (result.IsSuccess && result.Value is { } summary)
             {
                 // スキャン結果サマリ(REQ-015)

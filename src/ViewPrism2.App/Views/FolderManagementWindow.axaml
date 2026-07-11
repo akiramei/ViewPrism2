@@ -61,7 +61,7 @@
                             Command="{Binding SavePatternsCommand}" />
                     <TextBox Text="{Binding ExcludePatternsText}" />
                   </DockPanel>
-                  <ProgressBar Minimum="0" Maximum="100" Value="{Binding ScanProgress}"
+                  <ProgressBar Minimum="0" Maximum="100" Value="{Binding ScanProgress}" IsIndeterminate="True"
                                IsVisible="{Binding IsScanning}" />
                   <TextBlock Text="{Binding RowMessage}" FontSize="12"
                              Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />

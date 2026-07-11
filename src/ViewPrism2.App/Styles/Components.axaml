@@ -979,6 +979,10 @@
   <Style Selector="Button.primaryAction:disabled">
     <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
   </Style>
+  <!-- ECO-060: 類似検索は視覚的に無効だが、clickで理由を案内するため実disabledにはしない。 -->
+  <Style Selector="Button.primaryAction.scanBlocked">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
 
   <!-- 検索結果カード(中央ペイン): サムネ + 名前 + 一致率 + 追加アクション -->
   <Style Selector="Border.resultCard">

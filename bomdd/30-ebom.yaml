@@ -68,7 +68,7 @@ ebom:
       name: スキャン判定器+スキャンサービス+ステータス遷移
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016]
+      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016, REQ-086]
       kbom_refs: [K-WINFS]
       depends_on: [E-DOMAIN-001, E-HASH-006, E-DB-010]
       invariants:
@@ -78,6 +78,7 @@ ebom:
         - スキャン二重起動禁止(同一フォルダ)
         - (ECO-059) スキャン中のDB変更は件数上限を持つバッチで明示トランザクション適用し、画像1件ごとの暗黙commitを禁止する。進捗は整数百分率が変化した時だけ通知し、非空入力は100で完了する。列挙時に得たサイズ/日時を再利用してFileInfoの再照会を避け、SHA-256全体読取はHDD向け直列+SequentialScanで維持する
         - (ECO-059/GF-059-01) スキャン本体の列挙・ハッシュ・DBバッチは呼出元UIスレッドから明示分離し、同期完了するrepository awaitに依存しない。進捗だけを呼出元のProgress経由でUI contextへ通知する
+        - (ECO-060/REQ-086) 初回対象はstreaming列挙し、fully-hashed normal画像をDB batch commit成功後だけ取込順で公開通知する。commit失敗batchは通知しない
       acceptance_refs: [CP-SCAN-004]
 
     - id: E-HASH-006
@@ -370,7 +371,7 @@ ebom:
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-041, REQ-042, REQ-081]
+      requirement_refs: [REQ-041, REQ-042, REQ-081, REQ-086]
       external_source_ref: K-AVALONIA   # ECO-029: 合成値を分離(参照欄は単一 ID・注記は note へ)
       external_source_note: "モック権威: ViewPrismUI:資料/画像タブ/ViewPrism2 ファイル一覧v2 (standalone).html(ECO-025 β 列描画+ソート・CAD 権威=docs/screens/file_list.md v2 3e820b8)"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
@@ -584,7 +585,7 @@ ebom:
       name: 類似検索 UI(起動・閾値スライダー・精度モード非表示・結果一覧(類似度%降順)・進捗・空状態)— v3.0 新設+ECO-014(整理トレイの find へ統合)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-065, REQ-064]
+      requirement_refs: [REQ-065, REQ-064, REQ-086]
       external_source_ref: K-ORIGIN
       external_source_note: "原典 SimilarImageSearchModal/RepairModal(仕様 §2.10.4)。ECO-014 で独立モーダルを画像タブ整理トレイ(インペイン)へ作り直す"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
@@ -593,6 +594,7 @@ ebom:
         - 照合は pHash のみ。simple/detailed(精度モード)の選択 UI を出さない(仕様 §2.10.4)
         - 結果整列・選択・空状態のロジックは描画から独立した決定論的ロジックとして unit 検査可能にする
         - (ECO-014/UQ-I07・IMG-005) 類似検索は独立モーダル(原典 SimilarImageSearchModal)でなく、画像タブ右ペインの**整理トレイ**(整理モード)の find として提供する。整理は「整理」ボタンで開始しタグ編集モードと排他。find「似た画像を探す」は ①類似画像検索(E-SIMSEARCH-032・pHash 閾値スライダー)②条件検索(**E-CRITERIA-037 を消費**・hash/拡張子/サイズ/名前/mtime)の2方式。**(ECO-055 as-built)条件検索の UI 意味論=「マージ先との属性一致」をトグル 5 種で選ぶ(自由入力ではない)。一致の定義(裁定 2026-07-06)= ハッシュ SHA-256/拡張子(大小無視)/サイズ(バイト)=完全一致・ファイル名=マージ先名本体(拡張子除く)の部分一致・更新日=同一日(UTC)。条件検索もマージ先必須∧条件 1 つ以上で実行可。マージ先→SearchCriteria の写像は両タブ共有の OrganizeCriteria.FromMergeTarget(転写ドリフト防止)**。**(ECO-056 as-built)検索 UI の形= トレイ下部ピンの「似た画像を探す」折りたたみ内。タブは「条件検索」「類似画像検索」の順(v1 CAD から)・切替コンテンツ 150px 固定・実行ボタンは「探す」。検索結果は中央ペインにヘッダ(「グリッドへ」戻り=結果保持・件数・方式ラベル)つきで表示(backToGrid は v1 CAD 定義=51ad8ee からの実装欠落を是正)**。検索結果は中央ペイン全面に候補+**一致率**(見比べ重視)・候補ごとに「整理対象に追加」。Core(E-SIMSEARCH-032/E-CRITERIA-037)の意味論は不変(候補=normal・同一コレクション REQ-053・閾値以上を類似度降順安定)
+        - (ECO-060/REQ-086) 選択中collectionがスキャン中なら類似方式の検索を実行せず「スキャン完了後に利用できます」と理由を表示する。条件検索は公開済みnormal画像に対し利用可能
       acceptance_refs: [CP-UI-G9]
 
     - id: E-UI-MERGE-036

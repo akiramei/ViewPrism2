@@ -1104,3 +1104,22 @@ requirements:
       - "旧世代サムネキャッシュが参照され続け、EXIF 画像だけ横倒しのまま残る(世代移行漏れ — キーがパス MD5 のみで内容・規則の世代を含まない既知制約)"
       - "pHash 入力まで正立化して adapter 世代交代(P-09)が意図せず発動し、全特徴量再計算と ThisBuildGolden 再凍結を誘発する"
       - "Orientation 5〜8 の画像で解像度表示が W/H 逆のまま(実効寸法でない)"
+
+  - id: REQ-086
+    statement: "初回スキャン中のコレクションは、SHA-256計算と判定を完了しDB batch commitに成功したstatus=normal画像をbatch単位で段階的に公開する。公開中は取込順で末尾へ追加し、sort条件の変更は保持するが一覧を再配列しない。スキャン完了時に最新sort条件を全公開画像へ一度適用する。公開済み画像への通常操作と条件検索は利用可能だが、類似画像検索はスキャン完了まで実行せず『スキャン完了後に利用できます』と理由を表示する。進捗windowを閉じても処理と公開を継続し、画像タブ内のスキャン中表示を完了まで維持する。サムネイルは遅延生成のままで公開条件に含めない"
+    rationale: |
+      ECO-060案A裁定(maintainer 2026-07-11)。実HDD約260,000件の初回スキャンはECO-059後も35分で、
+      UI callerは解放されたが画像一覧は完了まで利用不能だった。ECO-059の最大512変更transactionを
+      公開境界として再利用すれば、images.hash NOT NULL・再リンク・条件検索・feature freshnessを変えずに
+      time-to-first-useを短縮できる。CAD原器=ViewPrismUI `1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f`。
+      metadata-first、hash NULL/特殊値、hash_state、遅延SHAは本要求に含めない。再スキャン差分・キャンセル・
+      失敗再試行・競合の詳細はCAD IMG-017で未設計のため別要求とする。
+    rationale_precision: ok
+    classification_hint: surface
+    external_source: "ViewPrismUI docs/screens/image_tab.md/review_points.md/integrated_ui_spec.md(`1ffed5bbdbb50dd313ddb5f2c11f4c57e3da559f`)"
+    counterexamples:
+      - "全ファイル列挙と全ハッシュ完了まで画像が1件も表示されない(ECO-060の元症状)"
+      - "commit前または失敗したbatchの画像を表示し、再読込で消える"
+      - "スキャン中にsortを逐次適用して既存項目が動き続ける"
+      - "スキャン中の部分母集合で類似検索を実行し、不完全結果を正常結果として表示する"
+      - "進捗windowを閉じるとスキャンまたは段階公開が止まる"

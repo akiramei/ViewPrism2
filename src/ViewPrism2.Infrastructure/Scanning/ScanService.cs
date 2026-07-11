@@ -48,7 +48,10 @@ public sealed class ScanService
     }
 
     public async Task<Result<ScanSummary>> ScanAsync(
-        string folderId, IProgress<int>? progress, CancellationToken ct)
+        string folderId,
+        IProgress<int>? progress,
+        CancellationToken ct,
+        IProgress<ScanBatchCommitted>? committed = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(folderId);
 
@@ -78,7 +81,7 @@ public sealed class ScanService
                 // ConfigureAwait(false) だけでは呼出元(UI)threadから離れないため、列挙・hash・
                 // DB batchを明示的にbackgroundへ移す。Progress<T>は生成元UI contextへpostする。
                 return await Task.Run(
-                    () => ScanCoreAsync(folder, progress, ct),
+                    () => ScanCoreAsync(folder, progress, committed, ct),
                     ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
@@ -99,7 +102,10 @@ public sealed class ScanService
     }
 
     private async Task<Result<ScanSummary>> ScanCoreAsync(
-        SyncFolder folder, IProgress<int>? progress, CancellationToken ct)
+        SyncFolder folder,
+        IProgress<int>? progress,
+        IProgress<ScanBatchCommitted>? committed,
+        CancellationToken ct)
     {
         var root = folder.Path;
         if (!Directory.Exists(root))
@@ -117,7 +123,8 @@ public sealed class ScanService
         };
         var excludeNames = new HashSet<string>(folder.ExcludePatterns, StringComparer.OrdinalIgnoreCase);
         // ECO-059: 列挙時にOSが既に返しているサイズ/日時を保持し、各ファイルのFileInfo再照会を避ける。
-        // 件数は百分率進捗に必要なため、軽量なメタデータだけをリスト化する(ファイル内容は保持しない)。
+        // ECO-060: 全件ToList後の処理では最初の公開が列挙完了まで遅れるため、列挙結果をそのまま
+        // 直列hash処理へ流す。総件数不明の間はpercentを捏造せず、完了時100だけを通知する。
         var enumerable = new FileSystemEnumerable<ScanFileEntry>(
             root,
             (ref FileSystemEntry entry) => new ScanFileEntry(
@@ -132,13 +139,11 @@ public sealed class ScanService
                 ImageExtensions.Contains(Path.GetExtension(entry.FileName).ToString().ToLowerInvariant()) &&
                 !excludeNames.Contains(entry.FileName.ToString()),
         };
-        var files = enumerable.ToList();
-
         var existing = await _images.GetByFolderAsync(folder.Id).ConfigureAwait(false);
         var isInitialScan = folder.LastScan is null;
 
         int added = 0, missing = 0, pending = 0, updated = 0, skipped = 0;
-        var batch = new ScanBatchBuffer(_images, ScanBatchSize);
+        var batch = new ScanBatchBuffer(_images, folder.Id, committed, ScanBatchSize);
 
         // 手順 4: status=normal で物理ファイルが存在しない行 → missing
         // 手順 5: 物理ファイルが存在しない status=pending の行 → 行削除
@@ -175,8 +180,7 @@ public sealed class ScanService
 
         // 手順 2〜3: 相対パス算出と優先順判定(OC-5)
         var processed = 0;
-        var lastReportedProgress = 0;
-        foreach (var file in files)
+        foreach (var file in enumerable)
         {
             ct.ThrowIfCancellationRequested();
             try
@@ -226,16 +230,10 @@ public sealed class ScanService
             }
 
             processed++;
-            var percent = (int)((long)processed * 100 / files.Count);
-            if (percent < 100 && percent > lastReportedProgress)
-            {
-                progress?.Report(percent);
-                lastReportedProgress = percent;
-            }
         }
 
         await batch.FlushAsync().ConfigureAwait(false);
-        if (files.Count > 0)
+        if (processed > 0)
         {
             progress?.Report(100);
         }
@@ -293,15 +291,23 @@ public sealed class ScanService
     private sealed class ScanBatchBuffer
     {
         private readonly IImageRepository _images;
+        private readonly string _folderId;
+        private readonly IProgress<ScanBatchCommitted>? _committed;
         private readonly int _capacity;
         private readonly List<ImageRecord> _adds = [];
         private readonly List<ScanFileMetaUpdate> _fileMetaUpdates = [];
         private readonly List<ScanStatusUpdate> _statusUpdates = [];
         private readonly List<string> _deletes = [];
 
-        public ScanBatchBuffer(IImageRepository images, int capacity)
+        public ScanBatchBuffer(
+            IImageRepository images,
+            string folderId,
+            IProgress<ScanBatchCommitted>? committed,
+            int capacity)
         {
             _images = images;
+            _folderId = folderId;
+            _committed = committed;
             _capacity = capacity;
         }
 
@@ -331,7 +337,15 @@ public sealed class ScanService
                 _fileMetaUpdates.ToArray(),
                 _statusUpdates.ToArray(),
                 _deletes.ToArray());
+            var publishable = _adds
+                .Where(image => image.Status == ImageStatus.Normal)
+                .ToArray();
             await _images.ApplyScanBatchAsync(mutations).ConfigureAwait(false);
+            if (publishable.Length > 0)
+            {
+                // 唯一の公開境界: repository transactionが成功してから通知する。
+                _committed?.Report(new ScanBatchCommitted(_folderId, publishable));
+            }
             _adds.Clear();
             _fileMetaUpdates.Clear();
             _statusUpdates.Clear();

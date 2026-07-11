@@ -24,7 +24,7 @@ public sealed class WindowService : IWindowService
     private readonly ITagRepository _tags;
     private readonly TagService _tagService;
     private readonly ViewService _viewService;
-    private readonly ScanService _scan;
+    private readonly ScanCoordinator _scans;
     private readonly RelinkService _relink;
     private readonly ImageMemoryCache _imageCache;
     private readonly CriteriaSearchService _criteriaSearch;
@@ -39,7 +39,7 @@ public sealed class WindowService : IWindowService
         ITagRepository tags,
         TagService tagService,
         ViewService viewService,
-        ScanService scan,
+        ScanCoordinator scans,
         RelinkService relink,
         ImageMemoryCache imageCache,
         CriteriaSearchService criteriaSearch,
@@ -53,7 +53,7 @@ public sealed class WindowService : IWindowService
         _tags = tags;
         _tagService = tagService;
         _viewService = viewService;
-        _scan = scan;
+        _scans = scans;
         _relink = relink;
         _imageCache = imageCache;
         _criteriaSearch = criteriaSearch;
@@ -99,7 +99,7 @@ public sealed class WindowService : IWindowService
             return;
         }
 
-        var vm = new FolderManagementViewModel(_folders, _scan, _localization, this);
+        var vm = new FolderManagementViewModel(_folders, _scans, _localization, this);
         var window = new FolderManagementWindow { DataContext = vm };
         await vm.LoadAsync();
         await window.ShowDialog(Owner);
@@ -270,7 +270,7 @@ public sealed class WindowService : IWindowService
         // 記録パスのファイル消失→missing 化 / リネーム後の新ファイル→pending 登録(=自動修復候補)。
         // これにより「再起動/コレクション展開で検出される」原典挙動に相当(明示再スキャン不要)。
         // ルート消失時の一括 missing 化は ScanService 側が抑止(INV-009/V1 F-3 保護)。
-        await _scan.ScanAsync(collectionId, null, System.Threading.CancellationToken.None);
+        await _scans.ScanAsync(collectionId, null, System.Threading.CancellationToken.None);
 
         // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): relink フロー(検索=候補絞り込みに統一)。
         // _folders は候補/missing のサムネイル絶対パス解決用(GF-V4-04)。

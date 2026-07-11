@@ -242,6 +242,59 @@ public sealed class CpScan004Tests : IDisposable
     }
 
     [Fact]
+    public async Task commit済みnormal画像だけをbatch順で公開通知する_ECO060()
+    {
+        const int fileCount = 513;
+        for (var i = 0; i < fileCount; i++)
+        {
+            WriteFile($"publish-{i:D3}.jpg", $"content-{i}");
+        }
+
+        var folder = await RegisterFolderAsync();
+        var published = new List<ScanBatchCommitted>();
+        var result = await _scan.ScanAsync(
+            folder.Id,
+            progress: null,
+            TestContext.Current.CancellationToken,
+            new SyncProgress<ScanBatchCommitted>(published.Add));
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal([512, 1], published.Select(x => x.Images.Count));
+        Assert.All(published.SelectMany(x => x.Images), image =>
+        {
+            Assert.Equal(folder.Id, image.SyncFolderId);
+            Assert.Equal(ImageStatus.Normal, image.Status);
+            Assert.Matches("^[0-9a-f]{64}$", image.Hash);
+        });
+
+        var persisted = (await _db.Images.GetByFolderAsync(folder.Id))
+            .ToDictionary(x => x.Id, StringComparer.Ordinal);
+        var publishedIds = published.SelectMany(x => x.Images).Select(x => x.Id).ToList();
+        Assert.Equal(fileCount, publishedIds.Count);
+        Assert.Equal(fileCount, publishedIds.Distinct(StringComparer.Ordinal).Count());
+        Assert.All(publishedIds, id => Assert.True(persisted.ContainsKey(id), $"commit前の画像が通知されました: {id}"));
+    }
+
+    [Fact]
+    public async Task commit失敗batchは公開通知しない_ECO060()
+    {
+        WriteFile("fail-publish.jpg", "content");
+        var folder = await RegisterFolderAsync();
+        var failing = new CountingImageRepository(_db.Images, failBatch: true);
+        var scan = new ScanService(_db.Folders, failing, _db.Clock);
+        var published = new List<ScanBatchCommitted>();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => scan.ScanAsync(
+            folder.Id,
+            progress: null,
+            TestContext.Current.CancellationToken,
+            new SyncProgress<ScanBatchCommitted>(published.Add)));
+
+        Assert.Empty(published);
+        Assert.Empty(await _db.Images.GetByFolderAsync(folder.Id));
+    }
+
+    [Fact]
     public async Task 進捗通知は整数百分率の変化時だけで重複せず100で終わる_FMEA039()
     {
         const int fileCount = 250;
@@ -631,23 +684,38 @@ public sealed class CpScan004Tests : IDisposable
         public void Report(int value) => _onReport(value);
     }
 
+    private sealed class SyncProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _onReport;
+
+        public SyncProgress(Action<T> onReport)
+        {
+            _onReport = onReport;
+        }
+
+        public void Report(T value) => _onReport(value);
+    }
+
     private sealed class CountingImageRepository : IImageRepository
     {
         private readonly IImageRepository _inner;
         private readonly bool _completeReadsSynchronously;
         private readonly ManualResetEventSlim? _batchEntered;
         private readonly ManualResetEventSlim? _releaseBatch;
+        private readonly bool _failBatch;
 
         public CountingImageRepository(
             IImageRepository inner,
             bool completeReadsSynchronously = false,
             ManualResetEventSlim? batchEntered = null,
-            ManualResetEventSlim? releaseBatch = null)
+            ManualResetEventSlim? releaseBatch = null,
+            bool failBatch = false)
         {
             _inner = inner;
             _completeReadsSynchronously = completeReadsSynchronously;
             _batchEntered = batchEntered;
             _releaseBatch = releaseBatch;
+            _failBatch = failBatch;
         }
 
         public int SingleAddCalls { get; private set; }
@@ -668,6 +736,11 @@ public sealed class CpScan004Tests : IDisposable
             if (_releaseBatch is not null && !_releaseBatch.Wait(TimeSpan.FromSeconds(5)))
             {
                 throw new TimeoutException("scan batchの解放待ちがタイムアウトしました。");
+            }
+
+            if (_failBatch)
+            {
+                throw new InvalidOperationException("probe: batch commit failure");
             }
 
             ScanBatchCalls++;

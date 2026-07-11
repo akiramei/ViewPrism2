@@ -666,13 +666,14 @@ public sealed partial class ImageTabSeedViewModel : ObservableObject
 
 public sealed class CollectionRowVM
 {
-    public CollectionRowVM(string id, string name, string path, int count, bool isSelected)
-    { Id = id; Name = name; Path = path; CountText = count.ToString(); IsSelected = isSelected; }
+    public CollectionRowVM(string id, string name, string path, int count, bool isSelected, bool isScanning = false)
+    { Id = id; Name = name; Path = path; CountText = count.ToString(); IsSelected = isSelected; IsScanning = isScanning; }
     public string Id { get; }
     public string Name { get; }
     public string Path { get; }
     public string CountText { get; }
     public bool IsSelected { get; }
+    public bool IsScanning { get; }
 }
 
 public sealed class CrumbVM

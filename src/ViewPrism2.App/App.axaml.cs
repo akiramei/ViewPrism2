@@ -182,6 +182,7 @@ public partial class App : Application
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<IClock>(),
             sp.GetRequiredService<ILogger<ScanService>>()));
+        services.AddSingleton(sp => new ScanCoordinator(sp.GetRequiredService<ScanService>()));
         services.AddSingleton(sp => new RelinkService(
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<ITagRepository>()));
@@ -222,7 +223,8 @@ public partial class App : Application
             sp.GetRequiredService<IWindowService>(),
             sp.GetRequiredService<TagsTabViewModel>(),
             sp.GetRequiredService<WorkspaceService>(),
-            sp.GetRequiredService<ILogger<MainWindowViewModel>>()));
+            sp.GetRequiredService<ILogger<MainWindowViewModel>>(),
+            sp.GetRequiredService<ScanCoordinator>()));
 
         return services.BuildServiceProvider();
     }

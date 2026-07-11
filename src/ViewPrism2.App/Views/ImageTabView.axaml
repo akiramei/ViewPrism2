@@ -65,9 +65,13 @@
                           Width="{Binding $parent[ScrollViewer].Viewport.Width}"
                           PointerPressed="OnCollectionPressed" ToolTip.Tip="{Binding Path}">
                     <DockPanel>
-                      <Border DockPanel.Dock="Right" Classes="countBadge" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding CountText}" />
-                      </Border>
+                      <StackPanel DockPanel.Dock="Right" Spacing="3" VerticalAlignment="Center">
+                        <Border Classes="countBadge" HorizontalAlignment="Right">
+                          <TextBlock Text="{Binding CountText}" />
+                        </Border>
+                        <TextBlock Text="スキャン中" IsVisible="{Binding IsScanning}" FontSize="10.5"
+                                   Foreground="{StaticResource AccentBrush}" />
+                      </StackPanel>
                       <Border DockPanel.Dock="Left" Classes="leadIcon" Width="34" Height="34" Margin="0,0,11,0">
                         <PathIcon Data="{StaticResource FolderIcon}" />
                       </Border>
@@ -487,13 +491,16 @@
                     </StackPanel>
                   </Panel>
                   <!-- 探す(文言は CAD v1 から「探す」— 51ad8ee の「似た画像を探す」が逸脱) -->
-                  <Button Classes="primaryAction" Height="40" IsEnabled="{Binding CanRunSearch}"
-                          Command="{Binding RunSearchCommand}">
+                  <Button Classes="primaryAction" Classes.scanBlocked="{Binding SimilarSearchBlocked}"
+                          Height="40" IsEnabled="{Binding CanInvokeSearch}" Command="{Binding RunSearchCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                       <PathIcon Data="{StaticResource SearchIcon}" Width="14" Height="14" />
                       <TextBlock Text="探す" VerticalAlignment="Center" />
                     </StackPanel>
                   </Button>
+                  <TextBlock Text="{Binding ScanNotice}" IsVisible="{Binding HasScanNotice}"
+                             FontSize="11.5" Foreground="{StaticResource AccentBrush}"
+                             TextAlignment="Center" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
 
@@ -856,6 +863,16 @@
             </StackPanel>
           </WrapPanel>
         </Grid>
+      </Border>
+
+      <!-- ECO-060 / IMG-016最小表示: windowを閉じても完了まで残る。詳細配置はgolden対象。 -->
+      <Border DockPanel.Dock="Top" IsVisible="{Binding IsSelectedCollectionScanning}"
+              Background="#F3F8FF" BorderBrush="#CFE0FC" BorderThickness="0,0,0,1" Padding="18,8">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <PathIcon Data="{StaticResource RestoreIcon}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+          <TextBlock Text="スキャン中 — 処理済みの画像から表示しています" FontSize="12.5"
+                     Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+        </StackPanel>
       </Border>
 
       <!-- パンくず -->

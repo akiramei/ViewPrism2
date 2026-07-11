@@ -98,7 +98,7 @@ mbom:
         type: dotnet-classlib
       interface_contract:
         judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。Decision = Skip | UpdateMeta | AddNormal | AddPending(candidateId)"
-        scan: "Task<Result<ScanSummary>> ScanAsync(string folderId, IProgress<int>? progress, CancellationToken ct)  // 仕様 §2.1 手順 1〜6"
+        scan: "Task<Result<ScanSummary>> ScanAsync(string folderId, IProgress<int>? progress, CancellationToken ct, IProgress<ScanBatchCommitted>? committed=null)  // 仕様 §2.1 手順 1〜6+ECO-060 commit後公開"
         scan_batch: "IImageRepository.ApplyScanBatchAsync(ScanMutationBatch batch)  // ECO-059: bounded件数のadd/update-meta/update-status/deleteを単一transactionで適用。ScanServiceはバッチ上限到達ごとにflush"
         relink_candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId)  // relative_path 昇順"
         relink_commit: "Task<Result> CommitRelinkAsync(string missingImageId, string pendingImageId)  // id 不変・pending 行削除"
@@ -108,6 +108,7 @@ mbom:
         - 読み取り不能ファイルはスキップ+警告(summary.skipped へ計上)
         - (ECO-059/FMEA-039) ファイル読取はHDDのランダムseekを増やさない直列+SequentialScan。列挙時のサイズ/日時を保持してFileInfo再照会を行わず、DB変更だけを有界バッチ化し、進捗通知は同じ整数百分率を重複送信しない
         - (ECO-059/GF-059-01) ScanCoreAsyncはTask.Run境界で呼出元UI threadから明示分離する。ConfigureAwait(false)だけに依存しない(同期完了awaitはthreadを切り替えないため)
+        - (ECO-060/REQ-086) 初回列挙はstreaming。ApplyScanBatchAsync成功後だけnormal追加行をScanBatchCommittedで通知し、batch内/全体の取込順を保持する
       acceptance_refs: [CP-SCAN-004]
       fmea_refs: [FMEA-004, FMEA-011, FMEA-039]
 
@@ -239,16 +240,18 @@ mbom:
       ebom_refs: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-TAGASSIGN-029]
       artifact:
         path: src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs
-        path_note: "残余= ブラウズ(母集合/items/選択)+FS/view 軸ナビ+ソート/表示列+モード統制(排他・クリック意味論ディスパッチ)+タグ編集パネル[AddGroups/CurrentTags/ApplyTagAsync ほか]。切り出し済み子 VM= Trash(032)/Work(033)/Organize(034)を内部生成し公開契約の転送殻を持つ。WorkTabViewModel の作業タブ再利用[ECO-021 β-2]・Views/ 側は M-UI-013 所有(表示面の品目トレースは本 unit 経由)"
+        path_note: "残余= ブラウズ(母集合/items/選択)+FS/view 軸ナビ+ソート/表示列+モード統制(排他・クリック意味論ディスパッチ)+タグ編集パネル[AddGroups/CurrentTags/ApplyTagAsync ほか]。ECO-060=App/Services/ScanCoordinator.csのstarted/batch/completedを消費して取込順append・完了sort。切り出し済み子 VM= Trash(032)/Work(033)/Organize(034)を内部生成し公開契約の転送殻を持つ。WorkTabViewModel の作業タブ再利用[ECO-021 β-2]・Views/ 側は M-UI-013 所有(表示面の品目トレースは本 unit 経由)"
         type: avalonia-app
       interface_contract:
         panel: "画像タブ タグ編集モード: CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel は ECO-024 で撤去(インライン化)"
         numeric: "NumericValueDialog: モード=固定値|連番(開始値+選択順 i・ApplySequential=UQ-I02b)。min/max/step 検証をダイアログ内で実施し範囲外は適用前に拒否"
         textual: "候補値ドロップダウン(predefined_values 順・インライン値チップ)+自由入力"
         mode_dispatch: "文脈モード(タグ編集/整理/作業/削除)の排他とグリッドクリック意味論のディスパッチ(E-UI-MODE-041)。フィーチャ実体は子 VM(032/033/034)"
+        scan_lifecycle: "ScanCoordinator started/batch/completed → 選択collectionのfully-hashed normalを取込順append。sort条件は保持し完了時だけ全体へ適用。類似方式はscanning gate"
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
         - 子 VM はホスト型を参照しない(関数注入)。通知は消費者(XAML/tests=ホスト公開契約)に対し旧実装と同一回数・同一位置(51 通知トポロジー 3 則)
+        - (ECO-060) スキャン中のsort操作は条件だけ更新しItems順を変えない。completionでDB再読込後に最新条件を一度適用する
       acceptance_refs: [CP-TAGUI-013, CP-NFR-026, CP-UI-G7]
       fmea_refs: [FMEA-013, FMEA-014]
 
