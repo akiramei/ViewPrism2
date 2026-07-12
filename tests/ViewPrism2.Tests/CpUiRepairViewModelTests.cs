@@ -165,6 +165,62 @@ public sealed class CpUiRepairViewModelTests
             $"ECO-075: LoadAsync が {sw.ElapsedMilliseconds}ms — missing ごとの全行再ロード(O(M×N))の疑い");
     }
 
+    /// <summary>
+    /// GF-075-01(golden 所見 2026-07-12): 26 万 missing で「自動修復」実行が固まった(修復自体は成功)。
+    /// ECO-075 §3 の残置疑いの実測確定= AutoRepairAll が missing ごとに GetCandidatesAsync
+    /// (毎回フォルダ全行×2 ロード)を呼ぶ O(M×N)+候補探索が UI スレッド上で同期完了する。
+    /// </summary>
+    [Fact]
+    public async Task GF075_01_すべて自動修復は単一パスで完了し候補探索は呼び出しスレッドを塞がない()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        await db.Manager.RunAsync(async conn =>
+        {
+            for (var i = 0; i < 2000; i++)
+            {
+                await conn.ExecuteAsync(
+                    """
+                    INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash, status, created_date, modified_date)
+                    VALUES (@M, @F, @Mp, @Mn, 100, @H, 'missing', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+                    """,
+                    new
+                    {
+                        M = $"m-{i:D5}",
+                        F = Folder,
+                        Mp = $"old/{i:D5}.jpg",
+                        Mn = $"{i:D5}.jpg",
+                        H = i.ToString("D64", System.Globalization.CultureInfo.InvariantCulture),
+                    });
+            }
+
+            // 自動修復可能な一意ペアは 1 組だけ(m-00000 ↔ p-00000)
+            await conn.ExecuteAsync(
+                """
+                INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash, status, created_date, modified_date)
+                VALUES ('p-00000', @F, 'new/00000.jpg', '00000.jpg', 100, @H, 'pending', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+                """, new { F = Folder, H = 0.ToString("D64", System.Globalization.CultureInfo.InvariantCulture) });
+        }, TestContext.Current.CancellationToken);
+
+        var vm = CreateRepairVm(db);
+        await vm.LoadAsync();
+        Assert.Equal(1, vm.AutoRepairableCount);
+
+        // ① 候補探索(選択時と同経路)は呼び出しスレッドを同期ブロックしない
+        vm.SelectedMissing = vm.MissingImages[1];
+        var refresh = vm.RefreshCandidatesAsync();
+        Assert.False(refresh.IsCompleted, "GF-075-01①: 候補探索が呼び出しスレッドを同期ブロックしている");
+        await refresh;
+
+        // ② すべて自動修復は missing ごとの全行再ロード(O(M×N))をしない
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var repaired = await vm.AutoRepairAllAsync();
+        sw.Stop();
+        Assert.Equal(1, repaired);
+        Assert.True(sw.ElapsedMilliseconds < 5000,
+            $"GF-075-01②: AutoRepairAll が {sw.ElapsedMilliseconds}ms — missing ごとの全行再ロードの疑い");
+    }
+
     // ---- 検索=再リンク候補探索に統一(GF-V4-03) ----
 
     [Fact]

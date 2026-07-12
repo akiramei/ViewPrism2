@@ -1232,7 +1232,7 @@ changes:
     status: implemented   # 2026-07-12 /eco-fix 機械受入完了・golden待ち
     golden: "pending(fix完了2026-07-12・本文§8。観点=26万missingコレクションで修復が開けてUI応答・missing一覧+自動修復可能数表示・小規模コレクションの修復操作に回帰なし)"
     baseline: "main 16d36428b827"
-    verification: "2026-07-12 /eco-fix完了: 先行probe赤(CpUiRepairViewModelTests=2000 missingでLoadAsync 71.2秒・O(M×N)裏取り)→是正(RelinkService.CountAutoRepairableAsync=単一ロード集合演算+CriteriaMatcher再利用+タグ除外memo化、RepairViewModel.LoadAsync=Task.Run構築+MissingImagesインスタンス一括差し替え)→probe緑転(修復VMクラス13本が3.2秒)。build 0/0・Tests 645/645・Oracle 109+2skip・validate_bom 0/0。M-RELINK-025 auto_count契約+沈黙次元specified化"
+    verification: "2026-07-12 /eco-fix完了: 先行probe赤(CpUiRepairViewModelTests=2000 missingでLoadAsync 71.2秒・O(M×N)裏取り)→是正(RelinkService.CountAutoRepairableAsync=単一ロード集合演算+CriteriaMatcher再利用+タグ除外memo化、RepairViewModel.LoadAsync=Task.Run構築+MissingImagesインスタンス一括差し替え)→probe緑転(修復VMクラス13本が3.2秒)。build 0/0・Tests 645/645・Oracle 109+2skip・validate_bom 0/0。M-RELINK-025 auto_count契約+沈黙次元specified化。GF-075-01(自動修復実行で固まる=残置疑いの実測確定)=先行probe赤(候補探索の同期ブロック)→GetCandidatesAsync単一ロード化+GetAutoRepairablePairsAsync(単一パス)+VM候補探索のTask.Run化+世代ガード→646/646(本文§9)"
     findings: "再起動後も単独再現・CPU活発・「スキャン中のまま」。実測: RepairViewModel.CountAutoRepairableAsyncがmissingごとにRelinkService.GetCandidatesAsyncを呼び、毎回GetByFolderAsync(全行52万)+CriteriaSearchService.SearchAsync(もう一度全行)=O(M×N)×2重ロード(262,045×52万×2)。加えてMissingImagesへ26万件逐次Add(CollectionChanged 26万発・UIスレッド・Dapper同期完了)でUIフリーズ=スキャン完了バッジが再描画されず「スキャン中のまま」に見える。事前スキャン自体は選択コレクション限定・background(ECO-059)で健全"
     impacted_bom: ["M-RELINK-025(単一ロード集計API CountAutoRepairableAsync)", "M-UI-REPAIR-027(LoadAsync=Task.Run構築+一覧インスタンス一括差し替え)", "CP-UI-G10(大量missing性能probe)", "32-mbom沈黙次元=修復のスケール前提"]
     body: 60-change-order-eco-075.md

@@ -220,17 +220,13 @@ public sealed partial class RepairViewModel : ObservableObject
     public async Task<int> AutoRepairAllAsync()
     {
         var repaired = 0;
-        // LoadAsync が MissingImages を差し替えるため、走査対象のスナップショットを取る
-        foreach (var missing in MissingImages.ToList())
+        // GF-075-01: missing ごとの候補探索(毎回フォルダ全行ロード= O(M×N))をやめ、
+        // 単一パスで自動修復ペアを確定してから逐次 commit する。同一候補を取り合う 2 組目以降は
+        // CommitRelinkAsync 側の検証が拒否する(旧逐次探索と同じ帰結・一括を止めない)
+        var pairs = await Task.Run(() => _relink.GetAutoRepairablePairsAsync(_collectionId));
+        foreach (var pair in pairs)
         {
-            var candidates = await _relink.GetCandidatesAsync(
-                missing.Record.Id, DeriveAutoCriteria(missing.Record));
-            if (candidates.Count != 1)
-            {
-                continue;
-            }
-
-            var result = await _relink.CommitRelinkAsync(missing.Record.Id, candidates[0].ImageId);
+            var result = await _relink.CommitRelinkAsync(pair.MissingImageId, pair.CandidateImageId);
             if (result.IsSuccess)
             {
                 repaired++;
@@ -254,8 +250,9 @@ public sealed partial class RepairViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(missing);
 
-        var candidates = await _relink.GetCandidatesAsync(
-            missing.Record.Id, DeriveAutoCriteria(missing.Record));
+        // GF-075-01: 候補探索(フォルダ全行ロード)で UI スレッドを塞がない
+        var candidates = await Task.Run(() => _relink.GetCandidatesAsync(
+            missing.Record.Id, DeriveAutoCriteria(missing.Record)));
         if (candidates.Count != 1)
         {
             return; // 0 件/2 件以上は自動修復対象外(曖昧)— 何もしない
@@ -367,17 +364,27 @@ public sealed partial class RepairViewModel : ObservableObject
         MtimeToInput = null;
     }
 
+    /// <summary>候補探索の世代(GF-075-01: 非同期化に伴う並行再入ガード。最新の探索だけを反映する)。</summary>
+    private int _candidatesVersion;
+
     private async Task LoadCandidatesAsync(MissingImageViewModel? missing)
     {
+        var version = ++_candidatesVersion;
         Candidates.Clear();
         SelectedCandidate = null;
         if (missing is not null)
         {
             // 候補=exact-hash pending ∪ criteria 結果(タグ付き除外・安定順は RelinkService 側で実施)。
-            // 現在のフォーム条件を criteria として渡す(空条件なら null=exact-hash pending のみ)
+            // 現在のフォーム条件を criteria として渡す(空条件なら null=exact-hash pending のみ)。
+            // GF-075-01: 探索(フォルダ全行ロード)は UI スレッドを塞がない
             var criteria = BuildCriteria();
-            var candidates = await _relink.GetCandidatesAsync(
-                missing.Record.Id, HasAnyCriteria(criteria) ? criteria : null);
+            var candidates = await Task.Run(() => _relink.GetCandidatesAsync(
+                missing.Record.Id, HasAnyCriteria(criteria) ? criteria : null));
+            if (version != _candidatesVersion)
+            {
+                return; // 追い越された古い探索結果は反映しない
+            }
+
             foreach (var candidate in candidates)
             {
                 // GF-V4-04(§2.11.5 表示パリティ): 候補カードはサムネイル+ファイル名+パス+サイズ+更新日時を提示し、

@@ -105,3 +105,37 @@ missing が少数である前提の潜在的非スケールで、ECO-073 の mis
    見出しが表示される(初回表示まで数秒程度・スキャン中バッジが正しく消える)。
 2. missing 行を選択 → 候補ペインが応答する(選択単位の候補探索は従来どおり)。
 3. 既存の小規模コレクションの修復操作(候補提示・再リンク・除外)に回帰がない。
+4. (GF-075-01)26 万 missing のコレクションで missing 行の選択・「自動修復」・
+   「すべて自動修復」を実行しても**固まらない**(選択の候補探索・自動修復とも数秒オーダーで応答)。
+
+## 9. golden所見 GF-075-01 の是正(2026-07-12 — 再機械受入)
+
+### 9.1 所見と工程診断
+
+- maintainer 実機(26 万 missing): 修復画面は開けた(§8 項目 1 合格)が、「自動修復」実行で
+  **固まった**(強制終了後の確認で**修復自体は成功**していた=commit は走り、その後の処理が固まった)。
+- 工程診断: §3 の残置疑いの実測確定。①選択時/自動修復時の `GetCandidatesAsync` が
+  フォルダ全行を**2 回**ロード(自身+CriteriaSearchService)し、**UI スレッド上で同期完了**
+  (Dapper 同期完了・Task.Run なし)→ 1 操作ごとに長時間フリーズ。②「すべて自動修復」は
+  missing ごとに `GetCandidatesAsync` を繰り返す **O(M×N)**(Load 経路と同じ構造の取り残し)。
+
+### 9.2 先行probe(R5)
+
+- `CpUiRepairViewModelTests` へ追加: ①候補探索(RefreshCandidatesAsync)が呼び出しスレッドを
+  同期ブロックしない ②2,000 missing+一意ペア 1 組で AutoRepairAllAsync が 5 秒未満+1 件修復。
+- 是正前実測: **1 件不合格**(①の同期ブロックで失敗)。
+
+### 9.3 是正diff
+
+- `RelinkService.GetCandidatesAsync`: CriteriaSearchService 経由の**再ロードを撤去**し、
+  同じ inFolder 行で `CriteriaMatcher` を直接評価(1 呼び出し=単一ロード・意味論同一)。
+- `RelinkService.GetAutoRepairablePairsAsync(folderId)` 新設(単一パスで自動修復ペアを確定。
+  `CountAutoRepairableAsync` はその件数へ委譲)。同一候補の取り合いは CommitRelinkAsync の
+  検証が拒否(旧逐次探索と同じ帰結)。
+- `RepairViewModel`: AutoRepairAll=pairs 方式へ。候補探索(選択時/検索/単一自動修復)を
+  `Task.Run` 化+**世代ガード**(非同期化に伴う並行再入で古い探索結果を反映しない)。
+
+### 9.4 再機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **646/646 pass**(probe 緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。判定は exe 直接実行。

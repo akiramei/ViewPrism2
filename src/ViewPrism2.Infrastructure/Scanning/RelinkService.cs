@@ -14,11 +14,13 @@ namespace ViewPrism2.Infrastructure.Scanning;
 /// untagged-normal)に限る。タグ付き候補を消費するとそのタグが失われるため relink を拒否し、
 /// マージ(§2.10.5)を案内する。
 /// </summary>
+/// <summary>自動修復ペア(GF-075-01: missing とその一意候補。単一パスで確定する)。</summary>
+public sealed record AutoRepairPair(string MissingImageId, string CandidateImageId);
+
 public sealed class RelinkService
 {
     private readonly IImageRepository _images;
     private readonly ITagRepository? _tags;
-    private readonly CriteriaSearchService _criteriaSearch;
 
     /// <summary>
     /// 構築する。<paramref name="tags"/>(INV-015 のタグ安全ガード用)は production DI で必ず注入する。
@@ -29,7 +31,6 @@ public sealed class RelinkService
     {
         _images = images;
         _tags = tags;
-        _criteriaSearch = new CriteriaSearchService(images);
     }
 
     /// <summary>
@@ -60,15 +61,14 @@ public sealed class RelinkService
         }
 
         // ② criteria 検索結果(status ∈ {Pending, Normal}・同一コレクション)
+        // GF-075-01: CriteriaSearchService 経由(フォルダ全行の再ロード)をやめ、同じ inFolder 行で
+        // CriteriaMatcher を直接評価する(1 呼び出し=単一ロード。意味論は同一)
         if (criteria is not null)
         {
             var statusTargets = new HashSet<ImageStatus> { ImageStatus.Pending, ImageStatus.Normal };
-            var matched = await _criteriaSearch
-                .SearchAsync(missing.SyncFolderId, criteria, statusTargets, CancellationToken.None)
-                .ConfigureAwait(false);
-            foreach (var record in matched)
+            foreach (var id in CriteriaMatcher.Match(inFolder, criteria, statusTargets))
             {
-                candidateIds.Add(record.Id);
+                candidateIds.Add(id);
             }
         }
 
@@ -118,6 +118,14 @@ public sealed class RelinkService
     /// exact-hash pending ∪ criteria(hash+拡張子+サイズ・Pending∪Normal)− 自身 − タグ付き(INV-015)。
     /// </summary>
     public async Task<int> CountAutoRepairableAsync(string folderId)
+        => (await GetAutoRepairablePairsAsync(folderId).ConfigureAwait(false)).Count;
+
+    /// <summary>
+    /// GF-075-01: 自動修復ペア(missing → 一意候補)を単一パスで確定する。「すべて自動修復」が
+    /// missing ごとに GetCandidatesAsync(全行再ロード)を繰り返す O(M×N) を置き換える。
+    /// 同一候補を取り合う 2 組目以降は CommitRelinkAsync 側の検証が拒否する(旧逐次探索と同じ帰結)。
+    /// </summary>
+    public async Task<IReadOnlyList<AutoRepairPair>> GetAutoRepairablePairsAsync(string folderId)
     {
         var inFolder = await _images.GetByFolderAsync(folderId).ConfigureAwait(false);
         var statusTargets = new HashSet<ImageStatus> { ImageStatus.Pending, ImageStatus.Normal };
@@ -131,7 +139,7 @@ public sealed class RelinkService
         }
 
         var taggedMemo = new Dictionary<string, bool>(StringComparer.Ordinal);
-        var count = 0;
+        var pairs = new List<AutoRepairPair>();
         foreach (var missing in inFolder)
         {
             if (missing.Status != ImageStatus.Missing || !byHash.TryGetValue(missing.Hash, out var bucket))
@@ -164,6 +172,7 @@ public sealed class RelinkService
 
             // タグ付き除外(INV-015)。「ちょうど 1 件」判定に必要な分だけ照会し memo 化する
             var safe = 0;
+            string? single = null;
             foreach (var id in candidateIds)
             {
                 if (safe > 1)
@@ -181,16 +190,17 @@ public sealed class RelinkService
                 if (!hasTags)
                 {
                     safe++;
+                    single = id;
                 }
             }
 
             if (safe == 1)
             {
-                count++;
+                pairs.Add(new AutoRepairPair(missing.Id, single!));
             }
         }
 
-        return count;
+        return pairs;
     }
 
     /// <summary>
