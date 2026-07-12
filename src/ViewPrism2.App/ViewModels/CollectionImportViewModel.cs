@@ -138,7 +138,8 @@ public sealed partial class CollectionImportViewModel : ObservableObject
     // ---- stepper(1=ファイル/検証 2=プレビュー 3=完了) ----
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OnFileStep), nameof(OnPreviewStep), nameof(OnDoneStep), nameof(WindowTitle))]
+    [NotifyPropertyChangedFor(nameof(OnFileStep), nameof(OnPreviewStep), nameof(OnDoneStep), nameof(WindowTitle),
+        nameof(Step2Reached), nameof(Step3Reached), nameof(Step4Done))]
     private int _step = 1;
 
     public bool OnFileStep => Step == 1;
@@ -146,6 +147,18 @@ public sealed partial class CollectionImportViewModel : ObservableObject
     public bool OnPreviewStep => Step == 2;
 
     public bool OnDoneStep => Step == 3;
+
+    // ECO-076(CAD mock 改版 5fdf4464): stepper は B-2〜B-4 の全可視面に表示(L7)。
+    // バッジ/接続線の到達状態は面と検証状態から導出(到達区間のみ青・B-4 で完了=緑チェック)。
+
+    /// <summary>ステップ 2(検証)到達=B-2 で検証済み、または B-3 以降。</summary>
+    public bool Step2Reached => VerifyOk || Step >= 2;
+
+    /// <summary>ステップ 3(プレビュー)到達=B-3 以降。</summary>
+    public bool Step3Reached => Step >= 2;
+
+    /// <summary>最終「完了」到達(B-4)=バッジ 4 が緑塗り+白チェック+緑ラベルへ切替(VC-3)。</summary>
+    public bool Step4Done => Step == 3;
 
     // ---- B-2: ファイル選択+検証 ----
 
@@ -160,13 +173,13 @@ public sealed partial class CollectionImportViewModel : ObservableObject
         : null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(VerifyOk))]
+    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(Step2Reached))]
     private string? _verifyError;
 
     public bool VerifyOk => Header is not null && VerifyError is null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(HeaderCollectionName), nameof(HeaderImageCount), nameof(HeaderTagCount), nameof(HeaderCreatedAt), nameof(HeaderAppVersion))]
+    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(Step2Reached), nameof(HeaderCollectionName), nameof(HeaderImageCount), nameof(HeaderTagCount), nameof(HeaderCreatedAt), nameof(HeaderAppVersion))]
     private PackageHeader? _header;
 
     public string? HeaderCollectionName => Header?.Collection.Name;

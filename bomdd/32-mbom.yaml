@@ -686,7 +686,7 @@ mbom:
         type: avalonia-app
       interface_contract:
         entry: "画像タブ ⋯ メニュー(CanOpenMaintenance=コレクション選択時のみ)→ 各 window をモーダル表示。取り込み完了後は ReloadImagesAsync+Recompute(missing 参照登録/付与増加の反映)"
-        wizard: "stepper=ファイル→検証→プレビュー→完了。VerifyOk のみ次へ活性。競合行=4択+別名 TextBox/割当 ComboBox(型互換のみ)。CanExecute=全競合解決∧(過半でない∨確認チェック)。失敗メッセージ(鮮度再検証等)は docked フッターへ表示し DB 無変更"
+        wizard: "stepper=ファイル→検証→プレビュー→完了(ECO-076/CAD mock 改版 5fdf4464: B-2〜B-4 の全可視面に表示=L7。到達状態は Step2Reached/Step3Reached/Step4Done で導出・接続線は到達区間のみ青・B-4 完了=緑塗り+白チェック+緑ラベル。書き出し B-1 は単段のため非表示)。VerifyOk のみ次へ活性。競合行=4択+別名 TextBox/割当 ComboBox(型互換のみ)。CanExecute=全競合解決∧(過半でない∨確認チェック)。失敗メッセージ(鮮度再検証等)は docked フッターへ表示し DB 無変更"
         i18n: "package.*(ja/en)。⋯ メニュー行は既存流儀(ja 直書き)に合わせる"
         location: "ECO-074/案A(仕様 §2.14.7): 管理フォルダ=AppSettings.CollectionPackageDirectory ?? CollectionPackageFormat.DefaultDirectory(<Documents>/ViewPrism2/collections)。書き出し既定出力先=管理フォルダ+既定名(CollectionExportViewModel)。Save/OpenFilePicker の SuggestedStartLocation=管理フォルダ(WindowService・無ければ作成・逸脱先は永続しない)。B-2 は Opened で picker 自動起動+キャンセル残留時プレースホルダ(package.selectFilePrompt)"
       acceptance_refs: [CP-PACKAGE-032, CP-UI-G13]

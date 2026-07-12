@@ -1,10 +1,10 @@
-# ECO-076(staged): 取り込みウィザード stepper の B-3・B-4 可視化 — CAD mock 改版への追随
+# ECO-076(implemented): 取り込みウィザード stepper の B-3・B-4 可視化 — CAD mock 改版への追随
 
 - 起票: 2026-07-13
 - 種別: 既存機能拡張(CAD mock 改版への追随。上流の設計変更は ViewPrismUI 側で決定・正典化済み=
   `4303337` decide(eco-073)。VP2 側の ECO-073 は applied でクローズ済みのため**再開せず新規採番**
   — 逆行遷移禁止)
-- 状態: staged
+- 状態: implemented(2026-07-13 是正+機械受入+R7 セルフゴールデン完了・golden 待ち)
 - 関連: ECO-073(B層 V1・applied。stepper 初回実装=GF-073-04)/ ECO-072(GF-072-01=captures
   同梱の恒久対策)/ 工程改善 R7(セルフゴールデン・VP2 `a96a782`/VPUI `e6a3140`)
 
@@ -99,4 +99,70 @@ CAD 改版が確定済みのため単案。/eco-fix にて:
 
 - gate①(裁定): **不要** — 設計変更は maintainer の mock 改版として CAD 正典化済み(§2)。
 - gate②(golden): CP-UI-G13(改訂後)— B-2/B-3/B-4 の stepper 状態表現を CAD captures と
-  並置で maintainer 実機承認。基準は /eco-fix 完了時に提示。
+  並置で maintainer 実機承認。**基準は §7.5(2026-07-13 /eco-fix 完了時に確定)**。
+
+## 7. 実施記録(2026-07-13 /eco-fix — 是正+機械受入完了・golden 待ち)
+
+### 7.1 プローブ先行(R5+R7・GF 後追い禁止)
+
+- CAD 視覚契約チェックリスト VC-1〜VC-4(`snapshot_export_import.md` visualContract)から
+  headless 視覚 probe を**是正前に**生成(`GfPackageVisualParityTests` へ 3 本追加+旧契約 pin
+  1 本を新契約へ改訂):
+  - 改訂: 「B2のstepperはバッジ式で…B3以降は非表示で専用タイトルになる」→
+    「B2のstepperはバッジ式で検証済みは2まで点灯し接続線は最初の区間のみ青になる」(VC-1。
+    L1=面別 Window.Title の検証は VC-2/VC-3 側へ移設して維持)
+  - 新設: VC-2(B3でもstepperが表示され3まで点灯し最後の接続線だけ灰…)/VC-3(B4は完了が
+    緑チェックになり接続線が全区間青…)/VC-4(書き出しB1は単段のためstepperを出さない)
+- **是正前の赤を実測**: 7 本中 VC-2/VC-3 の 2 本が不合格
+  (「VC-2: B-3 で stepper が非表示(旧契約のまま)」「VC-3: B-4 で stepper が非表示」)=
+  §2 診断どおり。VC-1/VC-4 は緑=既存承認状態のピン(旧ロットに欠陥なしの裏取り)。
+- 完了バッジの緑 `#0F9D76`・接続線の到達契約(B-3=3→4 のみ灰・B-4=全区間青)は CAD capture
+  B-3.png/B-4.png の**画素実測**で確定(一次資料 standalone.html は実行時展開バンドルで CSS 直読不可)。
+
+### 7.2 是正(単案・§4)
+
+- `CollectionImportViewModel`: 到達状態 3 プロパティを追加 — `Step2Reached`(=VerifyOk∨Step≥2)/
+  `Step3Reached`(=Step≥2)/`Step4Done`(=Step=3)。`Step`/`VerifyError`/`Header` の変更通知へ配線
+  (派生プロパティ通知漏れ=ECO-038 教訓の予防)。
+- `CollectionImportWindow.axaml`: stepper の `IsVisible="{Binding OnFileStep}"` を撤去(全面表示)・
+  バッジ 2/3+接続線 3 本の `Classes.active` を到達状態バインドへ・バッジ 4 は Panel 化して
+  数字 4(未到達)⇔白チェック Path `stepCheck`(完了)を切替・`stepBadge.done`(緑 #0F9D76)/
+  `stepLabel.done` スタイル追加。バッジ内 TextBlock セレクタは Panel 挿入に合わせ `>`(直子)から
+  子孫へ変更(視覚不変)。B-1(CollectionExportWindow)は無変更(VC-4)。
+- diff 規模: src 2 ファイル+tests 1 ファイル+台帳 3 ファイル(CP/M-BOM/register)。DB・Core・
+  i18n・Oracle 変更なし。
+
+### 7.3 機械受入(4 点・全緑)
+
+- `dotnet build`: 0 warning / 0 error
+- `dotnet test tests/ViewPrism2.Tests`(exe 直接実行): **649/649**(probe 7 本緑転を含む)
+- `dotnet test tests/ViewPrism2.Oracle`(exe 直接実行): 109 pass / 2 known skip(R6 不変)
+- `python bomdd/validate_bom.py`: 0 error / 0 warning
+
+### 7.4 セルフゴールデン(R7・L7 マトリクス列の全面並置)
+
+- scratchpad ハーネス(Avalonia.Headless UseHeadlessDrawing=false+Skia・CaptureRenderedFrame)で
+  B-2(検証済み)/B-3(mock 数値の競合・5状態)/B-4(mock 数値の結果)を実レンダリングし、
+  CAD captures(B-2.png/B-3.png/B-4.png)と並置。差分の全列挙と分類:
+  - **stepper(L7・本 ECO の対象)= 3 面とも転写一致・転写漏れ 0**: B-2=1-2 青/3-4 灰/接続線
+    1-2 間のみ青。B-3=1-3 青(現在=3)/4 灰/接続線 1→3 青・3→4 灰。B-4=1-3 青/4=緑塗り丸+
+    白チェック+緑ラベル/接続線全区間青。
+  - 裁定済み許容差分(引用): 擬似タイトルバー・ダイアログ幅(CP-UI-G13 tolerance)/B-3 ルート
+    「変更」非搭載(32-mbom 沈黙次元「取り込み先ルートの変更 UI」)/「場所を指定」非搭載
+    (同「未解決画像の場所を指定 即時解決」=deferred)。
+  - スコープ外所見 1 件(R3・51-cheat-log へ記録): B-4 mock の「レポートを保存」+「一覧を書き出す」
+    が実装非搭載で裁定記録なし(ECO-073 golden 承認済みの既存差分。本 ECO の diff に混ぜない)。
+
+### 7.5 gate② golden 合格基準(maintainer 実機・CP-UI-G13 改訂分)
+
+1. 画像タブ ⋯ メニュー「コレクションを取り込む」→ B-2 でパッケージ選択・検証 OK:
+   stepper が `1 ファイル ― 2 検証 ― 3 プレビュー ― 4 完了` の水平 1 行で、**1-2=青塗り丸+
+   白数字+青ラベル・3-4=灰丸+灰ラベル・接続線は 1-2 間のみ青**(CAD capture B-2.png と並置)。
+2. 「次へ: プレビュー」→ B-3: **stepper が表示されたまま**(旧実装は消えていた)、
+   **1-3=青(現在=3)・4=灰・接続線は 1→3 青・3→4 灰**。タイトルバーは
+   「取り込みプレビュー — <名前>」のまま(B-3.png と並置)。
+3. 取り込み実行 → B-4: **バッジ 4 が緑塗り丸+白チェック+緑ラベル「完了」へ切替**(数字 4 は
+   消える)・**接続線が全区間青**。タイトルバーは「取り込み結果」のまま(B-4.png と並置)。
+4. 裏面: B-1(コレクションを書き出す)に stepper が**出ていない**こと(単段・面の発明禁止)。
+5. 回帰: B-2 の検証前(ファイル未選択/互換 NG)で stepper が 1 のみ青であること・
+   ja/en 切替でステップラベルが追随すること。

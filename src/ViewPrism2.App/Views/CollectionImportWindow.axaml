@@ -92,7 +92,9 @@
       <Setter Property="BorderBrush" Value="#EDDFAF" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
-    <!-- GF-073-04: stepper は番号バッジ+接続線(mock B-2)。到達済み=青塗り・未到達=灰 -->
+    <!-- GF-073-04: stepper は番号バッジ+接続線。到達済み=青塗り・未到達=灰。
+         ECO-076(CAD mock 改版 5fdf4464): 最終「完了」到達(B-4)=緑塗り+白チェック+緑ラベル。
+         緑 #0F9D76 は CAD capture B-4.png の実測値 -->
     <Style Selector="Border.stepBadge">
       <Setter Property="Width" Value="22" />
       <Setter Property="Height" Value="22" />
@@ -103,14 +105,17 @@
     <Style Selector="Border.stepBadge.active">
       <Setter Property="Background" Value="#2F6BED" />
     </Style>
-    <Style Selector="Border.stepBadge > TextBlock">
+    <Style Selector="Border.stepBadge.done">
+      <Setter Property="Background" Value="#0F9D76" />
+    </Style>
+    <Style Selector="Border.stepBadge TextBlock">
       <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="#7A879C" />
       <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
-    <Style Selector="Border.stepBadge.active > TextBlock">
+    <Style Selector="Border.stepBadge.active TextBlock">
       <Setter Property="Foreground" Value="White" />
     </Style>
     <Style Selector="TextBlock.stepLabel">
@@ -120,6 +125,10 @@
     </Style>
     <Style Selector="TextBlock.stepLabel.active">
       <Setter Property="Foreground" Value="#2F6BED" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.stepLabel.done">
+      <Setter Property="Foreground" Value="#0F9D76" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Border.stepLine">
@@ -181,29 +190,38 @@
     <ScrollViewer>
       <StackPanel Spacing="14">
         <!-- GF-073-01: タイトルは Window.Title のみ(本文へ重複させない) -->
-        <!-- GF-073-04: stepper=番号バッジ式(mock B-2)。CAD「B-2 に可視」=ファイル/検証面のみ表示。
-             検証済み(VerifyOk)で 2 まで点灯。B-3/B-4 は Window.Title が専用タイトルへ切替 -->
-        <StackPanel x:Name="Stepper" Orientation="Horizontal" Spacing="8" IsVisible="{Binding OnFileStep}">
+        <!-- GF-073-04: stepper=番号バッジ式。ECO-076(CAD mock 改版 5fdf4464): B-2〜B-4 の全可視面に
+             表示(L7)。到達済み/現在=青・未到達=灰・接続線は到達区間のみ青・B-4 で完了=緑塗り+
+             白チェック+緑ラベル(VC-1〜VC-3)。面別 Window.Title(L1)は従来どおり -->
+        <StackPanel x:Name="Stepper" Orientation="Horizontal" Spacing="8">
           <Border Classes="stepBadge active">
             <TextBlock Text="1" />
           </Border>
           <TextBlock Classes="stepLabel active" Text="{Binding Loc[package.stepFile]}" />
-          <Border Classes="stepLine" Classes.active="{Binding VerifyOk}" />
-          <Border Classes="stepBadge" Classes.active="{Binding VerifyOk}">
+          <Border Classes="stepLine" Classes.active="{Binding Step2Reached}" />
+          <Border Classes="stepBadge" Classes.active="{Binding Step2Reached}">
             <TextBlock Text="2" />
           </Border>
-          <TextBlock Classes="stepLabel" Classes.active="{Binding VerifyOk}"
+          <TextBlock Classes="stepLabel" Classes.active="{Binding Step2Reached}"
                      Text="{Binding Loc[package.stepVerify]}" />
-          <Border Classes="stepLine" />
-          <Border Classes="stepBadge">
+          <Border Classes="stepLine" Classes.active="{Binding Step3Reached}" />
+          <Border Classes="stepBadge" Classes.active="{Binding Step3Reached}">
             <TextBlock Text="3" />
           </Border>
-          <TextBlock Classes="stepLabel" Text="{Binding Loc[package.stepPreview]}" />
-          <Border Classes="stepLine" />
-          <Border Classes="stepBadge">
-            <TextBlock Text="4" />
+          <TextBlock Classes="stepLabel" Classes.active="{Binding Step3Reached}"
+                     Text="{Binding Loc[package.stepPreview]}" />
+          <Border Classes="stepLine" Classes.active="{Binding Step4Done}" />
+          <Border Classes="stepBadge" Classes.done="{Binding Step4Done}">
+            <Panel>
+              <TextBlock Text="4" IsVisible="{Binding !Step4Done}" />
+              <Path Classes="stepCheck" Width="10" Height="8" Stretch="Uniform"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Stroke="White" StrokeThickness="1.8" Data="M1,5.5 L4.5,9 L11,1.5"
+                    IsVisible="{Binding Step4Done}" />
+            </Panel>
           </Border>
-          <TextBlock Classes="stepLabel" Text="{Binding Loc[package.stepDone]}" />
+          <TextBlock Classes="stepLabel" Classes.done="{Binding Step4Done}"
+                     Text="{Binding Loc[package.stepDone]}" />
         </StackPanel>
 
         <!-- ===== B-2: ファイル選択+検証 ===== -->

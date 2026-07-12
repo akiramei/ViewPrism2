@@ -20,6 +20,8 @@ namespace ViewPrism2.Tests;
 /// 「コレクションを書き出す」が本文にも太字で重複(mock は擬似タイトルバーのみ) ②コレクション
 /// カードのフォルダグリフ欠落で文字が密集 ③ボタンテキストが左寄せ(Avalonia Button 既定) ④キャンセルが
 /// テーマ既定グレー(mock は白+ボーダーの outline)。mock 視覚言語を headless 実レイアウトで恒久ガード化。
+/// ECO-076(CAD mock 改版 5fdf4464): stepper の可視面を B-2 のみ→B-2〜B-4 へ拡大。probe は
+/// CAD 視覚契約チェックリスト VC-1〜VC-4(snapshot_export_import.md)から先行生成(R7)。
 /// </summary>
 [Trait("cp", "CP-UI-G13")]
 public sealed class GfPackageVisualParityTests : IDisposable
@@ -163,13 +165,14 @@ public sealed class GfPackageVisualParityTests : IDisposable
     }
 
     /// <summary>
-    /// GF-073-04(golden 所見 2026-07-12): stepper が mock と乖離 — ⑩テキスト矢印でバッジ未転写・
-    /// 状態が静的(検証済みでも 1 のまま) ⑪CAD は stepper を B-2 面のみ可視と定義(prose「B-2 に可視」)
-    /// なのに全ステップ常時表示 ⑫B-3/B-4 の擬似タイトル(取り込みプレビュー — 名前/取り込み結果)が
-    /// Window.Title に未転写。
+    /// GF-073-04 ⑩(バッジ式・検証済みで 2 まで点灯)+ECO-076 VC-1(CAD mock 改版 5fdf4464・
+    /// snapshot_export_import visualContract): B-2 の stepper はバッジ 4 個・検証済みで 1-2 が青・
+    /// 3-4 は灰・接続線は 1-2 間のみ青。完了チェック(緑)は B-4 到達まで出ない。
+    /// 旧契約「B-3 以降は非表示」(GF-073-04 ⑪)は mock 改版で全可視面表示へ改訂
+    /// (B-3=VC-2/B-4=VC-3/B-1=VC-4 の各テスト)。面別 Window.Title(L1)は改版対象外で維持。
     /// </summary>
     [Fact]
-    public async Task B2のstepperはバッジ式で検証済みは2まで点灯しB3以降は非表示で専用タイトルになる()
+    public async Task B2のstepperはバッジ式で検証済みは2まで点灯し接続線は最初の区間のみ青になる()
     {
         var loc = new LocalizationService(I18nResourceLoader.Load(
             Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
@@ -188,26 +191,173 @@ public sealed class GfPackageVisualParityTests : IDisposable
             RunJobs();
             try
             {
-                // ⑩ バッジ 4 個・検証済み(VerifyOk)は 1,2 の 2 個だけ active(mock B-2)
+                // ⑩ バッジ 4 個・検証済み(VerifyOk)は 1,2 の 2 個だけ active(mock B-2=VC-1)
                 var badges = window.GetVisualDescendants().OfType<Border>()
                     .Where(b => b.Classes.Contains("stepBadge")).ToList();
                 Assert.Equal(4, badges.Count);
                 Assert.Equal(2, badges.Count(b => b.Classes.Contains("active")));
 
-                // ⑪ B-3(プレビュー)では stepper 非表示 ⑫Window.Title=取り込みプレビュー — <名前>
-                vm.Step = 2;
-                RunJobs();
+                // VC-1: 接続線 3 本のうち 1-2 間のみ青(active)
+                var lines = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stepLine")).ToList();
+                Assert.Equal(3, lines.Count);
+                Assert.True(lines[0].Classes.Contains("active"), "VC-1: 接続線 1-2 が青でない");
+                Assert.False(lines[1].Classes.Contains("active"), "VC-1: 接続線 2-3 が到達前に青");
+                Assert.False(lines[2].Classes.Contains("active"), "VC-1: 接続線 3-4 が到達前に青");
+
+                // VC-1: 完了チェック(緑・VC-3 の表現)は B-2 では出ない
+                Assert.False(badges[3].Classes.Contains("done"), "VC-1: B-2 でバッジ 4 が done");
+                Assert.DoesNotContain(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>(),
+                    p => p.Classes.Contains("stepCheck") && p.IsVisible);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// ECO-076 VC-2(CAD mock 改版 5fdf4464): B-3 でも stepper が表示され、1-3=青(現在=3)・4=灰・
+    /// 接続線は 1→3 が青・3→4 は灰。面別 Window.Title(L1・GF-073-04 ⑫)は維持。
+    /// 旧契約(B-3 以降非表示)pin の改訂先。
+    /// </summary>
+    [Fact]
+    public async Task B3でもstepperが表示され3まで点灯し最後の接続線だけ灰でタイトルはプレビューを維持する()
+    {
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
+        var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
+        var vm = new CollectionImportViewModel(importer, collection, loc,
+            _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        await Session.Dispatch(() =>
+        {
+            vm.PackagePath = @"C:\x\p.viewprism2-collection.json";
+            vm.Header = new PackageHeader(1, 1, [], null, null,
+                "2026-07-12T08:51:53.502Z", "1.0.0",
+                new PackageCollection("src-1", "友達", null), [], 5);
+            vm.Step = 2;
+            var window = new CollectionImportWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+            try
+            {
                 var stepper = window.GetVisualDescendants().OfType<StackPanel>()
                     .FirstOrDefault(p => p.Name == "Stepper");
-                Assert.True(stepper is not null, "GF-073-04⑪: Stepper が無い");
-                Assert.False(stepper!.IsVisible, "GF-073-04⑪: B-3 で stepper が可視");
+                Assert.True(stepper is not null, "VC-2: Stepper が無い");
+                Assert.True(stepper!.IsVisible, "VC-2: B-3 で stepper が非表示(旧契約のまま)");
+
+                var badges = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stepBadge")).ToList();
+                Assert.Equal(4, badges.Count);
+                Assert.Equal(3, badges.Count(b => b.Classes.Contains("active")));
+                Assert.False(badges[3].Classes.Contains("active"), "VC-2: バッジ 4 が到達前に青");
+                Assert.False(badges[3].Classes.Contains("done"), "VC-2: バッジ 4 が到達前に done");
+
+                var lines = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stepLine")).ToList();
+                Assert.True(lines[0].Classes.Contains("active"), "VC-2: 接続線 1-2 が青でない");
+                Assert.True(lines[1].Classes.Contains("active"), "VC-2: 接続線 2-3 が青でない");
+                Assert.False(lines[2].Classes.Contains("active"), "VC-2: 接続線 3-4 が到達前に青");
+
+                // L1(面別 Window.Title)は改版対象外で維持(GF-073-04 ⑫)
                 Assert.Equal(loc.T("package.previewTitle", new Dictionary<string, string> { ["name"] = "友達" }),
                     window.Title);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
 
-                // ⑫ B-4(完了)の Window.Title=取り込み結果
-                vm.Step = 3;
-                RunJobs();
+    /// <summary>
+    /// ECO-076 VC-3(CAD mock 改版 5fdf4464): B-4 は stepper の 4 が緑塗り丸+白チェック+緑ラベル
+    /// (数字ではなくチェックマーク・緑=#0F9D76 は CAD capture B-4.png 実測)・接続線は全区間青。
+    /// 面別 Window.Title(L1)は維持。
+    /// </summary>
+    [Fact]
+    public async Task B4はstepperの完了が緑チェックになり接続線が全区間青でタイトルは取り込み結果になる()
+    {
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
+        var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
+        var vm = new CollectionImportViewModel(importer, collection, loc,
+            _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        await Session.Dispatch(() =>
+        {
+            vm.PackagePath = @"C:\x\p.viewprism2-collection.json";
+            vm.Header = new PackageHeader(1, 1, [], null, null,
+                "2026-07-12T08:51:53.502Z", "1.0.0",
+                new PackageCollection("src-1", "友達", null), [], 5);
+            vm.Step = 3;
+            var window = new CollectionImportWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+            try
+            {
+                var stepper = window.GetVisualDescendants().OfType<StackPanel>()
+                    .FirstOrDefault(p => p.Name == "Stepper");
+                Assert.True(stepper is not null && stepper.IsVisible, "VC-3: B-4 で stepper が非表示");
+
+                // バッジ 4=done(緑塗り #0F9D76)・数字 4 は消え白チェックが出る
+                var badges = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stepBadge")).ToList();
+                Assert.True(badges[3].Classes.Contains("done"), "VC-3: バッジ 4 が done でない");
+                Assert.Equal(Color.Parse("#0F9D76"),
+                    Assert.IsAssignableFrom<ISolidColorBrush>(badges[3].Background).Color);
+                var number = badges[3].GetVisualDescendants().OfType<TextBlock>()
+                    .FirstOrDefault(t => t.Text == "4");
+                Assert.True(number is null || !number.IsVisible, "VC-3: 完了到達後も数字 4 が見える");
+                var check = badges[3].GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>()
+                    .FirstOrDefault(p => p.Classes.Contains("stepCheck"));
+                Assert.True(check is not null && check.IsVisible, "VC-3: 白チェックが無い");
+                Assert.Equal(Colors.White,
+                    Assert.IsAssignableFrom<ISolidColorBrush>(check!.Stroke).Color);
+
+                // ラベル「完了」=緑(done)
+                var labels = window.GetVisualDescendants().OfType<TextBlock>()
+                    .Where(t => t.Classes.Contains("stepLabel")).ToList();
+                Assert.Equal(4, labels.Count);
+                Assert.True(labels[3].Classes.Contains("done"), "VC-3: ラベル 完了 が緑でない");
+
+                // 接続線は全区間青(全到達)
+                var lines = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stepLine")).ToList();
+                Assert.All(lines, l => Assert.True(l.Classes.Contains("active"), "VC-3: 接続線に灰区間が残る"));
+
+                // L1(面別 Window.Title)は改版対象外で維持(GF-073-04 ⑫)
                 Assert.Equal(loc.T("package.resultTitle"), window.Title);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// ECO-076 VC-4(CAD mock 改版 5fdf4464): 書き出し B-1 は単段のため stepper を出さない(面の発明禁止)。
+    /// </summary>
+    [Fact]
+    public async Task 書き出しB1は単段のためstepperを出さない()
+    {
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var folder = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
+        var exporter = new CollectionPackageExporter(_db.Manager, _db.Clock, "9.9.9");
+        var vm = new CollectionExportViewModel(exporter, folder, loc, (_, _) => Task.FromResult<string?>(null));
+        await Session.Dispatch(() =>
+        {
+            var window = new CollectionExportWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+            try
+            {
+                Assert.DoesNotContain(window.GetVisualDescendants().OfType<Border>(),
+                    b => b.Classes.Contains("stepBadge"));
             }
             finally
             {
