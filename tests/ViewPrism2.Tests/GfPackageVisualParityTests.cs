@@ -91,4 +91,73 @@ public sealed class GfPackageVisualParityTests : IDisposable
             }
         }, TestContext.Current.CancellationToken);
     }
+
+    /// <summary>
+    /// GF-073-03(golden 所見 2026-07-12): B-2 実機が mock と乖離 — ⑦ファイルカードにファイル
+    /// グリフ+サイズ淡色行が無くプレーンテキスト 1 行 ⑧概要の作成日時が生 ISO(mock は
+    /// yyyy/MM/dd HH:mm) ⑨概要値が左寄せ非強調(mock は右寄せ太字)。
+    /// </summary>
+    [Fact]
+    public async Task B2はファイルカードにグリフとサイズを持ち概要値が右寄せ太字で日時整形される()
+    {
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
+        var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
+        var vm = new CollectionImportViewModel(importer, collection, loc,
+            _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        var pkg = Path.Combine(Path.GetTempPath(), $"gf07303-{Guid.NewGuid():N}.viewprism2-collection.json");
+        File.WriteAllBytes(pkg, new byte[1536]); // ByteSizeFormatter で「1.5 KB」になるサイズ
+        try
+        {
+            await Session.Dispatch(() =>
+            {
+                // picker/実ファイル読取を経ず「選択済み+互換OK」状態を直接投入(視覚検査が目的)
+                vm.PackagePath = pkg;
+                vm.Header = new PackageHeader(1, 1, [], null, null,
+                    "2026-07-12T08:51:53.502Z", "1.0.0",
+                    new PackageCollection("src-1", "旅行", null), [], 5);
+                var window = new CollectionImportWindow { DataContext = vm };
+                window.Show();
+                RunJobs();
+                try
+                {
+                    // ⑦ ファイルカードのファイルグリフ+サイズ淡色行(mock B-2 は 2 行構成)
+                    Assert.Contains(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>(),
+                        p => p.Classes.Contains("fileGlyph"));
+                    var size = window.GetVisualDescendants().OfType<TextBlock>()
+                        .FirstOrDefault(t => t.Name == "PackageSizeText");
+                    Assert.True(size is not null, "GF-073-03⑦: PackageSizeText が無い");
+                    Assert.Equal("1.5 KB", size!.Text);
+
+                    // ⑧ 作成日時は yyyy/MM/dd HH:mm(生 ISO を見せない。A-1 SnapshotItemViewModel と同流儀)
+                    var expectedDate = DateTime.Parse("2026-07-12T08:51:53.502Z",
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.RoundtripKind)
+                        .ToLocalTime()
+                        .ToString("yyyy/MM/dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                    Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(),
+                        t => t.Text == expectedDate);
+
+                    // ⑨ 概要 5 値は右寄せ太字(summaryValue)
+                    var values = window.GetVisualDescendants().OfType<TextBlock>()
+                        .Where(t => t.Classes.Contains("summaryValue")).ToList();
+                    Assert.Equal(5, values.Count);
+                    Assert.All(values, t =>
+                    {
+                        Assert.Equal(TextAlignment.Right, t.TextAlignment);
+                        Assert.True(t.FontWeight >= FontWeight.SemiBold, $"GF-073-03⑨: {t.Text} が太字でない");
+                    });
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            File.Delete(pkg);
+        }
+    }
 }

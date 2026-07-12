@@ -326,6 +326,49 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
 12. B-1 callout がグリフ+太字リード+行間で mock と同等、取り込みウィザードの互換OK/追加型マージ
     バナーに ✓ グリフがあることを captures と並置確認する。
 
+## 11. golden所見 GF-073-03 の是正(2026-07-12 — 再機械受入)
+
+### 11.1 所見と工程診断
+
+- maintainer が取り込みウィザード(B-2)ファイル選択面を実機確認し、**ファイルカードの
+  ファイルグリフ欠落**(初期状態は空白バーのみ)を指摘。診断時の captures 並置で同族 2 点を
+  追加実測: **作成日時が生 ISO 文字列**(mock は `yyyy/MM/dd HH:mm`)・**概要値が左寄せ非強調**
+  (mock は右寄せ太字+行区切り線のテーブル言語)。ファイルサイズ淡色行(mock の 2 行構成)も欠落。
+- 工程診断: GF-073-01 の是正(カードへのグリフ+2 行構成)を B-1 コレクションカードに留め、
+  **B-2 ファイルカードへ read-across しなかった**(GF-073-02 と同じ水平展開漏れ)。probe の pin も
+  B-1 面に限定されており B-2 面が検査外=検査面の粒度不足の再発。
+- 同時に maintainer が提起した「バックアップ置き場所の無管理(ファイル選択が最後に使った
+  フォルダから・管理フォルダ規約なし)」は CAD 沈黙(mock B-1 の `D:\export` はプレースホルダ)・
+  spec §5 も出力先の既定フォルダを規定せず=**要求の沈黙次元**であり本 ECO の転写欠陥ではない。
+  A層(ECO-072)にも及ぶため **R3 分離起票**とする。
+
+### 11.2 先行probe(R5)
+
+- `GfPackageVisualParityTests` へ B-2 専用テストを追加: ⑦fileGlyph(Path)+PackageSizeText
+  (ByteSizeFormatter 整形)存在 ⑧作成日時が `yyyy/MM/dd HH:mm`(生 ISO を見せない)
+  ⑨summaryValue 5 個が右寄せ太字。是正前実測: **1 件不合格**(⑦の fileGlyph で失敗・既存 635 緑)。
+
+### 11.3 是正diff
+
+- `CollectionImportWindow`: ファイルカードへファイルグリフ(角丸スクエア #EEF1F7+書類 Path)+
+  ファイル名太字+サイズ淡色行の 2 行構成(B-1 コレクションカードと同型)。パッケージ概要を
+  区切り線つき行(summaryRow)+右寄せ太字値(summaryValue)へ再編し、日時/app_version の
+  Consolas 指定は撤去(mock は値を統一の太字サンズで表示)。
+- `CollectionImportViewModel`: `PackageFileSizeText`(ByteSizeFormatter=REQ-043 流儀)を追加。
+  `HeaderCreatedAt` を ISO→ローカル `yyyy/MM/dd HH:mm` 整形(A-1 `SnapshotItemViewModel` と同流儀・
+  解釈不能時は原文フォールバック)。挙動・VM 遷移・エンジンは不変(視覚+表示整形のみ)。
+
+### 11.4 再機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **636/636 pass**(probe 緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+
+### 11.5 gate②再操作(§8.6/§9.5/§10.5 に追加)
+
+13. B-2 ファイルカードがグリフ+ファイル名太字+サイズ淡色の 2 行構成で、未選択の初期状態でも
+    グリフがあること、パッケージ概要の作成日時が `yyyy/MM/dd HH:mm`・値が右寄せ太字+
+    行区切り線であることを captures と並置確認する。
+
 ## 7. gate①裁定(2026-07-12)
 
 - maintainer裁定: **未解決画像(一致先なし)は「missing 行として参照のみ登録」を既定採用**し、

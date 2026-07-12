@@ -43,6 +43,20 @@
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="12,8" />
     </Style>
+    <!-- GF-073-03: パッケージ概要は区切り線つき行+値は右寄せ太字(mock B-2 のテーブル言語) -->
+    <Style Selector="Border.summaryRow">
+      <Setter Property="BorderBrush" Value="#EFF2F7" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="0,7" />
+    </Style>
+    <Style Selector="Border.summaryRow.last">
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.summaryValue">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextAlignment" Value="Right" />
+    </Style>
   </Window.Styles>
   <DockPanel Margin="20">
     <!-- docked フッター -->
@@ -95,12 +109,25 @@
 
         <!-- ===== B-2: ファイル選択+検証 ===== -->
         <StackPanel Spacing="12" IsVisible="{Binding OnFileStep}">
+          <!-- GF-073-03: ファイルグリフ+ファイル名太字+サイズ淡色の 2 行構成(mock B-2) -->
           <Border Classes="card" Padding="14,10">
             <DockPanel>
               <Button DockPanel.Dock="Right" Classes="choice" Content="{Binding Loc[snapshot.changeDir]}"
                       Command="{Binding PickFileCommand}" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding PackageFileName, FallbackValue=''}" FontFamily="Consolas,monospace"
-                         FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" />
+              <Border DockPanel.Dock="Left" Background="#EEF1F7" CornerRadius="8" Width="36" Height="36"
+                      Margin="0,0,12,0" VerticalAlignment="Center">
+                <Path Classes="fileGlyph" Width="12" Height="15" Stretch="Uniform"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                      Stroke="#5B657A" StrokeThickness="1.4"
+                      Data="M1,1 L8,1 L12,5 L12,16 L1,16 Z M8,1 L8,5 L12,5" />
+              </Border>
+              <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,12,0">
+                <TextBlock Text="{Binding PackageFileName, FallbackValue=''}" FontFamily="Consolas,monospace"
+                           FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="PackageSizeText" Text="{Binding PackageFileSizeText}" FontSize="11"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           IsVisible="{Binding PackageFileSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </StackPanel>
             </DockPanel>
           </Border>
 
@@ -117,18 +144,38 @@
               <StackPanel Spacing="6">
                 <TextBlock Text="{Binding Loc[package.summaryTitle]}" FontSize="12"
                            Foreground="{StaticResource TextMutedBrush}" />
-                <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                  <TextBlock Grid.Row="0" Text="{Binding Loc[package.colName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding HeaderCollectionName}" FontSize="12" FontWeight="SemiBold" />
-                  <TextBlock Grid.Row="1" Text="{Binding Loc[package.colImages]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HeaderImageCount}" FontSize="12" />
-                  <TextBlock Grid.Row="2" Text="{Binding Loc[package.colTags]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HeaderTagCount}" FontSize="12" />
-                  <TextBlock Grid.Row="3" Text="{Binding Loc[snapshot.colCreatedAt]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                  <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding HeaderCreatedAt}" FontSize="12" FontFamily="Consolas,monospace" />
-                  <TextBlock Grid.Row="4" Text="app_version" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HeaderAppVersion}" FontSize="12" FontFamily="Consolas,monospace" />
-                </Grid>
+                <StackPanel>
+                  <Border Classes="summaryRow">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Text="{Binding Loc[package.colName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Classes="summaryValue" Text="{Binding HeaderCollectionName}" />
+                    </DockPanel>
+                  </Border>
+                  <Border Classes="summaryRow">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Text="{Binding Loc[package.colImages]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Classes="summaryValue" Text="{Binding HeaderImageCount}" />
+                    </DockPanel>
+                  </Border>
+                  <Border Classes="summaryRow">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Text="{Binding Loc[package.colTags]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Classes="summaryValue" Text="{Binding HeaderTagCount}" />
+                    </DockPanel>
+                  </Border>
+                  <Border Classes="summaryRow">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Text="{Binding Loc[snapshot.colCreatedAt]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Classes="summaryValue" Text="{Binding HeaderCreatedAt}" />
+                    </DockPanel>
+                  </Border>
+                  <Border Classes="summaryRow last">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Text="app_version" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                      <TextBlock Classes="summaryValue" Text="{Binding HeaderAppVersion}" />
+                    </DockPanel>
+                  </Border>
+                </StackPanel>
               </StackPanel>
             </Border>
           </StackPanel>

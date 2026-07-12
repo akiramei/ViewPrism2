@@ -134,6 +134,11 @@ public sealed partial class CollectionImportViewModel : ObservableObject
 
     public string? PackageFileName => PackagePath is null ? null : Path.GetFileName(PackagePath);
 
+    /// <summary>選択ファイルのサイズ淡色行(GF-073-03・mock B-2 の 2 行構成)。</summary>
+    public string? PackageFileSizeText => PackagePath is not null && File.Exists(PackagePath)
+        ? Core.Common.ByteSizeFormatter.Format(new FileInfo(PackagePath).Length)
+        : null;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VerifyOk))]
     private string? _verifyError;
@@ -150,7 +155,12 @@ public sealed partial class CollectionImportViewModel : ObservableObject
 
     public string HeaderTagCount => Header?.Tags.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
 
-    public string HeaderCreatedAt => Header?.CreatedAt ?? "";
+    // GF-073-03: 生 ISO を見せない(mock は yyyy/MM/dd HH:mm。A-1 SnapshotItemViewModel と同流儀)
+    public string HeaderCreatedAt => Header?.CreatedAt is { Length: > 0 } iso
+        && DateTime.TryParse(iso, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind, out var dt)
+        ? dt.ToLocalTime().ToString("yyyy/MM/dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+        : Header?.CreatedAt ?? "";
 
     public string HeaderAppVersion => Header?.AppVersion ?? "";
 
@@ -165,6 +175,7 @@ public sealed partial class CollectionImportViewModel : ObservableObject
 
         PackagePath = picked;
         OnPropertyChanged(nameof(PackageFileName));
+        OnPropertyChanged(nameof(PackageFileSizeText));
         var header = _importer.ReadHeader(picked);
         if (header.IsSuccess)
         {
