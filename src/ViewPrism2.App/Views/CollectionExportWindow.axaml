@@ -9,32 +9,53 @@
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- ECO-073 B-1 コレクションを書き出す(CAD snapshot_export_import B-1・mock 権威) -->
-  <StackPanel Margin="20" Spacing="14">
-    <TextBlock Text="{Binding Loc[package.exportTitle]}" FontSize="18" FontWeight="Bold" />
-
+  <!-- ECO-073 B-1 コレクションを書き出す(CAD snapshot_export_import B-1・mock 権威)。
+       GF-073-01: タイトルは Window.Title のみ(本文へ重複させない)・カードにフォルダグリフ・
+       ボタンは中央揃え・キャンセルは outline(テーマ既定グレーにしない) -->
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.outlineButton">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="#D6E0EE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+  </Window.Styles>
+  <StackPanel Margin="24" Spacing="16">
     <!-- 書き出すコレクション(入口の三点メニューを開いたコレクション=SS-001 裁定(b)) -->
-    <StackPanel Spacing="4">
+    <StackPanel Spacing="6">
       <TextBlock Text="{Binding Loc[package.exportCollection]}" FontSize="12"
                  Foreground="{StaticResource TextMutedBrush}" />
-      <Border Background="{StaticResource PanelBrush}" CornerRadius="8" Padding="14,10">
-        <StackPanel>
-          <TextBlock Text="{Binding CollectionName}" FontSize="14" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding CollectionSummary}" FontSize="12"
-                     Foreground="{StaticResource TextMutedBrush}" />
+      <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1"
+              CornerRadius="10" Padding="14,12">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Border Background="#EEF1F7" CornerRadius="8" Width="36" Height="36">
+            <Path Classes="collectionGlyph" Width="17" Height="14" Stretch="Uniform"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" Fill="#5B657A"
+                  Data="M1,2.5 C1,1.7 1.7,1 2.5,1 L6,1 L7.5,3 L14.5,3 C15.3,3 16,3.7 16,4.5 L16,11.5 C16,12.3 15.3,13 14.5,13 L2.5,13 C1.7,13 1,12.3 1,11.5 Z" />
+          </Border>
+          <StackPanel VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding CollectionName}" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding CollectionSummary}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
         </StackPanel>
       </Border>
     </StackPanel>
 
     <!-- 出力先(既定名 <名前>.viewprism2-collection.json) -->
-    <StackPanel Spacing="4">
+    <StackPanel Spacing="6">
       <TextBlock Text="{Binding Loc[package.outputPath]}" FontSize="12"
                  Foreground="{StaticResource TextMutedBrush}" />
-      <Border Background="{StaticResource PanelBrush}" CornerRadius="8" Padding="14,10">
+      <Border Background="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1"
+              CornerRadius="10" Padding="14,10">
         <DockPanel>
-          <Button DockPanel.Dock="Right" Content="{Binding Loc[snapshot.changeDir]}"
+          <Button DockPanel.Dock="Right" Classes="outlineButton" Content="{Binding Loc[snapshot.changeDir]}"
                   Command="{Binding ChangeOutputCommand}" FontSize="12" VerticalAlignment="Center"
-                  Background="White" Foreground="#2F6BED" BorderBrush="#D6E0EE" BorderThickness="1" CornerRadius="6" />
+                  Foreground="#2F6BED" />
           <TextBlock Text="{Binding OutputPath}" FontFamily="Consolas,monospace" FontSize="12"
                      VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" />
         </DockPanel>
@@ -74,14 +95,15 @@
                Foreground="{StaticResource TextMutedBrush}"
                IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="{Binding Loc[common.cancel]}" Click="OnCloseClick" MinWidth="96"
-              IsVisible="{Binding !Done}" />
-      <Button Content="{Binding Loc[package.export]}" Command="{Binding ExportCommand}"
+    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+      <Button Classes="footerBtn outlineButton" Content="{Binding Loc[common.cancel]}" Click="OnCloseClick"
+              MinWidth="110" Padding="0,7" IsVisible="{Binding !Done}" />
+      <Button Classes="footerBtn" Content="{Binding Loc[package.export]}" Command="{Binding ExportCommand}"
               IsEnabled="{Binding !IsExporting}" IsVisible="{Binding !Done}"
-              Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="120" />
-      <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick" MinWidth="96"
-              IsVisible="{Binding Done}" />
+              Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6"
+              MinWidth="120" Padding="0,7" />
+      <Button Classes="footerBtn outlineButton" Content="{Binding Loc[common.close]}" Click="OnCloseClick"
+              MinWidth="110" Padding="0,7" IsVisible="{Binding Done}" />
     </StackPanel>
   </StackPanel>
 </Window>

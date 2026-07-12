@@ -12,6 +12,17 @@
   <!-- ECO-073 B-2〜B-4 取り込みウィザード(CAD snapshot_export_import・mock 権威)。
        stepper: ファイル → 検証 → プレビュー → 完了。docked フッター+ボディ単一スクロール -->
   <Window.Styles>
+    <!-- GF-073-01 同族: ボタンは中央揃え(Avalonia 既定=Left)・二次操作は outline(既定グレーにしない) -->
+    <Style Selector="Button">
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.outlineButton">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="#D6E0EE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
     <Style Selector="Border.card">
       <Setter Property="Background" Value="White" />
       <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
@@ -37,20 +48,23 @@
     <!-- docked フッター -->
     <Border DockPanel.Dock="Bottom" Margin="0,12,0,0">
       <DockPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-          <Button Content="{Binding Loc[common.cancel]}" Click="OnCloseClick" MinWidth="96"
-                  IsVisible="{Binding !OnDoneStep}" />
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
+          <Button Classes="outlineButton" Content="{Binding Loc[common.cancel]}" Click="OnCloseClick"
+                  MinWidth="110" Padding="0,7" IsVisible="{Binding !OnDoneStep}" />
           <Button Content="{Binding Loc[package.next]}" Command="{Binding ToPreviewCommand}"
                   IsVisible="{Binding OnFileStep}" IsEnabled="{Binding VerifyOk}"
-                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="150" />
-          <Button Content="{Binding Loc[package.back]}" Command="{Binding BackToFileCommand}"
-                  IsVisible="{Binding OnPreviewStep}" MinWidth="80" />
+                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6"
+                  MinWidth="150" Padding="0,7" />
+          <Button Classes="outlineButton" Content="{Binding Loc[package.back]}" Command="{Binding BackToFileCommand}"
+                  IsVisible="{Binding OnPreviewStep}" MinWidth="90" Padding="0,7" />
           <Button Content="{Binding Loc[package.execute]}" Command="{Binding ExecuteCommand}"
                   IsVisible="{Binding OnPreviewStep}" IsEnabled="{Binding CanExecute}"
-                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="140" />
+                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6"
+                  MinWidth="140" Padding="0,7" />
           <Button Content="{Binding Loc[package.finish]}" Click="OnCloseClick"
                   IsVisible="{Binding OnDoneStep}"
-                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="96" />
+                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6"
+                  MinWidth="110" Padding="0,7" />
         </StackPanel>
         <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
           <TextBlock Text="{Binding BlockReason}" FontSize="12" Foreground="#8A6D1A" TextWrapping="Wrap"
@@ -64,8 +78,7 @@
 
     <ScrollViewer>
       <StackPanel Spacing="14">
-        <TextBlock Text="{Binding Loc[package.importTitle]}" FontSize="18" FontWeight="Bold" />
-
+        <!-- GF-073-01: タイトルは Window.Title のみ(本文へ重複させない) -->
         <!-- stepper(ファイル→検証→プレビュー→完了) -->
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="{Binding Loc[package.stepFile]}" FontSize="12" FontWeight="SemiBold" Foreground="#2F6BED" />

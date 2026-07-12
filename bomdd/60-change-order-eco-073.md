@@ -252,6 +252,46 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
    missing→修復導線で解決)を許容できるか判定する(32-mbom 沈黙次元の裁定記録)。
 10. ja/en 切替で B-1〜B-4 の文言が追随(⋯ メニュー行は既存流儀=ja 直書き)。既存画面に視覚回帰がない。
 
+## 9. golden所見 GF-073-01 の是正(2026-07-12 — 再機械受入)
+
+### 9.1 所見と工程診断
+
+- maintainer が実機 B-1 と mock を並置比較し 4 点を指摘: ①「コレクションを書き出す」が
+  Window.Title と本文見出しに**重複**(mock は擬似タイトルバーのみ=実装では Window.Title が対応。
+  本文へ置いたのは実装の発明) ②コレクションカードの**フォルダグリフ欠落**でテキストが密集
+  ③**ボタンテキストが左寄せ**(Avalonia Button の既定 HorizontalContentAlignment=Left の取り漏れ)
+  ④キャンセルが**テーマ既定グレー**(mock の視覚言語=白+ボーダーの outline と不整合)。
+- 工程診断: GF-072-01 と同族(視覚言語の拘束不足)だが、captures 同梱後も「タイトルの
+  所在(擬似タイトルバー=Window.Title)」「ボタンの整列・二次操作の配色」という**ダイアログ共通言語**の
+  次元が個別画面検査から漏れた。V1/V2 許容差分(擬似タイトルバー)の裏面=「では本文には何を
+  置かないか」が沈黙次元だった。
+
+### 9.2 先行probe(R5)
+
+- `GfPackageVisualParityTests`(headless・CP-UI-G13)を製品コード変更前に追加:
+  ①本文にタイトル文言の TextBlock が 0 個 ②collectionGlyph(Path)存在 ③footerBtn の
+  HorizontalContentAlignment=Center ④outline ボタンの背景=白。
+- 是正前実測: **1 件不合格**(4 観点とも欠落を確認)。
+
+### 9.3 是正diff
+
+- `CollectionExportWindow`: 本文見出しを撤去(タイトルは Window.Title のみ)。コレクションカードへ
+  フォルダグリフ(角丸スクエア #EEF1F7+Path)+余白を追加し白カード化。出力先も白カード化。
+  Window スタイルで全ボタン中央揃え+outlineButton(白+#D6E0EE)。キャンセル/閉じるを outline へ。
+- `CollectionImportWindow`(同族水平展開): 本文見出し撤去・全ボタン中央揃え・キャンセル/戻るを
+  outline へ。挙動・VM・エンジンは不変(視覚のみ)。
+
+### 9.4 再機械受入
+
+- `ViewPrism2.Tests`: **635/635 pass**(GF probe 緑転)。`dotnet build`: 0 warning / 0 error。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+
+### 9.5 gate②再操作(§8.6 に追加)
+
+11. B-1/取り込みウィザードとも、タイトルがウィンドウタイトルのみで本文に重複せず、コレクションカードに
+    フォルダグリフ、フッターボタンが中央揃え・キャンセル/戻るが白 outline であることを captures と
+    並置確認する。
+
 ## 7. gate①裁定(2026-07-12)
 
 - maintainer裁定: **未解決画像(一致先なし)は「missing 行として参照のみ登録」を既定採用**し、
