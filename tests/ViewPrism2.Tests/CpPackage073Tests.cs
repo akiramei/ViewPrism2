@@ -477,6 +477,66 @@ public sealed class CpPackage073Tests : IDisposable
     }
 
     /// <summary>
+    /// GF-073-08(golden 所見 2026-07-12・診断の実測固定): 同一コレクションへの再取込では、
+    /// 移動済みファイル(旧行=missing・新パス=pending 候補)は **id 一致が優先**して「一致」に
+    /// 数えられ、タグは missing 行へ着地する(§2.14.4=一致は id またはパス+ハッシュ)。
+    /// 新パスへの引き継ぎは規則 3a の候補→修復画面(ECO-005)の確定が担う(gate①裁定)。
+    /// 「移動を検出」はこの経路では構造的に発火しない=golden 項目 6 の旧手順は検査手順の欠陥。
+    /// </summary>
+    [Fact]
+    public async Task 同一コレクション再取込では移動ファイルはid一致で一致に数えタグはmissing行へ着地する()
+    {
+        var folderA = await AddFolderAsync(_source, Path.Combine(_source.Directory, "colA"));
+        await AddTagAsync(_source, "tag-trip", "旅行", "simple");
+        var imgA = await AddImageAsync(_source, folderA.Id, "sub1/a.jpg", Hash('a'));
+        await AssignAsync(_source, imgA, "tag-trip", null);
+        var path = Path.Combine(_source.Directory, "colA" + CollectionPackageFormat.FileExtension);
+        var exporter = new CollectionPackageExporter(_source.Manager, _source.Clock, "9.9.9");
+        Assert.True((await exporter.ExportAsync(folderA.Id, path, ct: Ct)).IsSuccess);
+
+        // 移動+再スキャン後の DB 状態を再現: 旧行 missing 化+新パスに pending 候補(規則 3a)
+        await _source.Manager.RunAsync(conn => conn.ExecuteAsync(
+            "UPDATE images SET status = 'missing' WHERE id = @Id", new { Id = imgA }), Ct);
+        await _source.Manager.RunAsync(conn => conn.ExecuteAsync(
+            """
+            INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash, status, created_date, modified_date)
+            VALUES ('img-pending', @F, 'test/a.jpg', 'a.jpg', 10, @H, 'pending', '2026-07-01T00:00:00.000Z', '2026-07-01T00:00:00.000Z')
+            """, new { F = folderA.Id, H = Hash('a') }), Ct);
+
+        var importer = new CollectionPackageImporter(_source.Manager, _source.Clock);
+        var result = await importer.ApplyAsync(path, folderA.Id, ct: Ct);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal(1, result.Value!.Images.Exact);   // id 一致=「一致」
+        Assert.Equal(0, result.Value.Images.Moved);    // 移動検出はこの経路では発火しない
+        Assert.Equal(0, result.Value.Images.Unresolved);
+        Assert.Equal(1L, await _source.Manager.RunAsync(conn => conn.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM image_tags WHERE image_id = @Id", new { Id = imgA }), Ct)); // missing 行へ着地(冪等=変更なし)
+    }
+
+    /// <summary>
+    /// GF-073-08: 「移動を検出(自動追随)」が発火する正しい経路= id 不在の取り込み先で、
+    /// パッケージ記録と異なるパスに同一ハッシュのファイルが一意に存在する場合。付与は新パスの行へ着地。
+    /// </summary>
+    [Fact]
+    public async Task 別コレクションで別パス同一ハッシュの画像は移動検出され付与が新パスへ着地する()
+    {
+        var (_, path, tagTrip, _) = await ExportFixtureAsync(); // a=sub なし "2026/a.jpg"(旅行+評価4)
+        _ = tagTrip;
+        var target = await AddFolderAsync(_target, Path.Combine(_target.Directory, "dst"));
+        // 取り込み先には同一内容(ハッシュ一致)のファイルが別サブフォルダに存在する
+        var movedId = await AddImageAsync(_target, target.Id, "moved/a.jpg", Hash('a'));
+
+        var importer = NewImporter();
+        var result = await importer.ApplyAsync(path, target.Id, acceptMajorityUnresolved: true, ct: Ct);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal(1, result.Value!.Images.Moved);   // 移動を検出(自動追随)
+        Assert.Equal(2L, await _target.Manager.RunAsync(conn => conn.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM image_tags WHERE image_id = @Id", new { Id = movedId }), Ct)); // 旅行+評価が新パスの行へ
+    }
+
+    /// <summary>
     /// GF-073-06(golden 所見 2026-07-12): 大量 missing 登録の適用が UI スレッド上で同期実行され、
     /// ウィンドウが「応答なし」→ 完了画面(B-4)がメインウィンドウの背面に隠れた。
     /// プレビュー/実行は呼び出しスレッドをブロックせず、制御を即時返すこと。
