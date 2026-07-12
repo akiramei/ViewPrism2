@@ -1218,10 +1218,10 @@ changes:
   - id: ECO-074
     title: "バックアップファイルの置き場所管理(B層パッケージの既定フォルダ規約)"
     type: 機能拡張(UX欠陥是正を含む設計追加。ECO-073 gate② golden中のmaintainer所見をR3分離起票)
-    status: staged   # 2026-07-12 起票・gate①=裁定待ち(案A/B/C+既定フォルダ場所。CAD正典化が先行条件)
+    status: staged   # 2026-07-12 起票→同日gate①裁定済み(本文§7)=案A+ユーザー文書配下。次=CAD正典化→/eco-fix
     golden: "pending(gate①裁定→fix時に操作手順を確定)"
     baseline: "main 5f9b756d2537"
     findings: "B層のファイル選択がOS既定=最後に使ったフォルダから(Save/OpenFilePickerともSuggestedStartLocation未指定=WindowService.cs:190-213)・書き出し既定MyDocumentsはspec/CADに根拠なき実装の発明(CollectionExportViewModel.cs:37-39)。バックアップという重要操作で誤ファイル選択リスク高・パッケージである手掛かりがファイル名のみ。工程診断=要求の沈黙次元(CAD mock B-1のD:\\exportはプレースホルダ・spec§5も既定フォルダ規定なし)。A層はSS-002で管理済み(%APPDATA%/snapshots+settings永続)なのにB層設計へread-across漏れ"
     impacted_bom: ["CAD snapshot_export_import(既定フォルダ規約の明文化・案Cは新mock)", "spec §2.14 置き場所規約節(SS-002との対応)", "E-047/048受入観点+M-042/043 settings項目", "CP-PACKAGE-032 既定フォルダ往復観点", "実装=WindowService/CollectionExport・ImportViewModel/AppSettings"]
     body: 60-change-order-eco-074.md
-    notes: "案A=SS-002準拠の管理既定フォルダ+picker起点固定(diff小・視覚不変)。案B=A+対象コレクション最新パッケージの初期選択(maintainer自身が賛否あり)。案C=A-1同型の一覧起点UI(CAD新mock先行・diff大)。共通裁定=既定フォルダの場所とA層SS-002との統一"
+    notes: "gate①裁定済み(2026-07-12・本文§7)=案A採用+既定フォルダはユーザー文書配下 <Documents>\\ViewPrism2\\collections(SS-002と命名対称)・settings永続キーCollectionPackageDirectory・picker逸脱先は永続しない。B-2未選択状態=案イ(picker自動起動+キャンセル残留時プレースホルダ)を設計者適用(goldenで否認可)。案B(最新初期選択)不採用。CAD正典化が実装の先行条件"

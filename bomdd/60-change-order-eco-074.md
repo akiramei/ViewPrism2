@@ -81,5 +81,18 @@ B層設計時にこの**管理フォルダ概念を read-across しなかった*
 
 ## 6. 残ゲート
 
-- gate①: 是正方針の裁定(案A/B/C+既定フォルダ場所)— **CAD 正典化が先行条件**
-- gate②: golden(裁定案に応じて操作手順を fix 時に確定)
+- gate①: ~~是正方針の裁定(案A/B/C+既定フォルダ場所)~~ → **裁定済み(§7)**
+- gate②: golden(操作手順は fix 時に確定)
+
+## 7. gate①裁定(2026-07-12)
+
+- maintainer 裁定: **案A(SS-002 準拠の管理既定フォルダ+picker 起点固定)**を採用。
+  既定フォルダの場所は **ユーザー文書配下**(バックアップの持ち出し・目視確認のしやすさを優先)。
+- 具体化(設計者適用): 既定=`<Documents>\ViewPrism2\collections`(A層 SS-002 の
+  `%APPDATA%\ViewPrism2\snapshots` と命名対称)。settings 永続キー=`CollectionPackageDirectory`
+  (null=既定)。書き出し既定出力先・Save/OpenFilePicker の `SuggestedStartLocation` とも
+  この管理フォルダへ固定(picker での逸脱先は永続しない — 「最後に使ったフォルダ」の再発防止)。
+- **B-2 未選択状態(§1.1)= 案イを設計者適用**(裁定で明示選択なし・golden で否認可):
+  ウィザード表示直後に picker を自動起動(CAD の「未選択状態は存在しない」2 状態定義に忠実)。
+  キャンセル残留時のみプレースホルダ文言を表示(文言は CAD 正典化してから実装)。
+  案B(最新初期選択)は不採用(maintainer 自身が賛否ありとした点・本裁定に含めない)。
