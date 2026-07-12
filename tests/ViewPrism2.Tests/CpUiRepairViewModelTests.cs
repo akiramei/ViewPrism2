@@ -1,3 +1,4 @@
+using Dapper;
 using ViewPrism2.App.Services;
 using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
@@ -115,6 +116,54 @@ public sealed class CpUiRepairViewModelTests
             new TrashService(db.Images, db.Folders, new FakeProbe(exists: false)),
             CreateLoc(),
             new AcceptingWindows());
+
+    // ---- ECO-075: 大量 missing の性能(O(M×N) 候補探索の禁止) ----
+
+    /// <summary>
+    /// ECO-075(golden 所見 2026-07-12): 26 万 missing のコレクションで修復が事実上ハング。
+    /// 真因= LoadAsync が missing ごとに GetCandidatesAsync(毎回フォルダ全行×2 ロード)= O(M×N)+
+    /// 一覧へ逐次 Add。2,000 missing+2,000 pending の fixture で単一ロード相当の時間で完了することを固定。
+    /// </summary>
+    [Fact]
+    public async Task ECO075_大量missingでもLoadAsyncが単一ロード相当で完了する()
+    {
+        using var db = new TempDb();
+        await SeedFolderAsync(db);
+        await db.Manager.RunAsync(async conn =>
+        {
+            for (var i = 0; i < 2000; i++)
+            {
+                var hash = i.ToString("D64", System.Globalization.CultureInfo.InvariantCulture);
+                await conn.ExecuteAsync(
+                    """
+                    INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash, status, created_date, modified_date)
+                    VALUES (@M, @F, @Mp, @Mn, 100, @H, 'missing', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+                           (@P, @F, @Pp, @Pn, 100, @H, 'pending', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+                    """,
+                    new
+                    {
+                        M = $"m-{i:D5}",
+                        F = Folder,
+                        Mp = $"old/{i:D5}.jpg",
+                        Mn = $"{i:D5}.jpg",
+                        P = $"p-{i:D5}",
+                        Pp = $"new/{i:D5}.jpg",
+                        Pn = $"{i:D5}.jpg",
+                        H = hash,
+                    });
+            }
+        }, TestContext.Current.CancellationToken);
+
+        var vm = CreateRepairVm(db);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await vm.LoadAsync();
+        sw.Stop();
+
+        Assert.Equal(2000, vm.MissingImages.Count);
+        Assert.Equal(2000, vm.AutoRepairableCount); // 各 missing に一意候補が 1 件=全て自動修復可能
+        Assert.True(sw.ElapsedMilliseconds < 5000,
+            $"ECO-075: LoadAsync が {sw.ElapsedMilliseconds}ms — missing ごとの全行再ロード(O(M×N))の疑い");
+    }
 
     // ---- 検索=再リンク候補探索に統一(GF-V4-03) ----
 

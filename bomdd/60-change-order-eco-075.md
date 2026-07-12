@@ -67,5 +67,41 @@ missing が少数である前提の潜在的非スケールで、ECO-073 の mis
 ## 6. 残ゲート
 
 - gate①: 不要(実装層確定・視覚不変)
-- gate②: golden = maintainer 実機で当該コレクション(26 万 missing)の修復画面が開ける・
-  UI が応答すること
+- gate②: golden = §8
+
+## 7. 実施記録(2026-07-12 /eco-fix)
+
+### 7.1 先行probe(R5)
+
+- `CpUiRepairViewModelTests` へ「大量 missing でも LoadAsync が単一ロード相当で完了する」を追加
+  (2,000 missing+2,000 pending・一意ハッシュ対・件数正当性+5 秒上限)。
+- 是正前実測: **不合格 — LoadAsync 71.2 秒**(2,000 件で。262,045 件では事実上無限= O(M×N) の裏取り)。
+
+### 7.2 是正diff(案A)
+
+- `RelinkService.CountAutoRepairableAsync(folderId)` 新設: フォルダ行を単一ロードし
+  hash 索引+`CriteriaMatcher`(既存 Core 純粋関数)で per-missing 候補を集合演算。
+  意味論= GetCandidatesAsync+自動修復 criteria と同一(exact-hash pending ∪ criteria(hash+
+  拡張子+サイズ・Pending∪Normal)− 自身 − タグ付き(INV-015・memo 化+ちょうど 1 件判定に
+  必要な分だけ照会))。
+- `RepairViewModel.LoadAsync`: 行ロード+VM 構築+件数計算を `Task.Run` でバックグラウンド化。
+  `MissingImages` を ObservableProperty 化し**インスタンス一括差し替え**(26 万発の
+  CollectionChanged を出さない)。VM 内の per-missing カウント(旧 CountAutoRepairableAsync)を撤去。
+- 視覚・意味論不変。M-RELINK-025(auto_count 契約+スケール不変条件)・32-mbom 沈黙次元
+  「修復画面のスケール前提」を specified 化。
+
+### 7.3 機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **645/645 pass**
+  (probe 緑転 — 修復 VM クラス 13 本が 3.2 秒で完走)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。判定は exe 直接実行。
+- 疑い(未検証)の残置: `AutoRepairAllAsync`/`AutoRepairSingleAsync` の per-missing 候補探索は
+  実行時のみ・自動修復可能件数に依存。golden 実測で問題が残る場合に追補する(§3 記載どおり)。
+
+## 8. gate② golden 操作手順
+
+1. 26 万 missing が登録されたコレクション(先日の取り込み先)で ⋯ から修復を開く →
+   **UI が固まらず**、修復画面が開いて missing 一覧と「N 件のリンク切れ画像(M 件が自動修復可能)」
+   見出しが表示される(初回表示まで数秒程度・スキャン中バッジが正しく消える)。
+2. missing 行を選択 → 候補ペインが応答する(選択単位の候補探索は従来どおり)。
+3. 既存の小規模コレクションの修復操作(候補提示・再リンク・除外)に回帰がない。

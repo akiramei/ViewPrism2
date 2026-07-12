@@ -80,7 +80,10 @@ public sealed partial class RepairViewModel : ObservableObject
     private string? _sizeMaxInput;
 
     // ---- relink フロー ----
-    public ObservableCollection<MissingImageViewModel> MissingImages { get; } = [];
+    // ECO-075: 大量 missing(26 万行)でも CollectionChanged を大量発火させない — 一覧は
+    // インスタンス一括差し替えで反映する(setter は LoadAsync のみが使う)
+    [ObservableProperty]
+    private ObservableCollection<MissingImageViewModel> _missingImages = [];
 
     public ObservableCollection<RelinkCandidateViewModel> Candidates { get; } = [];
 
@@ -127,7 +130,6 @@ public sealed partial class RepairViewModel : ObservableObject
 
     public async Task LoadAsync()
     {
-        MissingImages.Clear();
         Candidates.Clear();
         SelectedMissing = null;
         SelectedCandidate = null;
@@ -136,37 +138,29 @@ public sealed partial class RepairViewModel : ObservableObject
         var folder = await _folders.GetByIdAsync(_collectionId);
         _rootPath = folder?.Path;
 
-        var records = await _images.GetByFolderAsync(_collectionId);
-        foreach (var record in records.Where(r => r.Status == ImageStatus.Missing)
-                     .OrderBy(r => r.RelativePath, StringComparer.OrdinalIgnoreCase))
+        // ECO-075: 大量 missing(26 万行)で UI スレッドを塞がない — 行ロード+VM 構築+件数計算は
+        // バックグラウンド。自動修復可能数は missing ごとの候補探索(O(M×N) 全行再ロード)でなく
+        // RelinkService の単一ロード集合演算で数える。
+        var (items, autoRepairable) = await Task.Run(async () =>
         {
-            MissingImages.Add(new MissingImageViewModel(record, ResolveAbsolute(record.RelativePath)));
-        }
+            var records = await _images.GetByFolderAsync(_collectionId).ConfigureAwait(false);
+            var list = new List<MissingImageViewModel>();
+            foreach (var record in records.Where(r => r.Status == ImageStatus.Missing)
+                         .OrderBy(r => r.RelativePath, StringComparer.OrdinalIgnoreCase))
+            {
+                list.Add(new MissingImageViewModel(record, ResolveAbsolute(record.RelativePath)));
+            }
 
-        AutoRepairableCount = await CountAutoRepairableAsync();
+            var auto = await _relink.CountAutoRepairableAsync(_collectionId).ConfigureAwait(false);
+            return (list, auto);
+        });
+
+        MissingImages = new ObservableCollection<MissingImageViewModel>(items);
+        AutoRepairableCount = autoRepairable;
 
         OnPropertyChanged(nameof(HasNoMissing));
         OnPropertyChanged(nameof(HasNoCandidates));
         OnPropertyChanged(nameof(RepairSummary));
-    }
-
-    /// <summary>
-    /// 自動修復可能な missing 数(GF-V4-02・原典準拠): 各 missing を hash+拡張子+サイズで候補探索し、
-    /// 候補が**ちょうど 1 件**(一意=曖昧でない)のものを数える。0 件/2 件以上は自動修復可能としない。
-    /// </summary>
-    private async Task<int> CountAutoRepairableAsync()
-    {
-        var count = 0;
-        foreach (var missing in MissingImages)
-        {
-            var candidates = await _relink.GetCandidatesAsync(missing.Record.Id, DeriveAutoCriteria(missing.Record));
-            if (candidates.Count == 1)
-            {
-                count++;
-            }
-        }
-
-        return count;
     }
 
     /// <summary>自動修復用の検索条件(原典 既定 useHash+useExtension+useSize。値は missing から導出)。</summary>

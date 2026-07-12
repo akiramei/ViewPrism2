@@ -112,6 +112,88 @@ public sealed class RelinkService
     }
 
     /// <summary>
+    /// ECO-075: フォルダ内 missing 全件の「自動修復可能」数(hash+拡張子+サイズで候補がちょうど 1 件)を
+    /// **単一ロードの集合演算**で数える。missing ごとの GetCandidatesAsync(毎回フォルダ全行×2 ロード=
+    /// O(M×N))を置き換える。判定意味論は GetCandidatesAsync+自動修復 criteria と同一:
+    /// exact-hash pending ∪ criteria(hash+拡張子+サイズ・Pending∪Normal)− 自身 − タグ付き(INV-015)。
+    /// </summary>
+    public async Task<int> CountAutoRepairableAsync(string folderId)
+    {
+        var inFolder = await _images.GetByFolderAsync(folderId).ConfigureAwait(false);
+        var statusTargets = new HashSet<ImageStatus> { ImageStatus.Pending, ImageStatus.Normal };
+        var byHash = new Dictionary<string, List<ImageRecord>>(StringComparer.Ordinal);
+        foreach (var record in inFolder)
+        {
+            if (record.Status is ImageStatus.Pending or ImageStatus.Normal)
+            {
+                (byHash.TryGetValue(record.Hash, out var list) ? list : byHash[record.Hash] = []).Add(record);
+            }
+        }
+
+        var taggedMemo = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var count = 0;
+        foreach (var missing in inFolder)
+        {
+            if (missing.Status != ImageStatus.Missing || !byHash.TryGetValue(missing.Hash, out var bucket))
+            {
+                continue;
+            }
+
+            var criteria = new SearchCriteria
+            {
+                Hash = missing.Hash,
+                Extension = Path.GetExtension(missing.FileName),
+                SizeMin = missing.FileSize,
+                SizeMax = missing.FileSize,
+            };
+            var candidateIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var image in bucket)
+            {
+                if (image.Status == ImageStatus.Pending)
+                {
+                    candidateIds.Add(image.Id); // ① exact-hash pending(GetCandidatesAsync と同一)
+                }
+            }
+
+            foreach (var id in CriteriaMatcher.Match(bucket, criteria, statusTargets))
+            {
+                candidateIds.Add(id); // ② criteria 検索(同一ハッシュ bucket 内で十分=hash 条件が含まれる)
+            }
+
+            candidateIds.Remove(missing.Id);
+
+            // タグ付き除外(INV-015)。「ちょうど 1 件」判定に必要な分だけ照会し memo 化する
+            var safe = 0;
+            foreach (var id in candidateIds)
+            {
+                if (safe > 1)
+                {
+                    break;
+                }
+
+                if (!taggedMemo.TryGetValue(id, out var hasTags))
+                {
+                    hasTags = _tags is not null
+                        && (await _tags.GetImageTagsAsync(id).ConfigureAwait(false)).Count > 0;
+                    taggedMemo[id] = hasTags;
+                }
+
+                if (!hasTags)
+                {
+                    safe++;
+                }
+            }
+
+            if (safe == 1)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
     /// 確定(REQ-069 / T4・単一トランザクション・原子): missing 行へ replacement 行のパス情報を上書きし
     /// status=normal・candidate_link_id=NULL、replacement 行は削除する。missing 側 image_id は不変(INV-001)。
     /// replacement は pending または untagged-normal に限る。タグ付き replacement は
