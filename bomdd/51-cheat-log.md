@@ -424,7 +424,7 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   ブロックのみ)では非認識となり、後続の validate_bom E15(履歴証拠検査)が不合格になる。
   ECO-076 で実発生(fix `2ceb938` が E15 検出→message のみ amend `542ef87` で解消・内容同一)。
   処置候補=hook 側を `git interpret-trailers`/`%(trailers)` 基準へ揃える(緩い grep 検査の撤去)。
-  起票要否は maintainer 判断。
+  起票要否は maintainer 判断。**→ 処置済み: ECO-078(2026-07-13)で是正**(msg_has_trailer=最終段落ブロック基準へ統一・selftest-lifecycle (d) で恒久 pin)。
 
 ## ECO-076/077 ブランチ統合時の検査器の谷間(記録)2026-07-13
 
@@ -437,4 +437,4 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   --selftest-lifecycle OK を成立証拠として記録**(本エントリ)。
   処置候補=lifecycle_edge_findings がマージ中(MERGE_HEAD 存在時)は HEAD と MERGE_HEAD の
   status を合算した old で比較する。E15 の hook 不一致(上記 ECO-076 記録)と合わせ、
-  検査器のライフサイクル系是正として一括起票が適切 — maintainer 判断。
+  検査器のライフサイクル系是正として一括起票が適切 — maintainer 判断。**→ 処置済み: ECO-078(2026-07-13)で是正**(combined_head_status=親合算・selftest-lifecycle (e) で恒久 pin)。

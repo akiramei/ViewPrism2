@@ -1267,7 +1267,8 @@ changes:
   - id: ECO-078
     title: "ライフサイクル検査器の一括是正(E19 マージ誤検知+E15/commit-msg hook の trailer 解釈不一致)"
     type: 検査器/台帳の欠陥是正(工程ハーネス。製品コード不変=ECO-061 と同型。51-cheat-log 記録2件の一括起票)
-    status: staged
+    status: implemented   # 2026-07-13 /eco-fix 完了(probe先行赤2→緑転+機械受入)・golden 待ち
+    verification: "2026-07-13 /eco-fix完了: 先行probe赤(--selftest-lifecycle へ (d)中間段落trailer非認/最終段落認識 (e)ブランチ正規遷移→non-ff merge進行中のE19無誤報 を追加→2件FAIL=型不在の実測)→是正(validate_bom.pyのみ: 案A=message_trailer_block/msg_has_trailer 新設で--commit-msgの全行grepをgit基準=最終段落ブロックのみへ統一、案B=merge_parent_refs/combined_head_status 新設でE19のoldをHEAD+MERGE_HEAD合算=より進んだ側に。本経路と--commit-msg経路の両方へ適用=起票時の疑い(commit-msg側の第1親前提)も同時解消。E15〜E17はHEAD祖先基準のまま=注記固定)→selftest-lifecycle OK(新2本緑転・既存a/b/c不変)+selftest OK+validate 0/0。製品不変確認=build 0/0・Tests 655/655・Oracle 109+2skip"
     golden: "pending(maintainer 実行確認=validate 0/0+--selftest-lifecycle OK(新ケース2本込み)+中間段落trailerコミットがhookでブロックされる手元再現)"
     baseline: "main 3ce339b"
     findings: "症状A=trailer を中間段落に置くと commit-msg hook は通過し E15 が不合格(ECO-076 fix 2ceb938→amend 542ef87・ECO-077 fix 00ba06e→amend ee9ecd4 の実発生2回)。真因=検査基準の二重定義: hook側 validate_bom.py:336 の全行grep(段落位置不問) vs 履歴側 :212-214 の %(trailers)(最終段落ブロックのみ)=hookが緩く fail-closed の破れ。症状B=別ブランチで正規遷移済み ECO の main マージで E19 が「新規エントリが applied で登場」と誤報し pre-commit をブロック(merge 3ce339b で実発生・--no-verify 1回+直後 validate 0/0 で成立証明済み)。真因=lifecycle_edge_findings(:185-198)の比較元 old が HEAD(第1親)のみ(:236)で MERGE_HEAD 非考慮=線形履歴の暗黙前提。切り分け=誤報はマージ進行中の pre-commit に限局(確定後は E15〜E19 とも 0 error 実測)。--selftest-lifecycle に両ケースの陽性対照が不在(検査の谷間が selftest の網にも空いていた)"

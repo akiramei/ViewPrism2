@@ -1,8 +1,8 @@
-# ECO-078(staged): ライフサイクル検査器の一括是正 — E19 マージ誤検知+E15/commit-msg hook の trailer 解釈不一致
+# ECO-078(implemented): ライフサイクル検査器の一括是正 — E19 マージ誤検知+E15/commit-msg hook の trailer 解釈不一致
 
 - 起票: 2026-07-13(maintainer 指示。51-cheat-log の記録 2 件=ECO-076 accept 時+ECO-076/077 統合時を一括起票)
 - 種別: 検査器/台帳の欠陥是正(工程ハーネス。製品コード不変 — ECO-061 と同型)
-- 状態: staged
+- 状態: implemented(2026-07-13 /eco-fix=§7。gate②=golden 待ち=§6)
 - 関連: ECO-061(検査器の導入元=E14〜E19+--commit-msg+--selftest-lifecycle)/
   ECO-076・ECO-077(両欠陥の実発生現場)
 
@@ -91,3 +91,36 @@ gate②=maintainer による selftest 実行で受け入れる)。
 - gate②(golden): maintainer による実行確認=`python bomdd/validate_bom.py`(0/0)+
   `python bomdd/validate_bom.py --selftest-lifecycle`(OK・新ケース 2 本を含む)+
   中間段落 trailer コミットの手元再現が hook でブロックされること。
+
+## 7. 実施記録(2026-07-13 /eco-fix)
+
+### 7.1 先行 probe(R5)
+
+- `--selftest-lifecycle` へ赤ケース 2 本を**製品変更前に**追加:
+  (d)=中間段落 trailer を trailer と誤認しない+最終段落ブロックは認識する(症状A)、
+  (e)=一時リポでブランチ正規遷移(staged→implemented→applied)→ main へ non-ff merge 進行中
+  (MERGE_HEAD 存在)の E19 が誤報しない(症状B)。
+- **是正前実測: 2 件とも FAIL**(`msg_has_trailer が存在しない`/`combined_head_status が存在しない`
+  =検査の谷間が selftest の網にも空いていた事実の固定)。
+
+### 7.2 是正 diff(validate_bom.py のみ・製品不変)
+
+- **案A(trailer 解釈の単一定義)**: 純粋層に `message_trailer_block`(git の解釈=最終段落
+  ブロックのみ・全行 `Key: value` 形のときだけ trailer と認める)+`msg_has_trailer` を新設。
+  --commit-msg 経路の全行 grep(旧 :336)を `msg_has_trailer` へ置換=履歴側 `%(trailers)` と
+  単一解釈。厳しすぎる側の誤差は commit 時の明瞭なエラーで止まる(fail-closed 側に倒す)。
+- **案B(E19 のマージ対応)**: git 抽出層に `merge_parent_refs`(MERGE_HEAD 存在時は
+  [HEAD, MERGE_HEAD])+`combined_head_status`(全親の status 合算・同一 ECO は
+  STATUS_ORDER でより進んだ側)を新設。E19 の比較元 old を本経路・--commit-msg 経路の
+  **両方**で合算値へ切替(§3 疑い=--commit-msg 経路の同居も同時に解消)。
+  E15〜E17(証拠検査)は従来どおり HEAD 祖先基準(マージ中の未合流 ECO は HEAD 台帳に
+  現れないため誤検知しない — 注記コメントで固定)。
+- hook(bomdd/hooks/commit-msg)は validate_bom 呼び出しのみのため不変。エラーメッセージへ
+  「中間段落は不可」の説明を追加。
+
+### 7.3 機械受入
+
+- `--selftest-lifecycle`: **OK(新ケース 2 本が緑転・既存 a/b/c 不変)**。`--selftest`: OK。
+- `validate_bom`: 0 error / 0 warning。
+- 製品不変確認: `dotnet build` 0/0・`ViewPrism2.Tests` 655/655・`ViewPrism2.Oracle` 109+2 known skip
+  (R6 不変)。R7 並置=対象外(UI サーフェスに触れない)。

@@ -157,6 +157,26 @@ def lifecycle_scheme(reg_data):
 def register_status_map(changes):
     return {c.get("id"): c.get("status") for c in (changes or []) if isinstance(c, dict) and c.get("id")}
 
+# 遷移の進行度(ECO-078 症状B: マージ親の合算で「より進んだ側」を採用するための順序)
+STATUS_ORDER = {"staged": 0, "implemented": 1, "applied": 2, "superseded": 3}
+
+def message_trailer_block(msg):
+    """コミットメッセージの trailer 行群(ECO-078 症状A: git の解釈=最終段落ブロックのみ、に統一)。
+    最終段落の全行が `Key: value` 形のときだけ trailer と認める。中間段落は本文であり trailer でない
+    (%(trailers) と同じ側へ寄せる。厳しすぎる側の誤差は commit 時に明瞭なエラーで止まる=fail-closed)。"""
+    paras = [p for p in re.split(r"\n\s*\n", (msg or "").strip()) if p.strip()]
+    if len(paras) <= 1:
+        return []  # 件名(+本文なし)だけのメッセージに trailer は無い
+    lines = [l.rstrip() for l in paras[-1].splitlines() if l.strip() and not l.lstrip().startswith("#")]
+    if lines and all(re.match(r"^[A-Za-z0-9-]+:\s?\S", l) for l in lines):
+        return lines
+    return []
+
+def msg_has_trailer(msg, key, value):
+    """メッセージが trailer 「key: value」を(git 基準の位置で)携行しているか。"""
+    return any(re.match(rf"^{re.escape(key)}:\s*{re.escape(value)}\s*$", l)
+               for l in message_trailer_block(msg))
+
 def lifecycle_evidence_findings(status_by_id, applies_from_num, evidence, is_ancestor, known_ids=None):
     """E15〜E18: コミット済み台帳状態 × 履歴証拠(trailer)の状態不変条件(純粋層・git 非依存)。
     evidence: {eco_id: {"fix": [sha...], "accept": [sha...]}}(HEAD 祖先のみ — 別系統ブランチは抽出層が除外)"""
@@ -243,6 +263,28 @@ def head_register_changes(repo_dir, ref="HEAD"):
     except yaml.YAMLError:
         return None
 
+def merge_parent_refs(repo_dir):
+    """比較元の親 ref 一覧。マージ進行中(MERGE_HEAD 存在)は [HEAD, MERGE_HEAD](ECO-078 症状B:
+    E19 の old を第 1 親だけから取る線形履歴前提の除去)。通常は [HEAD]。"""
+    rc, out = _git(repo_dir, "rev-parse", "-q", "--verify", "MERGE_HEAD")
+    return ["HEAD", "MERGE_HEAD"] if rc == 0 and out.strip() else ["HEAD"]
+
+def combined_head_status(repo_dir):
+    """E19 の比較元 old: 全親(HEAD+マージ中は MERGE_HEAD)の register status を合算する。
+    同一 ECO が複数親に居る場合は遷移がより進んだ側(STATUS_ORDER)を採用 — ブランチで正規に
+    歩んだ遷移をマージが「新規登場」と誤認しない(ECO-078 症状B)。どの親からも読めなければ None。"""
+    combined, seen_any = {}, False
+    for ref in merge_parent_refs(repo_dir):
+        ch = head_register_changes(repo_dir, ref)
+        if ch is None:
+            continue
+        seen_any = True
+        for cid, st in register_status_map(ch).items():
+            cur = combined.get(cid)
+            if cur is None or STATUS_ORDER.get(st, -1) > STATUS_ORDER.get(cur, -1):
+                combined[cid] = st
+    return combined if seen_any else None
+
 # ---- --selftest(ECO-053): 素通し様式の再発防止 — 検査器自身の検出能力を合成フィクスチャで自己検査 ----
 if "--selftest" in sys.argv:
     ok = True
@@ -323,8 +365,8 @@ if "--commit-msg" in sys.argv:
     _afn, _scheme_err = lifecycle_scheme(_staged)
     if _scheme_err:
         print(f"[lifecycle] {_scheme_err}"); sys.exit(1)
-    _head_ch = head_register_changes(_repo)
-    _head_st = register_status_map(_head_ch) if _head_ch is not None else {}
+    # ECO-078 症状B: 比較元 old はマージ中 MERGE_HEAD も合算(ブランチ正規遷移を新規登場と誤認しない)
+    _head_st = combined_head_status(_repo) or {}
     _st_st = register_status_map(_staged.get("changes"))
     _problems = [m for _, m in lifecycle_edge_findings(_head_st, _st_st, _afn)]
     _NEED = {("staged", "implemented"): TRAILER_FIX, ("implemented", "applied"): TRAILER_ACCEPT}
@@ -333,8 +375,9 @@ if "--commit-msg" in sys.argv:
         if _n is None or _n < _afn:
             continue
         _t = _NEED.get((_head_st.get(_cid), _st_st[_cid]))
-        if _t and not re.search(rf"^{_t}: {re.escape(_cid)}\s*$", _msg, re.M):
-            _problems.append(f"{_cid}: 遷移 {_head_st.get(_cid)}→{_st_st[_cid]} のコミットに trailer 「{_t}: {_cid}」が無い")
+        # ECO-078 症状A: trailer は git 基準(最終段落ブロックのみ)で判定 — 履歴側 %(trailers) と単一解釈
+        if _t and not msg_has_trailer(_msg, _t, _cid):
+            _problems.append(f"{_cid}: 遷移 {_head_st.get(_cid)}→{_st_st[_cid]} のコミットに trailer 「{_t}: {_cid}」が無い(メッセージ末尾の trailer ブロックに置く — 中間段落は不可)")
     if _problems:
         print("[lifecycle] commit-msg 検査 FAIL:")
         for _p in _problems:
@@ -409,6 +452,42 @@ if "--selftest-lifecycle" in sys.argv:
         r = _check(d)
         if not any(c == "E17" for c, _ in r):
             print(f"selftest-lifecycle FAIL: 実 DAG の順序逆転を検出できない(E17 が出ない: {r})"); ok = False
+    finally:
+        _rm(d)
+    # (d) ECO-078 症状A: trailer の解釈は git 基準(最終段落ブロックのみ)に統一する。
+    # 中間段落の trailer は「無い」と判定しなければならない(hook が E15 より緩い=fail-closed の破れ)。
+    try:
+        _mid = "fix(eco-100)\n\nBomDD-ECO-Fix: ECO-100\n\nCo-Authored-By: a <a@b.c>"
+        _fin = "fix(eco-100)\n\nBomDD-ECO-Fix: ECO-100\nCo-Authored-By: a <a@b.c>"
+        if msg_has_trailer(_mid, TRAILER_FIX, "ECO-100"):
+            print("selftest-lifecycle FAIL: 中間段落 trailer を trailer と誤認(%(trailers) と不一致 — ECO-078 症状A)"); ok = False
+        if not msg_has_trailer(_fin, TRAILER_FIX, "ECO-100"):
+            print("selftest-lifecycle FAIL: 最終段落ブロックの trailer を認識できない(ECO-078 症状A 過剰是正)"); ok = False
+    except NameError:
+        print("selftest-lifecycle FAIL: msg_has_trailer が存在しない(hook 側 trailer 解釈が git 基準に未統一 — ECO-078 症状A)"); ok = False
+    # (e) ECO-078 症状B: ブランチで正規遷移(staged→implemented→applied)した ECO を main へ
+    # マージする pre-commit(MERGE_HEAD 存在)で、E19 が「非 staged 登場」と誤報しないこと。
+    d = _mkrepo()
+    try:
+        _wreg(d, "staged"); _commit(d, "起票(eco-100)")
+        _git(d, "checkout", "-q", "-b", "side")
+        _wreg(d, "implemented"); _commit(d, "fix(eco-100)\n\nBomDD-ECO-Fix: ECO-100")
+        _wreg(d, "applied"); _commit(d, "accept(eco-100)\n\nBomDD-ECO-Accept: ECO-100")
+        _git(d, "checkout", "-q", "main")
+        with open(os.path.join(d, "other.txt"), "w", encoding="utf-8") as f:
+            f.write("x")  # main を前進させ non-ff にする(マージコミット=MERGE_HEAD が発生する形)
+        _commit(d, "unrelated on main")
+        _git(d, "merge", "--no-commit", "--no-ff", "side")
+        try:
+            _comb = combined_head_status(d)
+        except NameError:
+            print("selftest-lifecycle FAIL: combined_head_status が存在しない(E19 が線形履歴前提のまま — ECO-078 症状B)"); ok = False
+        else:
+            with open(os.path.join(d, REG_RELPATH), encoding="utf-8") as f:
+                _wt = register_status_map((yaml.safe_load(f.read()) or {}).get("changes"))
+            r = lifecycle_edge_findings(_comb or {}, _wt, 100)
+            if any(c == "E19" for c, _ in r):
+                print(f"selftest-lifecycle FAIL: マージ進行中の正規遷移済み ECO を E19 が誤報({r} — ECO-078 症状B)"); ok = False
     finally:
         _rm(d)
     print("selftest-lifecycle:", "OK" if ok else "FAIL")
@@ -546,7 +625,12 @@ else:
                     _base_st, applies_from_num, _evidence, git_is_ancestor(_repo), known_ids=_known):
                 err(_code, _msg)
             if _head_ch is not None:
-                for _code, _msg in lifecycle_edge_findings(_head_st, _wt_st, applies_from_num):
+                # ECO-078 症状B: E19 の old はマージ中 MERGE_HEAD も合算(線形履歴前提の除去)。
+                # E15〜E17(証拠検査)は従来どおり HEAD 祖先基準 — マージ中の未合流 ECO は
+                # _base_st(HEAD 台帳)に現れないため誤検知しない。
+                _edge_st = combined_head_status(_repo)
+                for _code, _msg in lifecycle_edge_findings(
+                        _edge_st if _edge_st is not None else _head_st, _wt_st, applies_from_num):
                     err(_code, _msg)
 
 # ---------------------------------------------------------------- UI-BOM(任意)
