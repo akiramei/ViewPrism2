@@ -377,9 +377,11 @@ public sealed class CpPackage073Tests : IDisposable
     }
 
     [Fact]
-    public async Task 三点メニューの書き出しと取り込みはコレクションIDで配線される()
+    public async Task 三点メニューの誘導は設定のデータとバックアップ節を開く()
     {
-        // SS-001 裁定(b): B層入口=画像タブ ⋯ メニュー。VM コマンド → IWindowService 配線を pin
+        // SS-001 再裁定(ECO-077/M5): B層入口=設定 ▸ データとバックアップ(E-1)。⋯ メニューは
+        // 誘導 1 項目のみ(実体を持たない)。旧 pin(実体 2 コマンドのコレクション ID 配線)は
+        // CAD 改版で契約ごと反転(ECO-076 教訓=pin 改訂+VC probe+CP 改訂を同一 diff で)。
         var win = new CapturingWindows();
         var folder = await AddFolderAsync(_target, Path.Combine(_target.Directory, "wired"));
         var vm = new App.ViewModels.ImageTabViewModel(
@@ -392,26 +394,22 @@ public sealed class CpPackage073Tests : IDisposable
             win, new AppSettings(), new WorkspaceService(_target.Workspaces, _target.Clock), TestLoc.Empty());
         await vm.InitializeAsync(folder.Id);
 
-        await vm.ExportCollectionCommand.ExecuteAsync(null);
-        await vm.ImportCollectionCommand.ExecuteAsync(null);
+        await vm.OpenBackupSettingsCommand.ExecuteAsync(null);
 
-        Assert.Equal([folder.Id], win.ExportCalls);
-        Assert.Equal([folder.Id], win.ImportCalls);
+        Assert.Equal([App.Services.SettingsSection.DataBackup], win.SettingsCalls);
+        Assert.False(vm.MoreMenuOpen); // 誘導起動でメニューは閉じる
     }
 
     private sealed class CapturingWindows : App.Services.IWindowService
     {
-        public List<string> ExportCalls { get; } = [];
-
-        public List<string> ImportCalls { get; } = [];
+        public List<App.Services.SettingsSection> SettingsCalls { get; } = [];
 
         public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(true);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
         public Task ShowSettingsAsync() => Task.CompletedTask;
+        public Task ShowSettingsAsync(App.Services.SettingsSection section) { SettingsCalls.Add(section); return Task.CompletedTask; }
         public Task ShowSnapshotsAsync() => Task.CompletedTask;
-        public Task ShowCollectionExportAsync(string collectionId) { ExportCalls.Add(collectionId); return Task.CompletedTask; }
-        public Task ShowCollectionImportAsync(string collectionId) { ImportCalls.Add(collectionId); return Task.CompletedTask; }
         public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
         public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);
         public Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(Tag tag, NumericTagSettings? settings, int selectionCount)
@@ -568,8 +566,9 @@ public sealed class CpPackage073Tests : IDisposable
         var target = await AddFolderAsync(_target, Path.Combine(_target.Directory, "dst"));
         var loc = new LocalizationService(I18nResourceLoader.Load(
             Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
-        var vm = new App.ViewModels.CollectionImportViewModel(NewImporter(), target, loc,
+        var vm = new App.ViewModels.CollectionImportViewModel(NewImporter(), [target], loc,
             _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        vm.SelectedTarget = target; // ECO-077 案A: 取り込み先は B-2 内選択
         vm.PackagePath = path;
         vm.Header = NewImporter().ReadHeader(path).Value;
 

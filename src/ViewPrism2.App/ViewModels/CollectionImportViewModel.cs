@@ -87,24 +87,25 @@ public sealed partial class TagConflictRowViewModel(
 /// B-2〜B-4 取り込みウィザード(ECO-073・CAD snapshot_export_import)。
 /// stepper: 1 ファイル → 2 検証 → 3 プレビュー&競合解決 → 4 完了。
 /// マージは追加型(削除しない=M4)。タグ競合が未解決の間は実行不可。未解決画像は missing 登録(gate①)。
+/// ECO-077 gate①裁定=案A: 入口(設定 E-1)にコレクション文脈が無いため、取り込み先コレクションは
+/// B-2 内で選択する(既定=未選択・選択まで「次へ」不活性=互換 OK と AND)。
 /// </summary>
 public sealed partial class CollectionImportViewModel : ObservableObject
 {
     private readonly CollectionPackageImporter _importer;
-    private readonly SyncFolder _collection;
     private readonly LocalizationService _localization;
     private readonly Func<string, Task<string?>> _pickOpenFile;
     private readonly Func<Task<IReadOnlyList<Tag>>> _loadLocalTags;
 
     public CollectionImportViewModel(
         CollectionPackageImporter importer,
-        SyncFolder collection,
+        IReadOnlyList<SyncFolder> collections,
         LocalizationService localization,
         Func<string, Task<string?>> pickOpenFile,
         Func<Task<IReadOnlyList<Tag>>> loadLocalTags)
     {
         _importer = importer;
-        _collection = collection;
+        Targets = collections;
         _localization = localization;
         _pickOpenFile = pickOpenFile;
         _loadLocalTags = loadLocalTags;
@@ -119,7 +120,19 @@ public sealed partial class CollectionImportViewModel : ObservableObject
 
     public LocalizationProxy Loc { get; private set; }
 
-    public string TargetRootPath => _collection.Path;
+    /// <summary>取り込み先候補(ライブラリ内全コレクション)。</summary>
+    public IReadOnlyList<SyncFolder> Targets { get; }
+
+    /// <summary>取り込み先コレクション(案A: 既定=未選択。選択まで「次へ」不活性)。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanProceed), nameof(TargetRootPath))]
+    private SyncFolder? _selectedTarget;
+
+    /// <summary>B-3 の突き合わせ基準ルート=選択した取り込み先のフォルダ(案A・従来意味論の保存)。</summary>
+    public string TargetRootPath => SelectedTarget?.Path ?? "";
+
+    /// <summary>「次へ:プレビュー」の活性(互換 OK かつ 取り込み先選択済み=CAD 実装補遺)。</summary>
+    public bool CanProceed => VerifyOk && SelectedTarget is not null;
 
     /// <summary>
     /// GF-073-04: mock の擬似タイトルは面ごとに異なる(B-2=コレクションを取り込む/
@@ -173,13 +186,13 @@ public sealed partial class CollectionImportViewModel : ObservableObject
         : null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(Step2Reached))]
+    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(Step2Reached), nameof(CanProceed))]
     private string? _verifyError;
 
     public bool VerifyOk => Header is not null && VerifyError is null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(Step2Reached), nameof(HeaderCollectionName), nameof(HeaderImageCount), nameof(HeaderTagCount), nameof(HeaderCreatedAt), nameof(HeaderAppVersion))]
+    [NotifyPropertyChangedFor(nameof(VerifyOk), nameof(Step2Reached), nameof(CanProceed), nameof(HeaderCollectionName), nameof(HeaderImageCount), nameof(HeaderTagCount), nameof(HeaderCreatedAt), nameof(HeaderAppVersion))]
     private PackageHeader? _header;
 
     public string? HeaderCollectionName => Header?.Collection.Name;
@@ -293,7 +306,8 @@ public sealed partial class CollectionImportViewModel : ObservableObject
     [RelayCommand]
     private async Task ToPreviewAsync()
     {
-        if (PackagePath is null || !VerifyOk || IsBusy)
+        // ECO-077 案A: 取り込み先未選択では進めない(CanProceed=互換 OK と AND)
+        if (PackagePath is null || !CanProceed || SelectedTarget is not { } target || IsBusy)
         {
             return;
         }
@@ -303,7 +317,7 @@ public sealed partial class CollectionImportViewModel : ObservableObject
         {
             // GF-073-06: 照合走査は大量画像で長時間かかる。UI スレッドを塞ぐと「応答なし」→
             // ウィンドウが背面に落ちるため、バックグラウンドで実行する
-            var preview = await Task.Run(() => _importer.PreviewAsync(PackagePath, _collection.Id));
+            var preview = await Task.Run(() => _importer.PreviewAsync(PackagePath, target.Id));
             if (!preview.IsSuccess)
             {
                 VerifyError = preview.Message;
@@ -373,13 +387,13 @@ public sealed partial class CollectionImportViewModel : ObservableObject
         : _localization.T("package.resultSummary", new Dictionary<string, string>
         {
             ["package"] = HeaderCollectionName ?? "",
-            ["collection"] = _collection.Name,
+            ["collection"] = SelectedTarget?.Name ?? "",
         });
 
     [RelayCommand]
     private async Task ExecuteAsync()
     {
-        if (PackagePath is null || !CanExecute)
+        if (PackagePath is null || SelectedTarget is not { } target || !CanExecute)
         {
             return;
         }
@@ -396,7 +410,7 @@ public sealed partial class CollectionImportViewModel : ObservableObject
             var accept = AcceptMajority;
             // GF-073-06: 適用(単一トランザクションの大量 INSERT)も同様にバックグラウンドで実行する
             var result = await Task.Run(() => _importer.ApplyAsync(
-                path, _collection.Id, resolutions, acceptMajorityUnresolved: accept));
+                path, target.Id, resolutions, acceptMajorityUnresolved: accept));
             if (result.IsSuccess)
             {
                 Result = result.Value;

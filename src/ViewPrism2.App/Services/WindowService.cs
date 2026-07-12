@@ -115,14 +115,17 @@ public sealed class WindowService : IWindowService
         await window.ShowDialog(Owner);
     }
 
-    public async Task ShowSettingsAsync()
+    public Task ShowSettingsAsync() => ShowSettingsAsync(SettingsSection.General);
+
+    public async Task ShowSettingsAsync(SettingsSection section)
     {
         if (Owner is null)
         {
             return;
         }
 
-        var vm = new SettingsViewModel(_localization, _settings, _settingsStore, this);
+        // ECO-077/E-1: スナップショット行サマリ(最終作成・件数)のため SnapshotService を渡す
+        var vm = new SettingsViewModel(_localization, _settings, _settingsStore, this, _snapshots, section);
         var window = new SettingsWindow { DataContext = vm };
         await window.ShowDialog(Owner);
     }
@@ -152,29 +155,32 @@ public sealed class WindowService : IWindowService
         await window.ShowDialog(Owner);
     }
 
-    public async Task ShowCollectionExportAsync(string collectionId)
+    public async Task ShowCollectionExportAsync()
     {
-        if (Owner is null || await _folders.GetByIdAsync(collectionId) is not { } collection)
+        // ECO-077(SS-001 再裁定/M5): 入口=設定 ▸ データとバックアップ。コレクション文脈が無いため
+        // 対象は B-1 内で選択する(CAD interaction 表)。コレクション 0 のライブラリでは開かない。
+        if (Owner is null || await _folders.GetAllAsync() is not { Count: > 0 } collections)
         {
             return;
         }
 
         var vm = new CollectionExportViewModel(
-            _packageExporter, collection, _localization, PickSaveFileAsync, PackageDirectory);
+            _packageExporter, collections, _localization, PickSaveFileAsync, PackageDirectory);
         var window = new CollectionExportWindow { DataContext = vm };
         await vm.LoadAsync();
         await window.ShowDialog(Owner);
     }
 
-    public async Task ShowCollectionImportAsync(string collectionId)
+    public async Task ShowCollectionImportAsync()
     {
-        if (Owner is null || await _folders.GetByIdAsync(collectionId) is not { } collection)
+        // ECO-077 gate①裁定=案A: 取り込み先は B-2 内で選択(既定=未選択・選択まで「次へ」不活性)
+        if (Owner is null || await _folders.GetAllAsync() is not { Count: > 0 } collections)
         {
             return;
         }
 
         var vm = new CollectionImportViewModel(
-            _packageImporter, collection, _localization, PickPackageFileAsync, () => _tags.GetAllAsync());
+            _packageImporter, collections, _localization, PickPackageFileAsync, () => _tags.GetAllAsync());
         var window = new CollectionImportWindow { DataContext = vm };
         await window.ShowDialog(Owner);
     }

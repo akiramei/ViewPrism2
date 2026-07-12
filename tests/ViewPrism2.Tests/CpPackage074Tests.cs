@@ -43,7 +43,7 @@ public sealed class CpPackage074Tests : IDisposable
     {
         var folder = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
         var exporter = new CollectionPackageExporter(_db.Manager, _db.Clock, "9.9.9");
-        var vm = new CollectionExportViewModel(exporter, folder, CreateLoc(), (_, _) => Task.FromResult<string?>(null));
+        var vm = new CollectionExportViewModel(exporter, [folder], CreateLoc(), (_, _) => Task.FromResult<string?>(null));
 
         var managed = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ViewPrism2", "collections");
@@ -57,7 +57,7 @@ public sealed class CpPackage074Tests : IDisposable
         var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
         var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
         var pickCount = 0;
-        var vm = new CollectionImportViewModel(importer, collection, loc,
+        var vm = new CollectionImportViewModel(importer, [collection], loc,
             _ => { pickCount++; return Task.FromResult<string?>(null); },
             () => Task.FromResult<IReadOnlyList<Tag>>([]));
         await Session.Dispatch(() =>

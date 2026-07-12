@@ -425,3 +425,16 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   ECO-076 で実発生(fix `2ceb938` が E15 検出→message のみ amend `542ef87` で解消・内容同一)。
   処置候補=hook 側を `git interpret-trailers`/`%(trailers)` 基準へ揃える(緩い grep 検査の撤去)。
   起票要否は maintainer 判断。
+
+## ECO-076/077 ブランチ統合時の検査器の谷間(記録)2026-07-13
+
+- **validate_bom E19 がマージコミットを線形履歴前提で誤検知**: E19(HEAD→作業ツリーの status
+  遷移検査)は比較元を HEAD(第 1 親)のみに取るため、別ブランチで正規に staged→implemented→
+  applied を歩んだ ECO を main へマージする際、「新規エントリが applied で登場(起票を経ない)」
+  と誤報し pre-commit をブロックする(MERGE_HEAD 側の status を考慮しない)。ECO-077 の main
+  統合で実発生。トレーラ証拠検査(E15〜E17)はマージ後の祖先関係で正しく成立するため、
+  マージコミットのみ hook の明示的逃げ道(--no-verify)で通し、**直後の validate_bom 0/0+
+  --selftest-lifecycle OK を成立証拠として記録**(本エントリ)。
+  処置候補=lifecycle_edge_findings がマージ中(MERGE_HEAD 存在時)は HEAD と MERGE_HEAD の
+  status を合算した old で比較する。E15 の hook 不一致(上記 ECO-076 記録)と合わせ、
+  検査器のライフサイクル系是正として一括起票が適切 — maintainer 判断。

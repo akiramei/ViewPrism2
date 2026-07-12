@@ -1575,24 +1575,18 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
-    /// <summary>⋯ メニュー: コレクションを書き出す(ECO-073 B-1・SS-001 裁定(b)=三点メニュー入口)。</summary>
+    /// <summary>
+    /// ⋯ メニュー: 設定 ▸ データとバックアップへの誘導(ECO-077/SS-001 再裁定=M5)。
+    /// 書き出す/取り込むの実体はここに置かない。設定内での取り込みが表示中コレクションの
+    /// 付与/参照を増やしうるため、閉じ後に再読込する(旧 ImportCollection と同じ理由)。
+    /// </summary>
     [RelayCommand]
-    private async Task ExportCollection()
+    private async Task OpenBackupSettings()
     {
         MoreMenuOpen = false;
         OnPropertyChanged(string.Empty);
+        await _windows.ShowSettingsAsync(SettingsSection.DataBackup).ConfigureAwait(true);
         if (_collectionId is null) { return; }
-        await _windows.ShowCollectionExportAsync(_collectionId).ConfigureAwait(true);
-    }
-
-    /// <summary>⋯ メニュー: コレクションを取り込む(ECO-073 B-2〜B-4)。取り込みで付与/参照が増えるため再読込。</summary>
-    [RelayCommand]
-    private async Task ImportCollection()
-    {
-        MoreMenuOpen = false;
-        OnPropertyChanged(string.Empty);
-        if (_collectionId is null) { return; }
-        await _windows.ShowCollectionImportAsync(_collectionId).ConfigureAwait(true);
         await ReloadImagesAsync().ConfigureAwait(true);
         Recompute();
     }

@@ -4,37 +4,196 @@
         x:Class="ViewPrism2.App.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="{Binding Loc[settings.title]}"
-        Width="400" SizeToContent="Height"
+        Width="720" SizeToContent="Height"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- 設定(言語)(REQ-050/051、G-5): 切替は即時反映+settings.json 永続化 -->
-  <StackPanel Margin="16" Spacing="8">
-    <TextBlock Text="{Binding Loc[settings.general.title]}" FontSize="16" />
-    <TextBlock Text="{Binding Loc[settings.general.language]}" FontSize="12"
-               Foreground="{StaticResource TextMutedBrush}" />
-    <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
-              HorizontalAlignment="Stretch">
-      <ComboBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:LanguageOption">
-          <TextBlock Text="{Binding Label}" />
-        </DataTemplate>
-      </ComboBox.ItemTemplate>
-    </ComboBox>
-    <TextBlock Text="{Binding Loc[settings.general.languageDescription]}" FontSize="12"
-               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+  <!-- 設定(REQ-050/051、G-5)+ ECO-077(SS-001 再裁定/E-1): 左ナビ(一般/データとバックアップ)+節構成。
+       幅はネイティブ面へ寄せる調整(mock 812 は許容差分 V2)。VC-5〜VC-7 の視覚契約は CAD
+       snapshot_export_import(captures/E-1.png)が正 -->
+  <Window.Styles>
+    <Style Selector="Button.navBtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Border.navItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="10,8" />
+    </Style>
+    <!-- VC-6: 選択中ナビ=淡青背景+青文字 -->
+    <Style Selector="Border.navItem.selected">
+      <Setter Property="Background" Value="#E8F0FE" />
+    </Style>
+    <Style Selector="Border.navItem Path.navGlyph">
+      <Setter Property="Stroke" Value="#7A879C" />
+    </Style>
+    <Style Selector="Border.navItem.selected Path.navGlyph">
+      <Setter Property="Stroke" Value="#2F6BED" />
+    </Style>
+    <Style Selector="Border.navItem TextBlock.navLabel">
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Border.navItem.selected TextBlock.navLabel">
+      <Setter Property="Foreground" Value="#2F6BED" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- VC-5: 行カード(L3)=白カード+左端グリフ角丸スクエア+名前太字+副情報淡色+右端白 outline 青文字ボタン -->
+    <Style Selector="Border.entryCard">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="14,12" />
+    </Style>
+    <Style Selector="Button.entryAction">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#2F6BED" />
+      <Setter Property="BorderBrush" Value="#D6E0EE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="14,5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.groupHeading">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.entryName">
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.entrySub">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+  </Window.Styles>
+  <Grid ColumnDefinitions="176,*" Margin="0">
+    <!-- 左ナビ(E-1: 一般/データとバックアップ) -->
+    <Border Grid.Column="0" Background="{StaticResource PanelBrush}" Padding="10,14">
+      <StackPanel Spacing="4">
+        <Button Classes="navBtn" Command="{Binding SelectGeneralCommand}">
+          <Border Classes="navItem" Classes.selected="{Binding IsGeneralSelected}">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Path Classes="navGlyph" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.2"
+                    Data="M8,1 A7,7 0 1 0 8,15 A7,7 0 1 0 8,1 M1,8 L15,8 M8,1 C5.2,4.6 5.2,11.4 8,15 C10.8,11.4 10.8,4.6 8,1" />
+              <TextBlock Classes="navLabel" FontSize="13" Text="{Binding Loc[settings.sidebar.general]}" />
+            </StackPanel>
+          </Border>
+        </Button>
+        <Button Classes="navBtn" Command="{Binding SelectDataBackupCommand}">
+          <Border Classes="navItem" Classes.selected="{Binding IsDataBackupSelected}">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Path Classes="navGlyph" Width="13" Height="14" Stretch="Uniform" StrokeThickness="1.2"
+                    Data="M8,2 C4.7,2 2,2.9 2,4 L2,12 C2,13.1 4.7,14 8,14 C11.3,14 14,13.1 14,12 L14,4 C14,2.9 11.3,2 8,2 M2,4 C2,5.1 4.7,6 8,6 C11.3,6 14,5.1 14,4 M2,8 C2,9.1 4.7,10 8,10 C11.3,10 14,9.1 14,8" />
+              <TextBlock Classes="navLabel" FontSize="13" Text="{Binding Loc[settings.dataBackup.title]}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Button>
+      </StackPanel>
+    </Border>
 
-    <!-- ECO-072/SS-001 裁定(b): A層(スナップショット)の入口は設定のバックアップ節 -->
-    <Separator Margin="0,8" Background="{StaticResource BorderLineBrush}" Height="1" />
-    <TextBlock Text="{Binding Loc[settings.backup.title]}" FontSize="16" />
-    <TextBlock Text="{Binding Loc[settings.backup.description]}" FontSize="12"
-               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-    <Button Content="{Binding Loc[settings.backup.openSnapshots]}"
-            Command="{Binding OpenSnapshotsCommand}" HorizontalAlignment="Stretch"
-            HorizontalContentAlignment="Center" />
+    <!-- 右: 節コンテンツ -->
+    <StackPanel Grid.Column="1" Margin="20,16" Spacing="8">
+      <!-- 一般(言語): 既存契約(REQ-050/051、G-5)そのまま -->
+      <StackPanel Spacing="8" IsVisible="{Binding IsGeneralSelected}">
+        <TextBlock Text="{Binding Loc[settings.general.title]}" FontSize="16" />
+        <TextBlock Text="{Binding Loc[settings.general.language]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" />
+        <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
+                  HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:LanguageOption">
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Text="{Binding Loc[settings.general.languageDescription]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+      </StackPanel>
 
-    <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick"
-            HorizontalAlignment="Right" MinWidth="80" />
-  </StackPanel>
+      <!-- データとバックアップ(ECO-077/E-1・CAD captures/E-1.png が視覚原器) -->
+      <StackPanel Spacing="10" IsVisible="{Binding IsDataBackupSelected}">
+        <TextBlock Text="{Binding Loc[settings.dataBackup.title]}" FontSize="16" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Loc[settings.dataBackup.description]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+
+        <!-- スナップショット(この端末内): 1 行カード+[開く]→A-1 -->
+        <TextBlock Classes="groupHeading" Margin="0,6,0,0"
+                   Text="{Binding Loc[settings.dataBackup.snapshotGroup]}" />
+        <Border Classes="entryCard">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="entryAction" Content="{Binding Loc[settings.dataBackup.open]}"
+                    Command="{Binding OpenSnapshotsCommand}" />
+            <Border DockPanel.Dock="Left" Background="#EEF1F7" CornerRadius="8" Width="36" Height="36"
+                    Margin="0,0,12,0" VerticalAlignment="Center">
+              <!-- DB 円筒(濃紺)=A-1 行グリフと同型(mock 準拠) -->
+              <Path Classes="entryGlyph" Width="15" Height="16" Stretch="Uniform"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Fill="#2F4A75"
+                    Data="M8,1 C4.7,1 2,1.9 2,3.2 L2,12.8 C2,14.1 4.7,15 8,15 C11.3,15 14,14.1 14,12.8 L14,3.2 C14,1.9 11.3,1 8,1 Z M8,2.2 C10.9,2.2 12.8,2.9 12.8,3.2 C12.8,3.5 10.9,4.2 8,4.2 C5.1,4.2 3.2,3.5 3.2,3.2 C3.2,2.9 5.1,2.2 8,2.2 Z M2.9,5.4 C4.1,6 5.9,6.4 8,6.4 C10.1,6.4 11.9,6 13.1,5.4 L13.1,7.2 C13.1,7.5 11.2,8.2 8,8.2 C4.8,8.2 2.9,7.5 2.9,7.2 Z" />
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,12,0">
+              <TextBlock Classes="entryName" Text="{Binding Loc[settings.dataBackup.snapshotName]}" />
+              <!-- VC-7/L8: 最終作成 yyyy/MM/dd HH:mm ・ N 件(0 件=placeholder 最小・SS-004 暫定) -->
+              <TextBlock x:Name="SnapshotSummaryText" Classes="entrySub" Text="{Binding SnapshotSummary}" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- コレクションの移送(他端末・共有): 書き出す→B-1/取り込む→B-2(picker 自動起動=ECO-074) -->
+        <TextBlock Classes="groupHeading" Margin="0,8,0,0"
+                   Text="{Binding Loc[settings.dataBackup.transferGroup]}" />
+        <Border Classes="entryCard">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="entryAction" Content="{Binding Loc[settings.dataBackup.choose]}"
+                    Command="{Binding OpenCollectionExportCommand}" />
+            <Border DockPanel.Dock="Left" Background="#E7F6EC" CornerRadius="8" Width="36" Height="36"
+                    Margin="0,0,12,0" VerticalAlignment="Center">
+              <!-- 上矢印トレイ(緑)=書き出す -->
+              <Path Classes="entryGlyph" Width="14" Height="14" Stretch="Uniform"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Stroke="#1F8A4C" StrokeThickness="1.6"
+                    Data="M2,10 L2,14 L14,14 L14,10 M8,10 L8,2 M4.6,5.2 L8,1.8 L11.4,5.2" />
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,12,0">
+              <TextBlock Classes="entryName" Text="{Binding Loc[settings.dataBackup.exportName]}" />
+              <TextBlock Classes="entrySub" Text="{Binding Loc[settings.dataBackup.exportSub]}" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+        <Border Classes="entryCard">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="entryAction" Content="{Binding Loc[settings.dataBackup.chooseFile]}"
+                    Command="{Binding OpenCollectionImportCommand}" />
+            <Border DockPanel.Dock="Left" Background="#EFF4FE" CornerRadius="8" Width="36" Height="36"
+                    Margin="0,0,12,0" VerticalAlignment="Center">
+              <!-- 下矢印トレイ(青)=取り込む -->
+              <Path Classes="entryGlyph" Width="14" Height="14" Stretch="Uniform"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Stroke="#2F6BED" StrokeThickness="1.6"
+                    Data="M2,10 L2,14 L14,14 L14,10 M8,2 L8,10 M4.6,6.8 L8,10.2 L11.4,6.8" />
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,12,0">
+              <TextBlock Classes="entryName" Text="{Binding Loc[settings.dataBackup.importName]}" />
+              <TextBlock Classes="entrySub" Text="{Binding Loc[settings.dataBackup.importSub]}" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- 末尾注記(M4: 削除しない=取り込みは追加のみ)。entrySub とはクラスを分ける(VC-5 の 2 行構成計数と混同しない) -->
+        <TextBlock x:Name="NoDeleteNote" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                   Margin="0,4,0,0" Text="{Binding Loc[settings.dataBackup.note]}" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick"
+              HorizontalAlignment="Right" MinWidth="80" Margin="0,8,0,0" />
+    </StackPanel>
+  </Grid>
 </Window>
