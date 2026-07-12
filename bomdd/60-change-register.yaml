@@ -1218,8 +1218,8 @@ changes:
   - id: ECO-074
     title: "バックアップファイルの置き場所管理(B層パッケージの既定フォルダ規約)"
     type: 機能拡張(UX欠陥是正を含む設計追加。ECO-073 gate② golden中のmaintainer所見をR3分離起票)
-    status: implemented   # 2026-07-12 /eco-fix 機械受入完了・golden待ち
-    golden: "pending(fix完了2026-07-12・CP-UI-G13追加観点=本文§9。観点=書き出し既定出力先が<文書>/ViewPrism2/collections+保存picker同起点→取り込みで picker 自動起動(起点=管理フォルダ)→キャンセル残留でプレースホルダ→逸脱先を覚えない→ja/en)"
+    status: applied   # 2026-07-13 gate②合格(maintainer実機・本文§9の5項目)→クローズ
+    golden: "approved(2026-07-13 maintainer 実機: 書き出し既定出力先=<文書>/ViewPrism2/collections+保存picker同起点・取り込みでpicker自動起動(起点=管理フォルダ)・キャンセル残留プレースホルダ・逸脱先を覚えない・ja/en)"
     baseline: "main 5f9b756d2537"
     verification: "2026-07-12 /eco-fix完了: CAD正典化先行(ViewPrismUI e26e29d=置き場所規約節+B-2未選択行)→先行probe赤(CpPackage074Tests 2 fail=既定出力先MyDocuments直下・picker自動起動0回。testhostハング再発のためexe直接実行で判定)→是正(AppSettings.CollectionPackageDirectory+CollectionPackageFormat.DefaultDirectory+ExportVM既定出力先+WindowService SuggestedStartLocation+ImportWindow Opened自動起動+プレースホルダi18n)→build 0/0・Tests 638/638・Oracle 109+2skip・validate_bom 0/0。台帳同期=仕様§2.14.7/E-048 invariants/M-043 location+沈黙次元/CP-PACKAGE-032"
     findings: "B層のファイル選択がOS既定=最後に使ったフォルダから(Save/OpenFilePickerともSuggestedStartLocation未指定=WindowService.cs:190-213)・書き出し既定MyDocumentsはspec/CADに根拠なき実装の発明(CollectionExportViewModel.cs:37-39)。バックアップという重要操作で誤ファイル選択リスク高・パッケージである手掛かりがファイル名のみ。工程診断=要求の沈黙次元(CAD mock B-1のD:\\exportはプレースホルダ・spec§5も既定フォルダ規定なし)。A層はSS-002で管理済み(%APPDATA%/snapshots+settings永続)なのにB層設計へread-across漏れ"
