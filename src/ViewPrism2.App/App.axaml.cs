@@ -47,6 +47,10 @@ public partial class App : Application
                 ? overrideDir
                 : Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ViewPrism2");
+
+            // ECO-072 案A: 予約済み時点復元を DB 接続確立前に適用する(単一共有接続のため稼働中差し替え不可)。
+            // 失敗時は退避 DB へ戻して通常起動を継続する(結果は起動後にステータスバーへ)
+            var restoreResult = SnapshotRestoreBootstrap.Apply(appDataDir, AppVersion);
             _provider = ConfigureServices(appDataDir);
 
             ThumbnailImageServiceInit(_provider);
@@ -69,6 +73,7 @@ public partial class App : Application
             exceptions.Register();
 
             _mainViewModel = _provider.GetRequiredService<MainWindowViewModel>();
+            ReportRestoreResult(restoreResult, localization, _provider);
             var window = new MainWindow { DataContext = _mainViewModel };
             _provider.GetRequiredService<WindowService>().Owner = window;
 
@@ -85,6 +90,35 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>診断用アプリバージョン(スナップショットのメタデータへ記録)。</summary>
+    private static string AppVersion =>
+        typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
+    /// <summary>復元ブートストラップの結果をログ+ステータスバーへ報告する(黙って握りつぶさない)。</summary>
+    private void ReportRestoreResult(
+        SnapshotRestoreResult result, LocalizationService localization, ServiceProvider provider)
+    {
+        if (result.Status == SnapshotRestoreStatus.NotRequested || _mainViewModel is null)
+        {
+            return;
+        }
+
+        var logger = provider.GetRequiredService<ILogger<App>>();
+        if (result.Status == SnapshotRestoreStatus.Applied)
+        {
+            logger.LogInformation("時点復元を適用しました: {Snapshot}", result.SnapshotPath);
+            _mainViewModel.StatusMessage = localization.T("snapshot.restoredStatus");
+        }
+        else
+        {
+            logger.LogError("時点復元に失敗しました({Snapshot}): {Message}", result.SnapshotPath, result.Message);
+            _mainViewModel.StatusMessage = localization.T("snapshot.restoreFailedStatus", new Dictionary<string, string>
+            {
+                ["message"] = result.Message ?? "",
+            });
+        }
     }
 
     private static void ThumbnailImageServiceInit(ServiceProvider provider)
@@ -172,6 +206,13 @@ public partial class App : Application
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<ITagRepository>(),
             sp.GetRequiredService<IMergeRepository>()));
+
+        // ECO-072: カタログ DB スナップショット(A層)。作成は共有接続上の VACUUM INTO(一貫読取)
+        services.AddSingleton(sp => new SnapshotService(
+            sp.GetRequiredService<DatabaseManager>(),
+            sp.GetRequiredService<IClock>(),
+            appDataDir,
+            AppVersion));
 
         // v4.0 修復ライフサイクル(M-CRITERIA-024 / M-TRASH-026)。
         // FilePresenceProbe(Infrastructure)=File.Exists のみ。TrashService(Core)は bool を受けて遷移判断(INV-009)

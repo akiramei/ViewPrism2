@@ -339,6 +339,24 @@ ebom:
         - (ECO-021/β-4) GetDeletedImagesAsync(workspace_images × images status=deleted・file_name 昇順)= 作業タブゴミ箱 popup/件数バッジの workspace スコープ供給。読み取りクエリのみで新状態遷移なし(削除/復元/完全削除の遷移は E-TRASH-038 が所有)
       acceptance_refs: [CP-WORKSPACE-028]
 
+    # ---------- ECO-072 核(バックアップA層) ----------
+    - id: E-SNAPSHOT-045
+      name: カタログDBスナップショット(作成器=VACUUM INTO+.partial検証確定・一覧・復元前検証・復元予約・復元ブートストラップ=起動時差し替え)— ECO-072 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-092]
+      kbom_refs: [K-SQLITE, K-WINFS]
+      depends_on: [E-DOMAIN-001, E-DB-010]
+      invariants:
+        - 作成は .partial → quick_check+foreign_key_check → SHA-256 → アトミックリネームの順。中断・検証失敗で不完全ファイルが正式名にならず .partial を残さない(SS-005)
+        - 検証済み(サイドカーメタ存在+サイズ一致)のみ復元可。メタ欠落・不一致は「検証待ち」=復元不可
+        - 復元前検証は integrity_check+foreign_key_check+migrations部分集合判定(未知ID=より新しいアプリ由来を拒否)。復元直前に省略しない
+        - 復元予約は一回限り(読取時に削除)。失敗時に起動のたび再試行しない
+        - ブートストラップはDB接続確立前に実行(単一共有接続 M-DB-007 と両立)。差し替え前に現行DBの安全スナップショットを作成し、失敗時は退避DBへ戻して通常起動を継続する
+        - 復元後の前進互換は既存 MigrationRunner(REQ-004)に委譲(スナップショットは migrations テーブルを内包)
+        - INV-009 画像実体・サムネイルへ触れない(DBファイルのみ)。検証用接続は Pooling=False でハンドルを残さない
+      acceptance_refs: [CP-SNAPSHOT-031]
+
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
       name: サムネイル生成サービス(+EXIF Orientation 正立化・実効寸法 — ECO-049)
@@ -482,6 +500,27 @@ ebom:
         - (ECO-021/β-4) ⋯メニュー(削除/ゴミ箱)を E-TRASH-038 / E-UI-REPAIR-039 から再利用配線。削除モード=4つ目の排他文脈モード(⋯から入る)→「ゴミ箱へ移動」=DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009)。ゴミ箱 in-tab popup(ECO-019 再利用・複数選択/すべて選択/復元 RestoreAsync/完全削除 PermanentDeleteAsync/空・確認文言は INV-009 忠実)。**修復はコレクションスコープで作業スペースに対応しないため作業タブ ⋯ から非搭載**(設計判断)。ゴミ箱は workspace スコープ(workspace_images × images status=deleted・E-WORKSPACE-042.GetDeletedImagesAsync 読み取りクエリ追加=新状態遷移なし)。完全削除は FK CASCADE で workspace_images も消滅。**ECO-β 完了**(β-1〜β-4)
       acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-NFR-026, CP-UI-G1]
       fmea_refs: [FMEA-038]
+
+    # ---------- ECO-072 表面(バックアップA層 UI) ----------
+    - id: E-UI-SNAPSHOT-046
+      name: スナップショット管理 UI(A-1 作成・保存先・作成中進捗・一覧=日時/app_version/サイズ/検証状態/復元、A-2 時点復元確認ダイアログ、設定バックアップ節の入口)— ECO-072 新設
+      classification: surface
+      part_kind: screen-surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-092]
+      external_source_ref: "ViewPrismUI:docs/screens/snapshot_export_import.md(A-1/A-2。一次資料=資料/スナップショット・書き出し取り込み/)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-SNAPSHOT-045, E-SETTINGS-013]
+      interface_contracts:
+        - 入口は設定ウィンドウのバックアップ節(SS-001 裁定(b))。作成/検証/復元予約の実体は E-SNAPSHOT-045 経由(UI で再実装しない)
+      invariants:
+        - 両画面に「画像ファイルは含まれません」を明示する(M3)。用語は「スナップショット作成/時点復元」(M1)
+        - 検証待ち行の復元ボタンは無効(CAD A-1)。A-2 は取り消し不可警告+対象情報+再起動/自動ロールバック/画像非含有の注意3項+危険CTA
+        - 復元確定=復元予約+自動再起動(案A)。再起動は Exit で DB 接続破棄後に新プロセス起動
+        - 作成中は進捗表示(件数=タグ/ビュー/メタデータ)+キャンセル。VACUUM INTO は百分率を提供しないため不確定バー(mock の 68% 表示との許容差分)
+        - 自動バックアップ・保持世代・カレンダーの V1 語彙は UI に出さない(M2・将来 ECO へ温存)
+        - レイアウト不変条件: ボディ単一スクロール+docked フッター(一覧が伸びても操作導線が埋もれない)
+      acceptance_refs: [CP-SNAPSHOT-031, CP-UI-G12]
 
     # E-UI-DETAIL-023(画像詳細パネル)は ECO-023 で撤回(削除)。理由=REQ-043 リバース誤り:
     # 原典 view-prism は詳細/ノートを常時パネルでなく ImageDetailModal(閲覧クリックで開くモーダル)として持つ。

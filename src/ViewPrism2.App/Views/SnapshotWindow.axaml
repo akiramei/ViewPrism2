@@ -1,0 +1,108 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.SnapshotWindow"
+        x:DataType="vm:SnapshotViewModel"
+        Title="{Binding Loc[snapshot.title]}"
+        Width="760" Height="560"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ECO-072 A-1 スナップショット作成・一覧(CAD snapshot_export_import・mock 権威)。
+       レイアウト不変条件: ボディ単一スクロール+docked フッター(一覧が伸びても閉じる導線が埋もれない) -->
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick" MinWidth="80" />
+    </StackPanel>
+    <ScrollViewer>
+      <StackPanel Spacing="12">
+        <!-- ヘッダ: 説明+作成 CTA -->
+        <DockPanel>
+          <Button DockPanel.Dock="Right" VerticalAlignment="Top"
+                  Content="{Binding Loc[snapshot.create]}"
+                  Command="{Binding CreateCommand}"
+                  IsEnabled="{Binding !IsCreating}"
+                  Background="{StaticResource AccentBrush}" Foreground="White" MinWidth="160" />
+          <StackPanel Spacing="4" Margin="0,0,12,0">
+            <TextBlock Text="{Binding Loc[snapshot.title]}" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Loc[snapshot.description]}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+          </StackPanel>
+        </DockPanel>
+
+        <!-- 保存先バー -->
+        <Border Background="{StaticResource PanelBrush}" CornerRadius="6" Padding="10,8">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="{Binding Loc[snapshot.changeDir]}"
+                    Command="{Binding ChangeDirectoryCommand}" FontSize="12" />
+            <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Loc[snapshot.saveDir]}" FontSize="11"
+                         Foreground="{StaticResource TextMutedBrush}" />
+              <TextBlock Text="{Binding Directory}" FontFamily="Consolas,monospace" FontSize="12"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- 画像非含有 callout(M3) -->
+        <Border Background="#EEF4FF" BorderBrush="#D6E4FC" BorderThickness="1"
+                CornerRadius="6" Padding="10,8">
+          <TextBlock Text="{Binding Loc[snapshot.noImagesNote]}" FontSize="12"
+                     Foreground="#2F4A75" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- 作成中進捗(実行時のみ)。VACUUM INTO は百分率を提供しないため不確定バー+件数表示 -->
+        <Border Background="{StaticResource PanelBrush}" CornerRadius="6" Padding="10,8"
+                IsVisible="{Binding IsCreating}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding Loc[snapshot.creating]}" FontSize="12" />
+            <ProgressBar IsIndeterminate="True" Height="6" />
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="{Binding Loc[common.cancel]}"
+                      Command="{Binding CancelCreateCommand}" FontSize="12" />
+              <TextBlock Text="{Binding CreatingCountsText}" FontSize="11"
+                         Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+            </DockPanel>
+          </StackPanel>
+        </Border>
+
+        <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{StaticResource TextMutedBrush}"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <!-- 作成済み一覧 -->
+        <TextBlock Text="{Binding Loc[snapshot.listTitle]}" FontSize="13" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Loc[snapshot.empty]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}"
+                   IsVisible="{Binding !HasItems}" />
+        <ItemsControl ItemsSource="{Binding Items}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SnapshotItemViewModel">
+              <Border BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1"
+                      Padding="4,8">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="{Binding $parent[Window].((vm:SnapshotViewModel)DataContext).Loc[snapshot.restore]}"
+                          Command="{Binding $parent[Window].((vm:SnapshotViewModel)DataContext).RestoreCommand}"
+                          CommandParameter="{Binding}"
+                          IsEnabled="{Binding IsVerified}" FontSize="12" MinWidth="72" />
+                  <TextBlock DockPanel.Dock="Right" Text="{Binding StatusText}" FontSize="12"
+                             VerticalAlignment="Center" Margin="12,0"
+                             Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock DockPanel.Dock="Right" Text="{Binding SizeText}" FontSize="12"
+                             VerticalAlignment="Center" Margin="12,0" />
+                  <StackPanel>
+                    <TextBlock Text="{Binding CreatedAtText}" FontSize="13" />
+                    <TextBlock Text="{Binding AppVersionText}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

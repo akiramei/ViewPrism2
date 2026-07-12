@@ -72,6 +72,8 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
         public Task ShowSettingsAsync() => Task.CompletedTask;
+
+        public Task ShowSnapshotsAsync() => Task.CompletedTask;
         public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
         public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);
         public Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(Tag tag, NumericTagSettings? settings, int selectionCount)

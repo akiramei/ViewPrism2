@@ -1,4 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using ViewPrism2.App.Services;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
 using ViewPrism2.Infrastructure.Settings;
@@ -33,12 +35,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly LocalizationService _localization;
     private readonly AppSettings _settings;
     private readonly SettingsStore _store;
+    private readonly IWindowService? _windows;
 
-    public SettingsViewModel(LocalizationService localization, AppSettings settings, SettingsStore store)
+    public SettingsViewModel(
+        LocalizationService localization, AppSettings settings, SettingsStore store, IWindowService? windows = null)
     {
         _localization = localization;
         _settings = settings;
         _store = store;
+        _windows = windows;
         Loc = new LocalizationProxy(localization);
         localization.CultureChanged += (_, _) =>
         {
@@ -70,4 +75,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.Locale = value.Locale;
         _store.Save(_settings);
     }
+
+    /// <summary>A層の入口(ECO-072/SS-001 裁定(b): 設定のバックアップ節→スナップショット管理)。</summary>
+    [RelayCommand]
+    private Task OpenSnapshotsAsync() => _windows?.ShowSnapshotsAsync() ?? Task.CompletedTask;
 }

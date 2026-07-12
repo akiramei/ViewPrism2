@@ -634,6 +634,34 @@ mbom:
       acceptance_refs: [CP-L1-SMOKE, CP-SIMSESSION-029, CP-UI-G9]
       acceptance_note: "整理挙動の受入= golden(視覚)+Core CP+ECO-066 session exact。画像/作業タブの転写driftを共通sessionで封止"
 
+    # ---- ECO-072(バックアップA層: カタログDBスナップショット) ----
+    - id: M-SNAPSHOT-040
+      ebom_refs: [E-SNAPSHOT-045]
+      artifact:
+        path: src/ViewPrism2.Infrastructure/Database/SnapshotService.cs
+        path_note: "SnapshotService.cs(作成/一覧/復元前検証/復元予約)+ SnapshotRestoreBootstrap.cs(起動時差し替え)"
+        type: dotnet-classlib
+      interface_contract:
+        create: "共有接続(M-DB-007)上の VACUUM INTO を .partial へ→quick_check+foreign_key_check→SHA-256→アトミックリネーム+サイドカーメタ(*.db.meta.json: appVersion/createdAt/checksumSha256/sizeBytes)。失敗/キャンセルで .partial を残さない(SS-005)"
+        list: "snapshot-*/pre-restore-*.db を列挙。検証済み=メタ存在+サイズ一致。メタ欠落/破損/不一致=検証待ち(復元不可・INV-008 と同じ『止めない』方向で列挙は継続)"
+        validate: "復元直前は integrity_check+foreign_key_check+migrations 部分集合判定(未知 ID 拒否)。検証用接続は Mode=ReadOnly;Pooling=False(ハンドル非残置)"
+        restore: "予約=restore-pending.json(snapshotPath/safetyDirectory/requestedAt)。適用=SnapshotRestoreBootstrap.Apply を DB 接続確立前に呼ぶ: 予約読取時削除(一回限り)→検証→現行DBの安全スナップショット(pre-restore-*)→現行退避→copy→quick_check→失敗時退避へ巻き戻し。前進 migration は既存 MigrationRunner に委譲"
+      acceptance_refs: [CP-SNAPSHOT-031]
+
+    - id: M-UI-SNAPSHOT-041
+      ebom_refs: [E-UI-SNAPSHOT-046]
+      artifact:
+        path: src/ViewPrism2.App/Views/SnapshotWindow.axaml
+        path_note: "SnapshotWindow.axaml(.cs)=A-1、SnapshotRestoreConfirmWindow.axaml(.cs)=A-2、ViewModels/SnapshotViewModel.cs、SettingsWindow.axaml バックアップ節+SettingsViewModel.OpenSnapshotsCommand、WindowService.ShowSnapshotsAsync+RestartApplication、App.axaml.cs 起動ブートストラップ結線+結果ステータス報告"
+        type: avalonia-app
+      interface_contract:
+        entry: "設定ウィンドウ「バックアップ」節(既存 settings.backup.title/description を配線・SS-001 裁定(b))→ SnapshotWindow をモーダル表示。i18n は snapshot.*(M2: 自動バックアップ語彙は配線しない)"
+        restore_flow: "A-1 復元(検証待ちは IsEnabled=false)→ A-2 確認(取り消し不可・再起動・自動ロールバック・画像非含有)→ ValidateForRestore → RequestRestore → 自動再起動(desktop.Exit で DB 破棄後に新プロセス起動)"
+        startup: "App は appDataDir 決定直後・ConfigureServices 前に SnapshotRestoreBootstrap.Apply を呼び、結果を logger+MainWindowViewModel.StatusMessage へ報告する(黙って握りつぶさない)"
+        persistence: "保存先は AppSettings.SnapshotDirectory(null=既定 %APPDATA%/ViewPrism2/snapshots)。変更は即時 SettingsStore.Save(SS-002=アプリ共通)"
+      acceptance_refs: [CP-SNAPSHOT-031, CP-UI-G12]
+      acceptance_note: "作成/検証/予約/差し替え/失敗復帰の決定論は CP-SNAPSHOT-031 unit。視覚と再起動を跨ぐ一連の実機確認は golden(CP-UI-G12)"
+
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
   - { package: Avalonia,                                   version: 12.0.4,  rationale: "ADR-0001 UI 基盤",            license: MIT,        substitutable: false }
@@ -754,3 +782,9 @@ silence_sweep:
   - { dimension: タグ制御の有効モード,             decision: specified, where: "M-UI-018 / 仕様 §2.12.0(§5.5)", note: "見開きフル(6アクション)・scroll/normal は skip のみ・他5は無視・その他モード無効" }
   - { dimension: マッピング先タグの削除/未割り当て, decision: specified, where: "M-TAGCTRL-028 / E-SETTINGS-013 / 仕様 §2.12.5", note: "現存しない tag_id・未マッピングは解決時に無視。永続値は保持してよい(誤消去回避)" }
   - { dimension: タグ制御マッピングモーダルの提示フィールド, decision: specified, where: "M-UI-018 tagctrl_ui / 仕様 §2.12.6", note: "6行×グリフ/名前+英名/説明/タグ picker(色ドット+ラベル/未割り当て)。表示パリティは golden G-11(ECO-003/004 教訓)" }
+  # ---- ECO-072 追加(バックアップA層・仕様 §2.13) ----
+  - { dimension: スナップショットの検証タイミング,   decision: specified, where: "M-SNAPSHOT-040 / 仕様 §2.13 / SS-003", note: "作成手順に quick_check+fk_check+SHA-256 を内包=作成フロー内で「検証待ち」は発生しない。検証待ちの発生源は外部持込ファイル等(メタ欠落/サイズ不一致)に限定され、復元不可のまま列挙する" }
+  - { dimension: スナップショットのファイル命名/メタ, decision: specified, where: M-SNAPSHOT-040, note: "snapshot-yyyyMMdd-HHmmssfff.db(安全=pre-restore- 接頭)+サイドカー *.db.meta.json(camelCase)。一覧の検証済み判定はメタ存在+サイズ一致(全量SHA再計算は復元直前のみ=一覧性能)" }
+  - { dimension: 復元予約の再試行方針,             decision: specified, where: "M-SNAPSHOT-040 / REQ-092", note: "一回限り(読取時に予約削除)。失敗は退避DBへ戻して通常起動+ステータス報告。起動ループ化しない" }
+  - { dimension: 作成進捗の百分率表示,             decision: specified, where: "M-UI-SNAPSHOT-041 / E-UI-SNAPSHOT-046", note: "VACUUM INTO は進捗コールバックを提供しない→不確定バー+件数(タグ/ビュー/メタデータ)表示。mock の 68% は許容差分として golden で確認" }
+  - { dimension: 自動バックアップ・保持世代,        decision: out-of-scope, note: "M2 裁定=UI 非表示・将来 ECO(その際 Online Backup API を検討)。i18n の settings.backup.* 自動系語彙は未配線のまま温存" }

@@ -24,6 +24,9 @@ public interface IWindowService
     /// <summary>設定(言語)ウィンドウ(モーダル)。</summary>
     Task ShowSettingsAsync();
 
+    /// <summary>スナップショット管理(ECO-072 A-1。入口=設定のバックアップ節・SS-001 裁定(b))。</summary>
+    Task ShowSnapshotsAsync();
+
     /// <summary>タグ作成/編集ダイアログ(タグパレットの「追加」「編集」)。保存されたら true。</summary>
     Task<bool> ShowTagEditorAsync(Tag? existing);
 

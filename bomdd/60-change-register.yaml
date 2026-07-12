@@ -1192,15 +1192,16 @@ changes:
 
   - id: ECO-072
     title: "カタログDBスナップショットの作成・検証・時点復元(バックアップA層)"
-    type: 新機能(maintainer要求のバックアップ2層構成のうちA層=全体時点復元。B層=コレクション論理書き出し/取り込みはECO-073へ分離。gate①裁定済み2026-07-12=案A採用+CAD正典化)
-    status: staged
-    golden: "pending(gate①完了2026-07-12: 案A=復元予約+再起動時差し替え採用・CAD正典化=ViewPrismUI 1fc5aaa38dd2 snapshot_export_import.md。残=SS-001 UI入口裁定→/eco-fix→実機確認。観点=作成/検証/時点復元の一連UI・「画像ファイルは含まれません」明示・復元失敗時の退避DBフォールバック起動・検証待ち行の復元無効)"
+    type: 新機能(maintainer要求のバックアップ2層構成のうちA層=全体時点復元。B層=コレクション論理書き出し/取り込みはECO-073へ分離。gate①裁定済み2026-07-12=案A採用+SS-001(b)分置+CAD正典化)
+    status: implemented   # 2026-07-12 /eco-fix 機械受入完了・golden待ち
+    golden: "pending(fix完了2026-07-12・CP-UI-G12実機確認待ち。観点=設定バックアップ節入口→A-1作成/保存先変更/一覧/検証待ち復元無効→A-2確認→復元予約→自動再起動→巻き戻り確認・破損スナップショットの退避DBフォールバック起動+予約一回限り・「画像ファイルは含まれません」明示・画像実体/サムネ不変・ja/en回帰)"
     baseline: "main 941693bfd5c3"
     findings: "maintainer要求2026-07-12=タグ/階層ビュー/コレクションのバックアップ。事前議論で2層構成確定、A層=カタログ・メタデータの時点復元(マージなし・画像実体含まず両UIに明示)。CADにバックアップ画面なし(SettingsWindowは言語のみの最小ダイアログ)、REQ/spec/E/M/CPすべて未宣言=純新規。i18n settings.backup.*(en.json:376-482)がV1由来の実装未接続語彙として残存し自動バックアップ/世代管理まで含む(本ECOは手動のみ、語彙再利用はCAD裁定)。DB前提は健全: WAL単一ファイル・全テーブル明示TEXT PK(VACUUM安全)・migrationsテーブル内包で互換性判定はサイドカー不要・MigrationRunnerが復元後前進を担う。単一共有SqliteConnection+SemaphoreSlimのため復元は全接続クローズ前提=復元予約→再起動時差し替えが案A(推奨)"
     impacted_bom: ["ViewPrismUI 新画面(mock=maintainer作成、docs/screens追加が先行)", "新REQ群+20-spec新節(A層/B層役割分担の核文)", "E-BOM新規(スナップショット作成器/検証器/復元ブートストラップ)", "M-BOM新規(Infrastructure SnapshotService+App起動シーケンス+バックアップUI)", "新CP(partial非昇格/検証失敗非掲載/復元失敗フォールバック/migration前進/未知migration拒否)", "K-BOM追加なし・DBスキーマ変更なし"]
     oracle: "既存固定Oracle行は変更しない(R6)。新規unit+一時DB fixtureでVACUUM INTO→quick_check/foreign_key_check→checksum→アトミックリネーム、中断時.partial残置、復元9手順の退避/差し替え/失敗復帰、未知migration ID拒否を固定"
+    verification: "2026-07-12 /eco-fix完了: 先行probe赤=Tests 612件中2 fail(SnapshotService/Bootstrap型不在+設定入口コマンド不在、610 pass)を実測後に実装。是正後Tests 618/618、build 0 warning/0 error、Oracle 109 pass/2 known skip(R6不変)、BOM validator 0/0、diff-check clean。VACUUM INTO @pathのパラメータバインド動作・Pooling=False接続のハンドル非残置を一時DB fixtureで実測(§3.2疑いの決着)"
     body: 60-change-order-eco-072.md
-    notes: "gate①裁定済み(2026-07-12・本文§7): 復元方式=案A(復元予約→再起動時差し替え・失敗時退避DBフォールバック)。CAD=ViewPrismUI 1fc5aaa38dd2 docs/screens/snapshot_export_import.md(A-1/A-2、B層と1画面CAD集約)+一次資料mock(SHA-256 5104C8CE…)。追加契約=検証待ちは復元不可・作成キャンセルは中途生成物を残さない・SS-003は作成フロー内で検証待ち非発生。残gate=SS-001(UI入口)裁定→/eco-fix ECO-072"
+    notes: "gate①裁定済み(2026-07-12・本文§7): 復元方式=案A(復元予約→再起動時差し替え・失敗時退避DBフォールバック)+SS-001=(b)分置(A層=設定バックアップ節・CAD反映77e4f50)。CAD=ViewPrismUI 1fc5aaa38dd2 docs/screens/snapshot_export_import.md(A-1/A-2)+一次資料mock(SHA-256 5104C8CE…)。fix=SnapshotService/SnapshotRestoreBootstrap(Infrastructure)+SnapshotWindow/RestoreConfirm/SnapshotViewModel/設定入口/WindowService再起動/App起動結線+i18n snapshot.*31キー+REQ-092/spec§2.13/E-045/046/M-040/041/CP-SNAPSHOT-031/CP-UI-G12同期。DBスキーマ/Core/既存Oracle不変。次gate=②golden(CP-UI-G12・本文§8.5)"
 
   - id: ECO-073
     title: "コレクションの論理書き出し/取り込み(バックアップB層 V1)"

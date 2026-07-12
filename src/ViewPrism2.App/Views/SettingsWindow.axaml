@@ -24,6 +24,16 @@
     </ComboBox>
     <TextBlock Text="{Binding Loc[settings.general.languageDescription]}" FontSize="12"
                Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+
+    <!-- ECO-072/SS-001 裁定(b): A層(スナップショット)の入口は設定のバックアップ節 -->
+    <Separator Margin="0,8" Background="{StaticResource BorderLineBrush}" Height="1" />
+    <TextBlock Text="{Binding Loc[settings.backup.title]}" FontSize="16" />
+    <TextBlock Text="{Binding Loc[settings.backup.description]}" FontSize="12"
+               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+    <Button Content="{Binding Loc[settings.backup.openSnapshots]}"
+            Command="{Binding OpenSnapshotsCommand}" HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Center" />
+
     <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick"
             HorizontalAlignment="Right" MinWidth="80" />
   </StackPanel>

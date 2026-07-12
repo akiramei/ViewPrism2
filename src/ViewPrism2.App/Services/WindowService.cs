@@ -8,6 +8,7 @@ using ViewPrism2.Core.Services;
 using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Core.Services.Viewer;
+using ViewPrism2.Infrastructure.Database;
 using ViewPrism2.Infrastructure.Scanning;
 using ViewPrism2.Infrastructure.Settings;
 
@@ -32,6 +33,7 @@ public sealed class WindowService : IWindowService
     private readonly LocalizationService _localization;
     private readonly AppSettings _settings;
     private readonly SettingsStore _settingsStore;
+    private readonly SnapshotService _snapshots;
 
     public WindowService(
         ISyncFolderRepository folders,
@@ -46,7 +48,8 @@ public sealed class WindowService : IWindowService
         TrashService trashService,
         LocalizationService localization,
         AppSettings settings,
-        SettingsStore settingsStore)
+        SettingsStore settingsStore,
+        SnapshotService snapshots)
     {
         _folders = folders;
         _images = images;
@@ -61,6 +64,7 @@ public sealed class WindowService : IWindowService
         _localization = localization;
         _settings = settings;
         _settingsStore = settingsStore;
+        _snapshots = snapshots;
     }
 
     /// <summary>モーダルダイアログのオーナー(App 起動時に設定)。</summary>
@@ -112,9 +116,55 @@ public sealed class WindowService : IWindowService
             return;
         }
 
-        var vm = new SettingsViewModel(_localization, _settings, _settingsStore);
+        var vm = new SettingsViewModel(_localization, _settings, _settingsStore, this);
         var window = new SettingsWindow { DataContext = vm };
         await window.ShowDialog(Owner);
+    }
+
+    public async Task ShowSnapshotsAsync()
+    {
+        if (Owner is null)
+        {
+            return;
+        }
+
+        SnapshotWindow? window = null;
+        var vm = new SnapshotViewModel(
+            _snapshots,
+            _settings,
+            _settingsStore,
+            _localization,
+            PickFolderAsync,
+            async item =>
+            {
+                var dialog = new SnapshotRestoreConfirmWindow(new LocalizationProxy(_localization), item);
+                return await dialog.ShowDialog<bool?>(window!) == true;
+            },
+            RestartApplication);
+        window = new SnapshotWindow { DataContext = vm };
+        vm.Load();
+        await window.ShowDialog(Owner);
+    }
+
+    /// <summary>
+    /// 復元予約後の自動再起動(ECO-072 案A・CAD A-2「実行後、自動的に再起動します」)。
+    /// Exit で DB 接続が破棄された後に新プロセスを起動する(差し替えとのファイル競合を避ける)。
+    /// </summary>
+    private static void RestartApplication()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime
+            is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return;
+        }
+
+        if (Environment.ProcessPath is { Length: > 0 } exe)
+        {
+            desktop.Exit += (_, _) => System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
+        }
+
+        desktop.Shutdown();
     }
 
     public async Task<bool> ShowTagEditorAsync(Tag? existing)

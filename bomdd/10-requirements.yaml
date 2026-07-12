@@ -1231,3 +1231,24 @@ requirements:
       - "上端からwheel Prevして前画像へ戻ったとき、読み終えた末尾でなく先頭へ着地する"
       - "設定drawer/mapping modal上のwheelが裏のviewerも送る"
       - "spread-rightだけwheel方向を反転し、wheel下が前へ戻る"
+
+  - id: REQ-092
+    statement: "カタログDBスナップショット(バックアップA層)を提供する。役割分担の核文=DBスナップショットはライブラリ全体の時点復元を行い、マージしない(コレクション単位の非破壊統合はB層=論理パッケージが担う)。対象はviewprism2.db内の全データ(tags/views/workspaces/merge_operations/キャッシュ含む)。画像実体・サムネイルキャッシュ・settings.jsonは対象外で、作成/復元の両UIに「画像ファイルは含まれません」を明示する(M3)。作成=共有接続上のVACUUM INTOで一意な.partialへ出力→読み取り専用でquick_check+foreign_key_check→SHA-256チェックサム→検証成功後に正式名(snapshot-*.db)へアトミックリネーム+サイドカーメタ(app_version/created_at/checksum/size)。中断・検証失敗時に不完全ファイルが正式名にならず、.partialを残さない。一覧=作成日時/app_version/サイズ/検証状態を表示し、検証待ち(メタ欠落・サイズ不一致)は復元ボタン無効。復元(案A)=A-2確認ダイアログ(取り消し不可警告・再起動・自動ロールバック・画像非含有の明示)→復元直前検証(integrity_check+foreign_key_check+スナップショット内migrations IDが現行既知集合の部分集合であること。未知ID=より新しいアプリ由来は拒否)→復元予約(restore-pending.json)→自動再起動→次回起動のDB接続確立前にブートストラップが適用: 予約は読取時に削除(一回限り)→現行DBの安全スナップショット作成→現行退避→差し替え→差し替え先検証→失敗時は退避DBへ戻して通常起動継続。復元後の未適用migrationは既存MigrationRunnerが昇順適用する。入口=設定ウィンドウのバックアップ節(SS-001裁定(b))。保存先=アプリ共通設定(既定%APPDATA%/ViewPrism2/snapshots・変更可)。用語=「スナップショット作成/時点復元」(M1)。自動バックアップ・保持世代管理はUI非表示・将来ECO(M2)"
+    rationale: |
+      ECO-072起票(maintainer要求2026-07-12: タグ/階層ビュー/コレクションのバックアップ)+gate①裁定(案A採用・SS-001=(b)分置)。
+      CAD=ViewPrismUI docs/screens/snapshot_export_import.md(`1fc5aaa38dd2`、SS-001裁定`77e4f50`)。
+      WALモードのため稼働中の単純ファイルコピーは-wal/-shmと不整合になり得る。VACUUM INTOは稼働中DBから一貫した
+      コンパクトなスナップショットを作れるが、出力は中断時に不完全になり得るため.partial→検証→アトミックリネームを契約化。
+      単一共有SqliteConnection+SemaphoreSlimアーキテクチャのため稼働中差し替えは不可で、復元予約→再起動時差し替えを採用。
+      互換性判定はスナップショットがmigrationsテーブルを内包するためサイドカー不要で機械判定できる。
+      SS-003: 作成手順が検証込みのため作成フロー内で「検証待ち」は発生しない(外部持込ファイル等が発生源)。
+    rationale_precision: ok
+    classification_hint: core+surface
+    external_source: "ViewPrismUI docs/screens/snapshot_export_import.md (`1fc5aaa38dd2`/`77e4f50`) / ECO-072"
+    counterexamples:
+      - "作成中断・検証失敗で .partial や不完全ファイルが正式名の snapshot-*.db として一覧に載る"
+      - "検証待ちスナップショットの復元ボタンが活性"
+      - "未知のmigration IDを含むスナップショットを復元してしまう"
+      - "復元失敗後に退避DBへ戻らず起動不能になる"
+      - "復元予約が失敗後も残り、起動のたびに復元を再試行する"
+      - "スナップショット作成/復元が画像実体やサムネイルへ触れる"

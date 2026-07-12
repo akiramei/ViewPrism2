@@ -59,6 +59,8 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
 
         public Task ShowSettingsAsync() => Task.CompletedTask;
 
+        public Task ShowSnapshotsAsync() => Task.CompletedTask;
+
         public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
 
         public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);

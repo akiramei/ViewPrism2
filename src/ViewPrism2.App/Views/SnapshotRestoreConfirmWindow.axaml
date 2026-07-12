@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ViewPrism2.App.Views.SnapshotRestoreConfirmWindow"
+        Width="560" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ECO-072 A-2 時点復元の確認(CAD snapshot_export_import・危険操作の確認ダイアログ言語)。
+       文言はコードビハインドで注入(ConfirmDialog と同じ流儀) -->
+  <StackPanel Margin="16" Spacing="12">
+    <StackPanel Spacing="4">
+      <TextBlock x:Name="HeadingText" FontSize="16" FontWeight="SemiBold"
+                 Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" />
+      <TextBlock x:Name="WarningText" FontSize="12" TextWrapping="Wrap"
+                 Foreground="{StaticResource TextMutedBrush}" />
+    </StackPanel>
+
+    <!-- 対象情報カード -->
+    <Border Background="{StaticResource PanelBrush}" CornerRadius="6" Padding="12,10">
+      <StackPanel Spacing="6">
+        <TextBlock x:Name="TargetLabel" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
+          <TextBlock x:Name="CreatedAtLabel" Grid.Row="0" Grid.Column="0" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" Margin="0,0,16,2" />
+          <TextBlock x:Name="CreatedAtValue" Grid.Row="0" Grid.Column="1" FontSize="12" />
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="app_version" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" Margin="0,0,16,2" />
+          <TextBlock x:Name="AppVersionValue" Grid.Row="1" Grid.Column="1" FontSize="12" />
+          <TextBlock x:Name="SizeLabel" Grid.Row="2" Grid.Column="0" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" Margin="0,0,16,2" />
+          <TextBlock x:Name="SizeValue" Grid.Row="2" Grid.Column="1" FontSize="12" />
+          <TextBlock x:Name="VerifyLabel" Grid.Row="3" Grid.Column="0" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" Margin="0,0,16,0" />
+          <TextBlock x:Name="VerifyValue" Grid.Row="3" Grid.Column="1" FontSize="12" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- 注意 3 項: 再起動・自動ロールバック・画像非含有(M3) -->
+    <StackPanel Spacing="6">
+      <TextBlock x:Name="RestartNote" FontSize="12" TextWrapping="Wrap" />
+      <TextBlock x:Name="RollbackNote" FontSize="12" TextWrapping="Wrap"
+                 Foreground="{StaticResource TextMutedBrush}" />
+      <TextBlock x:Name="NoImagesNote" FontSize="12" TextWrapping="Wrap"
+                 Foreground="{StaticResource TextMutedBrush}" />
+    </StackPanel>
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button x:Name="CancelButton" MinWidth="96" Click="OnCancelClick" />
+      <Button x:Name="RestoreButton" MinWidth="180" Click="OnRestoreClick"
+              Background="{StaticResource DangerBrush}" Foreground="White" />
+    </StackPanel>
+  </StackPanel>
+</Window>
