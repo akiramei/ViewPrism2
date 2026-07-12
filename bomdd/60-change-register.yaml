@@ -1237,3 +1237,14 @@ changes:
     impacted_bom: ["M-RELINK-025(単一ロード集計API CountAutoRepairableAsync)", "M-UI-REPAIR-027(LoadAsync=Task.Run構築+一覧インスタンス一括差し替え)", "CP-UI-G10(大量missing性能probe)", "32-mbom沈黙次元=修復のスケール前提"]
     body: 60-change-order-eco-075.md
     notes: "是正=案A(意味論不変・視覚不変): 集合演算+CriteriaMatcher再利用+タグ除外memo化。疑い(未検証)=AutoRepairAll/Singleのper-missing全行ロードも同族(実行時のみ・実測で残れば追補)"
+  - id: ECO-076
+    title: "取り込みウィザード stepper の B-3・B-4 可視化(CAD mock 改版への追随)"
+    type: 既存機能拡張(上流=ViewPrismUI 4303337 decide(eco-073)で mock 改版・CAD 正典化済み。VP2 側 ECO-073 は applied クローズ済みのため再開せず新規採番=逆行遷移禁止)
+    status: staged
+    golden: "pending(gate②=CP-UI-G13 改訂後: B-2/B-3/B-4 の stepper 状態表現を CAD captures と並置で maintainer 実機承認。基準は /eco-fix 完了時に提示)"
+    baseline: "main a96a7828e424"
+    findings: "CAD 改版 2026-07-13: 一次資料 standalone.html 差し替え(SHA-256 新 5fdf44645e31…/旧 5104c8cee489…・他4サーフェス画素不変確認済み)で取り込みウィザード stepper の可視面を B-2 のみ→B-2・B-3・B-4 へ拡大。L7 定義改訂(完了状態=緑塗り丸+白チェック+緑ラベル・接続線=到達区間のみ青)+適用面マトリクス L7 列 B-3/B-4 ○化+視覚契約チェックリスト VC-1〜VC-4 新設+captures 再生成(B-3/B-4/full)。VP2 実装は旧 CAD に忠実な転写のまま乖離: CollectionImportWindow.axaml:186 が IsVisible=OnFileStep で B-3 以降非表示・バッジ3/4 は静的灰・完了チェック状態の VM プロパティなし。旧契約 pin=GfPackageVisualParityTests.cs:172(B3以降非表示。L1=面別 Window.Title 検証は改版対象外で維持)・CP-UI-G13 の「stepper=番号バッジでB-2限定可視」記述。ECO-073 §7 正典化記録は旧 SHA 参照のため改版参照は本 ECO §3 が正。工程診断=実装・BOM・テストに欠陥なし(旧 CAD へは全工程整合)=上流設計変更への追随であり gate①不要"
+    impacted_bom: ["CAD 変更なし(ViewPrismUI 4303337 が入力)", "CP-UI-G13(stepper 可視面 B-2〜B-4+L7 状態表現へ改訂)", "M-UI-PACKAGE-043(wizard 契約へ可視面明記)", "CollectionImportWindow.axaml(+ImportViewModel ステップ状態公開)", "GfPackageVisualParityTests(旧契約 pin 改訂+VC-1〜4 probe)"]
+    oracle: "既存固定Oracle行は変更しない(R6・UI 変更で Oracle 対象外)。headless 視覚 probe は CAD の VC-1〜VC-4 から先行生成(R7・GF 後追い禁止): B-2=1-2青/3-4灰/接続線1-2間のみ青、B-3=1-3青(現在3)/4灰、B-4=バッジ4緑塗り+白チェック+緑ラベル/接続線全青、B-1=stepper 非表示"
+    body: 60-change-order-eco-076.md
+    notes: "fix 時は R7 セルフゴールデン=マトリクス L7 列の○全面(B-2・B-3・B-4)を CAD captures(snapshot_export_import/B-3.png・B-4.png+B-2)と並置し転写漏れ0で出荷。B-1(CollectionExportWindow)は変更しない(VC-4=面の発明禁止)。疑い(未検証)=B-4到達と「完了」チェック表示条件の等価性は fix 時に遷移フロー実測"
