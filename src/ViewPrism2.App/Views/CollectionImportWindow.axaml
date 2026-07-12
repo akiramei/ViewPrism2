@@ -3,7 +3,7 @@
         xmlns:vm="using:ViewPrism2.App.ViewModels"
         x:Class="ViewPrism2.App.Views.CollectionImportWindow"
         x:DataType="vm:CollectionImportViewModel"
-        Title="{Binding Loc[package.importTitle]}"
+        Title="{Binding WindowTitle}"
         Width="940" Height="640"
         CanResize="True"
         WindowStartupLocation="CenterOwner"
@@ -42,6 +42,45 @@
       <Setter Property="Background" Value="{StaticResource PanelBrush}" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="12,8" />
+    </Style>
+    <!-- GF-073-04: stepper は番号バッジ+接続線(mock B-2)。到達済み=青塗り・未到達=灰 -->
+    <Style Selector="Border.stepBadge">
+      <Setter Property="Width" Value="22" />
+      <Setter Property="Height" Value="22" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="Background" Value="#E4E9F2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.stepBadge.active">
+      <Setter Property="Background" Value="#2F6BED" />
+    </Style>
+    <Style Selector="Border.stepBadge > TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#7A879C" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.stepBadge.active > TextBlock">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="TextBlock.stepLabel">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.stepLabel.active">
+      <Setter Property="Foreground" Value="#2F6BED" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Border.stepLine">
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Height" Value="2" />
+      <Setter Property="Background" Value="#D8DEE9" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.stepLine.active">
+      <Setter Property="Background" Value="#2F6BED" />
     </Style>
     <!-- GF-073-03: パッケージ概要は区切り線つき行+値は右寄せ太字(mock B-2 のテーブル言語) -->
     <Style Selector="Border.summaryRow">
@@ -93,18 +132,29 @@
     <ScrollViewer>
       <StackPanel Spacing="14">
         <!-- GF-073-01: タイトルは Window.Title のみ(本文へ重複させない) -->
-        <!-- stepper(ファイル→検証→プレビュー→完了) -->
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="{Binding Loc[package.stepFile]}" FontSize="12" FontWeight="SemiBold" Foreground="#2F6BED" />
-          <TextBlock Text="→" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-          <TextBlock Text="{Binding Loc[package.stepVerify]}" FontSize="12"
-                     Foreground="{StaticResource TextMutedBrush}" />
-          <TextBlock Text="→" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-          <TextBlock Text="{Binding Loc[package.stepPreview]}" FontSize="12"
-                     Foreground="{StaticResource TextMutedBrush}" />
-          <TextBlock Text="→" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-          <TextBlock Text="{Binding Loc[package.stepDone]}" FontSize="12"
-                     Foreground="{StaticResource TextMutedBrush}" />
+        <!-- GF-073-04: stepper=番号バッジ式(mock B-2)。CAD「B-2 に可視」=ファイル/検証面のみ表示。
+             検証済み(VerifyOk)で 2 まで点灯。B-3/B-4 は Window.Title が専用タイトルへ切替 -->
+        <StackPanel x:Name="Stepper" Orientation="Horizontal" Spacing="8" IsVisible="{Binding OnFileStep}">
+          <Border Classes="stepBadge active">
+            <TextBlock Text="1" />
+          </Border>
+          <TextBlock Classes="stepLabel active" Text="{Binding Loc[package.stepFile]}" />
+          <Border Classes="stepLine" Classes.active="{Binding VerifyOk}" />
+          <Border Classes="stepBadge" Classes.active="{Binding VerifyOk}">
+            <TextBlock Text="2" />
+          </Border>
+          <TextBlock Classes="stepLabel" Classes.active="{Binding VerifyOk}"
+                     Text="{Binding Loc[package.stepVerify]}" />
+          <Border Classes="stepLine" />
+          <Border Classes="stepBadge">
+            <TextBlock Text="3" />
+          </Border>
+          <TextBlock Classes="stepLabel" Text="{Binding Loc[package.stepPreview]}" />
+          <Border Classes="stepLine" />
+          <Border Classes="stepBadge">
+            <TextBlock Text="4" />
+          </Border>
+          <TextBlock Classes="stepLabel" Text="{Binding Loc[package.stepDone]}" />
         </StackPanel>
 
         <!-- ===== B-2: ファイル選択+検証 ===== -->

@@ -372,6 +372,47 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
     (picker 自動起動/プレースホルダ/初期選択)は ECO-074 §1.1 の裁定範囲であり、本項目の
     合否判定から除外する。)
 
+## 12. golden所見 GF-073-04 の是正(2026-07-12 — 再機械受入)
+
+### 12.1 所見と工程診断
+
+- maintainer が B-2 でファイル選択+検証完了後も**上部の進捗表示が 1 のまま**であること、
+  進捗表現が **mock を再現しきれていない**ことを指摘。
+- 工程診断(CAD 実測): mock B-2 の stepper は**番号バッジ式**(到達済み=青塗り丸+青ラベル・
+  未到達=灰丸+淡ラベル・接続線)で、検証完了状態では **1・2 の両方が点灯**。さらに CAD prose は
+  stepper を「**B-2 に可視**」と定義し、B-3/B-4 の mock には stepper が無く**面ごとの擬似タイトル**
+  (「取り込みプレビュー — <名前>」「取り込み結果」)を持つ。実装の逸脱は 4 点:
+  ①テキスト矢印でバッジ未転写 ②配色が静的(常に 1 のみ青)=状態不追従の真因
+  ③全ステップに stepper 常時表示 ④B-3/B-4 の Window.Title が「コレクションを取り込む」のまま
+  (GF-073-01 の「擬似タイトル=Window.Title」規約の適用漏れ)。CAD は健全=実装の転写漏れ。
+
+### 12.2 先行probe(R5)
+
+- `GfPackageVisualParityTests` へ追加: ⑩stepBadge 4 個+VerifyOk で active が 2 個
+  ⑪Step=2 で stepper 非表示 ⑫Step=2/3 で Window.Title が専用タイトル。是正前実測: **1 件不合格**。
+
+### 12.3 是正diff
+
+- `CollectionImportWindow`: stepper を番号バッジ+接続線へ再構成(stepBadge/stepLabel/stepLine
+  スタイル・active は `Classes.active="{Binding VerifyOk}"`)。表示は `OnFileStep` のみ(CAD
+  「B-2 に可視」)。`Title="{Binding WindowTitle}"`。
+- `CollectionImportViewModel`: `WindowTitle`(Step 切替+CultureChanged 追随。B-3=
+  `package.previewTitle`(name=パッケージのコレクション名)・B-4=`package.resultTitle`)。
+- i18n: step ラベルから番号を除去(バッジが番号を担う)+ previewTitle/resultTitle 追加(ja/en)。
+  挙動・遷移・エンジンは不変(視覚+タイトルのみ)。
+
+### 12.4 再機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **639/639 pass**(probe 緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+- ※dotnet test の testhost ハング再発のため判定は exe 直接実行(既知の実行規律)。
+
+### 12.5 gate②再操作(§8.6/§9.5/§10.5/§11.5 に追加)
+
+14. B-2 の stepper が番号バッジ式(mock 同等)で、ファイル選択+検証 OK 後に **1・2 が点灯**する。
+    「次へ:プレビュー」で stepper が消え **Window.Title が「取り込みプレビュー — <名前>」**へ、
+    実行後は**「取り込み結果」**へ切り替わる。ja/en 追随。
+
 ## 7. gate①裁定(2026-07-12)
 
 - maintainer裁定: **未解決画像(一致先なし)は「missing 行として参照のみ登録」を既定採用**し、

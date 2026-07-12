@@ -108,6 +108,7 @@ public sealed partial class CollectionImportViewModel : ObservableObject
         {
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            OnPropertyChanged(nameof(WindowTitle));
         };
     }
 
@@ -115,10 +116,24 @@ public sealed partial class CollectionImportViewModel : ObservableObject
 
     public string TargetRootPath => _collection.Path;
 
+    /// <summary>
+    /// GF-073-04: mock の擬似タイトルは面ごとに異なる(B-2=コレクションを取り込む/
+    /// B-3=取り込みプレビュー — 名前/B-4=取り込み結果)。GF-073-01 の規約どおり Window.Title が担う。
+    /// </summary>
+    public string WindowTitle => Step switch
+    {
+        2 => _localization.T("package.previewTitle", new Dictionary<string, string>
+        {
+            ["name"] = HeaderCollectionName ?? "",
+        }),
+        3 => _localization.T("package.resultTitle"),
+        _ => _localization.T("package.importTitle"),
+    };
+
     // ---- stepper(1=ファイル/検証 2=プレビュー 3=完了) ----
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OnFileStep), nameof(OnPreviewStep), nameof(OnDoneStep))]
+    [NotifyPropertyChangedFor(nameof(OnFileStep), nameof(OnPreviewStep), nameof(OnDoneStep), nameof(WindowTitle))]
     private int _step = 1;
 
     public bool OnFileStep => Step == 1;

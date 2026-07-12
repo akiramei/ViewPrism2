@@ -160,4 +160,58 @@ public sealed class GfPackageVisualParityTests : IDisposable
             File.Delete(pkg);
         }
     }
+
+    /// <summary>
+    /// GF-073-04(golden 所見 2026-07-12): stepper が mock と乖離 — ⑩テキスト矢印でバッジ未転写・
+    /// 状態が静的(検証済みでも 1 のまま) ⑪CAD は stepper を B-2 面のみ可視と定義(prose「B-2 に可視」)
+    /// なのに全ステップ常時表示 ⑫B-3/B-4 の擬似タイトル(取り込みプレビュー — 名前/取り込み結果)が
+    /// Window.Title に未転写。
+    /// </summary>
+    [Fact]
+    public async Task B2のstepperはバッジ式で検証済みは2まで点灯しB3以降は非表示で専用タイトルになる()
+    {
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
+        var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
+        var vm = new CollectionImportViewModel(importer, collection, loc,
+            _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        await Session.Dispatch(() =>
+        {
+            vm.PackagePath = @"C:\x\p.viewprism2-collection.json";
+            vm.Header = new PackageHeader(1, 1, [], null, null,
+                "2026-07-12T08:51:53.502Z", "1.0.0",
+                new PackageCollection("src-1", "友達", null), [], 5);
+            var window = new CollectionImportWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+            try
+            {
+                // ⑩ バッジ 4 個・検証済み(VerifyOk)は 1,2 の 2 個だけ active(mock B-2)
+                var badges = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stepBadge")).ToList();
+                Assert.Equal(4, badges.Count);
+                Assert.Equal(2, badges.Count(b => b.Classes.Contains("active")));
+
+                // ⑪ B-3(プレビュー)では stepper 非表示 ⑫Window.Title=取り込みプレビュー — <名前>
+                vm.Step = 2;
+                RunJobs();
+                var stepper = window.GetVisualDescendants().OfType<StackPanel>()
+                    .FirstOrDefault(p => p.Name == "Stepper");
+                Assert.True(stepper is not null, "GF-073-04⑪: Stepper が無い");
+                Assert.False(stepper!.IsVisible, "GF-073-04⑪: B-3 で stepper が可視");
+                Assert.Equal(loc.T("package.previewTitle", new Dictionary<string, string> { ["name"] = "友達" }),
+                    window.Title);
+
+                // ⑫ B-4(完了)の Window.Title=取り込み結果
+                vm.Step = 3;
+                RunJobs();
+                Assert.Equal(loc.T("package.resultTitle"), window.Title);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
 }
