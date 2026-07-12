@@ -107,7 +107,11 @@
           <!-- 互換性 OK: 概要 -->
           <StackPanel Spacing="8" IsVisible="{Binding VerifyOk}">
             <Border Background="#E7F6EC" BorderBrush="#C4E7D2" BorderThickness="1" CornerRadius="8" Padding="12,8">
-              <TextBlock Text="{Binding Loc[package.compatible]}" FontSize="12" Foreground="#1F7A3D" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="calloutGlyph" Width="11" Height="9" Stretch="Uniform" VerticalAlignment="Center"
+                      Stroke="#1F7A3D" StrokeThickness="1.8" Data="M1,5.5 L4.5,9 L11,1.5" />
+                <TextBlock Text="{Binding Loc[package.compatible]}" FontSize="12" Foreground="#1F7A3D" />
+              </StackPanel>
             </Border>
             <Border Classes="card" Padding="14,10">
               <StackPanel Spacing="6">
@@ -144,7 +148,12 @@
         <StackPanel Spacing="12" IsVisible="{Binding OnPreviewStep}">
           <!-- 追加型マージの規則バナー(M4) -->
           <Border Background="#E7F6EC" BorderBrush="#C4E7D2" BorderThickness="1" CornerRadius="8" Padding="12,8">
-            <TextBlock Text="{Binding Loc[package.addOnlyNote]}" FontSize="12" Foreground="#1F7A3D" TextWrapping="Wrap" />
+            <DockPanel>
+              <Path DockPanel.Dock="Left" Classes="calloutGlyph" Width="11" Height="9" Stretch="Uniform"
+                    VerticalAlignment="Top" Margin="0,3,8,0" Stroke="#1F7A3D" StrokeThickness="1.8"
+                    Data="M1,5.5 L4.5,9 L11,1.5" />
+              <TextBlock Text="{Binding Loc[package.addOnlyNote]}" FontSize="12" Foreground="#1F7A3D" TextWrapping="Wrap" />
+            </DockPanel>
           </Border>
           <!-- 取り込み先ルート(入口コレクション固定=SS-001(b)) -->
           <Border Classes="card" Padding="14,8">

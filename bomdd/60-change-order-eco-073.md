@@ -292,6 +292,40 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
     フォルダグリフ、フッターボタンが中央揃え・キャンセル/戻るが白 outline であることを captures と
     並置確認する。
 
+## 10. golden所見 GF-073-02 の是正(2026-07-12 — 再機械受入)
+
+### 10.1 所見と工程診断
+
+- maintainer が B-1 の画像非含有 callout を mock と並置し、GF-073-01 の是正が**部分的**と指摘:
+  callout に**カメラ×斜線グリフが無く**テキストが密集したまま、**リード文の太字強調**
+  (「画像ファイルは含まれません。」のみ太字)も未転写。意図的差分か見落としかの問いに対し=**見落とし**。
+- 工程診断: GF-072-01 で A-1 の callout にグリフを入れた際、B層の同型 callout へ**水平展開しなかった**
+  (read-across 漏れ)。probe も「コレクションカードのグリフ」だけを pin し callout を観点に
+  含めなかった=検査面の粒度不足。
+
+### 10.2 先行probe(R5)
+
+- `GfPackageVisualParityTests` へ ⑤callout グリフ(calloutGlyph)存在 ⑥リード文(Run)の太字+
+  リード/本文の分離 を追加。是正前実測: **1 件不合格**。
+
+### 10.3 是正diff
+
+- i18n を `package.noImagesLead`(リード)+`package.noImagesRest`(本文)へ分割し、mock の段落構成
+  (リード太字+本文、二次情報=file_size 同梱は淡色の別行)へ再編。
+- B-1 callout: カメラ×斜線グリフ+余白(Padding 16,12・LineHeight)+太字リード Run。
+- 水平展開: 取り込みウィザードの緑バナー 2 箇所(互換OK・追加型マージ)へ ✓ グリフを追加
+  (mock のバナーはいずれもアイコン付き)。挙動・VM・エンジンは不変(視覚のみ)。
+
+### 10.4 再機械受入
+
+- `ViewPrism2.Tests`: **635/635 pass**(probe 緑転)。`dotnet build`: 0 warning / 0 error。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+
+### 10.5 gate②再操作(§8.6/§9.5 に追加)
+
+12. B-1 callout がグリフ+太字リード+行間で mock と同等、取り込みウィザードの互換OK/追加型マージ
+    バナーに ✓ グリフがあることを captures と並置確認する。
+
 ## 7. gate①裁定(2026-07-12)
 
 - maintainer裁定: **未解決画像(一致先なし)は「missing 行として参照のみ登録」を既定採用**し、

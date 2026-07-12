@@ -64,14 +64,19 @@
                  Foreground="{StaticResource TextMutedBrush}" />
     </StackPanel>
 
-    <!-- 画像非含有 callout(M3+ビュー非同梱の理由) -->
-    <Border Background="#EEF4FF" BorderBrush="#D6E4FC" BorderThickness="1" CornerRadius="8" Padding="14,10">
-      <StackPanel Spacing="6">
-        <TextBlock Text="{Binding Loc[package.noImagesNote]}" FontSize="12"
-                   Foreground="#2F4A75" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding Loc[package.metadataNote]}" FontSize="11"
-                   Foreground="#2F4A75" TextWrapping="Wrap" />
-      </StackPanel>
+    <!-- 画像非含有 callout(M3+ビュー非同梱の理由)。GF-073-02: カメラ×斜線グリフ+太字リード(mock 準拠) -->
+    <Border Background="#EEF4FF" BorderBrush="#D6E4FC" BorderThickness="1" CornerRadius="10" Padding="16,12">
+      <DockPanel>
+        <Path DockPanel.Dock="Left" Classes="calloutGlyph" VerticalAlignment="Top" Margin="0,3,12,0"
+              Width="16" Height="14" Stretch="Uniform" Stroke="#2F4A75" StrokeThickness="1.4"
+              Data="M2,4 L5,4 L6.5,2 L11.5,2 L13,4 L16,4 L16,13 L2,13 Z M9,6 A2.6,2.6 0 1 0 9.01,6 M1,1 L17,14" />
+        <StackPanel Spacing="6">
+          <TextBlock x:Name="NoImagesText" FontSize="12" Foreground="#2F4A75" TextWrapping="Wrap"
+                     LineHeight="19"><Run FontWeight="SemiBold" Text="{Binding Loc[package.noImagesLead]}" /><Run Text="{Binding Loc[package.noImagesRest]}" /></TextBlock>
+          <TextBlock Text="{Binding Loc[package.metadataNote]}" FontSize="11"
+                     Foreground="#5A6E92" TextWrapping="Wrap" LineHeight="17" />
+        </StackPanel>
+      </DockPanel>
     </Border>
 
     <!-- 書き出し中進捗(done/total 実測) -->

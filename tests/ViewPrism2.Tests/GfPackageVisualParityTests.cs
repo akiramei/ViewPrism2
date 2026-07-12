@@ -72,6 +72,18 @@ public sealed class GfPackageVisualParityTests : IDisposable
                 Assert.NotEmpty(outlines);
                 Assert.All(outlines, b =>
                     Assert.Equal(Colors.White, Assert.IsAssignableFrom<ISolidColorBrush>(b.Background).Color));
+
+                // ⑤ GF-073-02: 画像非含有 callout にグリフ(mock のカメラ×斜線)がある
+                Assert.Contains(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>(),
+                    p => p.Classes.Contains("calloutGlyph"));
+
+                // ⑥ GF-073-02: callout の先頭文「画像ファイルは含まれません。」だけが太字(mock のリード強調)
+                var noteText = window.GetVisualDescendants().OfType<TextBlock>()
+                    .FirstOrDefault(t => t.Name == "NoImagesText");
+                Assert.True(noteText is not null, "GF-073-02⑥: NoImagesText が無い");
+                var lead = Assert.IsAssignableFrom<Avalonia.Controls.Documents.Run>(noteText!.Inlines![0]);
+                Assert.True(lead.FontWeight >= FontWeight.SemiBold, "GF-073-02⑥: リード文が太字でない");
+                Assert.True(noteText.Inlines.Count >= 2, "GF-073-02⑥: リード+本文の分離がない");
             }
             finally
             {
