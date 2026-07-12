@@ -1,8 +1,8 @@
-# ECO-075: 修復画面が大量 missing で事実上ハング(O(M×N) 候補探索+一覧の逐次 Add)
+# ECO-075(applied / クローズ済み 2026-07-13): 修復画面が大量 missing で事実上ハング(O(M×N) 候補探索+一覧の逐次 Add)
 
 - 起票: 2026-07-12(maintainer 所見・ECO-073 gate② golden 実機確認中に発見)
 - 種別: 不具合(性能。既存修復実装の潜在非スケールが ECO-073 の missing 大量登録で顕在化)
-- 状態: staged
+- 状態: applied(2026-07-13 gate②合格)
 - 関連: ECO-005(修復導線)/ ECO-073(missing 参照登録=大量 missing の供給源)/ GF-073-06(同族=重い処理の UI スレッド到達)
 
 ## 1. 症状(maintainer 報告・2026-07-12)
@@ -139,3 +139,29 @@ missing が少数である前提の潜在的非スケールで、ECO-073 の mis
 
 - `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **646/646 pass**(probe 緑転)。
 - `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。判定は exe 直接実行。
+
+## 10. クローズ(2026-07-13 gate②合格)
+
+### 10.1 実機確認(maintainer)
+
+- §8 の 4 項目すべて合格: 26 万 missing のコレクションで修復画面が開けて UI 応答(missing 一覧+
+  自動修復可能数表示)/missing 選択で候補ペイン応答/小規模コレクションの修復操作に回帰なし/
+  選択・自動修復・すべて自動修復が固まらない。
+
+### 10.2 再発防止(恒久化の所在)
+
+- CP-UI-G10 characteristic へ「大量 missing でも応答」観点を潜伏実績つきで追記。
+- 機械側: `CpUiRepairViewModelTests` の性能 probe(Load=単一ロード相当時間・候補探索の
+  非同期ブロック検査・AutoRepairAll 単一パス)。M-RELINK-025 auto_count 契約+32-mbom 沈黙次元
+  「修復画面のスケール前提」を specified 化。
+
+### 10.3 教訓
+
+- **新機能が既存部品へ供給する「規模」は影響 BOM の一次元**: 修復画面(ECO-005)は少数 missing
+  前提の O(M×N) が導入時から潜伏していたが、当時の入力規模では実害がなく golden も素通しした。
+  ECO-073 の missing 参照登録が初めて数十万行を供給して顕在化。機能追加の影響分析では
+  「この機能は既存のどの部品に、これまで無かった規模・頻度の入力を与えるか」を問う。
+  ECO-062(類似候補の 26 万件全走査)・ECO-026(一覧仮想化)と同族= read-across。
+  もう一つ: **性能是正で処理を真に非同期化すると、fire-and-forget 前提だった UI 経路に並行再入が
+  生まれる**(GF-075-01 の世代ガード)。同期完了に依存していた暗黙の直列性を、非同期化の際に
+  明示のガードへ置き換える(GF-073-06 の Task.Run 化と対)。方法論昇格候補。
