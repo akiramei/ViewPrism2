@@ -521,6 +521,7 @@
   "snapshot.listTitle": "Saved Snapshots",
   "snapshot.colCreatedAt": "Created",
   "snapshot.colSize": "Size",
+  "snapshot.colStatus": "Status",
   "snapshot.verified": "Verified",
   "snapshot.unverified": "Pending verification",
   "snapshot.restore": "Restore",

@@ -521,6 +521,7 @@
   "snapshot.listTitle": "作成済みスナップショット",
   "snapshot.colCreatedAt": "作成日時",
   "snapshot.colSize": "サイズ",
+  "snapshot.colStatus": "状態",
   "snapshot.verified": "検証済み",
   "snapshot.unverified": "検証待ち",
   "snapshot.restore": "復元",
