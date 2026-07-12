@@ -1237,3 +1237,18 @@ changes:
     impacted_bom: ["M-RELINK-025(単一ロード集計API CountAutoRepairableAsync)", "M-UI-REPAIR-027(LoadAsync=Task.Run構築+一覧インスタンス一括差し替え)", "CP-UI-G10(大量missing性能probe)", "32-mbom沈黙次元=修復のスケール前提"]
     body: 60-change-order-eco-075.md
     notes: "是正=案A(意味論不変・視覚不変): 集合演算+CriteriaMatcher再利用+タグ除外memo化。疑い(未検証)=AutoRepairAll/Singleのper-missing全行ロードも同族(実行時のみ・実測で残れば追補)"
+
+  # ECO-076(取り込みウィザード stepper B-3/B-4 可視化)は別ブランチで起票〜accept 済み
+  # (accept 367593b・main 未マージ)。番号は予約済み — マージ時に本行の上へエントリが入る。
+
+  - id: ECO-077
+    title: "バックアップ・移送の入口を設定 ▸ データとバックアップへ集約(SS-001 再裁定=E-1 追随)"
+    type: 既存機能の設計変更追随(CAD上流裁定の転写=ViewPrismUI 4787b03 SS-001再裁定・mock改版E-1新設(新SHA-256 1278cf0606b5/旧5fdf44645e31)。旧裁定SS-001(b)分置は破棄。A層/B層エンジン不変)
+    status: staged
+    golden: "pending(gate①裁定→fix→CP-UI-G12/G13 のE-1観点でmaintainer実機)"
+    baseline: "main a96a7828e424"
+    findings: "CAD健全=E-1契約(VC-5〜8)+M5(本拠地=設定▸データとバックアップ・三点メニューは誘導1項目のみ)+captures/E-1.png+03_dialog_languageマトリクスE-1行(L1/L3/L8)まで4787b03で確定。BOM/実装は旧裁定(b)への忠実な整合=追随対象: REQ-092/093・spec§2.13.5/§2.14.6・E-046/048・M-041/043 entry・CP-UI-G12/G13入口記述・ImageTabView.axaml:888(⋯メニュー実体2項目)・SettingsWindow.axaml:28(バックアップ節・左ナビなし単票)・WindowService Show系がcollectionId必須。CAD沈黙1点=取り込み先コレクション決定(現実装=入口コレクション固定・PreviewAsync(path,_collection.Id)+突き合わせルート=_collection.Path。E-1にコレクション文脈なし・書き出し側のみ「B-1内で選択」明記)。32-mbom:823の代替手順(別コレクションの三点メニューから取り込み直し)はM5で失効。スナップショットサマリのデータ源は既存SnapshotService.List()・0件時表記はSS-004併合済み(発明せずplaceholder最小を設計者適用・golden否認可)"
+    impacted_bom: ["CAD追補1点(B-2取り込み先規定・採用案の正典化が先行条件。E-1本体は4787b03で改版済み)", "REQ-092/093入口記述", "spec §2.13.5/§2.14.6", "E-UI-SNAPSHOT-046/E-UI-PACKAGE-048(入口invariant+B-1コレクション選択)", "M-UI-SNAPSHOT-041/M-UI-PACKAGE-043 entry+32-mbom:823沈黙次元note", "CP-UI-G12/G13(入口記述+E-1観点)", "実装=ImageTabView(⋯メニュー誘導化)/SettingsWindow・VM(左ナビ+節+L3カード+L8サマリ)/WindowService(文脈なし起動+節指定オープン)/CollectionExport・ImportViewModel/i18n ja・en"]
+    oracle: "既存固定Oracle行は変更しない(R6)。E-1視覚probeはVC-5〜8から先行生成(R7・GF後追い禁止): VC-5行カードL3/VC-6左ナビ選択+注記/VC-7サマリ書式L8/VC-8⋯メニュー誘導1項目(実体2項目の不在)。挙動probe=誘導→節選択オープン・[開く]→A-1・[選ぶ…]→B-1(コレクション選択)・[ファイルを選ぶ…]→B-2 picker自動起動(ECO-074準拠)・サマリ実測一致・0件placeholder。並置検査範囲宣言=L3列○面(E-1/A-1/A-2/B-1/B-2/B-3)+L8列○面(E-1/A-1/B-1/B-2/B-3/B-4)+L1全7面 — 既存面は言語定義不変+画素不変(CAD明記)のため既存視覚pin(GfSnapshot/GfPackageVisualParityTests)の緑維持=回帰確認、R7並置の新規実施はE-1(+⋯メニュー)×captures。L7(stepper)には触れない=ECO-076のスコープ"
+    body: 60-change-order-eco-077.md
+    notes: "関連=ECO-072/073(旧入口)・ECO-074(picker自動起動・E-1でも維持)・ECO-076(同一CAD画面の別契約L7・別ブランチaccept済み367593b・main未マージ=registerマージ順注意)。gate①=取り込み先コレクション決定の1点のみ(案A=B-2内選択・B-1対称=推奨/案B=UUID自動+不一致時選択/案C=実体温存はM5衝突で非推奨)+0件placeholder設計者適用可否。採用案のViewPrismUI正典化がfixの先行条件。E-1契約の他部分はCAD確定済み・裁定不要"
