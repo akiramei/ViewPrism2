@@ -1226,3 +1226,13 @@ changes:
     impacted_bom: ["CAD snapshot_export_import(既定フォルダ規約の明文化・案Cは新mock)", "spec §2.14 置き場所規約節(SS-002との対応)", "E-047/048受入観点+M-042/043 settings項目", "CP-PACKAGE-032 既定フォルダ往復観点", "実装=WindowService/CollectionExport・ImportViewModel/AppSettings"]
     body: 60-change-order-eco-074.md
     notes: "gate①裁定済み(2026-07-12・本文§7)=案A採用+既定フォルダはユーザー文書配下 <Documents>\\ViewPrism2\\collections(SS-002と命名対称)・settings永続キーCollectionPackageDirectory・picker逸脱先は永続しない。B-2未選択状態=案イ(picker自動起動+キャンセル残留時プレースホルダ)を設計者適用(goldenで否認可)。案B(最新初期選択)不採用。CAD正典化が実装の先行条件"
+  - id: ECO-075
+    title: "修復画面が大量missingで事実上ハング(O(M×N)候補探索+一覧の逐次Add)"
+    type: 不具合(性能。既存修復実装=ECO-005系の潜在非スケールがECO-073のmissing大量登録(262,045行)で顕在化。ECO-073 golden中のmaintainer所見をR3分離起票)
+    status: staged   # 2026-07-12 起票・gate①不要(実装層確定・視覚不変)→/eco-fix可
+    golden: "pending(fix後=26万missingのコレクションで修復画面が開けてUIが応答する)"
+    baseline: "main 16d36428b827"
+    findings: "再起動後も単独再現・CPU活発・「スキャン中のまま」。実測: RepairViewModel.CountAutoRepairableAsyncがmissingごとにRelinkService.GetCandidatesAsyncを呼び、毎回GetByFolderAsync(全行52万)+CriteriaSearchService.SearchAsync(もう一度全行)=O(M×N)×2重ロード(262,045×52万×2)。加えてMissingImagesへ26万件逐次Add(CollectionChanged 26万発・UIスレッド・Dapper同期完了)でUIフリーズ=スキャン完了バッジが再描画されず「スキャン中のまま」に見える。事前スキャン自体は選択コレクション限定・background(ECO-059)で健全"
+    impacted_bom: ["M-RELINK-025(単一ロード集計API CountAutoRepairableAsync)", "M-UI-REPAIR-027(LoadAsync=Task.Run構築+一覧インスタンス一括差し替え)", "CP-UI-G10(大量missing性能probe)", "32-mbom沈黙次元=修復のスケール前提"]
+    body: 60-change-order-eco-075.md
+    notes: "是正=案A(意味論不変・視覚不変): 集合演算+CriteriaMatcher再利用+タグ除外memo化。疑い(未検証)=AutoRepairAll/Singleのper-missing全行ロードも同族(実行時のみ・実測で残れば追補)"
