@@ -1,8 +1,8 @@
-# ECO-077(staged・gate①裁定済み): バックアップ・移送の入口を設定 ▸ データとバックアップへ集約(SS-001 再裁定=E-1 追随)
+# ECO-077(implemented): バックアップ・移送の入口を設定 ▸ データとバックアップへ集約(SS-001 再裁定=E-1 追随)
 
 - 起票: 2026-07-13(maintainer 指示・ViewPrismUI SS-001 再裁定への追随)
 - 種別: 既存機能の設計変更追随(CAD 上流裁定の転写。機能の実体=A層/B層エンジンは不変)
-- 状態: staged(gate①裁定済み 2026-07-13=§8。fix 未着手)
+- 状態: implemented(2026-07-13 /eco-fix=§9。gate②=golden 待ち=§10)
 - 関連: ECO-072(A層・設定バックアップ節入口=旧裁定(b))/ ECO-073(B層・⋯メニュー入口=旧裁定(b))/
   ECO-074(置き場所管理・B-2 picker 自動起動=E-1 でも維持)/
   **ECO-076(取り込みウィザード stepper B-3/B-4 可視化・別ブランチで accept 済み `367593b`・main 未マージ)**
@@ -161,7 +161,7 @@ E-1 契約の大半は CAD 確定済みで裁定不要。ただし**取り込み
 
 - gate①: ~~§4.2(取り込み先コレクションの決定方法)の裁定+0 件時 placeholder の設計者適用可否~~
   → **裁定済み(§8)**。
-- gate②: golden(CP-UI-G12/G13 の E-1 観点・操作手順は fix 時に確定)。
+- gate②: golden(CP-UI-G12/G13 の E-1 観点)→ **操作手順=§10**(fix 済み・待機中)。
 
 ## 8. gate①裁定(2026-07-13)
 
@@ -173,3 +173,103 @@ E-1 契約の大半は CAD 確定済みで裁定不要。ただし**取り込み
 - **0 件時サマリ表記=placeholder 最小を設計者適用**(golden で否認可): 発明せず、
   件数のみ「0 件」・最終作成は省略(§4.1)。SS-004 の正式裁定時に追随する。
 - 32-mbom:823 の失効した代替手順(§3 確定 3)は、案A の「B-2 内選択」を後継として書き換える。
+
+## 9. 実施記録(2026-07-13 /eco-fix)
+
+### 9.1 CAD 正典化(先行条件)
+
+- ViewPrismUI `05080e1`: snapshot_export_import.md へ B-2 状態表「取り込み先コレクション
+  (実装補遺・ECO-077 裁定=案A)」行(B-1 対称・既定=未選択・選択まで「次へ」不活性=互換 OK と
+  AND・突き合わせ基準ルート=選択コレクションのフォルダ)+interaction 表 B-2 行+
+  「画面横断の依存」入口節へ B-1/B-2 内選択の一文+E-1 状態表の 0 件行へ placeholder 最小の暫定
+  (SS-004 追随・golden で否認可)。
+
+### 9.2 先行 probe(R5+R7: 視覚 probe は VC-5〜VC-8 から先行生成・GF 後追い禁止)
+
+- `GfEntryE1VisualParityTests`(VC-5/6/7=CP-UI-G12・VC-8=CP-UI-G13)+
+  `CpUiEco077EntryTests`(CP-UI-G13)を製品コード変更前に追加。
+- **是正前実測: Tests 652 件中 6 fail(追加 probe 6 本すべて赤・既存 646 pass)**:
+  VC5/VC6=左ナビ項目 0 個/VC7=SnapshotSummaryText 不在/VC8=実体項目
+  「コレクションを書き出す…」残存(M5 違反)/B-1=ExportCollectionSelector 不在/
+  B-2=ImportTargetSelector 不在/VM=OpenBackupSettingsCommand 不在。
+- probe の 2 段強化(記録): 新 API(ctor 変更)に依存する検証は是正前はコンパイル可能な
+  存在検査で赤を取り、是正と同一 diff 内で最終形(VC-7=実 SnapshotService fixture の書式検証+
+  0 件 placeholder、B-1=既定先頭+出力先追随、B-2=未選択で CanProceed 不活性)へ強化した。
+
+### 9.3 是正 diff
+
+- SettingsWindow/VM: 左ナビ(一般/データとバックアップ)+節構成へ再構成(幅 720=許容差分 V2)。
+  E-1 節=スナップショット行カード(DB 円筒グリフ濃紺 #2F4A75・サマリ=SnapshotService.List の
+  先頭 CreatedAtUtc+件数・0 件=`settings.dataBackup.snapshotSummaryEmpty`)+移送 2 行カード
+  (緑 #1F8A4C 上矢印トレイ/青 #2F6BED 下矢印トレイ・白 outline 青文字ボタン)+末尾注記。
+  `SettingsSection` enum(General/DataBackup)+`ShowSettingsAsync(SettingsSection)`
+  (IWindowService 既定実装=スタブ互換)。A-1 閉じ後サマリ再計算。
+- ImageTabView/VM: ⋯ メニューの実体 2 項目を撤去し「設定でバックアップ・移送…」誘導 1 項目
+  (淡紫 #F2EEFB ハイライト+太字+歯車グリフ・区切り線下・常時活性)へ。
+  `OpenBackupSettingsCommand`=節選択オープン+閉じ後 ReloadImagesAsync+Recompute
+  (旧 ImportCollection の再読込理由を継承)。旧 ExportCollection/ImportCollectionCommand 削除。
+- CollectionExportViewModel/Window: ctor を全コレクション受けへ。B-1 内選択
+  (カードに溶けた ComboBox=mock 同型の名前太字+シェブロン+件数淡色 2 行構成)。既定=先頭・
+  選択変更で既定出力先(<名前>.viewprism2-collection.json)と件数表示が追随。
+- CollectionImportViewModel/Window: ctor を全コレクション受けへ。B-2 に取り込み先コレクション
+  カード(案A・既定未選択・placeholder)。`CanProceed`=VerifyOk∧選択済みで「次へ」を配線。
+  Preview/Apply/突き合わせルート/結果文言は SelectedTarget 基準(エンジン引数は不変)。
+- WindowService: ShowCollectionExport/ImportAsync(引数なし・コレクション 0 では開かない)+
+  ShowSettingsAsync(section)。picker 起点=管理フォルダは不変(ECO-074 維持)。
+- i18n: `settings.dataBackup.*` 15 キー+`package.importTarget`/`package.selectCollectionPrompt`(ja/en)。
+- 既存 pin の契約反転(ECO-076 教訓=同一 diff 内): CpPackage073Tests の入口配線 pin を
+  誘導(ShowSettingsAsync(DataBackup))へ改訂。Gf/CpPackage073/074 の VM ctor 呼び出しを追随。
+
+### 9.4 機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **652/652 pass**(probe 6 本緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+- 台帳同期: REQ-092/093 入口・仕様 §2.13.5/§2.14.6(+§2.14 表面)・E-UI-SNAPSHOT-046/
+  E-UI-PACKAGE-048 入口 invariant・M-UI-SNAPSHOT-041/M-UI-PACKAGE-043 entry+wizard・
+  32-mbom:823 沈黙次元(失効代替手順→B-2 内選択)・CP-UI-G12/G13 characteristic。
+
+### 9.5 R7 セルフゴールデン(captures 並置・転写漏れ 0)
+
+検査面(headless Skia 実描画 PNG × CAD captures):
+
+1. **E-1(設定 ▸ データとバックアップ)× captures/E-1.png**: 左ナビ選択状態・節見出し 2・
+   行カード 3 枚(グリフ配色/名前太字/副情報淡色/白 outline 青文字ボタン)・サマリ L8・末尾注記
+   =転写一致。
+2. **整理 ⋯ メニュー × E-1.png 右パネル**: 修復(グレー)/削除(赤)/ゴミ箱(グレー)/区切り線/
+   誘導 1 項目(淡紫+太字)。実体 2 項目なし=転写一致。
+3. **B-1 × B-1.png**: コレクション選択をカードに溶けた 2 行構成(名前太字+右端シェブロン+
+   件数淡色)へ転写(初回並置で既定枠 ComboBox の浮きを検出→溶かして再並置)。他要素回帰なし。
+4. **B-2 × B-2.png**: 既存要素(stepper/ファイルカード/互換バッジ/概要)回帰なし。追加の
+   取り込み先カードは CAD 実装補遺(9.1)が根拠=差分でない。
+5. L3/L8 ○面の残り(A-1/A-2/B-3/B-4)は本 diff で不変+既存視覚 pin
+   (GfSnapshot/GfPackageVisualParityTests)緑=回帰なし。L7(stepper)には触れていない(ECO-076)。
+
+差分の全列挙と分類(転写漏れ 0):
+
+| # | 差分 | 分類 |
+|---|---|---|
+| D1 | 擬似タイトルバー非再現 | 裁定済み意図的差分(CAD レイアウト節) |
+| D2 | 設定窓幅 720(mock 812) | 許容差分 V2(CAD 明記) |
+| D3 | E-1 に「閉じる」ボタン(テーマ既定)が residual(mock に無し) | 既存設定ウィンドウへの相乗り(E-1 は「既存の設定ウィンドウの節」=CAD 規定)の帰結。E-1 の L2=−(マトリクス)。golden で否認可 |
+| D4 | 誘導グリフ=歯車(mock はスパークル様の紫グリフ) | VC-8 契約(淡紫ハイライト+太字+1 項目のみ)は充足・グリフ形状は契約外。golden で否認可 |
+
+## 10. gate② golden 操作手順(CP-UI-G12/G13 の E-1 観点)
+
+1. **E-1 並置**: 設定を開く→左ナビ「一般/データとバックアップ」。「データとバックアップ」選択で
+   淡青背景+青文字。節の全体を captures/E-1.png と並置(行カード 3 枚のグリフ配色=濃紺 DB 円筒/
+   緑上矢印/青下矢印・名前太字+副情報淡色・右端白 outline 青文字ボタン・節見出し 2・末尾注記
+   「既存データは削除されません(取り込みは追加のみ)。」)。記録済み差分 D1〜D3 の許容可否も確認。
+2. **サマリ(VC-7/L8)**: スナップショット行の副情報=「最終作成 yyyy/MM/dd HH:mm ・ N 件」が
+   実件数と一致。空の保存先では「0 件」のみ(placeholder 最小=SS-004 暫定の否認可ポイント)。
+   [開く]→A-1 で作成→閉じる→サマリが更新される。
+3. **書き出し(B-1 内選択)**: [選ぶ…]→B-1。コレクション選択がカード内 2 行構成(mock 同型)・
+   既定=先頭・選択変更で既定出力先の <名前> と件数表示が追随→書き出し成功(管理フォルダ既定=
+   ECO-074 回帰なし)。
+4. **取り込み(B-2 内選択=案A)**: [ファイルを選ぶ…]→B-2 が picker 自動起動(管理フォルダ起点)。
+   **取り込み先コレクション未選択の間は互換 OK でも「次へ」不活性**→選択で活性→B-3→B-4 の
+   既存フローに回帰なし。取り込み先を表示中のコレクションにした場合、完了後に画像タブへ反映。
+5. **⋯ メニュー(VC-8/M5)**: 実体 2 項目(書き出す/取り込む)が無い。区切り線の下に
+   「設定でバックアップ・移送…」1 項目のみ(淡紫ハイライト+太字・D4 の許容可否確認)→
+   クリックで設定が「データとバックアップ」節選択で開く。
+6. **ja/en**: E-1 文言(節名/カード/ボタン/注記/サマリ)が切替に追随。
+7. **回帰**: A-1/A-2/B-3/B-4 と設定「一般」(言語切替)に視覚・挙動の回帰なし。

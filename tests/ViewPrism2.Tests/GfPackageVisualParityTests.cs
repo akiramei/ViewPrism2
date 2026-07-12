@@ -45,7 +45,7 @@ public sealed class GfPackageVisualParityTests : IDisposable
             Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
         var folder = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
         var exporter = new CollectionPackageExporter(_db.Manager, _db.Clock, "9.9.9");
-        var vm = new CollectionExportViewModel(exporter, folder, loc, (_, _) => Task.FromResult<string?>(null));
+        var vm = new CollectionExportViewModel(exporter, [folder], loc, (_, _) => Task.FromResult<string?>(null));
         await Session.Dispatch(() =>
         {
             var window = new CollectionExportWindow { DataContext = vm };
@@ -105,7 +105,7 @@ public sealed class GfPackageVisualParityTests : IDisposable
             Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
         var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
         var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
-        var vm = new CollectionImportViewModel(importer, collection, loc,
+        var vm = new CollectionImportViewModel(importer, [collection], loc,
             _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
         var pkg = Path.Combine(Path.GetTempPath(), $"gf07303-{Guid.NewGuid():N}.viewprism2-collection.json");
         File.WriteAllBytes(pkg, new byte[1536]); // ByteSizeFormatter で「1.5 KB」になるサイズ
@@ -175,7 +175,7 @@ public sealed class GfPackageVisualParityTests : IDisposable
             Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
         var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
         var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
-        var vm = new CollectionImportViewModel(importer, collection, loc,
+        var vm = new CollectionImportViewModel(importer, [collection], loc,
             _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
         await Session.Dispatch(() =>
         {
@@ -231,7 +231,7 @@ public sealed class GfPackageVisualParityTests : IDisposable
             Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
         var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
         var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
-        var vm = new CollectionImportViewModel(importer, collection, loc,
+        var vm = new CollectionImportViewModel(importer, [collection], loc,
             _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
         await Session.Dispatch(() =>
         {

@@ -6,6 +6,13 @@ namespace ViewPrism2.App.Services;
 /// <summary>ノード条件ダイアログの結果(OK 時のみ非 null。ConditionType=null は「条件なし」)。</summary>
 public sealed record NodeConditionResult(HierarchyConditionType? ConditionType, string? ConditionValueJson);
 
+/// <summary>設定ウィンドウの節(ECO-077/E-1: 誘導導線が「データとバックアップ」節を直接開くための指定)。</summary>
+public enum SettingsSection
+{
+    General,
+    DataBackup,
+}
+
 /// <summary>
 /// ダイアログ・子ウィンドウ表示の抽象(K-MVVM: ViewModel から View への参照禁止。
 /// ダイアログ表示は IDialogService 抽象を介す)。実装は App の View 層。
@@ -21,17 +28,30 @@ public interface IWindowService
     /// <summary>同期フォルダ管理ウィンドウ(モーダル。詳細編集: 除外パターン・サブフォルダ等)。</summary>
     Task ShowFolderManagementAsync();
 
-    /// <summary>設定(言語)ウィンドウ(モーダル)。</summary>
+    /// <summary>設定ウィンドウ(モーダル)。</summary>
     Task ShowSettingsAsync();
 
-    /// <summary>スナップショット管理(ECO-072 A-1。入口=設定のバックアップ節・SS-001 裁定(b))。</summary>
+    /// <summary>
+    /// 設定ウィンドウを指定節で開く(ECO-077/M5: ⋯ メニューの誘導が「データとバックアップ」節を開く)。
+    /// 既定実装は節指定なしへ委譲(テストスタブ互換)。View 層 WindowService が上書きする。
+    /// </summary>
+    Task ShowSettingsAsync(SettingsSection section) => ShowSettingsAsync();
+
+    /// <summary>スナップショット管理(ECO-072 A-1。入口=設定 ▸ データとバックアップ・SS-001 再裁定=ECO-077)。</summary>
     Task ShowSnapshotsAsync();
 
-    /// <summary>コレクションを書き出す(ECO-073 B-1。入口=画像タブ ⋯ メニュー・SS-001 裁定(b))。</summary>
-    Task ShowCollectionExportAsync(string collectionId);
+    /// <summary>
+    /// コレクションを書き出す(ECO-073 B-1)。入口=設定 ▸ データとバックアップ(SS-001 再裁定=ECO-077/M5)。
+    /// コレクション文脈を持たないため対象は B-1 内で選択する。既定実装は no-op(テストスタブ互換)。
+    /// </summary>
+    Task ShowCollectionExportAsync() => Task.CompletedTask;
 
-    /// <summary>コレクションを取り込む(ECO-073 B-2〜B-4 ウィザード。取り込み先=入口コレクション)。</summary>
-    Task ShowCollectionImportAsync(string collectionId);
+    /// <summary>
+    /// コレクションを取り込む(ECO-073 B-2〜B-4 ウィザード)。入口=設定 ▸ データとバックアップ
+    /// (SS-001 再裁定=ECO-077/M5)。取り込み先は B-2 内で選択する(gate①裁定=案A・B-1 対称)。
+    /// 既定実装は no-op(テストスタブ互換)。
+    /// </summary>
+    Task ShowCollectionImportAsync() => Task.CompletedTask;
 
     /// <summary>タグ作成/編集ダイアログ(タグパレットの「追加」「編集」)。保存されたら true。</summary>
     Task<bool> ShowTagEditorAsync(Tag? existing);

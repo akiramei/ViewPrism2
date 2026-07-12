@@ -654,10 +654,10 @@ mbom:
       ebom_refs: [E-UI-SNAPSHOT-046]
       artifact:
         path: src/ViewPrism2.App/Views/SnapshotWindow.axaml
-        path_note: "SnapshotWindow.axaml(.cs)=A-1、SnapshotRestoreConfirmWindow.axaml(.cs)=A-2、ViewModels/SnapshotViewModel.cs、SettingsWindow.axaml バックアップ節+SettingsViewModel.OpenSnapshotsCommand、WindowService.ShowSnapshotsAsync+RestartApplication、App.axaml.cs 起動ブートストラップ結線+結果ステータス報告"
+        path_note: "SnapshotWindow.axaml(.cs)=A-1、SnapshotRestoreConfirmWindow.axaml(.cs)=A-2、ViewModels/SnapshotViewModel.cs、SettingsWindow.axaml データとバックアップ節(E-1)+SettingsViewModel(OpenSnapshotsCommand+SnapshotSummary+節ナビ)、WindowService.ShowSnapshotsAsync+RestartApplication、App.axaml.cs 起動ブートストラップ結線+結果ステータス報告"
         type: avalonia-app
       interface_contract:
-        entry: "設定ウィンドウ「バックアップ」節(既存 settings.backup.title/description を配線・SS-001 裁定(b))→ SnapshotWindow をモーダル表示。i18n は snapshot.*(M2: 自動バックアップ語彙は配線しない)"
+        entry: "設定ウィンドウ「データとバックアップ」節(E-1・SS-001 再裁定 2026-07-13=M5・ECO-077)のスナップショット行カード[開く]→ SnapshotWindow をモーダル表示。行サマリ=SnapshotService.List の先頭 CreatedAtUtc+件数(L8=yyyy/MM/dd HH:mm・0 件は placeholder 最小=settings.dataBackup.snapshotSummaryEmpty・SS-004 暫定)。A-1 閉じ後にサマリ再計算。i18n は settings.dataBackup.*+snapshot.*(M2: 自動バックアップ語彙は配線しない)"
         restore_flow: "A-1 復元(検証待ちは IsEnabled=false)→ A-2 確認(取り消し不可・再起動・自動ロールバック・画像非含有)→ ValidateForRestore → RequestRestore → 自動再起動(desktop.Exit で DB 破棄後に新プロセス起動)"
         startup: "App は appDataDir 決定直後・ConfigureServices 前に SnapshotRestoreBootstrap.Apply を呼び、結果を logger+MainWindowViewModel.StatusMessage へ報告する(黙って握りつぶさない)"
         persistence: "保存先は AppSettings.SnapshotDirectory(null=既定 %APPDATA%/ViewPrism2/snapshots)。変更は即時 SettingsStore.Save(SS-002=アプリ共通)"
@@ -682,11 +682,11 @@ mbom:
       ebom_refs: [E-UI-PACKAGE-048]
       artifact:
         path: src/ViewPrism2.App/Views/CollectionImportWindow.axaml
-        path_note: "CollectionImportWindow.axaml(.cs)=B-2〜B-4 ウィザード、CollectionExportWindow.axaml(.cs)=B-1、ViewModels/CollectionImportViewModel.cs(+TagConflictRowViewModel)/CollectionExportViewModel.cs/PackageConverters.cs、ImageTabView.axaml ⋯ メニュー2行+ImageTabViewModel.ExportCollection/ImportCollectionCommand、WindowService.ShowCollectionExport/ImportAsync+Save/OpenFilePicker"
+        path_note: "CollectionImportWindow.axaml(.cs)=B-2〜B-4 ウィザード、CollectionExportWindow.axaml(.cs)=B-1、ViewModels/CollectionImportViewModel.cs(+TagConflictRowViewModel)/CollectionExportViewModel.cs/PackageConverters.cs、SettingsWindow.axaml E-1 移送2行カード+SettingsViewModel.OpenCollectionExport/ImportCommand、ImageTabView.axaml ⋯ メニュー誘導1項目+ImageTabViewModel.OpenBackupSettingsCommand、WindowService.ShowCollectionExport/ImportAsync(引数なし)+ShowSettingsAsync(SettingsSection)+Save/OpenFilePicker"
         type: avalonia-app
       interface_contract:
-        entry: "画像タブ ⋯ メニュー(CanOpenMaintenance=コレクション選択時のみ)→ 各 window をモーダル表示。取り込み完了後は ReloadImagesAsync+Recompute(missing 参照登録/付与増加の反映)"
-        wizard: "stepper=ファイル→検証→プレビュー→完了。VerifyOk のみ次へ活性。競合行=4択+別名 TextBox/割当 ComboBox(型互換のみ)。CanExecute=全競合解決∧(過半でない∨確認チェック)。失敗メッセージ(鮮度再検証等)は docked フッターへ表示し DB 無変更"
+        entry: "設定 ▸ データとバックアップ(E-1・SS-001 再裁定 2026-07-13=M5・ECO-077)の移送2行カード=[選ぶ…]→B-1/[ファイルを選ぶ…]→B-2(コレクション0のライブラリでは開かない)。⋯ メニューは「設定でバックアップ・移送…」誘導1項目のみ(実体を持たない・常時活性)=ShowSettingsAsync(DataBackup) で節選択オープンし、閉じ後に表示中コレクションを ReloadImagesAsync+Recompute(取り込みの missing 参照登録/付与増加の反映)"
+        wizard: "stepper=ファイル→検証→プレビュー→完了。書き出し対象=B-1 内選択(既定=先頭・既定出力先/件数表示が追随)。取り込み先=B-2 内選択(案A・既定未選択・CanProceed=VerifyOk∧選択済みのみ次へ活性。突き合わせ基準ルート=選択コレクションのフォルダ)。競合行=4択+別名 TextBox/割当 ComboBox(型互換のみ)。CanExecute=全競合解決∧(過半でない∨確認チェック)。失敗メッセージ(鮮度再検証等)は docked フッターへ表示し DB 無変更"
         i18n: "package.*(ja/en)。⋯ メニュー行は既存流儀(ja 直書き)に合わせる"
         location: "ECO-074/案A(仕様 §2.14.7): 管理フォルダ=AppSettings.CollectionPackageDirectory ?? CollectionPackageFormat.DefaultDirectory(<Documents>/ViewPrism2/collections)。書き出し既定出力先=管理フォルダ+既定名(CollectionExportViewModel)。Save/OpenFilePicker の SuggestedStartLocation=管理フォルダ(WindowService・無ければ作成・逸脱先は永続しない)。B-2 は Opened で picker 自動起動+キャンセル残留時プレースホルダ(package.selectFilePrompt)"
       acceptance_refs: [CP-PACKAGE-032, CP-UI-G13]
@@ -820,7 +820,7 @@ silence_sweep:
   - { dimension: 自動バックアップ・保持世代,        decision: out-of-scope, note: "M2 裁定=UI 非表示・将来 ECO(その際 Online Backup API を検討)。i18n の settings.backup.* 自動系語彙は未配線のまま温存" }
   # ---- ECO-073 追加(バックアップB層・仕様 §2.14) ----
   - { dimension: パッケージの書き出し対象 status,   decision: specified, where: "M-PACKAGE-042 / 仕様 §2.14.2", note: "normal+missing(タグを持ち得る可視カタログ)。deleted=トラッシュ・pending=未確定は含めない" }
-  - { dimension: 取り込み先ルートの変更 UI,          decision: specified, where: "E-UI-PACKAGE-048 / SS-001(b)", note: "V1 は入口コレクション固定(三点メニュー=文脈操作)。CAD B-3 の「変更」は非搭載とし、誤ルートは過半ガード(EX-002)+別コレクションの三点メニューから取り込み直しで代替。golden で maintainer 確認" }
+  - { dimension: 取り込み先ルートの変更 UI,          decision: specified, where: "E-UI-PACKAGE-048 / ECO-077 gate①=案A", note: "取り込み先=B-2 内選択(SS-001 再裁定で三点メニュー文脈が消えた後継。旧代替手順『別コレクションの三点メニューから取り込み直し』は ECO-077 で失効→B-2 の取り込み先選び直しが代替)。CAD B-3 の「変更」は引き続き非搭載・誤ルートは過半ガード(EX-002)。golden で maintainer 確認" }
   - { dimension: 未解決画像の「場所を指定」即時解決, decision: deferred, note: "V1 は missing 登録→既存修復導線(規則3a候補提示→修復画面確定)で解決。ダイアログ内の即時指定はEX-003(変更あり明示取込)と合わせて後続ECO。gate①条件2の『場所を指定も可』は修復画面経由で充足と整理(golden で maintainer 確認)" }
   - { dimension: 競合行「中止」の意味論,             decision: specified, where: M-UI-PACKAGE-043, note: "選択を解除して要対応へ戻す(=実行不可のまま)。取り込み全体の中止はフッターのキャンセル" }
   - { dimension: パッケージの置き場所,               decision: specified, where: "仕様 §2.14.7 / ECO-074 案A裁定", note: "管理フォルダ <Documents>/ViewPrism2/collections(settings 上書き可)。書き出し既定・picker 起点とも管理フォルダ・逸脱先は永続しない。B-2 未選択は定常状態でない(picker 自動起動+キャンセル残留時プレースホルダ)" }

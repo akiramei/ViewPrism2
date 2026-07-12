@@ -523,7 +523,7 @@ ebom:
 
     # ---------- ECO-072 表面(バックアップA層 UI) ----------
     - id: E-UI-SNAPSHOT-046
-      name: スナップショット管理 UI(A-1 作成・保存先・作成中進捗・一覧=日時/app_version/サイズ/検証状態/復元、A-2 時点復元確認ダイアログ、設定バックアップ節の入口)— ECO-072 新設
+      name: スナップショット管理 UI(A-1 作成・保存先・作成中進捗・一覧=日時/app_version/サイズ/検証状態/復元、A-2 時点復元確認ダイアログ、設定 E-1 データとバックアップ節の入口)— ECO-072 新設・ECO-077 入口改版
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
@@ -532,7 +532,7 @@ ebom:
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-SNAPSHOT-045, E-SETTINGS-013]
       interface_contracts:
-        - 入口は設定ウィンドウのバックアップ節(SS-001 裁定(b))。作成/検証/復元予約の実体は E-SNAPSHOT-045 経由(UI で再実装しない)
+        - 入口は設定 ▸ データとバックアップ節(E-1)のスナップショット行カード[開く](SS-001 再裁定 2026-07-13=M5・ECO-077。行サマリ=最終作成+件数の L8 書式・0 件は placeholder 最小=SS-004 暫定)。作成/検証/復元予約の実体は E-SNAPSHOT-045 経由(UI で再実装しない)
       invariants:
         - 両画面に「画像ファイルは含まれません」を明示する(M3)。用語は「スナップショット作成/時点復元」(M1)
         - 検証待ち行の復元ボタンは無効(CAD A-1)。A-2 は取り消し不可警告+対象情報+再起動/自動ロールバック/画像非含有の注意3項+危険CTA
@@ -544,7 +544,7 @@ ebom:
 
     # ---------- ECO-073 表面(バックアップB層 UI) ----------
     - id: E-UI-PACKAGE-048
-      name: コレクション書き出し/取り込み UI(B-1 書き出しダイアログ・B-2〜B-4 取り込みウィザード=検証/プレビュー&競合解決/結果レポート・画像タブ ⋯ メニュー入口)— ECO-073 新設
+      name: コレクション書き出し/取り込み UI(B-1 書き出しダイアログ・B-2〜B-4 取り込みウィザード=検証/プレビュー&競合解決/結果レポート・設定 E-1 入口+⋯ メニュー誘導)— ECO-073 新設・ECO-077 入口改版
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
@@ -553,7 +553,7 @@ ebom:
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-PACKAGE-047, E-UI-BROWSE-022]
       interface_contracts:
-        - 入口は画像タブ ⋯ メニュー「コレクションを書き出す/取り込む」(SS-001 裁定(b))。取り込み先=入口コレクション固定。形式/照合/適用の実体は E-PACKAGE-047 経由(UI で再実装しない)
+        - 入口は設定 ▸ データとバックアップ節(E-1)の移送 2 行カード(SS-001 再裁定 2026-07-13=M5・ECO-077。⋯ メニューは「設定でバックアップ・移送…」誘導 1 項目のみ=実体を持たない)。書き出し対象は B-1 内で選択(既定=先頭・既定出力先が追随)・取り込み先は B-2 内で選択(gate①裁定=案A・既定未選択・選択まで「次へ」不活性=互換 OK と AND・突き合わせ基準ルート=選択コレクションのフォルダ)。形式/照合/適用の実体は E-PACKAGE-047 経由(UI で再実装しない)
       invariants:
         - 用語=「書き出す/取り込む」(M1)・画像非含有明示(M3)・「追加はするが削除はしない」明示(M4)
         - B-2 互換 NG は別面(判定は formatVersion/minReaderVersion・app_version は参考表示)
