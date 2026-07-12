@@ -82,7 +82,7 @@ B層設計時にこの**管理フォルダ概念を read-across しなかった*
 ## 6. 残ゲート
 
 - gate①: ~~是正方針の裁定(案A/B/C+既定フォルダ場所)~~ → **裁定済み(§7)**
-- gate②: golden(操作手順は fix 時に確定)
+- gate②: golden(操作手順=§9)
 
 ## 7. gate①裁定(2026-07-12)
 
@@ -96,3 +96,52 @@ B層設計時にこの**管理フォルダ概念を read-across しなかった*
   ウィザード表示直後に picker を自動起動(CAD の「未選択状態は存在しない」2 状態定義に忠実)。
   キャンセル残留時のみプレースホルダ文言を表示(文言は CAD 正典化してから実装)。
   案B(最新初期選択)は不採用(maintainer 自身が賛否ありとした点・本裁定に含めない)。
+
+## 8. 実施記録(2026-07-12 /eco-fix)
+
+### 8.1 CAD 正典化(先行条件)
+
+- ViewPrismUI `e26e29d`: snapshot_export_import.md へ「パッケージの置き場所」節(管理フォルダ・
+  書き出し既定・picker 起点・逸脱の扱い・案B 不採用)+ B-2 状態表へ「未選択(実装補遺)」行
+  (picker 自動起動+プレースホルダ文言「取り込むパッケージを選択してください」)。
+
+### 8.2 先行probe(R5)
+
+- `CpPackage074Tests`(Trait cp=CP-PACKAGE-032)を製品コード変更前に追加:
+  P1=書き出し既定出力先が `<Documents>/ViewPrism2/collections/<名前>.viewprism2-collection.json`。
+  P2=取り込みウィザード表示直後に picker が 1 回自動起動+キャンセル残留時プレースホルダ可視。
+- 是正前実測: **2 件とも不合格**(既定=MyDocuments 直下・picker 自動起動 0 回)。
+  ※dotnet test の testhost ハング再発のため判定は exe 直接実行(既知の実行規律)。
+
+### 8.3 是正diff
+
+- `AppSettings.CollectionPackageDirectory`(null=既定)+ `CollectionPackageFormat.DefaultDirectory`
+  (`<Documents>/ViewPrism2/collections`)。
+- `CollectionExportViewModel`: ctor に `packageDirectory`(null=既定へフォールバック)を追加し
+  既定出力先を管理フォルダ配下へ(MyDocuments 直下の実装発明を撤去)。
+- `WindowService`: `PackageDirectory`(settings ?? 既定)+ `GetPackageStartFolderAsync`
+  (無ければ作成→`TryGetFolderFromPathAsync`)。Save/OpenFilePicker とも
+  `SuggestedStartLocation`=管理フォルダ(逸脱先は永続しない)。
+- `CollectionImportWindow`: `Opened` で `PackagePath` null なら `PickFileCommand` を自動起動(案イ)。
+  ファイルカードへプレースホルダ(`package.selectFilePrompt` ja/en 追加)+ファイル名は選択時のみ表示。
+- エンジンは変更なし(Exporter は既に出力ディレクトリを作成する=ExportAsync 実測)。
+
+### 8.4 機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **638/638 pass**(probe 2 件緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+- 台帳同期: 仕様 §2.14.7 新設・E-UI-PACKAGE-048 invariants・M-UI-PACKAGE-043 interface_contract
+  (location)+沈黙次元「パッケージの置き場所」・CP-PACKAGE-032 test_vectors+fixture_note。
+
+## 9. gate② golden 操作手順(CP-UI-G13 追加観点)
+
+1. コレクションの ⋯「コレクションを書き出す…」→ 出力先が
+   `<文書>\ViewPrism2\collections\<名前>.viewprism2-collection.json`。「変更」の保存ダイアログも
+   同フォルダ起点で開く。書き出し実行 → ファイルが管理フォルダへ落ちる(フォルダは自動作成)。
+2. ⋯「コレクションを取り込む…」→ **開いた直後にファイル選択ダイアログが自動で開き**、
+   起点=管理フォルダ(書き出したパッケージだけが並ぶ)。
+3. ファイル選択をキャンセル → カードが空白でなく「取り込むパッケージを選択してください」+
+   ファイルグリフ。「変更」で選び直せる。
+4. 一度別フォルダからファイルを選んだ後、ウィザードを閉じて再度開く → picker の起点は
+   管理フォルダのまま(「最後に使ったフォルダ」を覚えない)。
+5. ja/en 切替でプレースホルダ文言が追随。既存 B-1〜B-4 の視覚に回帰がない。

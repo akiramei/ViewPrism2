@@ -22,7 +22,8 @@ public sealed partial class CollectionExportViewModel : ObservableObject
         CollectionPackageExporter exporter,
         SyncFolder collection,
         LocalizationService localization,
-        Func<string, string, Task<string?>> pickSaveFile)
+        Func<string, string, Task<string?>> pickSaveFile,
+        string? packageDirectory = null)
     {
         _exporter = exporter;
         _collection = collection;
@@ -34,8 +35,9 @@ public sealed partial class CollectionExportViewModel : ObservableObject
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
         };
+        // ECO-074 案A: 既定出力先=管理フォルダ(「最後に使ったフォルダ」等の無管理な起点を用いない)
         _outputPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            packageDirectory ?? CollectionPackageFormat.DefaultDirectory,
             _collection.Name + CollectionPackageFormat.FileExtension);
     }
 

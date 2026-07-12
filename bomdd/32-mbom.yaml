@@ -686,6 +686,7 @@ mbom:
         entry: "画像タブ ⋯ メニュー(CanOpenMaintenance=コレクション選択時のみ)→ 各 window をモーダル表示。取り込み完了後は ReloadImagesAsync+Recompute(missing 参照登録/付与増加の反映)"
         wizard: "stepper=ファイル→検証→プレビュー→完了。VerifyOk のみ次へ活性。競合行=4択+別名 TextBox/割当 ComboBox(型互換のみ)。CanExecute=全競合解決∧(過半でない∨確認チェック)。失敗メッセージ(鮮度再検証等)は docked フッターへ表示し DB 無変更"
         i18n: "package.*(ja/en)。⋯ メニュー行は既存流儀(ja 直書き)に合わせる"
+        location: "ECO-074/案A(仕様 §2.14.7): 管理フォルダ=AppSettings.CollectionPackageDirectory ?? CollectionPackageFormat.DefaultDirectory(<Documents>/ViewPrism2/collections)。書き出し既定出力先=管理フォルダ+既定名(CollectionExportViewModel)。Save/OpenFilePicker の SuggestedStartLocation=管理フォルダ(WindowService・無ければ作成・逸脱先は永続しない)。B-2 は Opened で picker 自動起動+キャンセル残留時プレースホルダ(package.selectFilePrompt)"
       acceptance_refs: [CP-PACKAGE-032, CP-UI-G13]
       acceptance_note: "形式/照合/適用の決定論は CP-PACKAGE-032 unit(VM 配線 pin 含む)。視覚と書き出し→取り込み往復の実機確認は golden(CP-UI-G13)"
 
@@ -820,6 +821,7 @@ silence_sweep:
   - { dimension: 取り込み先ルートの変更 UI,          decision: specified, where: "E-UI-PACKAGE-048 / SS-001(b)", note: "V1 は入口コレクション固定(三点メニュー=文脈操作)。CAD B-3 の「変更」は非搭載とし、誤ルートは過半ガード(EX-002)+別コレクションの三点メニューから取り込み直しで代替。golden で maintainer 確認" }
   - { dimension: 未解決画像の「場所を指定」即時解決, decision: deferred, note: "V1 は missing 登録→既存修復導線(規則3a候補提示→修復画面確定)で解決。ダイアログ内の即時指定はEX-003(変更あり明示取込)と合わせて後続ECO。gate①条件2の『場所を指定も可』は修復画面経由で充足と整理(golden で maintainer 確認)" }
   - { dimension: 競合行「中止」の意味論,             decision: specified, where: M-UI-PACKAGE-043, note: "選択を解除して要対応へ戻す(=実行不可のまま)。取り込み全体の中止はフッターのキャンセル" }
+  - { dimension: パッケージの置き場所,               decision: specified, where: "仕様 §2.14.7 / ECO-074 案A裁定", note: "管理フォルダ <Documents>/ViewPrism2/collections(settings 上書き可)。書き出し既定・picker 起点とも管理フォルダ・逸脱先は永続しない。B-2 未選択は定常状態でない(picker 自動起動+キャンセル残留時プレースホルダ)" }
   - { dimension: 過半ガードの閾値(EX-002),         decision: specified, where: "CollectionPackageImporter.MajorityUnresolved", note: "未解決×2>総数(=過半)。警告+確認チェックで続行可・既定は中断" }
   - { dimension: ZIP コンテナ transport,            decision: out-of-scope, note: "V1=単一JSON。将来は manifest.json+tags.json+images.ndjson の別 transport・container_version 別採番(V1 形式を流用しない)" }
   - { dimension: 手編集ファイルの保証,               decision: specified, where: "仕様 §2.14.1 / REQ-093", note: "人間が読める(relaxed escape・非ASCII非エスケープ)が、動作保証はスキーマ検証を通った場合に限る" }

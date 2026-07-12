@@ -160,7 +160,7 @@ public sealed class WindowService : IWindowService
         }
 
         var vm = new CollectionExportViewModel(
-            _packageExporter, collection, _localization, PickSaveFileAsync);
+            _packageExporter, collection, _localization, PickSaveFileAsync, PackageDirectory);
         var window = new CollectionExportWindow { DataContext = vm };
         await vm.LoadAsync();
         await window.ShowDialog(Owner);
@@ -179,6 +179,28 @@ public sealed class WindowService : IWindowService
         await window.ShowDialog(Owner);
     }
 
+    /// <summary>パッケージ管理フォルダ(ECO-074/案A: settings 上書き可・null=既定)。</summary>
+    private string PackageDirectory =>
+        _settings.CollectionPackageDirectory ?? CollectionPackageFormat.DefaultDirectory;
+
+    /// <summary>
+    /// picker の起点=管理フォルダ(ECO-074/案A: 常に管理フォルダ起点。逸脱先は永続しない=
+    /// 「最後に使ったフォルダ」の再発防止)。無ければ作る(初回でも起点が成立する)。
+    /// </summary>
+    private async Task<Avalonia.Platform.Storage.IStorageFolder?> GetPackageStartFolderAsync()
+    {
+        try
+        {
+            Directory.CreateDirectory(PackageDirectory);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null; // 起点なしで picker を開く(OS 既定)よりよい代替がないため続行
+        }
+
+        return await Owner!.StorageProvider.TryGetFolderFromPathAsync(PackageDirectory);
+    }
+
     /// <summary>保存ファイル選択(B-1 出力先)。キャンセルは null。</summary>
     private async Task<string?> PickSaveFileAsync(string title, string suggestedName)
     {
@@ -192,6 +214,7 @@ public sealed class WindowService : IWindowService
             Title = title,
             SuggestedFileName = suggestedName,
             DefaultExtension = "json",
+            SuggestedStartLocation = await GetPackageStartFolderAsync(),
         });
         return file?.TryGetLocalPath();
     }
@@ -212,6 +235,7 @@ public sealed class WindowService : IWindowService
             [
                 new FilePickerFileType("ViewPrism2 collection") { Patterns = ["*.viewprism2-collection.json", "*.json"] },
             ],
+            SuggestedStartLocation = await GetPackageStartFolderAsync(),
         });
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }

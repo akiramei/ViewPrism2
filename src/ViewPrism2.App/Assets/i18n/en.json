@@ -540,6 +540,7 @@
   "snapshot.restoreFailedStatus": "Restore failed; started with the previous state: {message}",
   "package.exportTitle": "Export Collection",
   "package.importTitle": "Import Collection",
+  "package.selectFilePrompt": "Select a package to import",
   "package.exportCollection": "Collection to export",
   "package.collectionSummary": "{images} items · {tags} tags",
   "package.outputPath": "Output",

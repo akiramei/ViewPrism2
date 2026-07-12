@@ -540,6 +540,7 @@
   "snapshot.restoreFailedStatus": "時点復元に失敗したため、元の状態で起動しました: {message}",
   "package.exportTitle": "コレクションを書き出す",
   "package.importTitle": "コレクションを取り込む",
+  "package.selectFilePrompt": "取り込むパッケージを選択してください",
   "package.exportCollection": "書き出すコレクション",
   "package.collectionSummary": "{images} 項目 · タグ {tags}",
   "package.outputPath": "出力先",

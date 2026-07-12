@@ -716,7 +716,7 @@ control_plan:
       depth: "unit/L2"
       tolerance: exact
       fixture: tests/ViewPrism2.Tests/CpPackage073Tests.cs
-      fixture_note: "Trait cp=CP-PACKAGE-032。source/target の一時 SQLite 2 基で実ファイル往復。先行probe(reflection+migration)=是正前622件中2不合格の実測記録を含む"
+      fixture_note: "Trait cp=CP-PACKAGE-032。source/target の一時 SQLite 2 基で実ファイル往復。先行probe(reflection+migration)=是正前622件中2不合格の実測記録を含む。置き場所規約(ECO-074)は CpPackage074Tests(同 Trait)"
       oracle: "パッケージ内容(正規形値・件数)・target DB のタグ/付与/missing行集合・Result 件数・マッピング行の完全一致"
       approver: automated
       test_vectors:
@@ -731,6 +731,7 @@ control_plan:
         - "missing 登録行は後続スキャンで削除されず、実体出現で pending+candidate_link_id(規則3a)"
         - "プレビュー後の DB 変化(競合タグ出現): 適用直前の再計画が検出して中止"
         - "⋯メニューの書き出し/取り込みコマンドがコレクション ID で IWindowService へ配線される"
+        - "ECO-074 置き場所規約: 書き出し既定出力先=管理フォルダ(<Documents>/ViewPrism2/collections)配下の既定名。取り込みウィザードは表示直後に picker を 1 回だけ自動起動し、キャンセル残留時はプレースホルダ文言(空白カードを見せない)"
 
     # ---- golden(G)— 承認者必須。判定項目は 20-spec.md §2.6 G-1〜G-9(v2.0/v3.0・操作経路付き) ----
     # 承認記録(AUDIT-303): 各 G 行の実施結果は 50-as-built.yaml に

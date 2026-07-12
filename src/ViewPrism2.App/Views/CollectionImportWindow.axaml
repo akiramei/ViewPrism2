@@ -122,8 +122,13 @@
                       Data="M1,1 L8,1 L12,5 L12,16 L1,16 Z M8,1 L8,5 L12,5" />
               </Border>
               <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,0,12,0">
+                <!-- ECO-074 案イ: キャンセル残留(未選択)は空白でなくプレースホルダ文言 -->
+                <TextBlock x:Name="PackagePlaceholder" Text="{Binding Loc[package.selectFilePrompt]}"
+                           FontSize="13" Foreground="{StaticResource TextMutedBrush}"
+                           IsVisible="{Binding PackageFileName, Converter={x:Static ObjectConverters.IsNull}}" />
                 <TextBlock Text="{Binding PackageFileName, FallbackValue=''}" FontFamily="Consolas,monospace"
-                           FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                           FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                           IsVisible="{Binding PackageFileName, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock x:Name="PackageSizeText" Text="{Binding PackageFileSizeText}" FontSize="11"
                            Foreground="{StaticResource TextMutedBrush}"
                            IsVisible="{Binding PackageFileSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" />

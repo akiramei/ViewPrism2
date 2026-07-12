@@ -23,6 +23,13 @@ public static class CollectionPackageFormat
     public const string FileExtension = ".viewprism2-collection.json";
     public const string PartialExtension = ".partial";
 
+    /// <summary>
+    /// 管理フォルダの既定(ECO-074/案A裁定: ユーザー文書配下=持ち出し・目視確認のしやすさ優先。
+    /// A層 SS-002 の %APPDATA%/ViewPrism2/snapshots と命名対称)。
+    /// </summary>
+    public static string DefaultDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ViewPrism2", "collections");
+
     /// <summary>既知の必須 feature(未知の必須 feature を含むファイルは拒否)。</summary>
     public static readonly IReadOnlySet<string> KnownFeatures =
         new HashSet<string>(StringComparer.Ordinal) { "tag-definition-v1", "image-fingerprint-v1" };

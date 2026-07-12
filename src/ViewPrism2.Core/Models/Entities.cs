@@ -266,6 +266,9 @@ public sealed record AppSettings
     /// <summary>スナップショット保存先(ECO-072/SS-002: アプリ共通)。null=既定(%APPDATA%/ViewPrism2/snapshots)。</summary>
     public string? SnapshotDirectory { get; set; }
 
+    /// <summary>コレクションパッケージの管理フォルダ(ECO-074/案A)。null=既定(&lt;Documents&gt;/ViewPrism2/collections)。</summary>
+    public string? CollectionPackageDirectory { get; set; }
+
     // ---- v2.0 追加(REQ-059 ビューア設定の永続化。M-SET-010 拡張) ----
     // 列挙系は文字列のまま格納し、型付き化と既定化は ViewerSettingsModel が担う(項目単位の破損耐性)。
     // 文字列系は TolerantStringConverter で「文字列以外の型・null」を許容し、不正値は項目単位で既定へ落とす
