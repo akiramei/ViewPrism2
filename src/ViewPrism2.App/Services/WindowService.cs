@@ -34,6 +34,8 @@ public sealed class WindowService : IWindowService
     private readonly AppSettings _settings;
     private readonly SettingsStore _settingsStore;
     private readonly SnapshotService _snapshots;
+    private readonly CollectionPackageExporter _packageExporter;
+    private readonly CollectionPackageImporter _packageImporter;
 
     public WindowService(
         ISyncFolderRepository folders,
@@ -49,7 +51,9 @@ public sealed class WindowService : IWindowService
         LocalizationService localization,
         AppSettings settings,
         SettingsStore settingsStore,
-        SnapshotService snapshots)
+        SnapshotService snapshots,
+        CollectionPackageExporter packageExporter,
+        CollectionPackageImporter packageImporter)
     {
         _folders = folders;
         _images = images;
@@ -65,6 +69,8 @@ public sealed class WindowService : IWindowService
         _settings = settings;
         _settingsStore = settingsStore;
         _snapshots = snapshots;
+        _packageExporter = packageExporter;
+        _packageImporter = packageImporter;
     }
 
     /// <summary>モーダルダイアログのオーナー(App 起動時に設定)。</summary>
@@ -144,6 +150,70 @@ public sealed class WindowService : IWindowService
         window = new SnapshotWindow { DataContext = vm };
         vm.Load();
         await window.ShowDialog(Owner);
+    }
+
+    public async Task ShowCollectionExportAsync(string collectionId)
+    {
+        if (Owner is null || await _folders.GetByIdAsync(collectionId) is not { } collection)
+        {
+            return;
+        }
+
+        var vm = new CollectionExportViewModel(
+            _packageExporter, collection, _localization, PickSaveFileAsync);
+        var window = new CollectionExportWindow { DataContext = vm };
+        await vm.LoadAsync();
+        await window.ShowDialog(Owner);
+    }
+
+    public async Task ShowCollectionImportAsync(string collectionId)
+    {
+        if (Owner is null || await _folders.GetByIdAsync(collectionId) is not { } collection)
+        {
+            return;
+        }
+
+        var vm = new CollectionImportViewModel(
+            _packageImporter, collection, _localization, PickPackageFileAsync, () => _tags.GetAllAsync());
+        var window = new CollectionImportWindow { DataContext = vm };
+        await window.ShowDialog(Owner);
+    }
+
+    /// <summary>保存ファイル選択(B-1 出力先)。キャンセルは null。</summary>
+    private async Task<string?> PickSaveFileAsync(string title, string suggestedName)
+    {
+        if (Owner is null)
+        {
+            return null;
+        }
+
+        var file = await Owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            DefaultExtension = "json",
+        });
+        return file?.TryGetLocalPath();
+    }
+
+    /// <summary>パッケージファイル選択(B-2)。キャンセルは null。</summary>
+    private async Task<string?> PickPackageFileAsync(string title)
+    {
+        if (Owner is null)
+        {
+            return null;
+        }
+
+        var files = await Owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("ViewPrism2 collection") { Patterns = ["*.viewprism2-collection.json", "*.json"] },
+            ],
+        });
+        return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
     /// <summary>

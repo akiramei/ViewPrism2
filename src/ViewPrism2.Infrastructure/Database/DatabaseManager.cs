@@ -15,10 +15,14 @@ public sealed class DatabaseManager : IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _disposed;
 
-    private DatabaseManager(SqliteConnection connection)
+    private DatabaseManager(SqliteConnection connection, string dbPath)
     {
         _connection = connection;
+        DbPath = dbPath;
     }
+
+    /// <summary>DB ファイルの実パス(ECO-073: 書き出し専用の読み取り接続を別に開くため公開)。</summary>
+    public string DbPath { get; }
 
     /// <summary>
     /// ディレクトリ作成 → 接続 → PRAGMA → マイグレーション(REQ-004)の順で DB を開く。
@@ -41,7 +45,7 @@ public sealed class DatabaseManager : IDisposable
             connection.Execute("PRAGMA journal_mode=WAL;");
             connection.Execute("PRAGMA foreign_keys=ON;");
             MigrationRunner.Run(connection, clock, DatabaseSchema.LatestDdl, DatabaseSchema.Migrations);
-            return new DatabaseManager(connection);
+            return new DatabaseManager(connection, Path.GetFullPath(dbPath));
         }
         catch
         {

@@ -1575,6 +1575,28 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
+    /// <summary>⋯ メニュー: コレクションを書き出す(ECO-073 B-1・SS-001 裁定(b)=三点メニュー入口)。</summary>
+    [RelayCommand]
+    private async Task ExportCollection()
+    {
+        MoreMenuOpen = false;
+        OnPropertyChanged(string.Empty);
+        if (_collectionId is null) { return; }
+        await _windows.ShowCollectionExportAsync(_collectionId).ConfigureAwait(true);
+    }
+
+    /// <summary>⋯ メニュー: コレクションを取り込む(ECO-073 B-2〜B-4)。取り込みで付与/参照が増えるため再読込。</summary>
+    [RelayCommand]
+    private async Task ImportCollection()
+    {
+        MoreMenuOpen = false;
+        OnPropertyChanged(string.Empty);
+        if (_collectionId is null) { return; }
+        await _windows.ShowCollectionImportAsync(_collectionId).ConfigureAwait(true);
+        await ReloadImagesAsync().ConfigureAwait(true);
+        Recompute();
+    }
+
     /// <summary>アイコン「並び替え」メニューの 昇順/降順 セグメント(ECO-025 β/FL-003 v2)。ソート列がある時のみ効く。</summary>
     [RelayCommand]
     private void SetSortAsc() { if (_sortColKey is not null && _sortColDir != SortDirection.Asc) { _sortColDir = SortDirection.Asc; Recompute(); } }

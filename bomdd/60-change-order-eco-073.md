@@ -1,4 +1,4 @@
-# Change Order — ECO-073(staged / gate①裁定済み): コレクションの論理書き出し/取り込み(バックアップB層 V1)
+# Change Order — ECO-073(implemented / golden待ち): コレクションの論理書き出し/取り込み(バックアップB層 V1)
 
 > maintainer要求(2026-07-12)のバックアップ2層構成のうちB層。A層=DBスナップショット(ECO-072)と
 > 対をなす。仕様は maintainer+外部アドバイザーとの事前議論で確定済みであり、本ECOはその
@@ -169,13 +169,88 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
 
 1. ~~**gate① CAD mock 作成**(maintainer。画面情報は §4 と起票報告で提供済み)+
    `docs/screens/` への画面正典追加。~~ → CAD正典化+「参照のみ登録」裁定で完了(§7)
-2. **SS-001(UI 入口)の裁定**: 書き出し/取り込みをどのメニュー/タブから開くか(mock 未設計・
-   CAD review_points 登録済み)。`/eco-fix ECO-073` 着手時までに maintainer が裁定する。
-3. `/eco-fix ECO-073` で probe(§3.8)→migration→エンジン→UI→機械受入。
-   規模により2段受入(エンジン先行)を fix 時に判断。EX-002(過半閾値)/EX-003(変更あり明示取込の
-   具体面)/EX-004(レポート粒度)はこの段で確定する。
-4. gate② golden: 書き出し→別状態のライブラリへ取り込み→プレビュー→競合解決→結果の実機確認。
+2. ~~**SS-001(UI 入口)の裁定**~~ → 裁定済み(2026-07-12)=(b) 分置: B層=画像タブ ⋯ メニュー。
+3. ~~`/eco-fix ECO-073` で probe(§3.8)→migration→エンジン→UI→機械受入。~~ → 完了(§8。
+   2段受入を採用: 第1段=migration+エンジン、第2段=UI 4面。EX-002=過半で確定、EX-003/場所を指定は
+   V1 非搭載を沈黙次元へ裁定記録、EX-004=B-4 4区分で確定)
+4. **gate② golden**: 書き出し→別状態のライブラリへ取り込み→プレビュー→競合解決→結果の実機確認(§8.6)。
 5. `/eco-accept ECO-073` でクローズ。
+
+## 8. 実施記録(2026-07-12 — 機械受入完了・golden待ち)
+
+### 8.1 先行probe(R5)
+
+- `CpPackage073Tests` へ Exporter/Importer/TagImportPlanner の存在(reflection)と migration
+  `008-collection-package` の存在を要求する probe を製品コード変更前に追加した。
+- 是正前実測は `ViewPrism2.Tests` **622件中2件不合格**(未実装を確認してから着手)。
+
+### 8.2 §3.8 疑いの実測結果
+
+- 重複プロパティ拒否は JsonNode(JsonObject.Add が重複キーで throw)+トップレベル seen-set で実装。
+  images のストリーミングは増分 Utf8JsonReader ポンプ(JsonPump)で 1 要素ずつ生成し、
+  途中で切れたファイルは JsonException→PackageFormatException で拒否される(実測緑)。
+- プレビュー計画はタグ計画(小)+画像 5 状態カウント+未解決サンプル上限 100 で保持し、
+  一時 SQLite ステージングは不要だった(images は 3 回のストリーム走査: 件数/プレビュー/適用)。
+- 書き出し専用読取接続(`Mode=ReadOnly;Pooling=False`+単一トランザクション)は共有接続と
+  共存し、WAL スナップショットで同一時点の自己無矛盾ファイルになることをテストで確認。
+- Utf8JsonWriter は既定で非 ASCII を \uXXXX エスケープする — 「人間が読める」形式契約のため
+  relaxed エスケープを採用した(UTF-8 ファイルへの出力では安全)。
+
+### 8.3 是正裁定とdiff(2段受入)
+
+- **第1段(migration+エンジン)**: migration `008-collection-package`(library_metadata+
+  tag_import_mappings・LatestDdl 同値=CP-DB-006 緑維持)。`LibraryIdentity`(DB内ライブラリUUID・
+  実行時冪等シード)。`CollectionPackage.cs`(形式定数/DTO/PackageJson ストリーミング読取+厳格拒否)。
+  `TagImportPlanner`(**Core/Services/Package**・照合5段の純粋計算・§3.7 の再利用可能コンポーネント)+
+  `TagValueFormat`(正規形・二段階検証・パース後比較)。`CollectionPackageExporter`(専用読取接続・
+  2カーソルマージ結合ストリーム・.partial→構造検証→アトミック確定)。`CollectionPackageImporter`
+  (ReadHeader/Preview/Apply=単一トランザクション・追加型マージ・missing 参照登録・鮮度再計画・過半ガード)。
+- **第2段(UI 4面)**: B-1=`CollectionExportWindow`+VM(実進捗 done/total・キャンセル・既定名)。
+  B-2〜B-4=`CollectionImportWindow`+VM(stepper・互換NG別面・競合行4択+型互換割当 ComboBox・
+  画像5状態タイル・未解決一覧+missing 説明・過半警告+確認チェック・結果4タイル)。入口=画像タブ
+  ⋯ メニュー2行(`ExportCollection/ImportCollectionCommand`・SS-001(b))+`WindowService.
+  ShowCollectionExport/ImportAsync`+Save/OpenFilePicker。i18n `package.*` 57キー(ja/en)。
+- **V1 差分の裁定記録(32-mbom 沈黙次元)**: B-3「取り込み先ルート変更」=非搭載(入口コレクション固定・
+  誤ルートは過半ガード+別コレクションから取り込み直し)。「場所を指定」=非搭載(missing 登録→既存
+  修復導線で解決)。競合行「中止」=選択解除(全体中止はフッター)。いずれも golden で maintainer 確認対象。
+- **M4 同期**: REQ-093、仕様 §2.14(核文込み)、E-PACKAGE-047/E-UI-PACKAGE-048、
+  M-PACKAGE-042/M-UI-PACKAGE-043+沈黙次元7行、CP-PACKAGE-032(unit)+CP-UI-G13(golden)。
+- 既存画面の視覚・Core 既存意味論・既存 Oracle 期待値は変更していない。DB 変更は migration 008 のみ。
+
+### 8.4 機械受入
+
+- 先行probe+挙動テスト12本(冪等/照合5段/5状態/厳格拒否/ロールバック/スキャン生存+規則3a/鮮度/配線)を
+  含む `ViewPrism2.Tests`: **634/634 pass**。
+- `dotnet build ViewPrism2.sln --no-restore`: **0 warning / 0 error**。
+- `ViewPrism2.Oracle`: **109 pass / 2 known skip**(R6 不変。CP-DB-006 スキーマ同値=migration 008 込みで緑)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+
+### 8.6 gate② golden 操作手順(CP-UI-G13)
+
+準備: コレクション A(タグ付き画像あり)とコレクション B(空 or 別内容)を用意。
+
+1. **書き出し(B-1)**: コレクション A の ⋯ メニュー「コレクションを書き出す…」→ コレクション名+件数・
+   出力先の既定名 `<名前>.viewprism2-collection.json`・画像非含有 callout を確認 → 書き出す →
+   実進捗(done/total)→ 完了。出力先に `.partial` が残っていない。コレクション未選択時は ⋯ 行が無効。
+2. **取り込み・冪等(B-2〜B-4)**: 同じコレクション A へ同ファイルを取り込む → B-2 で互換OK+概要
+   (名前/画像数/タグ数/作成日時/app_version)→ B-3 でタグ競合 0・画像は全て「一致」→ 実行 →
+   B-4 で追加 0/変更なし N。DB が増えていない(冪等)。
+3. **別コレクションへの取り込み**: コレクション B の ⋯ から取り込み → B-3 で未解決(missing で登録)
+   が数えられ、**過半警告+確認チェック**が出る → チェックして実行 → B-4 の件数と missing 登録一覧 →
+   画像タブに missing 行が現れ、タグ付与も付いている。
+4. **タグ競合の 4 択**: B のタグ辞書に「同名・範囲違い」の numeric タグを作ってから取り込み →
+   B-3 に競合行(要対応バッジ)・**未解決の間は実行ボタン無効+フッターに件数注記** →
+   「別名で取込」→ 解決済みバッジ+要約 → 実行 → 別名タグが作成される。
+   「既存へ割当」の候補が**型互換タグのみ**であること。
+5. **互換性 NG(B-2 別面)**: パッケージ JSON の `"minReaderVersion": 1` を手で 99 に書き換えて選択 →
+   赤系の「このパッケージは取り込めません」面(閉じる/別のファイルを選ぶ)。
+6. **移動検出**: A の画像ファイル 1 枚を別サブフォルダへ移してスキャン後に取り込み → 「移動を検出
+   (自動追随)」に数えられ、付与が新パスの画像へ着地する。
+7. **鮮度**: B-3 プレビュー表示中に別途競合する同名タグを作成 → 実行 → 失敗メッセージ(DB 無変更)。
+8. **物理非破壊**: 書き出し/取り込みの前後で画像ファイル・サムネイルが変更されない(エクスプローラ確認)。
+9. **V1 差分の確認**: B-3 に「取り込み先ルート変更」「場所を指定」が無いこと(入口コレクション固定・
+   missing→修復導線で解決)を許容できるか判定する(32-mbom 沈黙次元の裁定記録)。
+10. ja/en 切替で B-1〜B-4 の文言が追随(⋯ メニュー行は既存流儀=ja 直書き)。既存画面に視覚回帰がない。
 
 ## 7. gate①裁定(2026-07-12)
 

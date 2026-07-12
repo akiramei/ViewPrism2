@@ -1,0 +1,313 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.CollectionImportWindow"
+        x:DataType="vm:CollectionImportViewModel"
+        Title="{Binding Loc[package.importTitle]}"
+        Width="940" Height="640"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ECO-073 B-2〜B-4 取り込みウィザード(CAD snapshot_export_import・mock 権威)。
+       stepper: ファイル → 検証 → プレビュー → 完了。docked フッター+ボディ単一スクロール -->
+  <Window.Styles>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.choice">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="#D6E0EE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="10,3" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="Border.stateTile">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+  </Window.Styles>
+  <DockPanel Margin="20">
+    <!-- docked フッター -->
+    <Border DockPanel.Dock="Bottom" Margin="0,12,0,0">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+          <Button Content="{Binding Loc[common.cancel]}" Click="OnCloseClick" MinWidth="96"
+                  IsVisible="{Binding !OnDoneStep}" />
+          <Button Content="{Binding Loc[package.next]}" Command="{Binding ToPreviewCommand}"
+                  IsVisible="{Binding OnFileStep}" IsEnabled="{Binding VerifyOk}"
+                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="150" />
+          <Button Content="{Binding Loc[package.back]}" Command="{Binding BackToFileCommand}"
+                  IsVisible="{Binding OnPreviewStep}" MinWidth="80" />
+          <Button Content="{Binding Loc[package.execute]}" Command="{Binding ExecuteCommand}"
+                  IsVisible="{Binding OnPreviewStep}" IsEnabled="{Binding CanExecute}"
+                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="140" />
+          <Button Content="{Binding Loc[package.finish]}" Click="OnCloseClick"
+                  IsVisible="{Binding OnDoneStep}"
+                  Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="96" />
+        </StackPanel>
+        <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+          <TextBlock Text="{Binding BlockReason}" FontSize="12" Foreground="#8A6D1A" TextWrapping="Wrap"
+                     IsVisible="{Binding OnPreviewStep}" />
+          <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="{StaticResource DangerBrush}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Spacing="14">
+        <TextBlock Text="{Binding Loc[package.importTitle]}" FontSize="18" FontWeight="Bold" />
+
+        <!-- stepper(ファイル→検証→プレビュー→完了) -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="{Binding Loc[package.stepFile]}" FontSize="12" FontWeight="SemiBold" Foreground="#2F6BED" />
+          <TextBlock Text="→" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="{Binding Loc[package.stepVerify]}" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="→" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="{Binding Loc[package.stepPreview]}" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="→" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="{Binding Loc[package.stepDone]}" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" />
+        </StackPanel>
+
+        <!-- ===== B-2: ファイル選択+検証 ===== -->
+        <StackPanel Spacing="12" IsVisible="{Binding OnFileStep}">
+          <Border Classes="card" Padding="14,10">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="choice" Content="{Binding Loc[snapshot.changeDir]}"
+                      Command="{Binding PickFileCommand}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding PackageFileName, FallbackValue=''}" FontFamily="Consolas,monospace"
+                         FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+          </Border>
+
+          <!-- 互換性 OK: 概要 -->
+          <StackPanel Spacing="8" IsVisible="{Binding VerifyOk}">
+            <Border Background="#E7F6EC" BorderBrush="#C4E7D2" BorderThickness="1" CornerRadius="8" Padding="12,8">
+              <TextBlock Text="{Binding Loc[package.compatible]}" FontSize="12" Foreground="#1F7A3D" />
+            </Border>
+            <Border Classes="card" Padding="14,10">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Loc[package.summaryTitle]}" FontSize="12"
+                           Foreground="{StaticResource TextMutedBrush}" />
+                <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                  <TextBlock Grid.Row="0" Text="{Binding Loc[package.colName]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding HeaderCollectionName}" FontSize="12" FontWeight="SemiBold" />
+                  <TextBlock Grid.Row="1" Text="{Binding Loc[package.colImages]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HeaderImageCount}" FontSize="12" />
+                  <TextBlock Grid.Row="2" Text="{Binding Loc[package.colTags]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HeaderTagCount}" FontSize="12" />
+                  <TextBlock Grid.Row="3" Text="{Binding Loc[snapshot.colCreatedAt]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding HeaderCreatedAt}" FontSize="12" FontFamily="Consolas,monospace" />
+                  <TextBlock Grid.Row="4" Text="app_version" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HeaderAppVersion}" FontSize="12" FontFamily="Consolas,monospace" />
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- 互換性 NG(判定は format_version/min_reader_version・app_version は参考) -->
+          <Border Background="#FDECEC" BorderBrush="#F2C7C7" BorderThickness="1" CornerRadius="8" Padding="14,10"
+                  IsVisible="{Binding VerifyError, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding Loc[package.incompatibleTitle]}" FontSize="13" FontWeight="SemiBold"
+                         Foreground="#B3261E" />
+              <TextBlock Text="{Binding VerifyError}" FontSize="12" Foreground="#B3261E" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ===== B-3: プレビュー&競合解決 ===== -->
+        <StackPanel Spacing="12" IsVisible="{Binding OnPreviewStep}">
+          <!-- 追加型マージの規則バナー(M4) -->
+          <Border Background="#E7F6EC" BorderBrush="#C4E7D2" BorderThickness="1" CornerRadius="8" Padding="12,8">
+            <TextBlock Text="{Binding Loc[package.addOnlyNote]}" FontSize="12" Foreground="#1F7A3D" TextWrapping="Wrap" />
+          </Border>
+          <!-- 取り込み先ルート(入口コレクション固定=SS-001(b)) -->
+          <Border Classes="card" Padding="14,8">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <TextBlock Text="{Binding Loc[package.targetRoot]}" FontSize="12"
+                         Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding TargetRootPath}" FontFamily="Consolas,monospace" FontSize="12"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Border>
+
+          <!-- タグ計画+競合解決 -->
+          <TextBlock Text="{Binding TagCountsText}" FontSize="13" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding Loc[package.mapCompatNote]}" FontSize="11"
+                     Foreground="{StaticResource TextMutedBrush}" />
+          <ItemsControl ItemsSource="{Binding Conflicts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TagConflictRowViewModel">
+                <Border Classes="card" Padding="12,10" Margin="0,0,0,8">
+                  <StackPanel Spacing="8">
+                    <DockPanel>
+                      <Border DockPanel.Dock="Right" CornerRadius="10" Padding="8,2"
+                              Background="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Background}}"
+                              BorderBrush="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Border}}"
+                              BorderThickness="1">
+                        <TextBlock FontSize="11"
+                                   Text="{Binding IsResolved, Converter={x:Static vm:PackageConverters.ResolvedLabel}}"
+                                   Foreground="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Foreground}}" />
+                      </Border>
+                      <StackPanel>
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                    </DockPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceAbort]}"
+                              Command="{Binding AbortCommand}" />
+                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceSkip]}"
+                              Command="{Binding SkipCommand}" />
+                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceRename]}"
+                              Command="{Binding RenameCommand}" />
+                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceMap]}"
+                              Command="{Binding MapCommand}" />
+                      <TextBox Text="{Binding RenameTo}" Width="180" FontSize="12" IsVisible="{Binding IsRename}" />
+                      <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding MapTarget}" Width="180"
+                                IsVisible="{Binding IsMap}">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding Name}" FontSize="12" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                      <TextBlock Text="{Binding SummaryText}" FontSize="12" Foreground="#1F7A3D"
+                                 VerticalAlignment="Center" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- 画像 5 状態(実体は含まれないため参照突き合わせ) -->
+          <TextBlock Text="{Binding Loc[package.imagesTitle]}" FontSize="13" FontWeight="SemiBold" />
+          <WrapPanel>
+            <Border Classes="stateTile" Margin="0,0,8,8">
+              <StackPanel>
+                <TextBlock Text="{Binding ImageCounts.Exact, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#1F7A3D" />
+                <TextBlock Text="{Binding Loc[package.stateExact]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8">
+              <StackPanel>
+                <TextBlock Text="{Binding ImageCounts.Moved, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#1F7A3D" />
+                <TextBlock Text="{Binding Loc[package.stateMoved]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8">
+              <StackPanel>
+                <TextBlock Text="{Binding ImageCounts.Changed, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
+                <TextBlock Text="{Binding Loc[package.stateChanged]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8">
+              <StackPanel>
+                <TextBlock Text="{Binding ImageCounts.Ambiguous, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
+                <TextBlock Text="{Binding Loc[package.stateAmbiguous]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8">
+              <StackPanel>
+                <TextBlock Text="{Binding ImageCounts.Unresolved, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
+                <TextBlock Text="{Binding Loc[package.stateUnresolved]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+          </WrapPanel>
+
+          <!-- 未解決一覧+missing 登録の説明(gate①)+過半警告(EX-002) -->
+          <StackPanel Spacing="6" IsVisible="{Binding HasUnresolved}">
+            <TextBlock Text="{Binding Loc[package.unresolvedTitle]}" FontSize="12" FontWeight="SemiBold" />
+            <Border Classes="card" MaxHeight="140" Padding="8">
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding UnresolvedSamples}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" FontFamily="Consolas,monospace" FontSize="11" Margin="4,1" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+            <TextBlock Text="{Binding Loc[package.missingNote]}" FontSize="11"
+                       Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+            <Border Background="#FCF4DC" BorderBrush="#EDDFAF" BorderThickness="1" CornerRadius="8" Padding="12,8"
+                    IsVisible="{Binding MajorityUnresolved}">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Loc[package.majorityWarn]}" FontSize="12" Foreground="#8A6D1A" TextWrapping="Wrap" />
+                <CheckBox IsChecked="{Binding AcceptMajority}" FontSize="12"
+                          Content="{Binding Loc[package.majorityAccept]}" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- ===== B-4: 結果レポート ===== -->
+        <StackPanel Spacing="12" IsVisible="{Binding OnDoneStep}">
+          <Border Background="#E7F6EC" BorderBrush="#C4E7D2" BorderThickness="1" CornerRadius="8" Padding="14,10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding Loc[package.doneTitle]}" FontSize="14" FontWeight="SemiBold" Foreground="#1F7A3D" />
+              <TextBlock Text="{Binding ResultSummaryText}" FontSize="12" Foreground="#1F7A3D" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <WrapPanel>
+            <Border Classes="stateTile" Margin="0,0,8,8" MinWidth="120">
+              <StackPanel>
+                <TextBlock Text="{Binding ResultAdded}" FontSize="20" FontWeight="Bold" Foreground="#1F7A3D" />
+                <TextBlock Text="{Binding Loc[package.resultAdded]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8" MinWidth="120">
+              <StackPanel>
+                <TextBlock Text="{Binding ResultUnchanged}" FontSize="20" FontWeight="Bold" />
+                <TextBlock Text="{Binding Loc[package.resultUnchanged]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8" MinWidth="120">
+              <StackPanel>
+                <TextBlock Text="{Binding ResultSkipped}" FontSize="20" FontWeight="Bold" Foreground="#8A6D1A" />
+                <TextBlock Text="{Binding Loc[package.resultSkipped]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stateTile" Margin="0,0,8,8" MinWidth="120">
+              <StackPanel>
+                <TextBlock Text="{Binding ResultConflictResolved}" FontSize="20" FontWeight="Bold" />
+                <TextBlock Text="{Binding Loc[package.resultConflicts]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+          </WrapPanel>
+          <StackPanel Spacing="6" IsVisible="{Binding HasUnresolved}">
+            <TextBlock Text="{Binding Loc[package.unresolvedRegistered]}" FontSize="12" FontWeight="SemiBold" />
+            <Border Classes="card" MaxHeight="160" Padding="8">
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding UnresolvedSamples}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" FontFamily="Consolas,monospace" FontSize="11" Margin="4,1" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+            <TextBlock Text="{Binding Loc[package.missingDoneNote]}" FontSize="11"
+                       Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

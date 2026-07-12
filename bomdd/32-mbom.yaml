@@ -662,6 +662,33 @@ mbom:
       acceptance_refs: [CP-SNAPSHOT-031, CP-UI-G12]
       acceptance_note: "作成/検証/予約/差し替え/失敗復帰の決定論は CP-SNAPSHOT-031 unit。視覚と再起動を跨ぐ一連の実機確認は golden(CP-UI-G12)"
 
+    # ---- ECO-073(バックアップB層: コレクション論理パッケージ) ----
+    - id: M-PACKAGE-042
+      ebom_refs: [E-PACKAGE-047]
+      artifact:
+        path: src/ViewPrism2.Infrastructure/Database/CollectionPackage.cs
+        path_note: "CollectionPackage.cs(形式定数/DTO/PackageJson=増分Utf8JsonReaderストリーミング読取+厳格拒否)+CollectionPackageExporter.cs+CollectionPackageImporter.cs+LibraryIdentity.cs。照合5段の純粋計算は Core 側 Services/Package/TagImportPlanner.cs(M-CORE-001 配下・再利用可能コンポーネント)"
+        type: dotnet-classlib
+      interface_contract:
+        export: "専用読取接続(Mode=ReadOnly;Pooling=False・DatabaseManager.DbPath)+単一読取トランザクション。画像/付与は image_id 順の2カーソル・マージ結合でストリーム書き出し(全件メモリ展開しない)。.partial→再読取の構造検証(件数一致)→アトミック確定。numeric 値は正規形へ(TagValueFormat)"
+        import_preview: "ReadHeader(pass1=エンベロープ+タグ+images件数のみ)→TagImportPlanner.Plan(現在のDB状態+tag_import_mappings)→pass2 の count-only 走査で画像5状態+未解決サンプル(上限100)。DB 無変更"
+        import_apply: "適用直前に再計画(鮮度)→未解決競合/過半ガードで拒否→単一トランザクション内で タグ新規作成(親→子順)→マッピング upsert→画像ストリーム適用(missing 参照登録・追加型マージ・二段階値検証)。SqliteException(UNIQUE 違反=プレビュー後変化を含む)で全ロールバック"
+        migration: "008-collection-package=library_metadata+tag_import_mappings(FK CASCADE)。ライブラリUUIDのシードは LibraryIdentity が実行時に冪等 INSERT(migration は純 DDL・CP-DB-006 スキーマ同値維持)"
+      acceptance_refs: [CP-PACKAGE-032]
+
+    - id: M-UI-PACKAGE-043
+      ebom_refs: [E-UI-PACKAGE-048]
+      artifact:
+        path: src/ViewPrism2.App/Views/CollectionImportWindow.axaml
+        path_note: "CollectionImportWindow.axaml(.cs)=B-2〜B-4 ウィザード、CollectionExportWindow.axaml(.cs)=B-1、ViewModels/CollectionImportViewModel.cs(+TagConflictRowViewModel)/CollectionExportViewModel.cs/PackageConverters.cs、ImageTabView.axaml ⋯ メニュー2行+ImageTabViewModel.ExportCollection/ImportCollectionCommand、WindowService.ShowCollectionExport/ImportAsync+Save/OpenFilePicker"
+        type: avalonia-app
+      interface_contract:
+        entry: "画像タブ ⋯ メニュー(CanOpenMaintenance=コレクション選択時のみ)→ 各 window をモーダル表示。取り込み完了後は ReloadImagesAsync+Recompute(missing 参照登録/付与増加の反映)"
+        wizard: "stepper=ファイル→検証→プレビュー→完了。VerifyOk のみ次へ活性。競合行=4択+別名 TextBox/割当 ComboBox(型互換のみ)。CanExecute=全競合解決∧(過半でない∨確認チェック)。失敗メッセージ(鮮度再検証等)は docked フッターへ表示し DB 無変更"
+        i18n: "package.*(ja/en)。⋯ メニュー行は既存流儀(ja 直書き)に合わせる"
+      acceptance_refs: [CP-PACKAGE-032, CP-UI-G13]
+      acceptance_note: "形式/照合/適用の決定論は CP-PACKAGE-032 unit(VM 配線 pin 含む)。視覚と書き出し→取り込み往復の実機確認は golden(CP-UI-G13)"
+
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
   - { package: Avalonia,                                   version: 12.0.4,  rationale: "ADR-0001 UI 基盤",            license: MIT,        substitutable: false }
@@ -788,3 +815,11 @@ silence_sweep:
   - { dimension: 復元予約の再試行方針,             decision: specified, where: "M-SNAPSHOT-040 / REQ-092", note: "一回限り(読取時に予約削除)。失敗は退避DBへ戻して通常起動+ステータス報告。起動ループ化しない" }
   - { dimension: 作成進捗の百分率表示,             decision: specified, where: "M-UI-SNAPSHOT-041 / E-UI-SNAPSHOT-046", note: "VACUUM INTO は進捗コールバックを提供しない→不確定バー+件数(タグ/ビュー/メタデータ)表示。mock の 68% は許容差分として golden で確認" }
   - { dimension: 自動バックアップ・保持世代,        decision: out-of-scope, note: "M2 裁定=UI 非表示・将来 ECO(その際 Online Backup API を検討)。i18n の settings.backup.* 自動系語彙は未配線のまま温存" }
+  # ---- ECO-073 追加(バックアップB層・仕様 §2.14) ----
+  - { dimension: パッケージの書き出し対象 status,   decision: specified, where: "M-PACKAGE-042 / 仕様 §2.14.2", note: "normal+missing(タグを持ち得る可視カタログ)。deleted=トラッシュ・pending=未確定は含めない" }
+  - { dimension: 取り込み先ルートの変更 UI,          decision: specified, where: "E-UI-PACKAGE-048 / SS-001(b)", note: "V1 は入口コレクション固定(三点メニュー=文脈操作)。CAD B-3 の「変更」は非搭載とし、誤ルートは過半ガード(EX-002)+別コレクションの三点メニューから取り込み直しで代替。golden で maintainer 確認" }
+  - { dimension: 未解決画像の「場所を指定」即時解決, decision: deferred, note: "V1 は missing 登録→既存修復導線(規則3a候補提示→修復画面確定)で解決。ダイアログ内の即時指定はEX-003(変更あり明示取込)と合わせて後続ECO。gate①条件2の『場所を指定も可』は修復画面経由で充足と整理(golden で maintainer 確認)" }
+  - { dimension: 競合行「中止」の意味論,             decision: specified, where: M-UI-PACKAGE-043, note: "選択を解除して要対応へ戻す(=実行不可のまま)。取り込み全体の中止はフッターのキャンセル" }
+  - { dimension: 過半ガードの閾値(EX-002),         decision: specified, where: "CollectionPackageImporter.MajorityUnresolved", note: "未解決×2>総数(=過半)。警告+確認チェックで続行可・既定は中断" }
+  - { dimension: ZIP コンテナ transport,            decision: out-of-scope, note: "V1=単一JSON。将来は manifest.json+tags.json+images.ndjson の別 transport・container_version 別採番(V1 形式を流用しない)" }
+  - { dimension: 手編集ファイルの保証,               decision: specified, where: "仕様 §2.14.1 / REQ-093", note: "人間が読める(relaxed escape・非ASCII非エスケープ)が、動作保証はスキーマ検証を通った場合に限る" }

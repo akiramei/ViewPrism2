@@ -64,6 +64,10 @@ public sealed class CpDisplayParity022Tests
 
         public Task ShowSnapshotsAsync() => Task.CompletedTask;
 
+        public Task ShowCollectionExportAsync(string collectionId) => Task.CompletedTask;
+
+        public Task ShowCollectionImportAsync(string collectionId) => Task.CompletedTask;
+
         public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
 
         public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);

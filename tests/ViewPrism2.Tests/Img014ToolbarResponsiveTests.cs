@@ -31,6 +31,10 @@ public sealed class Img014ToolbarResponsiveTests : IDisposable
         public Task ShowSettingsAsync() => Task.CompletedTask;
 
         public Task ShowSnapshotsAsync() => Task.CompletedTask;
+
+        public Task ShowCollectionExportAsync(string collectionId) => Task.CompletedTask;
+
+        public Task ShowCollectionImportAsync(string collectionId) => Task.CompletedTask;
         public Task<bool> ShowTagEditorAsync(Tag? existing) => Task.FromResult(false);
         public Task<bool> ShowViewEditDialogAsync(View? existing) => Task.FromResult(false);
         public Task<IReadOnlyList<string>?> ShowNumericValueDialogAsync(Tag tag, NumericTagSettings? settings, int selectionCount)

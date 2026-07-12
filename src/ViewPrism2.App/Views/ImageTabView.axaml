@@ -885,6 +885,20 @@
                           <TextBlock Text="ゴミ箱" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
                         </DockPanel>
                       </Button>
+                      <!-- コレクションの書き出す/取り込む(ECO-073・SS-001 裁定(b)=B層入口は三点メニュー) -->
+                      <Border Height="1" Background="{StaticResource CardBorderBrush}" Margin="8,4" />
+                      <Button Classes="menuRow" Command="{Binding ExportCollectionCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource MoreIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
+                          <TextBlock Text="コレクションを書き出す…" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                      </Button>
+                      <Button Classes="menuRow" Command="{Binding ImportCollectionCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource MoreIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
+                          <TextBlock Text="コレクションを取り込む…" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                      </Button>
                     </StackPanel>
                   </Border>
                 </Popup>

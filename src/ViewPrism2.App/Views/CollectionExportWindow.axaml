@@ -1,0 +1,87 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.CollectionExportWindow"
+        x:DataType="vm:CollectionExportViewModel"
+        Title="{Binding Loc[package.exportTitle]}"
+        Width="560" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- ECO-073 B-1 コレクションを書き出す(CAD snapshot_export_import B-1・mock 権威) -->
+  <StackPanel Margin="20" Spacing="14">
+    <TextBlock Text="{Binding Loc[package.exportTitle]}" FontSize="18" FontWeight="Bold" />
+
+    <!-- 書き出すコレクション(入口の三点メニューを開いたコレクション=SS-001 裁定(b)) -->
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding Loc[package.exportCollection]}" FontSize="12"
+                 Foreground="{StaticResource TextMutedBrush}" />
+      <Border Background="{StaticResource PanelBrush}" CornerRadius="8" Padding="14,10">
+        <StackPanel>
+          <TextBlock Text="{Binding CollectionName}" FontSize="14" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding CollectionSummary}" FontSize="12"
+                     Foreground="{StaticResource TextMutedBrush}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
+    <!-- 出力先(既定名 <名前>.viewprism2-collection.json) -->
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding Loc[package.outputPath]}" FontSize="12"
+                 Foreground="{StaticResource TextMutedBrush}" />
+      <Border Background="{StaticResource PanelBrush}" CornerRadius="8" Padding="14,10">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="{Binding Loc[snapshot.changeDir]}"
+                  Command="{Binding ChangeOutputCommand}" FontSize="12" VerticalAlignment="Center"
+                  Background="White" Foreground="#2F6BED" BorderBrush="#D6E0EE" BorderThickness="1" CornerRadius="6" />
+          <TextBlock Text="{Binding OutputPath}" FontFamily="Consolas,monospace" FontSize="12"
+                     VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+      </Border>
+      <TextBlock Text="{Binding Loc[package.defaultNameNote]}" FontSize="11"
+                 Foreground="{StaticResource TextMutedBrush}" />
+    </StackPanel>
+
+    <!-- 画像非含有 callout(M3+ビュー非同梱の理由) -->
+    <Border Background="#EEF4FF" BorderBrush="#D6E4FC" BorderThickness="1" CornerRadius="8" Padding="14,10">
+      <StackPanel Spacing="6">
+        <TextBlock Text="{Binding Loc[package.noImagesNote]}" FontSize="12"
+                   Foreground="#2F4A75" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Loc[package.metadataNote]}" FontSize="11"
+                   Foreground="#2F4A75" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- 書き出し中進捗(done/total 実測) -->
+    <Border Background="{StaticResource PanelBrush}" CornerRadius="8" Padding="14,10"
+            IsVisible="{Binding IsExporting}">
+      <StackPanel Spacing="6">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}" FontSize="12"
+                     Foreground="#2F6BED" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding Loc[package.exporting]}" FontSize="12" />
+        </DockPanel>
+        <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressRatio}" Height="6" CornerRadius="3"
+                     Foreground="{StaticResource AccentBrush}" />
+        <Button Content="{Binding Loc[common.cancel]}" Command="{Binding CancelExportCommand}"
+                FontSize="12" HorizontalAlignment="Right"
+                Background="Transparent" Foreground="#2F6BED" BorderThickness="0" Padding="4,0" />
+      </StackPanel>
+    </Border>
+
+    <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextWrapping="Wrap"
+               Foreground="{StaticResource TextMutedBrush}"
+               IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Content="{Binding Loc[common.cancel]}" Click="OnCloseClick" MinWidth="96"
+              IsVisible="{Binding !Done}" />
+      <Button Content="{Binding Loc[package.export]}" Command="{Binding ExportCommand}"
+              IsEnabled="{Binding !IsExporting}" IsVisible="{Binding !Done}"
+              Background="{StaticResource AccentBrush}" Foreground="White" CornerRadius="6" MinWidth="120" />
+      <Button Content="{Binding Loc[common.close]}" Click="OnCloseClick" MinWidth="96"
+              IsVisible="{Binding Done}" />
+    </StackPanel>
+  </StackPanel>
+</Window>

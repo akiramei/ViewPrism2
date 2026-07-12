@@ -159,6 +159,20 @@ public static class DatabaseSchema
             undone_at           TEXT NULL
         );
         CREATE INDEX idx_merge_operations_target ON merge_operations(target_id);
+
+        CREATE TABLE library_metadata (
+            key   TEXT NOT NULL PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+
+        CREATE TABLE tag_import_mappings (
+            source_library_id TEXT NOT NULL,
+            source_tag_id     TEXT NOT NULL,
+            local_tag_id      TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            created_at        TEXT NOT NULL,
+            updated_at        TEXT NOT NULL,
+            PRIMARY KEY (source_library_id, source_tag_id)
+        );
         """;
 
     /// <summary>
@@ -259,6 +273,28 @@ public static class DatabaseSchema
             ALTER TABLE image_similarity ADD COLUMN duplicate_relationship TEXT NULL;
             ALTER TABLE image_similarity ADD COLUMN candidate_score INTEGER NULL;
             ALTER TABLE image_similarity ADD COLUMN verifier_adapter TEXT NULL;
+            """),
+
+        // ECO-073(REQ-093): B層 論理パッケージの唯一の migration。
+        // library_metadata=DB内ライブラリUUID等のキー値領域(設定ファイルでなくDB内・スナップショット復元後も不変。
+        // 値のシードは LibraryIdentity が実行時に冪等 INSERT — migration は純 DDL に保つ)。
+        // tag_import_mappings=永続タグマッピング (source_library_id, source_tag_id)→local_tag_id。
+        // FK CASCADE でローカルタグ削除時に古いマッピングを残さない(汎用多態表はFK不能のため種類別テーブル)。
+        // LatestDdl 末尾と列順・索引名を揃えスキーマ同値を保つ(CP-DB-006・ECO-020 前例)。
+        new("008-collection-package", """
+            CREATE TABLE library_metadata (
+                key   TEXT NOT NULL PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+
+            CREATE TABLE tag_import_mappings (
+                source_library_id TEXT NOT NULL,
+                source_tag_id     TEXT NOT NULL,
+                local_tag_id      TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+                created_at        TEXT NOT NULL,
+                updated_at        TEXT NOT NULL,
+                PRIMARY KEY (source_library_id, source_tag_id)
+            );
             """),
     ];
 }

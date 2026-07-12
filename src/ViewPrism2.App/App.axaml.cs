@@ -214,6 +214,12 @@ public partial class App : Application
             appDataDir,
             AppVersion));
 
+        // ECO-073: コレクション論理パッケージ(B層)。書き出し=専用読取接続・取り込み=単一トランザクション
+        services.AddSingleton(sp => new CollectionPackageExporter(
+            sp.GetRequiredService<DatabaseManager>(), sp.GetRequiredService<IClock>(), AppVersion));
+        services.AddSingleton(sp => new CollectionPackageImporter(
+            sp.GetRequiredService<DatabaseManager>(), sp.GetRequiredService<IClock>()));
+
         // v4.0 修復ライフサイクル(M-CRITERIA-024 / M-TRASH-026)。
         // FilePresenceProbe(Infrastructure)=File.Exists のみ。TrashService(Core)は bool を受けて遷移判断(INV-009)
         services.AddSingleton<IFilePresenceProbe>(sp => new FilePresenceProbe());

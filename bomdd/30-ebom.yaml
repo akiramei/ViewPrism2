@@ -357,6 +357,26 @@ ebom:
         - INV-009 画像実体・サムネイルへ触れない(DBファイルのみ)。検証用接続は Pooling=False でハンドルを残さない
       acceptance_refs: [CP-SNAPSHOT-031]
 
+    # ---------- ECO-073 核(バックアップB層) ----------
+    - id: E-PACKAGE-047
+      name: コレクション論理パッケージ(形式=ストリーミングJSON読み書き+厳格拒否・書き出し器=同一時点スナップショット/.partial確定・タグ取り込みプランナ=照合5段・取り込み適用器=単一トランザクション/追加型マージ/missing参照登録)— ECO-073 新設
+      classification: core
+      rationale_type: requirement
+      requirement_refs: [REQ-093]
+      kbom_refs: [K-SQLITE, K-WINFS]
+      depends_on: [E-DOMAIN-001, E-DB-010, E-SNAPSHOT-045]
+      invariants:
+        - 核文: 非破壊統合であり過去タグ体系の厳密巻き戻しではない(時点復元=E-SNAPSHOT-045)
+        - 互換判定は formatVersion/minReaderVersion/features のみ。schema_migrations/app_version を判定に使わない
+        - 書き出しは専用読取接続の単一トランザクション(共有接続 M-DB-007 の semaphore を長時間占有しない)+.partial→構造検証→アトミック確定
+        - タグ照合5段(REQ-093)。名前+型だけの自動統合をしない。②⑤の値互換差分はクランプせず競合。③と手動割当は tag_import_mappings へ永続化
+        - 画像照合5状態。未解決=missing 行で参照のみ登録(pending 不可=スキャン手順5で行削除)・規則3a→修復画面(E-TRASH-038/E-UI-REPAIR-039 系)で image_id 不変リンク
+        - マージは追加型(削除しない・値競合=現行維持・数値はパース後比較)。実適用は単一トランザクション+適用直前の再計画(鮮度)
+        - 厳格拒否(重複プロパティ/重複ID/親循環/不明タグ参照/不正パス/未知必須feature/不正numeric)は DB 変更前に拒否
+        - 読み込み/検証/プレビューも全件メモリ展開しない(images は 1 要素ずつストリーム)
+        - INV-009 画像実体・サムネイルへ触れない。TagImportPlanner は Core 純粋計算=将来の tag-catalog/view-set から再利用可能(§3.7)
+      acceptance_refs: [CP-PACKAGE-032]
+
     # ---------- 表面(surface) ----------
     - id: E-THUMB-020
       name: サムネイル生成サービス(+EXIF Orientation 正立化・実効寸法 — ECO-049)
@@ -521,6 +541,27 @@ ebom:
         - 自動バックアップ・保持世代・カレンダーの V1 語彙は UI に出さない(M2・将来 ECO へ温存)
         - レイアウト不変条件: ボディ単一スクロール+docked フッター(一覧が伸びても操作導線が埋もれない)
       acceptance_refs: [CP-SNAPSHOT-031, CP-UI-G12]
+
+    # ---------- ECO-073 表面(バックアップB層 UI) ----------
+    - id: E-UI-PACKAGE-048
+      name: コレクション書き出し/取り込み UI(B-1 書き出しダイアログ・B-2〜B-4 取り込みウィザード=検証/プレビュー&競合解決/結果レポート・画像タブ ⋯ メニュー入口)— ECO-073 新設
+      classification: surface
+      part_kind: screen-surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-093]
+      external_source_ref: "ViewPrismUI:docs/screens/snapshot_export_import.md(B-1〜B-4。captures/snapshot_export_import/=視覚原器)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-PACKAGE-047, E-UI-BROWSE-022]
+      interface_contracts:
+        - 入口は画像タブ ⋯ メニュー「コレクションを書き出す/取り込む」(SS-001 裁定(b))。取り込み先=入口コレクション固定。形式/照合/適用の実体は E-PACKAGE-047 経由(UI で再実装しない)
+      invariants:
+        - 用語=「書き出す/取り込む」(M1)・画像非含有明示(M3)・「追加はするが削除はしない」明示(M4)
+        - B-2 互換 NG は別面(判定は formatVersion/minReaderVersion・app_version は参考表示)
+        - B-3 タグ競合行=4択(中止/スキップ/別名で取込/既存へ割当)。割当候補は値の型が互換なタグのみ。未解決競合が残る間は実行不可(docked フッターに件数注記)
+        - B-3 画像5状態タイル+未解決一覧+missing 登録の説明+過半警告(確認チェックで解錠=EX-002)
+        - B-4 件数4タイル(追加/変更なし/スキップ/競合解決)+missing 登録一覧
+        - レイアウト不変条件: ボディ単一スクロール+docked フッター(競合行/未解決一覧が伸びても実行導線が埋もれない)
+      acceptance_refs: [CP-PACKAGE-032, CP-UI-G13]
 
     # E-UI-DETAIL-023(画像詳細パネル)は ECO-023 で撤回(削除)。理由=REQ-043 リバース誤り:
     # 原典 view-prism は詳細/ノートを常時パネルでなく ImageDetailModal(閲覧クリックで開くモーダル)として持つ。

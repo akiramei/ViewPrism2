@@ -27,6 +27,12 @@ public interface IWindowService
     /// <summary>スナップショット管理(ECO-072 A-1。入口=設定のバックアップ節・SS-001 裁定(b))。</summary>
     Task ShowSnapshotsAsync();
 
+    /// <summary>コレクションを書き出す(ECO-073 B-1。入口=画像タブ ⋯ メニュー・SS-001 裁定(b))。</summary>
+    Task ShowCollectionExportAsync(string collectionId);
+
+    /// <summary>コレクションを取り込む(ECO-073 B-2〜B-4 ウィザード。取り込み先=入口コレクション)。</summary>
+    Task ShowCollectionImportAsync(string collectionId);
+
     /// <summary>タグ作成/編集ダイアログ(タグパレットの「追加」「編集」)。保存されたら true。</summary>
     Task<bool> ShowTagEditorAsync(Tag? existing);
 
