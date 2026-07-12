@@ -6,6 +6,7 @@ using ViewPrism2.Core.Services.Package;
 using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Infrastructure.Database;
+using ViewPrism2.Infrastructure.I18n;
 using ViewPrism2.Infrastructure.Imaging;
 using ViewPrism2.Infrastructure.Scanning;
 using Xunit;
@@ -473,5 +474,56 @@ public sealed class CpPackage073Tests : IDisposable
             "SELECT COUNT(*) FROM image_tags WHERE image_id = @Id", new { Id = registered.Id }), Ct));
         Assert.Equal(1L, await _source.Manager.RunAsync(conn => conn.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM images WHERE sync_folder_id = @Id AND status = 'normal'", new { Id = folderA.Id }), Ct));
+    }
+
+    /// <summary>
+    /// GF-073-06(golden 所見 2026-07-12): 大量 missing 登録の適用が UI スレッド上で同期実行され、
+    /// ウィンドウが「応答なし」→ 完了画面(B-4)がメインウィンドウの背面に隠れた。
+    /// プレビュー/実行は呼び出しスレッドをブロックせず、制御を即時返すこと。
+    /// </summary>
+    [Fact]
+    public async Task プレビューと実行は呼び出しスレッドを塞がず制御を即時返す()
+    {
+        var folder = await AddFolderAsync(_source, Path.Combine(_source.Directory, "colA"));
+        await AddTagAsync(_source, "tag-trip", "旅行", "simple");
+        await _source.Manager.RunAsync(async conn =>
+        {
+            for (var i = 0; i < 2000; i++)
+            {
+                await conn.ExecuteAsync(
+                    """
+                    INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash, status, created_date, modified_date)
+                    VALUES (@Id, @F, @P, @N, 10, @H, 'normal', '2026-07-01T00:00:00.000Z', '2026-07-01T00:00:00.000Z')
+                    """,
+                    new { Id = $"img-{i:D5}", F = folder.Id, P = $"2026/{i:D5}.jpg", N = $"{i:D5}.jpg", H = i.ToString("D64") });
+                await conn.ExecuteAsync(
+                    "INSERT INTO image_tags (image_id, tag_id, value) VALUES (@Id, 'tag-trip', NULL)",
+                    new { Id = $"img-{i:D5}" });
+            }
+        }, Ct);
+        var path = Path.Combine(_source.Directory, "colA" + CollectionPackageFormat.FileExtension);
+        var exporter = new CollectionPackageExporter(_source.Manager, _source.Clock, "9.9.9");
+        Assert.True((await exporter.ExportAsync(folder.Id, path, ct: Ct)).IsSuccess);
+
+        var target = await AddFolderAsync(_target, Path.Combine(_target.Directory, "dst"));
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var vm = new App.ViewModels.CollectionImportViewModel(NewImporter(), target, loc,
+            _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        vm.PackagePath = path;
+        vm.Header = NewImporter().ReadHeader(path).Value;
+
+        var preview = vm.ToPreviewCommand.ExecuteAsync(null);
+        Assert.False(preview.IsCompleted, "GF-073-06: プレビューが呼び出しスレッドを同期ブロックしている");
+        await preview;
+
+        vm.AcceptMajority = true; // 2000/2000 未解決=過半ガードの確認
+        Assert.True(vm.CanExecute);
+        var execute = vm.ExecuteCommand.ExecuteAsync(null);
+        Assert.False(execute.IsCompleted, "GF-073-06: 実行が呼び出しスレッドを同期ブロックしている");
+        await execute;
+
+        Assert.Equal(3, vm.Step); // 成功して完了面へ
+        Assert.Equal(2000L, await TargetCountAsync("SELECT COUNT(*) FROM images WHERE status = 'missing'"));
     }
 }

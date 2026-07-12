@@ -263,7 +263,9 @@ public sealed partial class CollectionImportViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var preview = await _importer.PreviewAsync(PackagePath, _collection.Id);
+            // GF-073-06: 照合走査は大量画像で長時間かかる。UI スレッドを塞ぐと「応答なし」→
+            // ウィンドウが背面に落ちるため、バックグラウンドで実行する
+            var preview = await Task.Run(() => _importer.PreviewAsync(PackagePath, _collection.Id));
             if (!preview.IsSuccess)
             {
                 VerifyError = preview.Message;
@@ -346,8 +348,11 @@ public sealed partial class CollectionImportViewModel : ObservableObject
                 .Select(c => (c.SourceId, Resolution: c.ToResolution()))
                 .Where(x => x.Resolution is not null)
                 .ToDictionary(x => x.SourceId, x => x.Resolution!, StringComparer.Ordinal);
-            var result = await _importer.ApplyAsync(
-                PackagePath, _collection.Id, resolutions, acceptMajorityUnresolved: AcceptMajority);
+            var path = PackagePath;
+            var accept = AcceptMajority;
+            // GF-073-06: 適用(単一トランザクションの大量 INSERT)も同様にバックグラウンドで実行する
+            var result = await Task.Run(() => _importer.ApplyAsync(
+                path, _collection.Id, resolutions, acceptMajorityUnresolved: accept));
             if (result.IsSuccess)
             {
                 Result = result.Value;
