@@ -415,3 +415,13 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   ルート「変更」・「場所を指定」(32-mbom 沈黙次元 823/824 行)と違い**裁定記録が無い**。
   ECO-076(stepper 可視面拡大)の並置検査で顕在化した既存差分であり、本 ECO の diff には混ぜない
   (R3)。処置=裁定記録化(非搭載を沈黙次元へ)or 搭載の分離起票 — maintainer 判断。
+
+## ECO-076 accept 時の検査器の谷間(記録)2026-07-13
+
+- **commit-msg hook と validate_bom E15 の trailer 解釈が不一致**: `git commit -m "<subject>"
+  -m "BomDD-ECO-Fix: ECO-NNN" -m "Co-Authored-By: …"` のように trailer を**中間段落**へ置くと、
+  hook(fail-closed のはずの検査)は通過するが、git の trailer 解釈(`%(trailers)`=最終段落
+  ブロックのみ)では非認識となり、後続の validate_bom E15(履歴証拠検査)が不合格になる。
+  ECO-076 で実発生(fix `2ceb938` が E15 検出→message のみ amend `542ef87` で解消・内容同一)。
+  処置候補=hook 側を `git interpret-trailers`/`%(trailers)` 基準へ揃える(緩い grep 検査の撤去)。
+  起票要否は maintainer 判断。
