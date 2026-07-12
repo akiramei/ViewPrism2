@@ -8,6 +8,7 @@ using ViewPrism2.App.ViewModels;
 using ViewPrism2.App.Views;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
+using ViewPrism2.Core.Services.Package;
 using ViewPrism2.Infrastructure.Database;
 using ViewPrism2.Infrastructure.I18n;
 using Xunit;
@@ -207,6 +208,82 @@ public sealed class GfPackageVisualParityTests : IDisposable
                 vm.Step = 3;
                 RunJobs();
                 Assert.Equal(loc.T("package.resultTitle"), window.Title);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// GF-073-07(golden 所見 2026-07-12): B-3 が mock と乖離 — ⑬タグ件数がプレーンテキスト
+    /// (mock は緑/青/黄のチップ 3 個)・「競合の解決(未解決 N 件)」見出し欠落 ⑭競合カードの状態色
+    /// なし(mock は要対応=淡黄・解決済み=白) ⑮画像5状態タイルが無彩色の横並び(mock は
+    /// 配色つき 2×2+未解決ワイド+検算行) ⑯取り込み先ルート/未解決行のグリフ欠落
+    /// ⑰タグ/画像の 2 カラムレイアウト未転写(CAD layoutInvariant)。
+    /// 許容差分(裁定済み・§8.6 項目 9): ルート「変更」・「場所を指定」非搭載。
+    /// </summary>
+    [Fact]
+    public async Task B3は2カラムでチップと競合状態色と配色タイルと検算行を持つ()
+    {
+        var loc = new LocalizationService(I18nResourceLoader.Load(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")));
+        var collection = new SyncFolder { Id = "col-1", Name = "旅行", Path = @"C:\col" };
+        var importer = new CollectionPackageImporter(_db.Manager, _db.Clock);
+        var vm = new CollectionImportViewModel(importer, collection, loc,
+            _ => Task.FromResult<string?>(null), () => Task.FromResult<IReadOnlyList<Tag>>([]));
+        await Session.Dispatch(() =>
+        {
+            // B-3 状態を直接投入(視覚検査が目的。mock B-3 の数値を使用)
+            vm.PackagePath = @"C:\x\p.viewprism2-collection.json";
+            vm.Step = 2;
+            vm.ImageCounts = new ImageMatchCounts(12405, 823, 34, 5, 17);
+            vm.UnresolvedSamples.Add("friends/2025/ev_0431.png");
+            vm.Conflicts.Add(new TagConflictRowViewModel(
+                new TagPlanItem(new PackageTagDef("t1", "five", TagType.Numeric, null, null, null, [], 0, 5, null, null),
+                    TagImportDecision.Conflict, null, null, null, "既存 'five' と名前が衝突"), [], () => { }));
+            var window = new CollectionImportWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+            try
+            {
+                // ⑬ タグ件数チップ 3 個+競合見出し
+                Assert.Equal(3, window.GetVisualDescendants().OfType<Border>()
+                    .Count(b => b.Classes.Contains("tagChip")));
+                Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(),
+                    t => t.Name == "ConflictHeading");
+
+                // ⑭ 競合カード: 要対応=非 resolved → スキップ解決で resolved クラスへ
+                var card = window.GetVisualDescendants().OfType<Border>()
+                    .First(b => b.Classes.Contains("conflictCard"));
+                Assert.DoesNotContain("resolved", card.Classes);
+                vm.Conflicts[0].SkipCommand.Execute(null);
+                RunJobs();
+                Assert.True(card.Classes.Contains("resolved"), "GF-073-07⑭: 解決済みで白カードへ切替わらない");
+
+                // ⑮ 5 状態タイルの配色クラス(exact/moved/warn×3)+検算行
+                // stateTile は B-4 の結果タイルと共有クラスのため、B-3 固有の配色変種で数える
+                var tiles = window.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("stateTile")).ToList();
+                Assert.Equal(1, tiles.Count(t => t.Classes.Contains("exact")));
+                Assert.Equal(1, tiles.Count(t => t.Classes.Contains("moved")));
+                Assert.Equal(3, tiles.Count(t => t.Classes.Contains("warn")));
+                var sum = window.GetVisualDescendants().OfType<TextBlock>()
+                    .FirstOrDefault(t => t.Name == "StateSumText");
+                Assert.True(sum is not null && sum.Text!.Contains("13,284"), "GF-073-07⑮: 検算行が無い");
+
+                // ⑯ 取り込み先ルート/未解決行のグリフ
+                Assert.Contains(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>(),
+                    p => p.Classes.Contains("rootGlyph"));
+                Assert.Contains(window.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>(),
+                    p => p.Classes.Contains("sampleGlyph"));
+
+                // ⑰ 広幅(既定 940)ではタグ/画像が 2 カラム(画像列は col=2)
+                var imageColumn = window.GetVisualDescendants().OfType<StackPanel>()
+                    .FirstOrDefault(p => p.Name == "ImageColumn");
+                Assert.True(imageColumn is not null, "GF-073-07⑰: ImageColumn が無い");
+                Assert.Equal(2, Grid.GetColumn(imageColumn!));
             }
             finally
             {

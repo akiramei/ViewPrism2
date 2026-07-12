@@ -20,7 +20,7 @@ public sealed partial class TagConflictRowViewModel(
     public IReadOnlyList<Tag> Targets { get; } = compatibleTargets;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsResolved), nameof(SummaryText), nameof(IsRename), nameof(IsMap))]
+    [NotifyPropertyChangedFor(nameof(IsResolved), nameof(SummaryText), nameof(IsRename), nameof(IsMap), nameof(IsSkip))]
     private TagImportDecision? _choice;
 
     [ObservableProperty]
@@ -33,6 +33,11 @@ public sealed partial class TagConflictRowViewModel(
     public bool IsRename => Choice == TagImportDecision.ResolvedRename;
 
     public bool IsMap => Choice == TagImportDecision.ResolvedManualMap;
+
+    public bool IsSkip => Choice == TagImportDecision.ResolvedSkip;
+
+    /// <summary>mock B-3 のタグカラードット(GF-073-07)。未定義色は非表示。</summary>
+    public string? Color => item.Source.Color;
 
     public bool IsResolved => Choice switch
     {
@@ -208,14 +213,33 @@ public sealed partial class CollectionImportViewModel : ObservableObject
 
     public ObservableCollection<TagConflictRowViewModel> Conflicts { get; } = [];
 
+    // GF-073-07: mock B-3 のタグ件数チップ(新規作成=緑/既存へ自動対応=青/競合=黄)
     [ObservableProperty]
-    private string _tagCountsText = "";
+    private string _tagCreatedChip = "";
 
     [ObservableProperty]
-    private string _conflictHeader = "";
+    private string _tagMappedChip = "";
 
     [ObservableProperty]
+    private string _tagConflictChip = "";
+
+    /// <summary>「競合の解決(未解決 N 件)」見出し(mock B-3・GF-073-07)。</summary>
+    public string ConflictHeader => _localization.T("package.conflictHeading", new Dictionary<string, string>
+    {
+        ["count"] = Conflicts.Count(c => !c.IsResolved).ToString(System.Globalization.CultureInfo.InvariantCulture),
+    });
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StateSumText))]
     private ImageMatchCounts? _imageCounts;
+
+    /// <summary>mock B-3 の検算行「a + b + c + d + e = 合計(パッケージの画像数と一致)」。</summary>
+    public string StateSumText => ImageCounts is not { } c
+        ? ""
+        : string.Join(" + ", new[] { c.Exact, c.Moved, c.Changed, c.Ambiguous, c.Unresolved }
+              .Select(v => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)))
+          + " = " + c.Total.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)
+          + " " + _localization.T("package.stateSumNote");
 
     public ObservableCollection<string> UnresolvedSamples { get; } = [];
 
@@ -250,6 +274,7 @@ public sealed partial class CollectionImportViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanExecute));
         OnPropertyChanged(nameof(BlockReason));
+        OnPropertyChanged(nameof(ConflictHeader));
     }
 
     [RelayCommand]
@@ -276,11 +301,17 @@ public sealed partial class CollectionImportViewModel : ObservableObject
             var mapped = plan.Items.Count(i => i.Decision is TagImportDecision.MappedById
                 or TagImportDecision.MappedByPersistentMapping or TagImportDecision.MappedBySemantic);
             var created = plan.Items.Count(i => i.Decision == TagImportDecision.CreateNew);
-            TagCountsText = _localization.T("package.tagCounts", new Dictionary<string, string>
+            TagCreatedChip = _localization.T("package.chipCreated", new Dictionary<string, string>
             {
-                ["created"] = created.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["mapped"] = mapped.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["conflicts"] = plan.UnresolvedConflicts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["count"] = created.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            });
+            TagMappedChip = _localization.T("package.chipMapped", new Dictionary<string, string>
+            {
+                ["count"] = mapped.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            });
+            TagConflictChip = _localization.T("package.chipConflict", new Dictionary<string, string>
+            {
+                ["count"] = plan.UnresolvedConflicts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
             });
 
             var localTags = await _loadLocalTags();

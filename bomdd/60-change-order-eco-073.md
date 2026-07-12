@@ -489,6 +489,52 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
 16. 大量未解決の取り込み実行中もウィザードが「応答なし」にならず(ドラッグ可・実行ボタンは
     無効のまま)、完了後に **B-4 が前面のまま**表示される。
 
+## 15. golden所見 GF-073-07 の是正(2026-07-12 — 再機械受入)
+
+### 15.1 所見と工程診断
+
+- maintainer が B-3(競合ありプレビュー)を mock と並置し「許容可能な差異か再現失敗か」を提起。
+- 工程診断(captures 並置の実測): **大部分は実装の転写漏れ(再現失敗)**。
+  ⑬タグ件数がプレーンテキスト 1 行(mock は緑/青/黄のチップ 3 個+「タグ」見出し)・
+  「競合の解決(未解決 N 件)」見出し欠落 ⑭競合カードの状態色なし(mock は要対応=淡黄・
+  解決済み=白・選択中の 4 択ボタン=青塗り・タグカラードット) ⑮画像 5 状態タイルが無彩色の
+  横並び(mock は配色つき 2×2+未解決ワイド+桁区切り+検算行「a+b+c+d+e=合計」)
+  ⑯取り込み先ルートのフォルダグリフ・未解決行の画像グリフ欠落・ラベルのカード外出し
+  ⑰タグ/画像の 2 カラム(CAD layoutInvariant「タグ列 min440・画像列 min360・狭幅で縦積み」)未転写。
+- **許容差分(gate①裁定済み・変更なし)**: ルート「変更」リンク・「場所を指定」ボタンの非搭載
+  (§8.6 項目 9 の V1 差分)・擬似タイトルバー。
+
+### 15.2 先行probe(R5)
+
+- `GfPackageVisualParityTests` へ B-3 専用テスト追加(チップ 3 個・ConflictHeading・conflictCard の
+  resolved 切替・タイル変種 exact/moved/warn=1/1/3・検算行・rootGlyph/sampleGlyph・広幅で
+  ImageColumn=col 2)。是正前実測: **1 件不合格**。
+  ※probe 是正 1 回: stateTile は B-4 結果タイルと共有クラスのため件数 pin を変種クラス基準へ。
+
+### 15.3 是正diff
+
+- `CollectionImportWindow`: B-3 を 2 カラム Grid(TagColumn/ImageColumn)へ再構成し、狭幅(<860)は
+  code-behind の実測幅切替で縦積み(ECO-027 手法)。タグ件数チップ(tagChip create/map/conflict)・
+  競合見出し・conflictCard 状態色(Classes.resolved)+選択中 choice ボタン青塗り+タグカラードット・
+  5 状態タイル配色(exact 緑/moved 青/warn 黄)+副文+N0 桁区切り+検算行・ルートのラベル外出し+
+  フォルダグリフ・未解決行の画像グリフ。
+- `CollectionImportViewModel`: TagCountsText→チップ 3 値へ分割。ConflictHeader を計算プロパティ化
+  (未解決数に追随)。StateSumText(検算行)。行 VM に IsSkip/Color。
+- i18n: tagsTitle/chip×3/conflictHeading/stateSumNote/state*Sub 追加・stateChanged/stateAmbiguous を
+  mock 本文へ改訂(限定句は副文へ)。挙動・エンジンは不変(視覚のみ)。
+
+### 15.4 再機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **642/642 pass**(probe 緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。判定は exe 直接実行。
+
+### 15.5 gate②再操作(§8.6 項目 4 の再実施+追加)
+
+17. B-3 が mock と並置同等: タグ件数チップ(緑/青/黄)・「競合の解決(未解決 N 件)」・
+    要対応カード=淡黄/解決済み=白+選択ボタン青塗り・5 状態タイル配色+検算行・
+    ルート/未解決行グリフ・広幅 2 カラム(ウィンドウを狭めると縦積みへ回り込む)。
+    許容差分=ルート「変更」・「場所を指定」非搭載(項目 9)。
+
 ## 7. gate①裁定(2026-07-12)
 
 - maintainer裁定: **未解決画像(一致先なし)は「missing 行として参照のみ登録」を既定採用**し、

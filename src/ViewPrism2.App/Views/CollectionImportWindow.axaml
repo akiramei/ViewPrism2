@@ -43,6 +43,55 @@
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="12,8" />
     </Style>
+    <!-- GF-073-07: B-3 の mock 転写 — タグ件数チップ/競合カード状態色/5状態タイル配色 -->
+    <Style Selector="Border.tagChip">
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.tagChip.create">
+      <Setter Property="Background" Value="#E7F6EC" />
+      <Setter Property="BorderBrush" Value="#C4E7D2" />
+    </Style>
+    <Style Selector="Border.tagChip.map">
+      <Setter Property="Background" Value="#EFF4FE" />
+      <Setter Property="BorderBrush" Value="#D3E1FB" />
+    </Style>
+    <Style Selector="Border.tagChip.conflict">
+      <Setter Property="Background" Value="#FCF4DC" />
+      <Setter Property="BorderBrush" Value="#EDDFAF" />
+    </Style>
+    <Style Selector="Border.conflictCard">
+      <Setter Property="Background" Value="#FFFBEB" />
+      <Setter Property="BorderBrush" Value="#EDDFAF" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Border.conflictCard.resolved">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    </Style>
+    <Style Selector="Button.choice.selected">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.stateTile.exact">
+      <Setter Property="Background" Value="#EFF9F1" />
+      <Setter Property="BorderBrush" Value="#CFE8D8" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.stateTile.moved">
+      <Setter Property="Background" Value="#EFF4FE" />
+      <Setter Property="BorderBrush" Value="#D3E1FB" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.stateTile.warn">
+      <Setter Property="Background" Value="#FFFBEB" />
+      <Setter Property="BorderBrush" Value="#EDDFAF" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
     <!-- GF-073-04: stepper は番号バッジ+接続線(mock B-2)。到達済み=青塗り・未到達=灰 -->
     <Style Selector="Border.stepBadge">
       <Setter Property="Width" Value="22" />
@@ -257,127 +306,186 @@
               <TextBlock Text="{Binding Loc[package.addOnlyNote]}" FontSize="12" Foreground="#1F7A3D" TextWrapping="Wrap" />
             </DockPanel>
           </Border>
-          <!-- 取り込み先ルート(入口コレクション固定=SS-001(b)) -->
-          <Border Classes="card" Padding="14,8">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <TextBlock Text="{Binding Loc[package.targetRoot]}" FontSize="12"
-                         Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding TargetRootPath}" FontFamily="Consolas,monospace" FontSize="12"
-                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </Border>
-
-          <!-- タグ計画+競合解決 -->
-          <TextBlock Text="{Binding TagCountsText}" FontSize="13" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding Loc[package.mapCompatNote]}" FontSize="11"
-                     Foreground="{StaticResource TextMutedBrush}" />
-          <ItemsControl ItemsSource="{Binding Conflicts}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:TagConflictRowViewModel">
-                <Border Classes="card" Padding="12,10" Margin="0,0,0,8">
-                  <StackPanel Spacing="8">
-                    <DockPanel>
-                      <Border DockPanel.Dock="Right" CornerRadius="10" Padding="8,2"
-                              Background="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Background}}"
-                              BorderBrush="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Border}}"
-                              BorderThickness="1">
-                        <TextBlock FontSize="11"
-                                   Text="{Binding IsResolved, Converter={x:Static vm:PackageConverters.ResolvedLabel}}"
-                                   Foreground="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Foreground}}" />
-                      </Border>
-                      <StackPanel>
-                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                    </DockPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceAbort]}"
-                              Command="{Binding AbortCommand}" />
-                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceSkip]}"
-                              Command="{Binding SkipCommand}" />
-                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceRename]}"
-                              Command="{Binding RenameCommand}" />
-                      <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceMap]}"
-                              Command="{Binding MapCommand}" />
-                      <TextBox Text="{Binding RenameTo}" Width="180" FontSize="12" IsVisible="{Binding IsRename}" />
-                      <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding MapTarget}" Width="180"
-                                IsVisible="{Binding IsMap}">
-                        <ComboBox.ItemTemplate>
-                          <DataTemplate>
-                            <TextBlock Text="{Binding Name}" FontSize="12" />
-                          </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                      </ComboBox>
-                      <TextBlock Text="{Binding SummaryText}" FontSize="12" Foreground="#1F7A3D"
-                                 VerticalAlignment="Center" />
-                    </StackPanel>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <!-- 画像 5 状態(実体は含まれないため参照突き合わせ) -->
-          <TextBlock Text="{Binding Loc[package.imagesTitle]}" FontSize="13" FontWeight="SemiBold" />
-          <WrapPanel>
-            <Border Classes="stateTile" Margin="0,0,8,8">
-              <StackPanel>
-                <TextBlock Text="{Binding ImageCounts.Exact, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#1F7A3D" />
-                <TextBlock Text="{Binding Loc[package.stateExact]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="stateTile" Margin="0,0,8,8">
-              <StackPanel>
-                <TextBlock Text="{Binding ImageCounts.Moved, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#1F7A3D" />
-                <TextBlock Text="{Binding Loc[package.stateMoved]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="stateTile" Margin="0,0,8,8">
-              <StackPanel>
-                <TextBlock Text="{Binding ImageCounts.Changed, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
-                <TextBlock Text="{Binding Loc[package.stateChanged]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="stateTile" Margin="0,0,8,8">
-              <StackPanel>
-                <TextBlock Text="{Binding ImageCounts.Ambiguous, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
-                <TextBlock Text="{Binding Loc[package.stateAmbiguous]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="stateTile" Margin="0,0,8,8">
-              <StackPanel>
-                <TextBlock Text="{Binding ImageCounts.Unresolved, FallbackValue=0}" FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
-                <TextBlock Text="{Binding Loc[package.stateUnresolved]}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-            </Border>
-          </WrapPanel>
-
-          <!-- 未解決一覧+missing 登録の説明(gate①)+過半警告(EX-002) -->
-          <StackPanel Spacing="6" IsVisible="{Binding HasUnresolved}">
-            <TextBlock Text="{Binding Loc[package.unresolvedTitle]}" FontSize="12" FontWeight="SemiBold" />
-            <Border Classes="card" MaxHeight="140" Padding="8">
-              <ScrollViewer>
-                <ItemsControl ItemsSource="{Binding UnresolvedSamples}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding}" FontFamily="Consolas,monospace" FontSize="11" Margin="4,1" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Border>
-            <TextBlock Text="{Binding Loc[package.missingNote]}" FontSize="11"
-                       Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-            <Border Background="#FCF4DC" BorderBrush="#EDDFAF" BorderThickness="1" CornerRadius="8" Padding="12,8"
-                    IsVisible="{Binding MajorityUnresolved}">
-              <StackPanel Spacing="6">
-                <TextBlock Text="{Binding Loc[package.majorityWarn]}" FontSize="12" Foreground="#8A6D1A" TextWrapping="Wrap" />
-                <CheckBox IsChecked="{Binding AcceptMajority}" FontSize="12"
-                          Content="{Binding Loc[package.majorityAccept]}" />
+          <!-- 取り込み先ルート(入口コレクション固定=SS-001(b)。「変更」は非搭載=V1裁定・項目9) -->
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="{Binding Loc[package.targetRoot]}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+            <Border Classes="card" Padding="12,6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="rootGlyph" Width="15" Height="12" Stretch="Uniform" VerticalAlignment="Center"
+                      Fill="#5B657A"
+                      Data="M1,2.5 C1,1.7 1.7,1 2.5,1 L6,1 L7.5,3 L14.5,3 C15.3,3 16,3.7 16,4.5 L16,11.5 C16,12.3 15.3,13 14.5,13 L2.5,13 C1.7,13 1,12.3 1,11.5 Z" />
+                <TextBlock Text="{Binding TargetRootPath}" FontFamily="Consolas,monospace" FontSize="12"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </Border>
           </StackPanel>
+
+          <!-- GF-073-07: 広幅=タグ/画像の 2 カラム・狭幅=縦積み(CAD layoutInvariant。切替は code-behind) -->
+          <Grid x:Name="PreviewColumns" ColumnDefinitions="*,16,*" RowDefinitions="Auto,12,Auto">
+            <!-- タグ列 -->
+            <StackPanel x:Name="TagColumn" Grid.Row="0" Grid.Column="0" Spacing="10" VerticalAlignment="Top">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Loc[package.tagsTitle]}" FontSize="13" FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Border Classes="tagChip create">
+                  <TextBlock Text="{Binding TagCreatedChip}" FontSize="11" Foreground="#1F7A3D" />
+                </Border>
+                <Border Classes="tagChip map">
+                  <TextBlock Text="{Binding TagMappedChip}" FontSize="11" Foreground="#2F6BED" />
+                </Border>
+                <Border Classes="tagChip conflict">
+                  <TextBlock Text="{Binding TagConflictChip}" FontSize="11" Foreground="#8A6D1A" />
+                </Border>
+              </StackPanel>
+              <TextBlock x:Name="ConflictHeading" Text="{Binding ConflictHeader}" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{StaticResource TextMutedBrush}" />
+              <TextBlock Text="{Binding Loc[package.mapCompatNote]}" FontSize="11"
+                         Foreground="{StaticResource TextMutedBrush}" />
+              <ItemsControl ItemsSource="{Binding Conflicts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TagConflictRowViewModel">
+                    <Border Classes="conflictCard" Classes.resolved="{Binding IsResolved}"
+                            Padding="12,10" Margin="0,0,0,8">
+                      <StackPanel Spacing="8">
+                        <DockPanel>
+                          <Border DockPanel.Dock="Right" CornerRadius="10" Padding="8,2"
+                                  Background="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Background}}"
+                                  BorderBrush="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Border}}"
+                                  BorderThickness="1">
+                            <TextBlock FontSize="11"
+                                       Text="{Binding IsResolved, Converter={x:Static vm:PackageConverters.ResolvedLabel}}"
+                                       Foreground="{Binding IsResolved, Converter={x:Static vm:SnapshotBadgeConverters.Foreground}}" />
+                          </Border>
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
+                                    Background="{Binding Color}"
+                                    IsVisible="{Binding Color, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <StackPanel>
+                              <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                          </StackPanel>
+                        </DockPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Button Classes="choice" Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceAbort]}"
+                                  Command="{Binding AbortCommand}" />
+                          <Button Classes="choice" Classes.selected="{Binding IsSkip}"
+                                  Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceSkip]}"
+                                  Command="{Binding SkipCommand}" />
+                          <Button Classes="choice" Classes.selected="{Binding IsRename}"
+                                  Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceRename]}"
+                                  Command="{Binding RenameCommand}" />
+                          <Button Classes="choice" Classes.selected="{Binding IsMap}"
+                                  Content="{Binding $parent[Window].((vm:CollectionImportViewModel)DataContext).Loc[package.choiceMap]}"
+                                  Command="{Binding MapCommand}" />
+                          <TextBox Text="{Binding RenameTo}" Width="150" FontSize="12" IsVisible="{Binding IsRename}" />
+                          <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding MapTarget}" Width="150"
+                                    IsVisible="{Binding IsMap}">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontSize="12" />
+                              </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                        </StackPanel>
+                        <TextBlock Text="{Binding SummaryText}" FontSize="12" Foreground="#1F7A3D"
+                                   IsVisible="{Binding IsResolved}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- 画像列(5 状態タイル 2×2+未解決ワイド+検算行・mock B-3) -->
+            <StackPanel x:Name="ImageColumn" Grid.Row="0" Grid.Column="2" Spacing="10" VerticalAlignment="Top">
+              <TextBlock Text="{Binding Loc[package.imagesTitle]}" FontSize="13" FontWeight="SemiBold" />
+              <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto,8,Auto">
+                <Border Classes="stateTile exact" Grid.Row="0" Grid.Column="0">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding ImageCounts.Exact, FallbackValue=0, StringFormat='{}{0:N0}'}"
+                               FontSize="18" FontWeight="Bold" Foreground="#1F7A3D" />
+                    <TextBlock Text="{Binding Loc[package.stateExact]}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="stateTile moved" Grid.Row="0" Grid.Column="2">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding ImageCounts.Moved, FallbackValue=0, StringFormat='{}{0:N0}'}"
+                               FontSize="18" FontWeight="Bold" Foreground="#2F6BED" />
+                    <TextBlock Text="{Binding Loc[package.stateMoved]}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Loc[package.stateMovedSub]}" FontSize="10"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="stateTile warn" Grid.Row="2" Grid.Column="0">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding ImageCounts.Changed, FallbackValue=0, StringFormat='{}{0:N0}'}"
+                               FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
+                    <TextBlock Text="{Binding Loc[package.stateChanged]}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Loc[package.stateChangedSub]}" FontSize="10"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="stateTile warn" Grid.Row="2" Grid.Column="2">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding ImageCounts.Ambiguous, FallbackValue=0, StringFormat='{}{0:N0}'}"
+                               FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
+                    <TextBlock Text="{Binding Loc[package.stateAmbiguous]}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Loc[package.stateAmbiguousSub]}" FontSize="10"
+                               Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="stateTile warn" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3">
+                  <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ImageCounts.Unresolved, FallbackValue=0, StringFormat='{}{0:N0}'}"
+                               FontSize="18" FontWeight="Bold" Foreground="#8A6D1A" />
+                    <TextBlock Text="{Binding Loc[package.stateUnresolved]}" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+              <TextBlock x:Name="StateSumText" Text="{Binding StateSumText}" FontSize="11"
+                         FontFamily="Consolas,monospace" Foreground="{StaticResource TextMutedBrush}"
+                         TextWrapping="Wrap" />
+
+              <!-- 未解決一覧+missing 登録の説明(gate①)+過半警告(EX-002)。「場所を指定」は非搭載=V1裁定・項目9 -->
+              <StackPanel Spacing="6" IsVisible="{Binding HasUnresolved}">
+                <TextBlock Text="{Binding Loc[package.unresolvedTitle]}" FontSize="12" FontWeight="SemiBold" />
+                <Border Classes="card" MaxHeight="200" Padding="8">
+                  <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding UnresolvedSamples}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,2">
+                            <Path Classes="sampleGlyph" Width="12" Height="10" Stretch="Uniform"
+                                  VerticalAlignment="Center" Stroke="#8A93A6" StrokeThickness="1.2"
+                                  Data="M1,1 L15,1 L15,12 L1,12 Z M4.5,4.5 A1.2,1.2 0 1 0 4.51,4.5 M1,10 L5.5,6.5 L9,9.5 L12,7 L15,9.5" />
+                            <TextBlock Text="{Binding}" FontFamily="Consolas,monospace" FontSize="11" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Border>
+                <TextBlock Text="{Binding Loc[package.missingNote]}" FontSize="11"
+                           Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                <Border Background="#FCF4DC" BorderBrush="#EDDFAF" BorderThickness="1" CornerRadius="8" Padding="12,8"
+                        IsVisible="{Binding MajorityUnresolved}">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding Loc[package.majorityWarn]}" FontSize="12" Foreground="#8A6D1A" TextWrapping="Wrap" />
+                    <CheckBox IsChecked="{Binding AcceptMajority}" FontSize="12"
+                              Content="{Binding Loc[package.majorityAccept]}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
         </StackPanel>
 
         <!-- ===== B-4: 結果レポート ===== -->

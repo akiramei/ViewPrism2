@@ -20,6 +20,23 @@ public partial class CollectionImportWindow : Window
                 vm.PickFileCommand.Execute(null);
             }
         };
+
+        // GF-073-07: B-3 は広幅=タグ/画像 2 カラム・狭幅=縦積み(CAD layoutInvariant。
+        // Avalonia に ResizeObserver は無いため実測幅で切替=ECO-027 と同じ手法)
+        SizeChanged += (_, e) => UpdatePreviewColumns(e.NewSize.Width);
+    }
+
+    private void UpdatePreviewColumns(double width)
+    {
+        var image = this.FindControl<Avalonia.Controls.StackPanel>("ImageColumn");
+        if (image is null)
+        {
+            return;
+        }
+
+        var narrow = width < 860; // タグ min440+画像 min360+余白(CAD の回り込みしきい値相当)
+        Avalonia.Controls.Grid.SetColumn(image, narrow ? 0 : 2);
+        Avalonia.Controls.Grid.SetRow(image, narrow ? 2 : 0);
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
