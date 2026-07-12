@@ -1206,8 +1206,8 @@ changes:
   - id: ECO-073
     title: "コレクションの論理書き出し/取り込み(バックアップB層 V1)"
     type: 新機能(バックアップ2層構成のうちB層=コレクション単位の非破壊統合。仕様はmaintainer+外部アドバイザー事前議論で確定済み、gate①裁定済み2026-07-12=参照のみ登録採用+SS-001(b)分置+CAD正典化。A層=ECO-072)
-    status: implemented   # 2026-07-12 /eco-fix 機械受入完了(2段受入=migration+エンジン→UI 4面)・golden待ち
-    golden: "pending(fix完了2026-07-12・CP-UI-G13実機確認待ち。観点=⋯メニュー入口→B-1書き出し(実進捗・既定名・partial非残置)→B-2検証(互換OK概要/NG別面)→B-3プレビュー&競合解決(4択・型互換割当・5状態タイル・過半警告・未解決競合中は実行不可)→B-4結果→冪等再取込・移動検出・鮮度失敗・物理非破壊・V1差分(ルート変更/場所を指定 非搭載)の許容判定)"
+    status: applied   # 2026-07-13 gate②合格(maintainer実機・全17項目)→クローズ。GF-073-01〜08 の8所見を経て承認
+    golden: "approved(2026-07-13 maintainer 実機: §8.6+§9.5/§10.5/§11.5/§12.5/§13.5/§14.5/§15.5 の全17項目=B-1書き出し・冪等・missing登録+過半警告・競合4択・互換NG・移動検出(是正後手順)・鮮度・物理非破壊・V1差分許容・ja/en・GF視覚観点(ダイアログ共通言語/B-2カード/stepper/B-3並置)・同一ライブラリ内取込成功・実行中UI応答)"
     baseline: "main 86bfed9e0394"
     findings: "maintainer要求2026-07-12=コレクション単位バックアップ+リストア時のタグ定義欠落(revずれ)問題の仕様解決。確定仕様: 単一UTF-8 JSON(kind=collection)・タグ依存閉包同梱の自己完結・保証定義=過去タグ体系の厳密再現でなく現在ライブラリへの統合。タグ照合5段(永続マッピング→UUID一致+値互換検証→意味定義完全一致の自動マッピング→UUID維持新規作成→競合4択+手動マッピング)。値はstring|null(タグ定義が型の唯一の正・InvariantCulture正規形・省略不可・クランプ禁止)。画像照合4状態(パス+SHA256両一致=採用/パス一致ハッシュ不一致=競合/一意ハッシュ=移動採用/複数=曖昧)。マージは追加型・削除なし・値競合は現行維持。前提部品は既存: images.hash=SHA-256全画像NOT NULL・file_size・全PK=UUID(ポータブルID新設不要)。DB変更はtag_import_mappings+DB内ライブラリUUIDの単一migration(ECO-020前例)。tag-catalog/view-set/workspace単独可搬・自動バックアップはスコープ外(将来ECO、TagImportPlannerは再利用可能に分離)"
     impacted_bom: ["ViewPrismUI 新画面4面=書き出し/取り込み検証/プレビュー&競合解決/結果レポート(mock=maintainer作成が先行)", "新REQ群+20-spec新節(核文+パッケージ形式/タグ照合/画像照合/マージ規則/実行規律)", "E-BOM新規(エクスポータ/TagImportPlanner/インポート適用器)", "M-BOM新規+migration 1件(tag_import_mappings+ライブラリUUID・CP-DB-006維持)", "新CP(冪等/照合分類/拒否入力/全ロールバック/画像ファイル無変更/プレビュー鮮度)", "K-BOM追加なし予測"]
