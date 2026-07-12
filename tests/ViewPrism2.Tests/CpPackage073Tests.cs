@@ -439,4 +439,39 @@ public sealed class CpPackage073Tests : IDisposable
         Assert.False(apply.IsSuccess); // 適用直前の再計画が競合を検出して中止
         Assert.Equal(0L, await TargetCountAsync("SELECT COUNT(*) FROM image_tags"));
     }
+
+    /// <summary>
+    /// GF-073-05(golden 所見 2026-07-12): 元コレクションが同居する**同一ライブラリ内**の別コレクション
+    /// へ取り込むと、missing 登録が package sourceId を再利用して images.id(PK=ライブラリ全体)に
+    /// 衝突し全体が失敗した。衝突ガード(415行)の走査が取り込み先コレクション限定だったのが真因。
+    /// </summary>
+    [Fact]
+    public async Task 同一ライブラリ内の別コレクションへの取り込みはID衝突せずmissing登録で成功する()
+    {
+        var folderA = await AddFolderAsync(_source, Path.Combine(_source.Directory, "colA"));
+        await AddTagAsync(_source, "tag-trip", "旅行", "simple");
+        var imgA = await AddImageAsync(_source, folderA.Id, "2026/a.jpg", Hash('a'));
+        await AssignAsync(_source, imgA, "tag-trip", null);
+        var path = Path.Combine(_source.Directory, "colA" + CollectionPackageFormat.FileExtension);
+        var exporter = new CollectionPackageExporter(_source.Manager, _source.Clock, "9.9.9");
+        Assert.True((await exporter.ExportAsync(folderA.Id, path, ct: Ct)).IsSuccess);
+
+        // 同じ DB(=同一ライブラリ)の別コレクションへ取り込む
+        var folderB = await AddFolderAsync(_source, Path.Combine(_source.Directory, "colB"));
+        var importer = new CollectionPackageImporter(_source.Manager, _source.Clock);
+        var result = await importer.ApplyAsync(path, folderB.Id, acceptMajorityUnresolved: true, ct: Ct);
+
+        Assert.True(result.IsSuccess, result.Message);
+        var rows = (await _source.Manager.RunAsync(async conn => (await conn.QueryAsync<(string Id, string Status)>(
+            "SELECT id, status FROM images WHERE sync_folder_id = @Id", new { Id = folderB.Id })).ToList(), Ct));
+        var registered = Assert.Single(rows);
+        Assert.Equal("missing", registered.Status);
+        Assert.NotEqual(imgA, registered.Id); // 元行(コレクション A)と衝突しない新 UUID
+
+        // タグ付与は新 missing 行へ着地し、元コレクション A は無傷
+        Assert.Equal(1L, await _source.Manager.RunAsync(conn => conn.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM image_tags WHERE image_id = @Id", new { Id = registered.Id }), Ct));
+        Assert.Equal(1L, await _source.Manager.RunAsync(conn => conn.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM images WHERE sync_folder_id = @Id AND status = 'normal'", new { Id = folderA.Id }), Ct));
+    }
 }

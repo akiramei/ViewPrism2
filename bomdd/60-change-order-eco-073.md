@@ -413,6 +413,47 @@ UI 意匠の裁定**のみ。必要画面(名称・配置は CAD が正):
     「次へ:プレビュー」で stepper が消え **Window.Title が「取り込みプレビュー — <名前>」**へ、
     実行後は**「取り込み結果」**へ切り替わる。ja/en 追随。
 
+## 13. golden所見 GF-073-05 の是正(2026-07-12 — 再機械受入)
+
+### 13.1 所見と工程診断
+
+- maintainer が**同一ライブラリ内の別コレクション**へパッケージを取り込み(過半警告を確認して続行)、
+  実行で `SQLite Error 19: UNIQUE constraint failed: images.id` の**生エラーが露出**して全体が失敗。
+- 工程診断(実測): **実装バグ(この操作は成功すべき)**。missing 登録の ID 衝突ガード
+  (`localImages.Ids.Contains(sourceId)`)は存在したが、走査集合が取り込み先コレクションの行だけ
+  (`WHERE sync_folder_id = @Id`)で、**images.id の PK はライブラリ全体**に効く。元コレクションが
+  同居する同一ライブラリ内取り込みで package sourceId が元行と衝突した。CP-PACKAGE-032 の fixture が
+  source/target を**別 DB 2 基**で組んでおり「同一ライブラリ内」次元が未検査だった(検査面の欠落)。
+  全ロールバック(DB 無変更)自体は設計どおり機能した。
+- 併せて②: 失敗メッセージへ生 SQL エラー文を連結して露出していた(UX 欠陥)。
+
+### 13.2 先行probe(R5)
+
+- `CpPackage073Tests` へ「同一ライブラリ内の別コレクションへの取り込みは ID 衝突せず missing 登録で
+  成功する」を追加(同一 DB に colA/colB・colA を書き出し→colB へ適用→成功+新 UUID の missing 行+
+  タグ着地+colA 無傷)。是正前実測: **1 件不合格**(実機と同一の UNIQUE 違反を再現)。
+
+### 13.3 是正diff
+
+- `CollectionPackageImporter.ApplyInTransaction`: 衝突ガードを**ライブラリ全域の id 集合**
+  (`SELECT id FROM images`)で判定し、衝突時は新 UUID で登録(登録の都度 集合へ追加)。
+  再取込の冪等は登録行の path+hash 一致で維持される(照合順=id→パス+ハッシュ→ハッシュ)。
+- SqliteException の失敗メッセージから生 SQL 文を除去し人間語へ(「適用に失敗したため全て
+  取り消しました。データベースは変更されていません。プレビューからやり直してください。
+  (DB エラー N)」— 診断用にエラーコードのみ添える)。
+
+### 13.4 再機械受入
+
+- `dotnet build`: 0 warning / 0 error。`ViewPrism2.Tests`: **640/640 pass**(probe 緑転)。
+- `ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。`validate_bom`: 0/0。
+- ※判定は exe 直接実行(dotnet test の testhost ハング回避=既知の実行規律)。
+
+### 13.5 gate②再操作(§8.6 項目 3 の再実施+追加)
+
+15. 同一ライブラリ内の別コレクションへ取り込み(過半警告→確認チェック→実行)が**成功**し、
+    B-4 に missing 登録件数が出て画像タブに missing 行+タグ付与が現れる。元コレクションの行は無傷。
+    エラーが出る場合も生 SQL 文でなく人間語メッセージであること。
+
 ## 7. gate①裁定(2026-07-12)
 
 - maintainer裁定: **未解決画像(一致先なし)は「missing 行として参照のみ登録」を既定採用**し、

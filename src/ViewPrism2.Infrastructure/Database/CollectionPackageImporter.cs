@@ -386,6 +386,11 @@ public sealed class CollectionPackageImporter(DatabaseManager db, IClock clock)
                 (localImages.ByHash.TryGetValue(r.Hash, out var list) ? list : localImages.ByHash[r.Hash] = []).Add(r.Id);
             }
 
+            // GF-073-05: missing 登録の ID 衝突ガードはライブラリ全域で判定する(images.id の PK は
+            // コレクション横断。同一ライブラリ内の別コレクションへの取り込みで元行と衝突していた)
+            var allImageIds = conn.Query<string>("SELECT id FROM images", transaction: tx)
+                .ToHashSet(StringComparer.Ordinal);
+
             var existing = conn.Query<(string ImageId, string TagId, string? Value)>(
                 """
                 SELECT it.image_id, it.tag_id, it.value FROM image_tags it
@@ -411,8 +416,9 @@ public sealed class CollectionPackageImporter(DatabaseManager db, IClock clock)
                     if (kind == ImageMatchKind.Unresolved)
                     {
                         // gate①採用: missing 行として参照のみ登録(pending は次回スキャンで行削除されるため不可)。
-                        // 実体出現時は規則 3a の候補提示→修復画面(ECO-005)確定で image_id 不変リンク
-                        localImageId = localImages.Ids.Contains(image.SourceId) ? IdGenerator.NewId() : image.SourceId;
+                        // 実体出現時は規則 3a の候補提示→修復画面(ECO-005)確定で image_id 不変リンク。
+                        // 再取込の冪等は登録行の path+hash 一致で維持される(sourceId 再利用は必須でない)
+                        localImageId = allImageIds.Contains(image.SourceId) ? IdGenerator.NewId() : image.SourceId;
                         conn.Execute(
                             """
                             INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash, status, created_date, modified_date)
@@ -430,6 +436,7 @@ public sealed class CollectionPackageImporter(DatabaseManager db, IClock clock)
                                 image.ModifiedDate,
                             }, tx);
                         localImages.Ids.Add(localImageId);
+                        allImageIds.Add(localImageId);
                         registeredMissing++;
                     }
 
@@ -485,8 +492,10 @@ public sealed class CollectionPackageImporter(DatabaseManager db, IClock clock)
         }
         catch (SqliteException ex)
         {
-            // UNIQUE 違反等=プレビュー後の DB 変化を含む。トランザクションは using で全ロールバック
-            return Result<ImportResult>.Fail(ErrorCode.Database, $"適用に失敗したため全て取り消しました: {ex.Message}");
+            // UNIQUE 違反等=プレビュー後の DB 変化を含む。トランザクションは using で全ロールバック。
+            // GF-073-05②: 生の SQL エラー文はユーザーへ見せない(診断用にエラーコードのみ添える)
+            return Result<ImportResult>.Fail(ErrorCode.Database,
+                $"適用に失敗したため全て取り消しました。データベースは変更されていません。プレビューからやり直してください。(DB エラー {ex.SqliteErrorCode})");
         }
     }
 }
