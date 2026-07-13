@@ -238,7 +238,7 @@ public sealed class CpUi056OrganizeV2Tests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
+            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
         await vm.InitializeAsync(_col.Id);
         return vm;
     }
@@ -264,7 +264,8 @@ public sealed class CpUi056OrganizeV2Tests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new ImageSorter(), new AppSettings());
+            new StubWindowService(), new ImageSorter(), new AppSettings(),
+            TestLoc.Ja());
         await vm.InitializeAsync();
         return vm;
     }

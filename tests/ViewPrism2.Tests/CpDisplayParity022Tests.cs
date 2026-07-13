@@ -168,7 +168,7 @@ public sealed class CpDisplayParity022Tests
             new SimilaritySearchService(db.Folders, db.Images, db.Features, db.Similarities, new FakePHashImageReader(), db.Clock),
             new MergeService(db.Images, db.Tags, db.Merges),
             new TrashService(db.Images, db.Folders, new FilePresenceProbe()),
-            new NoopWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), TestLoc.Empty());
+            new NoopWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), TestLoc.Ja());
         await vm.InitializeAsync(col.Id);
 
         var item = Assert.Single(vm.Items, i => !i.IsFolder);
@@ -196,7 +196,7 @@ public sealed class CpDisplayParity022Tests
             new SimilaritySearchService(db.Folders, db.Images, db.Features, db.Similarities, new FakePHashImageReader(), db.Clock),
             new MergeService(db.Images, db.Tags, db.Merges),
             new TrashService(db.Images, db.Folders, new FilePresenceProbe()),
-            new NoopWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), TestLoc.Empty());
+            new NoopWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), TestLoc.Ja());
         await vm.InitializeAsync(col.Id);
         await vm.OpenTrashCommand.ExecuteAsync(null);
 

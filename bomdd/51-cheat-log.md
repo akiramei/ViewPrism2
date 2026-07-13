@@ -438,3 +438,14 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   処置候補=lifecycle_edge_findings がマージ中(MERGE_HEAD 存在時)は HEAD と MERGE_HEAD の
   status を合算した old で比較する。E15 の hook 不一致(上記 ECO-076 記録)と合わせ、
   検査器のライフサイクル系是正として一括起票が適切 — maintainer 判断。**→ 処置済み: ECO-078(2026-07-13)で是正**(combined_head_status=親合算・selftest-lifecycle (e) で恒久 pin)。
+
+## ECO-079 是正中に観測した並列実行フレーク(記録)2026-07-13
+
+- **CpWorkspace028Tests が並列フル実行時のみ Dapper Int64→Int32 キャスト例外で断続的に fail**:
+  `dotnet test`(全並列)で 4 テストが `InvalidCastException: Int64 → Int32`(Dapper SqlMapper)で
+  fail する run があったが、`-class CpWorkspace028Tests` の isolation は 10/10 緑、exe 直接のフル run
+  も 658/658 緑。WorkspaceService/リポジトリ/Dapper マッピングは ECO-079 で不変=本変更と無関係の
+  既存フレーク(並列 run 間の SQLite 共有/接続状態が疑い・run ごとに fail 対象が変わる)。
+  ECO-079 の diff には混ぜない(R3)。処置候補=当該テストの DB 隔離見直し or 並列度制御 —
+  分離起票 or 恒久記録は maintainer 判断。機械受入は exe 直接実行で確定(memory の dotnet test
+  実行規律に同じ)。

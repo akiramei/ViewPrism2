@@ -25,7 +25,7 @@
             <PathIcon Data="{StaticResource ChevronRightIcon}" />
           </Button>
           <!-- コレクション管理(追加/スキャン/削除)入口(ECO-013/IMG-009) -->
-          <Button Classes="railIcon" Command="{Binding OpenFolderManagementCommand}" ToolTip.Tip="コレクションを管理">
+          <Button Classes="railIcon" Command="{Binding OpenFolderManagementCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[collection.manage]}">
             <PathIcon Data="{StaticResource PlusIcon}" />
           </Button>
           <Border Width="30" Height="1" Background="{StaticResource CardBorderBrush}" Margin="0,2" />
@@ -51,10 +51,10 @@
                 <PathIcon Data="{StaticResource ChevronLeftIcon}" />
               </Button>
               <!-- コレクション管理(追加/スキャン/削除)入口(ECO-013/IMG-009) -->
-              <Button DockPanel.Dock="Right" Classes="crumbHome" Command="{Binding OpenFolderManagementCommand}" ToolTip.Tip="コレクションを管理">
+              <Button DockPanel.Dock="Right" Classes="crumbHome" Command="{Binding OpenFolderManagementCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[collection.manage]}">
                 <PathIcon Data="{StaticResource PlusIcon}" />
               </Button>
-              <TextBlock Text="コレクション" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[navigation.collections]}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
             </DockPanel>
           </Border>
           <ScrollViewer Margin="12,8,12,8" HorizontalScrollBarVisibility="Disabled">
@@ -69,7 +69,7 @@
                         <Border Classes="countBadge" HorizontalAlignment="Right">
                           <TextBlock Text="{Binding CountText}" />
                         </Border>
-                        <TextBlock Text="スキャン中" IsVisible="{Binding IsScanning}" FontSize="10.5"
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.scanning]}" IsVisible="{Binding IsScanning}" FontSize="10.5"
                                    Foreground="{StaticResource AccentBrush}" />
                       </StackPanel>
                       <Border DockPanel.Dock="Left" Classes="leadIcon" Width="34" Height="34" Margin="0,0,11,0">
@@ -92,7 +92,7 @@
         <!-- ECO-064/IMG-019: catalog loading/error は未選択・0件と別状態。左ペイン内だけを覆い shell は操作可能。 -->
         <Border IsVisible="{Binding ShowCatalogLoading}" Background="{StaticResource AppBackgroundBrush}">
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="12">
-            <TextBlock Text="コレクションを読み込み中…" TextAlignment="Center" TextWrapping="Wrap"
+            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.loadingCollections]}" TextAlignment="Center" TextWrapping="Wrap"
                        Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
         </Border>
@@ -100,7 +100,7 @@
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="12">
             <TextBlock Text="{Binding CatalogErrorMessage}" TextAlignment="Center" TextWrapping="Wrap"
                        Foreground="{StaticResource TextMutedBrush}" />
-            <Button Content="再試行" Command="{Binding RetryCatalogCommand}" HorizontalAlignment="Center" />
+            <Button Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.retry]}" Command="{Binding RetryCatalogCommand}" HorizontalAlignment="Center" />
           </StackPanel>
         </Border>
       </Panel>
@@ -117,7 +117,7 @@
             </Button>
             <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
               <PathIcon Data="{StaticResource PencilIcon}" Width="17" Height="17" Foreground="{StaticResource AccentBrush}" />
-              <TextBlock Text="タグ編集" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.tagEdit]}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
               <Border Classes="accentPill" IsVisible="{Binding HasSelection}">
                 <TextBlock Text="{Binding SelectionLabel}" />
               </Border>
@@ -133,9 +133,9 @@
             <PathIcon Data="{StaticResource CheckIcon}" Width="26" Height="26" Foreground="{StaticResource FaintTextBrush}"
                       HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
-          <TextBlock Text="画像を選択" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource ChipSimpleFg}"
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[image.feature.selectImages]}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource ChipSimpleFg}"
                      HorizontalAlignment="Center" />
-          <TextBlock Text="タグ付けする画像をグリッドから選んでください。Ctrl＝複数選択 / Shift＝連続選択"
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.selectImagesHint]}"
                      FontSize="12.5" Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap"
                      TextAlignment="Center" MaxWidth="220" />
         </StackPanel>
@@ -145,9 +145,9 @@
           <!-- タブ -->
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*" Margin="14,10,14,0">
             <Button Grid.Column="0" Classes="panelTab" Classes.active="{Binding OnCurrentTab}"
-                    Content="現在のタグ" Command="{Binding TabCurrentCommand}" />
+                    Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.currentTags]}" Command="{Binding TabCurrentCommand}" />
             <Button Grid.Column="1" Classes="panelTab" Classes.active="{Binding OnAddTab}"
-                    Content="タグ追加" Command="{Binding TabAddCommand}" />
+                    Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.addTag]}" Command="{Binding TabAddCommand}" />
           </Grid>
           <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource CardBorderBrush}" />
 
@@ -196,7 +196,7 @@
                   <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />
                   <!-- ECO-040: テーマ既定余白を潰すため VerticalContentAlignment を明示(上寄り防止)。
                        Padding 左右 4 はフォーカス枠へのテキスト密着防止(GF-040-01)。 -->
-                  <TextBox Text="{Binding AddQuery}" PlaceholderText="タグを検索…" BorderThickness="0" Background="Transparent"
+                  <TextBox Text="{Binding AddQuery}" PlaceholderText="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.searchPlaceholder]}" BorderThickness="0" Background="Transparent"
                            VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,0" Width="240" />
                 </StackPanel>
               </Border>
@@ -222,7 +222,7 @@
                                     <StackPanel Orientation="Horizontal" Spacing="3" IsVisible="{Binding Added}">
                                       <PathIcon Data="{StaticResource CheckIcon}" Width="13" Height="13"
                                                 Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
-                                      <TextBlock Classes="addedBadge" Text="追加済" />
+                                      <TextBlock Classes="addedBadge" Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.added]}" />
                                     </StackPanel>
                                     <PathIcon Classes="addAffordance" Data="{StaticResource ChevronDownIcon}"
                                               IsVisible="{Binding ShowCaret}" RenderTransformOrigin="50%,50%">
@@ -243,7 +243,7 @@
                               <!-- インライン候補値(テキスト型) -->
                               <Border Classes="inlinePicker" IsVisible="{Binding ShowText}">
                                 <StackPanel Spacing="8">
-                                  <TextBlock Classes="pickerHint" Text="候補値から選んで付与" />
+                                  <TextBlock Classes="pickerHint" Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.selectFromCandidates]}" />
                                   <ItemsControl ItemsSource="{Binding ValueChips}">
                                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
@@ -265,7 +265,14 @@
                                 <StackPanel Spacing="9">
                                   <DockPanel>
                                     <TextBlock Classes="numCurrent" DockPanel.Dock="Right" Text="{Binding NumCurrent}" />
-                                    <TextBlock Classes="pickerHint" Text="{Binding NumRange, StringFormat='値を選んで付与（{0}）'}" />
+                                    <TextBlock Classes="pickerHint">
+                                      <TextBlock.Text>
+                                        <MultiBinding Converter="{x:Static cv:LocalizedFormatConverter.Instance}">
+                                          <Binding Path="$parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.selectValueToApply]" />
+                                          <Binding Path="NumRange" />
+                                        </MultiBinding>
+                                      </TextBlock.Text>
+                                    </TextBlock>
                                   </DockPanel>
                                   <ItemsControl ItemsSource="{Binding NumCells}">
                                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -284,7 +291,7 @@
                                           CommandParameter="{Binding Id}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                       <PathIcon Data="{StaticResource SortIcon}" Width="14" Height="14" />
-                                      <TextBlock Text="連番で付与…" VerticalAlignment="Center" />
+                                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.applySequential]}" VerticalAlignment="Center" />
                                     </StackPanel>
                                   </Button>
                                 </StackPanel>
@@ -309,12 +316,12 @@
         <!-- ヘッダ -->
         <Border DockPanel.Dock="Top" Classes="editPanelHeader">
           <DockPanel VerticalAlignment="Center">
-            <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding ToggleOrganizeCommand}" ToolTip.Tip="整理を終了">
+            <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding ToggleOrganizeCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.organizeExit]}">
               <PathIcon Data="{StaticResource CloseIcon}" />
             </Button>
             <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
               <PathIcon Data="{StaticResource TuneIcon}" Width="17" Height="17" Foreground="{StaticResource AccentBrush}" />
-              <TextBlock Text="整理" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.organize]}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
             </StackPanel>
           </DockPanel>
         </Border>
@@ -334,7 +341,7 @@
                     <PathIcon Data="{StaticResource CheckIcon}" Width="18" Height="18" Foreground="White"
                               HorizontalAlignment="Center" VerticalAlignment="Center" />
                   </Border>
-                  <TextBlock Text="統合しました" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.consolidated]}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
                              Foreground="{StaticResource TextPrimaryBrush}" />
                 </StackPanel>
                 <TextBlock Text="{Binding DoneSummary}" FontSize="12.5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
@@ -344,13 +351,13 @@
             <Button Classes="toolbarBtn" Height="40" MinHeight="40" IsEnabled="{Binding CanUndo}"
                     Command="{Binding UndoMergeCommand}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                    ToolTip.Tip="直前のマージを取り消す（マージ後に変更が無い場合のみ）">
-              <TextBlock Text="取り消す" VerticalAlignment="Center" />
+                    ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.undoHint]}">
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.undo]}" VerticalAlignment="Center" />
             </Button>
             <TextBlock IsVisible="{Binding HasUndoNote}" Text="{Binding UndoNote}" FontSize="11.5"
                        Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap" TextAlignment="Center" />
             <Button Classes="primaryAction" Command="{Binding ContinueOrganizeCommand}">
-              <TextBlock Text="別の整理を続ける" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.continueOrganizing]}" />
             </Button>
           </StackPanel>
         </ScrollViewer>
@@ -363,12 +370,12 @@
           <!-- PINNED TOP: マージ先(残す1枚) -->
           <StackPanel DockPanel.Dock="Top" Margin="16,14,16,0" Spacing="8">
             <Border Classes="trayBadge dest" HorizontalAlignment="Left">
-              <TextBlock Text="マージ先（残す1枚）" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.targetSlotTitle]}" />
             </Border>
             <Border Classes="organizeSlot target" IsVisible="{Binding HasMergeTarget}">
               <DockPanel>
                 <!-- マージ先の解除(ECO-056/CAD v2 clearDest・A-2 裁定=REQ-067) -->
-                <Button DockPanel.Dock="Right" Classes="iconBtn" ToolTip.Tip="マージ先を解除" VerticalAlignment="Top"
+                <Button DockPanel.Dock="Right" Classes="iconBtn" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.clearTargetTip]}" VerticalAlignment="Top"
                         Command="{Binding ClearMergeTargetCommand}">
                   <PathIcon Data="{StaticResource CloseIcon}" Width="13" Height="13" />
                 </Button>
@@ -383,26 +390,33 @@
                   <StackPanel Orientation="Horizontal" Spacing="4">
                     <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
                               Foreground="{StaticResource OrganizeDestBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="この1枚が残ります" FontSize="11" FontWeight="Bold"
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.thisRemains]}" FontSize="11" FontWeight="Bold"
                                Foreground="{StaticResource OrganizeDestBrush}" VerticalAlignment="Center" />
                   </StackPanel>
                 </StackPanel>
               </DockPanel>
             </Border>
             <Border Classes="trayHint" IsVisible="{Binding ShowMergeTargetPrompt}">
-              <TextBlock Text="グリッドで残したい1枚を選ぶとマージ先になります。" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.pickTargetHint]}" />
             </Border>
           </StackPanel>
 
           <!-- PINNED TOP: 整理対象ヘッダ(件数バッジ+すべて解除) -->
           <DockPanel DockPanel.Dock="Top" Margin="16,12,16,8">
-            <Button DockPanel.Dock="Right" Classes="trayLink" Content="すべて解除"
+            <Button DockPanel.Dock="Right" Classes="trayLink" Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.clearAll]}"
                     IsVisible="{Binding HasOrganizeTargets}" Command="{Binding ClearOrganizeTargetsCommand}" />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Border Classes="trayBadge src">
-                <TextBlock Text="{Binding OrganizeTargets.Count, StringFormat='整理対象 {0}'}" />
+                <TextBlock>
+                  <TextBlock.Text>
+                    <MultiBinding Converter="{x:Static cv:LocalizedFormatConverter.Instance}">
+                      <Binding Path="$parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.organizeTargetsBadge]" />
+                      <Binding Path="OrganizeTargets.Count" />
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
               </Border>
-              <TextBlock Text="宛先へ統合し削除" FontSize="11" Foreground="{StaticResource FaintTextBrush}"
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.consolidateNote]}" FontSize="11" Foreground="{StaticResource FaintTextBrush}"
                          VerticalAlignment="Center" />
             </StackPanel>
           </DockPanel>
@@ -418,7 +432,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="9">
                     <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15"
                               Foreground="{StaticResource AccentBrush}" />
-                    <TextBlock Text="似た画像を探す" FontSize="13" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[similar.findSimilar]}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                   </StackPanel>
                 </DockPanel>
@@ -429,10 +443,10 @@
                   <Border Classes="segmented" IsEnabled="{Binding ShowSearchSettings}">
                     <Grid ColumnDefinitions="*,*">
                       <Button Grid.Column="0" Classes="segBtnText" HorizontalAlignment="Stretch"
-                              Classes.active="{Binding IsCriteriaMethod}" Content="条件検索"
+                              Classes.active="{Binding IsCriteriaMethod}" Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.criteriaSearch]}"
                               Command="{Binding SetSearchMethodCommand}" CommandParameter="criteria" />
                       <Button Grid.Column="1" Classes="segBtnText" HorizontalAlignment="Stretch"
-                              Classes.active="{Binding IsSimilarMethod}" Content="類似画像検索"
+                              Classes.active="{Binding IsSimilarMethod}" Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[similar.title]}"
                               Command="{Binding SetSearchMethodCommand}" CommandParameter="similar" />
                     </Grid>
                   </Border>
@@ -441,7 +455,7 @@
                     <Panel IsVisible="{Binding ShowSearchSettings}">
                     <!-- 条件: 2 列グリッド+チェック行(ECO-055 意味論=マージ先との属性一致・意匠は v2 モック) -->
                     <StackPanel Spacing="8" VerticalAlignment="Top" IsVisible="{Binding IsCriteriaMethod}">
-                      <TextBlock Text="一致を判定する条件" FontSize="11" FontWeight="SemiBold"
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[similar.matchCriteriaHeading]}" FontSize="11" FontWeight="SemiBold"
                                  Foreground="{StaticResource FaintTextBrush}" />
                       <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto,8,Auto">
                         <ToggleButton Grid.Row="0" Grid.Column="0" Classes="condRow" IsChecked="{Binding CondHash}">
@@ -450,7 +464,7 @@
                               <PathIcon Data="{StaticResource CheckIcon}" Width="11" Height="11" Foreground="White"
                                         IsVisible="{Binding $parent[ToggleButton].IsChecked}" />
                             </Border>
-                            <TextBlock Text="ハッシュ値" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.hashValue]}" VerticalAlignment="Center" />
                           </StackPanel>
                         </ToggleButton>
                         <ToggleButton Grid.Row="0" Grid.Column="2" Classes="condRow" IsChecked="{Binding CondExt}">
@@ -459,7 +473,7 @@
                               <PathIcon Data="{StaticResource CheckIcon}" Width="11" Height="11" Foreground="White"
                                         IsVisible="{Binding $parent[ToggleButton].IsChecked}" />
                             </Border>
-                            <TextBlock Text="拡張子" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.extension]}" VerticalAlignment="Center" />
                           </StackPanel>
                         </ToggleButton>
                         <ToggleButton Grid.Row="2" Grid.Column="0" Classes="condRow" IsChecked="{Binding CondSize}">
@@ -468,7 +482,7 @@
                               <PathIcon Data="{StaticResource CheckIcon}" Width="11" Height="11" Foreground="White"
                                         IsVisible="{Binding $parent[ToggleButton].IsChecked}" />
                             </Border>
-                            <TextBlock Text="サイズ" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.size]}" VerticalAlignment="Center" />
                           </StackPanel>
                         </ToggleButton>
                         <ToggleButton Grid.Row="2" Grid.Column="2" Classes="condRow" IsChecked="{Binding CondName}">
@@ -477,7 +491,7 @@
                               <PathIcon Data="{StaticResource CheckIcon}" Width="11" Height="11" Foreground="White"
                                         IsVisible="{Binding $parent[ToggleButton].IsChecked}" />
                             </Border>
-                            <TextBlock Text="ファイル名" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.fileName]}" VerticalAlignment="Center" />
                           </StackPanel>
                         </ToggleButton>
                         <ToggleButton Grid.Row="4" Grid.Column="0" Classes="condRow" IsChecked="{Binding CondDate}">
@@ -486,7 +500,7 @@
                               <PathIcon Data="{StaticResource CheckIcon}" Width="11" Height="11" Foreground="White"
                                         IsVisible="{Binding $parent[ToggleButton].IsChecked}" />
                             </Border>
-                            <TextBlock Text="更新日" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.modifiedDate]}" VerticalAlignment="Center" />
                           </StackPanel>
                         </ToggleButton>
                       </Grid>
@@ -494,9 +508,16 @@
                     <!-- GF-067-02: 表示結果と同じ検証器一致度%をしきい値にする -->
                     <StackPanel Spacing="4" VerticalAlignment="Top" IsVisible="{Binding IsSimilarMethod}">
                       <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding SimilarThresholdLabel, StringFormat='{}{0} 以上'}"
-                                   FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <TextBlock Text="一致度のしきい値" FontSize="11" FontWeight="SemiBold"
+                        <TextBlock DockPanel.Dock="Right"
+                                   FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}">
+                          <TextBlock.Text>
+                            <MultiBinding Converter="{x:Static cv:LocalizedFormatConverter.Instance}">
+                              <Binding Path="$parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.thresholdAtLeast]" />
+                              <Binding Path="SimilarThresholdLabel" />
+                            </MultiBinding>
+                          </TextBlock.Text>
+                        </TextBlock>
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[similar.matchThreshold]}" FontSize="11" FontWeight="SemiBold"
                                    Foreground="{StaticResource FaintTextBrush}" />
                       </DockPanel>
                       <Slider Minimum="50" Maximum="100" Value="{Binding SimilarThreshold}" />
@@ -520,7 +541,7 @@
                           IsEnabled="{Binding CanInvokeSearch}" Command="{Binding RunSearchCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                       <PathIcon Data="{StaticResource SearchIcon}" Width="14" Height="14" />
-                      <TextBlock Text="探す" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[modals.advancedRepair.find]}" VerticalAlignment="Center" />
                     </StackPanel>
                   </Button>
                   <Button Classes="primaryAction" Height="40" IsVisible="{Binding ShowCancelSearch}"
@@ -548,7 +569,7 @@
           <ScrollViewer Margin="16,0,16,8" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
               <Border Classes="trayHint" IsVisible="{Binding ShowOrganizeTargetsPrompt}">
-                <TextBlock Text="まとめる相手がありません。グリッドで選ぶか、下の検索で探します。" />
+                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.noCandidates]}" />
               </Border>
               <ItemsControl ItemsSource="{Binding OrganizeTargets}">
                 <ItemsControl.ItemTemplate>
@@ -556,12 +577,12 @@
                     <Border Classes="organizeSlot" Margin="0,0,0,8">
                       <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                          <Button Classes="iconBtn" ToolTip.Tip="マージ先にする"
+                          <Button Classes="iconBtn" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.setAsTarget]}"
                                   Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).PromoteToMergeTargetCommand}"
                                   CommandParameter="{Binding Id}">
                             <PathIcon Data="{StaticResource ArrowUpIcon}" Width="14" Height="14" />
                           </Button>
-                          <Button Classes="iconBtn" ToolTip.Tip="対象から外す"
+                          <Button Classes="iconBtn" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.removeFromTargets]}"
                                   Command="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).RemoveOrganizeTargetCommand}"
                                   CommandParameter="{Binding Id}">
                             <PathIcon Data="{StaticResource CloseIcon}" Width="13" Height="13" />
@@ -618,7 +639,7 @@
                 <TextBlock Text="{Binding ColumnSortLabel}" FontSize="12.5" VerticalAlignment="Center"
                            Foreground="{StaticResource TextPrimaryBrush}" />
                 <Button Command="{Binding ClearColumnSortCommand}" Background="Transparent" Padding="2"
-                        ToolTip.Tip="ソートを解除" VerticalAlignment="Center">
+                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.clearSort]}" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource CloseIcon}" Width="11" Height="11" Foreground="{StaticResource TextMutedBrush}" />
                 </Button>
               </StackPanel>
@@ -628,7 +649,7 @@
               <Button x:Name="SortTrigger" Classes="toolbarBtn" Command="{Binding ToggleSortMenuCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource SortIcon}" Foreground="{StaticResource FaintTextBrush}" />
-                  <TextBlock Text="並び替え" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.sort]}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
                   <Border Background="{StaticResource CardSelectedBgBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding SortButtonBadge}" FontSize="11.5" Foreground="{StaticResource AccentBrush}" />
                   </Border>
@@ -640,8 +661,8 @@
                 <Border Classes="popupMenu" Width="248">
                   <StackPanel>
                     <StackPanel Margin="12,10,12,6">
-                      <TextBlock Text="並び替え" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                      <TextBlock Text="ビューの表示列から選択" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.sort]}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.sortFromDisplayColumns]}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
                     </StackPanel>
                     <ItemsControl ItemsSource="{Binding SortColumns}">
                       <ItemsControl.Styles>
@@ -677,10 +698,10 @@
                     <Border Classes="segmented" Margin="12,6,12,10">
                       <StackPanel Orientation="Horizontal" Spacing="2">
                         <Button Classes="segBtn" Classes.active="{Binding SortAscActive}" Command="{Binding SetSortAscCommand}">
-                          <TextBlock Text="昇順" FontSize="12.5" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.ascending]}" FontSize="12.5" />
                         </Button>
                         <Button Classes="segBtn" Classes.active="{Binding SortDescActive}" Command="{Binding SetSortDescCommand}">
-                          <TextBlock Text="降順" FontSize="12.5" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.descending]}" FontSize="12.5" />
                         </Button>
                       </StackPanel>
                     </Border>
@@ -690,10 +711,10 @@
             </Panel>
             <Border Classes="segmented">
               <StackPanel Orientation="Horizontal" Spacing="2">
-                <Button Classes="segBtn" Classes.active="{Binding IsGrid}" Command="{Binding SetGridCommand}" ToolTip.Tip="グリッド">
+                <Button Classes="segBtn" Classes.active="{Binding IsGrid}" Command="{Binding SetGridCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.grid]}">
                   <PathIcon Data="{StaticResource GridIcon}" />
                 </Button>
-                <Button Classes="segBtn" Classes.active="{Binding IsList}" Command="{Binding SetListCommand}" ToolTip.Tip="リスト">
+                <Button Classes="segBtn" Classes.active="{Binding IsList}" Command="{Binding SetListCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.list]}">
                   <PathIcon Data="{StaticResource ViewListIcon}" />
                 </Button>
               </StackPanel>
@@ -707,7 +728,7 @@
           <WrapPanel x:Name="LeftCluster" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding LeftClusterColumnSpan}"
                      Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <TextBlock Text="表示" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource FaintTextBrush}"
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.view]}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource FaintTextBrush}"
                          VerticalAlignment="Center" />
               <Panel>
                 <Button x:Name="AxisTrigger" Classes="toolbarBtn" Padding="12,0" Command="{Binding ToggleAxisMenuCommand}">
@@ -767,7 +788,7 @@
               <Button x:Name="ColumnsTrigger" Classes="toolbarBtn" Padding="12,0" Command="{Binding ToggleColumnPickerCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource ViewColumnIcon}" Foreground="{StaticResource FaintTextBrush}" />
-                  <TextBlock Text="表示列" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[filelist.columnsButton]}" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
                   <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
                 </StackPanel>
               </Button>
@@ -814,7 +835,7 @@
                       IsEnabled="{Binding CanAddToWork}" Command="{Binding AddToWorkCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource PlusIcon}" Width="16" Height="16" />
-                  <TextBlock Text="追加" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.add]}" VerticalAlignment="Center" />
                   <Border Classes="workAddBadge" IsVisible="{Binding HasWorkSelection}">
                     <TextBlock Text="{Binding WorkSelCount}" />
                   </Border>
@@ -831,14 +852,14 @@
               <Button Classes="toolbarBtn" IsVisible="{Binding DeleteMode}" Command="{Binding ExitDeleteCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource CloseIcon}" />
-                  <TextBlock Text="削除を終了" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.deleteExit]}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <Button Classes="delMoveBtn" Classes.ready="{Binding CanDeleteToTrash}" IsVisible="{Binding DeleteMode}"
                       IsEnabled="{Binding CanDeleteToTrash}" Command="{Binding DeleteToTrashCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" />
-                  <TextBlock Text="ゴミ箱へ移動" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.moveToTrash]}" VerticalAlignment="Center" />
                   <Border Classes="delMoveBadge" IsVisible="{Binding HasDeleteSelection}">
                     <TextBlock Text="{Binding DeleteSelCount}" />
                   </Border>
@@ -846,7 +867,7 @@
               </Button>
               <!-- ⋯ = メンテナンスメニュー(修復/削除/ゴミ箱・ECO-015/018)。モード中は隠す(InAnyMode に作業・削除を含む) -->
               <Panel IsVisible="{Binding !InAnyMode}">
-                <Button x:Name="MoreTrigger" Classes="toolbarBtn square" Command="{Binding ToggleMoreMenuCommand}" ToolTip.Tip="その他">
+                <Button x:Name="MoreTrigger" Classes="toolbarBtn square" Command="{Binding ToggleMoreMenuCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.more]}">
                   <PathIcon Data="{StaticResource MoreIcon}" />
                 </Button>
                 <Popup PlacementTarget="{Binding #MoreTrigger}" Placement="BottomEdgeAlignedRight"
@@ -857,7 +878,7 @@
                       <Button Classes="menuRow" IsVisible="{Binding StowOrganizeToMenu}" Command="{Binding ToggleOrganizeCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                           <PathIcon Data="{StaticResource TuneIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
-                          <TextBlock Text="整理" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.organize]}" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
                         </StackPanel>
                       </Button>
                       <Border Height="1" Background="{StaticResource CardBorderBrush}" Margin="8,4" IsVisible="{Binding StowOrganizeToMenu}" />
@@ -865,14 +886,14 @@
                       <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                           <PathIcon Data="{StaticResource RepairIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
-                          <TextBlock Text="修復" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.repair]}" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
                         </StackPanel>
                       </Button>
                       <!-- 削除: 削除モードに入る(ECO-018・赤) -->
                       <Button Classes="menuRow" Command="{Binding EnterDeleteCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                           <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" Foreground="#C4282D" />
-                          <TextBlock Text="削除" FontSize="13.5" FontWeight="SemiBold" Foreground="#C4282D" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.delete]}" FontSize="13.5" FontWeight="SemiBold" Foreground="#C4282D" />
                         </StackPanel>
                       </Button>
                       <!-- ゴミ箱: 既存トラッシュモーダル(ECO-015・改名)+ deleted 件数バッジ -->
@@ -882,7 +903,7 @@
                           <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding Trash.HasTrash}">
                             <TextBlock Text="{Binding Trash.TrashCount}" />
                           </Border>
-                          <TextBlock Text="ゴミ箱" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.trash]}" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
                         </DockPanel>
                       </Button>
                       <!-- 設定への誘導 1 項目(ECO-077/SS-001 再裁定=M5: 書き出す/取り込むの実体は
@@ -895,7 +916,7 @@
                           <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                             <PathIcon Width="16" Height="16" Foreground="#6B5BD2"
                                       Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" />
-                            <TextBlock x:Name="BackupGuideText" Text="設定でバックアップ・移送…" FontSize="13.5"
+                            <TextBlock x:Name="BackupGuideText" Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.backupTransferGuide]}" FontSize="13.5"
                                        FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                           </StackPanel>
                         </Border>
@@ -914,7 +935,7 @@
               Background="#F3F8FF" BorderBrush="#CFE0FC" BorderThickness="0,0,0,1" Padding="18,8">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <PathIcon Data="{StaticResource RestoreIcon}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
-          <TextBlock Text="スキャン中 — 処理済みの画像から表示しています" FontSize="12.5"
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.scanningPartial]}" FontSize="12.5"
                      Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
         </StackPanel>
       </Border>
@@ -976,7 +997,7 @@
               Background="{StaticResource AppBackgroundBrush}">
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <PathIcon Data="{StaticResource InfoIcon}" />
-          <TextBlock Text="このフォルダにはタグ付き画像がありません" />
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tag.filter.noTaggedImages]}" />
         </StackPanel>
       </Border>
 
@@ -985,25 +1006,25 @@
         <!-- ECO-064/IMG-019: 選択collection contentのloading/error。catalogやshellとは独立。 -->
         <StackPanel IsVisible="{Binding ShowContentLoading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
           <PathIcon Data="{StaticResource ImageIcon}" Width="40" Height="40" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
-          <TextBlock Text="画像を読み込み中…" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.loadingImages]}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
         </StackPanel>
 
         <StackPanel IsVisible="{Binding HasContentError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
           <TextBlock Text="{Binding ContentErrorMessage}" Foreground="{StaticResource TextMutedBrush}"
                      TextAlignment="Center" TextWrapping="Wrap" />
-          <Button Content="再試行" Command="{Binding RetryContentCommand}" HorizontalAlignment="Center" />
+          <Button Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.retry]}" Command="{Binding RetryContentCommand}" HorizontalAlignment="Center" />
         </StackPanel>
 
         <!-- 未選択プロンプト(REQ-053): コレクションを選ぶまで横断表示しない -->
         <StackPanel IsVisible="{Binding ShowCollectionPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
           <PathIcon Data="{StaticResource FolderIcon}" Width="44" Height="44" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
-          <TextBlock Text="左のコレクションを選択してください" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.selectCollectionPrompt]}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
         </StackPanel>
 
         <!-- 画像 0 件の空状態(コレクション選択済み) -->
         <StackPanel IsVisible="{Binding ShowEmptyMessage}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
           <PathIcon Data="{StaticResource ImageIcon}" Width="40" Height="40" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
-          <TextBlock Text="画像がありません" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[collection.noImages]}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
         </StackPanel>
 
         <!-- グリッド(ECO-026/#1: REQ-041/KBOM 適合の仮想化。旧 ItemsControl+WrapPanel=非仮想化 → ItemsRepeater+
@@ -1043,13 +1064,13 @@
                         <PathIcon Data="{StaticResource CheckIcon}" />
                       </Border>
                       <Border Classes="cellTag dest" IsVisible="{Binding IsMergeTarget}">
-                        <TextBlock Text="宛先" />
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.colDestination]}" />
                       </Border>
                       <Border Classes="thumbCheck selected" IsVisible="{Binding IsOrganizeTarget}">
                         <PathIcon Data="{StaticResource CheckIcon}" />
                       </Border>
                       <Border Classes="cellTag" IsVisible="{Binding IsOrganizeTarget}">
-                        <TextBlock Text="対象" />
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[merge.colTarget]}" />
                       </Border>
                       <ItemsControl ItemsSource="{Binding TagDots}" IsVisible="{Binding HasTagDots}"
                                     HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="7">
@@ -1075,7 +1096,7 @@
                                  Foreground="{Binding SortItemCell.Color, FallbackValue=Gray}" />
                       <TextBlock Text="{Binding SortItemCell.Text}" FontSize="10.5" IsVisible="{Binding SortItemCell.HasValue}"
                                  Foreground="{Binding SortItemCell.Color, FallbackValue=Gray}" />
-                      <TextBlock Text="未設定" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.notSet]}" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
                     </StackPanel>
                     <Panel IsVisible="{Binding SortItemCell.IsTextCell}" VerticalAlignment="Center">
                       <TextBlock Text="{Binding SortItemCell.Text}" FontSize="10.5" IsVisible="{Binding SortItemCell.HasValue}"
@@ -1085,8 +1106,8 @@
                     <StackPanel Orientation="Horizontal" Spacing="3" IsVisible="{Binding SortItemCell.IsSimple}" VerticalAlignment="Center">
                       <Ellipse Width="8" Height="8" Fill="{Binding SortItemCell.Color, FallbackValue=Transparent}"
                                IsVisible="{Binding SortItemCell.HasValue}" VerticalAlignment="Center" />
-                      <TextBlock Text="あり" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding SortItemCell.HasValue}" />
-                      <TextBlock Text="なし" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.valuePresent]}" FontSize="10.5" Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding SortItemCell.HasValue}" />
+                      <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.valueAbsent]}" FontSize="10.5" Foreground="{StaticResource FaintTextBrush}" IsVisible="{Binding SortItemCell.IsEmpty}" />
                     </StackPanel>
                   </StackPanel>
                  </StackPanel>
@@ -1210,7 +1231,7 @@
                                            IsVisible="{Binding HasValue}" VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding Text}" Foreground="{Binding Color, FallbackValue=Gray}"
                                            IsVisible="{Binding HasValue}" VerticalAlignment="Center" />
-                                <TextBlock Text="未設定" Foreground="{StaticResource FaintTextBrush}"
+                                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.notSet]}" Foreground="{StaticResource FaintTextBrush}"
                                            IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" />
                               </StackPanel>
                               <!-- text(値チップ) / — -->
@@ -1255,11 +1276,11 @@
                   <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource ChevronLeftIcon}" Width="14" Height="14"
                               Foreground="{StaticResource AccentBrush}" />
-                    <TextBlock Text="グリッドへ" FontSize="12.5" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.toGrid]}" FontSize="12.5" FontWeight="SemiBold"
                                Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
-                <TextBlock Text="検索結果" FontSize="13.5" FontWeight="SemiBold"
+                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.searchResults]}" FontSize="13.5" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding SearchResultsSubLabel}" FontSize="12.5"
                            Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
@@ -1270,7 +1291,7 @@
           <StackPanel Margin="18,14">
             <StackPanel IsVisible="{Binding NoSearchResults}" HorizontalAlignment="Center" Spacing="10" Margin="0,40">
               <PathIcon Data="{StaticResource SearchIcon}" Width="34" Height="34" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
-              <TextBlock Text="候補が見つかりませんでした" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+              <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.noCandidatesFound]}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
             </StackPanel>
             <ItemsControl ItemsSource="{Binding SearchResults}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -1292,12 +1313,12 @@
                                 CommandParameter="{Binding Id}">
                           <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                             <PathIcon Data="{StaticResource PlusIcon}" Width="13" Height="13" />
-                            <TextBlock Text="追加" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.add]}" VerticalAlignment="Center" />
                           </StackPanel>
                         </Button>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding Added}">
                           <PathIcon Data="{StaticResource CheckIcon}" Width="13" Height="13" Foreground="{StaticResource AccentBrush}" />
-                          <TextBlock Text="追加済" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[tagging.added]}" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="Medium" Foreground="{StaticResource TextPrimaryBrush}"
                                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
@@ -1323,7 +1344,7 @@
           <!-- header -->
           <Border DockPanel.Dock="Top" Classes="trashPopupHeader">
             <DockPanel VerticalAlignment="Center">
-              <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding Trash.CloseTrashCommand}" ToolTip.Tip="閉じる">
+              <Button DockPanel.Dock="Right" Classes="iconBtn" Command="{Binding Trash.CloseTrashCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[common.close]}">
                 <PathIcon Data="{StaticResource CloseIcon}" />
               </Button>
               <Button DockPanel.Dock="Right" Classes="toolbarBtn" Height="32" MinHeight="32" Padding="11,0" Margin="0,0,8,0"
@@ -1335,8 +1356,8 @@
               </Button>
               <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource TrashIcon}" Width="18" Height="18" Foreground="{StaticResource FaintTextBrush}" />
-                <TextBlock Text="ゴミ箱" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="削除済み画像" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.trash]}" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[trash.deletedImages]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                 <Border Classes="trashCountBadge" IsVisible="{Binding Trash.HasTrashItems}">
                   <TextBlock Text="{Binding Trash.TrashPopupCount}" />
                 </Border>
@@ -1352,7 +1373,7 @@
                         IsEnabled="{Binding Trash.CanRestoreTrash}" Command="{Binding Trash.RestoreSelectedTrashCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource RestoreIcon}" Width="16" Height="16" />
-                    <TextBlock Text="復元" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[trash.restore]}" VerticalAlignment="Center" />
                     <Border Classes="trashRestoreBadge" IsVisible="{Binding Trash.HasTrashSel}"><TextBlock Text="{Binding Trash.TrashSelCount}" /></Border>
                   </StackPanel>
                 </Button>
@@ -1360,7 +1381,7 @@
                         IsEnabled="{Binding Trash.CanPurgeTrash}" Command="{Binding Trash.PurgeSelectedTrashCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource TrashIcon}" Width="16" Height="16" />
-                    <TextBlock Text="完全削除" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[trash.purge]}" VerticalAlignment="Center" />
                     <Border Classes="delMoveBadge" IsVisible="{Binding Trash.HasTrashSel}"><TextBlock Text="{Binding Trash.TrashSelCount}" /></Border>
                   </StackPanel>
                 </Button>
@@ -1371,7 +1392,7 @@
                 <Button Classes="trashEmptyBtn" Command="{Binding Trash.EmptyTrashCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource TrashIcon}" Width="15" Height="15" />
-                    <TextBlock Text="ゴミ箱を空にする" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[modals.trash.emptyTrash]}" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
               </StackPanel>
@@ -1413,8 +1434,8 @@
                           HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
               <StackPanel Spacing="2">
-                <TextBlock Text="ゴミ箱は空です。" FontSize="13.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
-                <TextBlock Text="削除した画像はここに移動します。" FontSize="13.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[trash.emptyStateFull]}" FontSize="13.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[trash.emptyStateHint]}" FontSize="13.5" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
               </StackPanel>
             </StackPanel>
           </Panel>

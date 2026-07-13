@@ -31,7 +31,7 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
+            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
 
         Assert.Equal(70, vm.SimilarThreshold); // REQ-064/065: 既定 70(範囲 50〜100)
         Assert.Equal("70%", vm.SimilarThresholdLabel); // GF-067-01: 同じ検索条件を数値で再現可能
@@ -54,7 +54,8 @@ public sealed class CpUi050ThresholdDefaultTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new ImageSorter(), new AppSettings());
+            new StubWindowService(), new ImageSorter(), new AppSettings(),
+            TestLoc.Ja());
 
         Assert.Equal(70, vm.SimilarThreshold); // REQ-064/065: 既定 70(整理トレイと同値=転写ドリフト防止)
         Assert.Equal("70%", vm.SimilarThresholdLabel); // GF-067-01: 画像/作業タブで同じ数値契約

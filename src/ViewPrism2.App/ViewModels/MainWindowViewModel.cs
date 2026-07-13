@@ -57,7 +57,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ImageTab = new ImageTabViewModel(folders, images, tags, sorter, views, graphBuilder, pathConverter, evaluator, similar, merge, trash, windows, settings, workspaces, localization, scanCoordinator);
 
         // 作業タブ surface(第3タブ・ECO-020)。
-        WorkTab = new WorkTabViewModel(workspaces, folders, tags, similar, merge, trash, windows, sorter, settings);
+        WorkTab = new WorkTabViewModel(workspaces, folders, tags, similar, merge, trash, windows, sorter, settings, localization);
 
         // タグ タブでの永続変更(タグ・ビュー・階層)は次回画像タブ表示時に反映する(stale フラグ)。
         TagsTab.DataChanged += (_, _) => _imagesTabStale = true;

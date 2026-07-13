@@ -391,7 +391,7 @@ public sealed class CpPackage073Tests : IDisposable
             new SimilaritySearchService(_target.Folders, _target.Images, _target.Features, _target.Similarities, new FakePHashImageReader(), _target.Clock),
             new MergeService(_target.Images, _target.Tags, _target.Merges),
             new TrashService(_target.Images, _target.Folders, new FilePresenceProbe()),
-            win, new AppSettings(), new WorkspaceService(_target.Workspaces, _target.Clock), TestLoc.Empty());
+            win, new AppSettings(), new WorkspaceService(_target.Workspaces, _target.Clock), TestLoc.Ja());
         await vm.InitializeAsync(folder.Id);
 
         await vm.OpenBackupSettingsCommand.ExecuteAsync(null);

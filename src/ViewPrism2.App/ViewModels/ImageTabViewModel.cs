@@ -129,6 +129,10 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- ゴミ箱フィーチャ(ECO-018/ECO-019)は子 VM へ移送(ECO-036 第1段) ----
     public ImageTabTrashViewModel Trash { get; }
 
+    /// <summary>XAML 文言バインディング用の i18n プロキシ(ECO-079: 画像タブの直書き文言を Loc[key] 経由へ)。
+    /// CultureChanged で差し替えて全文言を一斉再バインドする(K-AVALONIA の罠対策=TagsTabViewModel の DF-3 に同じ)。</summary>
+    public LocalizationProxy Loc { get; private set; } = null!;
+
     public ImageTabViewModel(
         ISyncFolderRepository folders,
         IImageRepository images,
@@ -160,6 +164,13 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _settings = settings;
         Work = new ImageTabWorkViewModel(workspaces);
         _localization = localization;
+        Loc = new LocalizationProxy(localization);
+        localization.CultureChanged += (_, _) =>
+        {
+            // ECO-079/DF-3: Loc 差し替えで画像タブ全文言バインディングを再評価させる
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
         _scans = scanCoordinator;
         if (_scans is not null)
         {

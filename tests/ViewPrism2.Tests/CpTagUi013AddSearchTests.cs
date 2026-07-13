@@ -72,7 +72,7 @@ public sealed class CpTagUi013AddSearchTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
+            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
         await vm.InitializeAsync(col.Id);
         vm.ToggleEditCommand.Execute(null);
         vm.HandleItemClick(vm.Items.Single(i => !i.IsFolder), false, false);
@@ -97,7 +97,8 @@ public sealed class CpTagUi013AddSearchTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new ImageSorter(), new AppSettings());
+            new StubWindowService(), new ImageSorter(), new AppSettings(),
+            TestLoc.Ja());
         await vm.InitializeAsync();
         vm.ToggleEditCommand.Execute(null);
         vm.HandleItemClick(vm.Items.Single(i => i.Id == "img-a"), ctrl: false, shift: false);

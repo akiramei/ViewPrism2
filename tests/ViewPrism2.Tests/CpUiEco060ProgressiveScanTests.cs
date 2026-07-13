@@ -88,7 +88,7 @@ public sealed class CpUiEco060ProgressiveScanTests : IDisposable
             new SimilaritySearchService(_db.Folders, images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(images, _db.Tags, _db.Merges),
             new TrashService(images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty(), coordinator);
+            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja(), coordinator);
 
     private static string[] FileNames(ImageTabViewModel vm)
         => vm.Items.Where(x => !x.IsFolder).Select(x => x.Name).ToArray();

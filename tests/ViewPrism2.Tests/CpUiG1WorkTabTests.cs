@@ -79,7 +79,8 @@ public sealed class CpUiG1WorkTabTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new TruePresenceProbe()),
-            windows ?? new StubWindowService(), new ImageSorter(), settings ?? new AppSettings());
+            windows ?? new StubWindowService(), new ImageSorter(), settings ?? new AppSettings(),
+            TestLoc.Ja());
 
     /// <summary>ECO-068: 作業タブ閲覧モードのダブルクリックは、現在の可視順でビューアーを起動する。</summary>
     [Fact]

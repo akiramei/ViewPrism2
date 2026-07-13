@@ -188,7 +188,7 @@ public sealed class CpSnapshot072Tests : IDisposable
         var restartRequested = 0;
         var confirmAnswer = false;
         var vm = new SnapshotViewModel(
-            service, settings, store, TestLoc.Empty(),
+            service, settings, store, TestLoc.Ja(),
             _ => Task.FromResult<string?>(null),
             _ => Task.FromResult(confirmAnswer),
             () => restartRequested++);

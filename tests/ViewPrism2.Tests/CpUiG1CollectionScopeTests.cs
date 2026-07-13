@@ -107,7 +107,7 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
             new SimilaritySearchService(_db.Folders, images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(images, tags, _db.Merges),
             new TrashService(images, _db.Folders, new FilePresenceProbe()),
-            new StubWindowService(), settings, new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Empty());
+            new StubWindowService(), settings, new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
     }
 
     private class RepositorySpy<T> : DispatchProxy where T : class

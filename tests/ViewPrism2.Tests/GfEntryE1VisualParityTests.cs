@@ -184,9 +184,11 @@ public sealed class GfEntryE1VisualParityTests : IDisposable
     {
         await Session.Dispatch(() =>
         {
-            // ImageTabView の ⋯ Popup は XAML 静的内容(文言/太字/ハイライトはインライン指定)。
-            // Popup.Child の論理ツリーを未表示のまま検査する(開閉やレイアウトに依存しない構造契約)。
-            var view = new ImageTabView();
+            // ImageTabView の ⋯ Popup は XAML 静的内容(太字/ハイライトはインライン指定)。
+            // ECO-079: 文言は Loc[key] バインドへ移行したため、実 loc(ja)を持つ VM を DataContext に与えて
+            // 論理ツリーで解決させる($parent[UserControl] は論理祖先探索のため未表示 Popup でも解決)。
+            var view = new ImageTabView { DataContext = TestImageTab.NewVm(_db) };
+            RunJobs();
             var menu = view.GetLogicalDescendants().OfType<Popup>()
                 .Select(p => p.Child)
                 .OfType<Control>()

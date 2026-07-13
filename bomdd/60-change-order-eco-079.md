@@ -71,5 +71,33 @@
 
 ## §6 残ゲート
 
-- **gate① 裁定: 不要**(実装逸脱と確定・CAD 健全・視覚不変)。`/eco-fix eco-079` で是正着手可。
+- **gate① 裁定: 不要**(実装逸脱と確定・CAD 健全・視覚不変)。→ 是正完了(§7)。
 - **gate② golden**: 言語切替(ja⇔en)で画像タブ・作業タブの全文言が切り替わることの maintainer 実機確認。R7 セルフゴールデン=日本語 mock(CAD captures)との並置に加え、**en 表示時のはみ出し/切れ**を確認(英字は日本語より長くなり得るためレイアウト観点も含める)。
+
+## §7 実施記録(2026-07-13 /eco-fix)
+
+### プローブ先行(R5)= 赤の実測裏取り
+
+- **静的 lint プローブ**を新設(`CpI18n010XamlLintTests`・谷間是正を兼ねる恒久ガード): ImageTabView/WorkTabView の非コメント XAML に文言バインディングでない直書き日本語が無いことを検査。是正**前**(fixed axaml を stash して HEAD へ戻した状態)で実行 → **2 件不合格**(ImageTabView・WorkTabView=診断どおり・件数は起票時実測 88/80)。是正後に緑転。
+- 機能プローブ `CpI18n010TabKeysTests`= 代表キー(navigation.collections/toolbar.organize/view.scanning/StringFormat 書式等)が ja/en で解決し en 切替で英語化することを固定。
+
+### 是正(案A採用=真因構造を消す)
+
+TagsTabView と同一の DF-3 パターンで両タブを i18n 配線:
+- **VM**: ImageTabViewModel(`_localization` 受領済)・WorkTabViewModel(`LocalizationService` を DI 追加)に `Loc` プロキシを公開し、`CultureChanged` で差し替え+`OnPropertyChanged(nameof(Loc))`。MainWindowViewModel の WorkTab 構築へ `localization` を伝搬。
+- **XAML**: 両 axaml の直書き文言 168 サイトを `{Binding $parent[UserControl].((vm:XxxTabViewModel)DataContext).Loc[key]}`(祖先形=全 DataContext スコープで安全)へ置換。StringFormat 6 本(NumRange/OrganizeTargets.Count/SimilarThresholdLabel)は新設 `LocalizedFormatConverter`(IMultiValueConverter・`{x:Static}` 単一実体)+ MultiBinding で「Loc[書式] + 値」に統一(テンプレートも言語切替へ追随)。
+- **i18n**: 既存キー再利用 94 マッピング中、不足分 58 キー(3 書式含む)を ja/en へ追加。**転写ドリフト 0 を実測**=束ねた 94 マッピング全ての ja 値が元の直書き文字列と完全一致(視覚不変=R7 セルフゴールデンの核を機械保証)。CAD/mock は不変。
+- **テスト影響(必要な追随)**: 直書き→Loc バインド化で描画テキストが loc 依存になったため、View を描画して文言を検査するテストの loc を空辞書→実アセット(`TestLoc.Ja()`)へ統一(Empty 19+inline 5 箇所)。両 VM は `T(` 呼び出し 0 のため VM 計算値は不変=挙動テストへの影響なし。VC8(GfEntryE1・⋯メニュー構造 probe)は DataContext 無し描画を前提にしていたため、共有ビルダー `TestImageTab.NewVm` で実 loc を持つ ImageTabViewModel を DataContext に与え、論理祖先で Loc を解決(未表示 Popup でも `$parent[UserControl]` は論理探索のため解決を実測確認)。
+
+### 機械受入(4 点・全緑)
+
+- `dotnet build ViewPrism2.sln`: **0 warning / 0 error**。
+- Tests: **658/658**(旧 655 + 新規プローブ 3)。`dotnet test`(全並列)で無関係の既存フレーク(CpWorkspace028=Dapper Int64→Int32・並列 SQLite 共有)が断続再現したため、memory の実行規律どおり **exe 直接実行で 658/658 を確定**(当該フレークは isolation 10/10 緑・本変更は WorkspaceService 不変=51-cheat-log 記録・R3)。
+- Oracle: **109 pass / 2 known skip**(R6 不変)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+
+### R7 セルフゴールデン(UI fix)
+
+視覚不変(ja 表示は現状と同一)を機械保証: ①転写ドリフト 0 の実測(上記)②描画テスト(Img014 等)が ja レンダリングで従来の日本語ラベルを検出=現状維持③機能プローブが en 解決を裏取り。CAD captures は ja のため ja 不変=並置一致は構成上自明。en 表示は新規挙動(CAD に en capture 無し)=maintainer 実機の golden 観点(はみ出し/切れ)へ委ねる。
+
+**次 gate=② golden**(下記 golden 基準)。

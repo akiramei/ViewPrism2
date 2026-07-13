@@ -92,10 +92,15 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private int _trashCount;
     private readonly List<string> _trashSel = new();
 
+    /// <summary>XAML 文言バインディング用の i18n プロキシ(ECO-079: 作業タブの直書き文言を Loc[key] 経由へ)。
+    /// CultureChanged で差し替えて全文言を一斉再バインドする(K-AVALONIA の罠対策=TagsTabViewModel の DF-3 に同じ)。</summary>
+    public LocalizationProxy Loc { get; private set; }
+
     public WorkTabViewModel(
         WorkspaceService workspaces, ISyncFolderRepository folders, ITagRepository tags,
         SimilaritySearchService similar, MergeService merge, TrashService trash,
-        IWindowService windows, ImageSorter sorter, AppSettings settings)
+        IWindowService windows, ImageSorter sorter, AppSettings settings,
+        LocalizationService localization)
     {
         _workspaces = workspaces;
         _folders = folders;
@@ -107,6 +112,13 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _windows = windows;
         _sorter = sorter;
         _settings = settings;
+        Loc = new LocalizationProxy(localization);
+        localization.CultureChanged += (_, _) =>
+        {
+            // ECO-079/DF-3: Loc 差し替えで作業タブ全文言バインディングを再評価させる
+            Loc = new LocalizationProxy(localization);
+            OnPropertyChanged(nameof(Loc));
+        };
         _searchSession.PropertyChanged += (_, _) => OnPropertyChanged(string.Empty);
     }
 

@@ -1,13 +1,16 @@
 using ViewPrism2.Core.Services;
+using ViewPrism2.Infrastructure.I18n;
 
 namespace ViewPrism2.Tests;
 
 /// <summary>
-/// テスト用の最小 LocalizationService。ローカライズを検査しないテスト(ImageTabViewModel 構築など)向けに、
-/// 空リソースの loc を1つ用意する(欠落キーはキー文字列を返すため挙動検査には影響しない)。
+/// テスト用 LocalizationService。ECO-079 以降、画像/作業タブの文言は XAML 直書きから Loc[key] バインドへ
+/// 移行したため、View を描画して文言を検査するテストは実アセット(ja 既定)で解決する必要がある。
+/// VM 構築の共通ヘルパーは <see cref="Ja"/>(実 Assets/i18n を読み込む)を用いる。
 /// </summary>
 internal static class TestLoc
 {
-    public static LocalizationService Empty() =>
-        new(new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal));
+    /// <summary>実 Assets/i18n を読み込んだ loc(既定 ja)。View 描画+文言検査のあるテストはこれを使う。</summary>
+    public static LocalizationService Ja() =>
+        new(I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")), "ja");
 }
