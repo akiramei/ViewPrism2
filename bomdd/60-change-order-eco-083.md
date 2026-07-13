@@ -84,13 +84,46 @@
 3. `HeadlessApp` クラスコメントへ「並列安全はループが生きている限り」の但し書きを追記(暗黙前提の明示化)。
 4. 台帳同期: M-HARNESS-015 `fail_closed` へ ECO-083 節(Headless fail-fast 契約)。
 
-### 機械受入(4 点・全緑)
+### 機械受入(第 1 段・全緑)
 
 - `dotnet build ViewPrism2.sln`: 0 warning / 0 error。
-- `dotnet test tests/ViewPrism2.Tests`: **666/666**(665+新規 pin 1・16.9 秒・正本経路=HangDump 宣言込み)。
+- `dotnet test tests/ViewPrism2.Tests`: 全緑(正本経路=HangDump 宣言込み)。
 - `dotnet test tests/ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。
 - `python bomdd/validate_bom.py`: 0 error / 0 warning。
 
 R7 セルフゴールデン: 対象外(UI 不変・製品 src 不変)。一時プローブは削除済み。
+
+## §9 実発火の捕獲と真因の深化(2026-07-13・fix 第 2 段=真因除去)
+
+### 監視(案D)が初回フル run で実発火を捕獲=真犯人と発生源が完全確定
+
+第 1 段コミット直後の exe フル run で監視が**本物のループ死を即時捕獲**し、原因例外+完全スタックを顕在化:
+
+```
+InvalidOperationException: The calling thread cannot access this object because a different thread owns it.
+  at Avalonia.Threading.Dispatcher.VerifyAccess()
+  at Avalonia.Rendering.DefaultRenderLoop.Add(IRenderLoopTask)
+  at ...ServerCompositor..ctor → Compositor..ctor
+  at Avalonia.Headless.AvaloniaHeadlessPlatform.Initialize
+  at Avalonia.AppBuilder.SetupUnsafe()
+  at Avalonia.Headless.HeadlessUnitTestSession.EnsureIsolatedApplication()   ← §2 仮説(a)=try 外
+  at HeadlessUnitTestSession.DispatchCore.b__0 → StartNew ループ
+```
+
+**診断の更新**: 発生源は §2 仮説 (b)(RunJobs の残留ジョブ)ではなく**仮説 (a) 側=`EnsureIsolatedApplication`**。真因の核心は **`StartNew(Type)` の既定 isolation が `PerTest`** であること — Dispatch **ごと**に `Dispatcher.ResetBeforeUnitTests + SetupUnsafe`(Avalonia プラットフォーム再初期化=Compositor/RenderLoop 再構築)が走り、この再構築が間欠的にスレッドアフィニティ違反(`VerifyAccess` 失敗)を起こし、保護外のためループごと死んでいた。**HeadlessApp のクラスコメント(「プロセス共有・Setup はプロセス 1 回制約」=共有前提)と実装(既定 PerTest=毎回再初期化)が乖離していた**。
+
+### fix 第 2 段(真因構造そのものを消す)
+
+`HeadlessUnitTestSession.StartNew(typeof(Entry), AvaloniaTestIsolationLevel.PerAssembly)` へ明示 — 単一 Application/Dispatcher を全テストで再利用(`EnsureSharedApplication` 経路=Setup は初回 1 回)。毎 Dispatch 再初期化の構造自体が消える。本セッションの元来の設計意図(App リソース共有)とも一致。FailFast 監視(第 1 段)は**多層防御として維持**(将来別経路でループが死んだ場合の即時診断)。
+
+### 実測(第 2 段後)
+
+- dotnet test フル run **×12: ハング/FailFast 発火 0**(是正前 2/15)。
+- 全テスト挙動不変: 665/665 緑の run が 10/12(PerAssembly 化による恒常的な赤なし)。
+- 非ハング fail 2 回は**別欠陥(ECO-082 ファミリー=並列フレーク)**: run2=`SqliteCommand.DisposePreparedStatements` の NRE(CpUiRepairViewModelTests・TempDb.Dispose とテスト内 background タスクの競合疑い=**新証拠として ECO-082 へ記録**)・run7=詳細不明(後続 run がログを上書き・非ハングのみ確認)。R3 により本 ECO の diff には含めない。
+
+### 機械受入(第 2 段・全緑)
+
+- build 0/0・`dotnet test` Tests **665/665**(単発確認・正本経路)・Oracle 109+2skip・validate_bom 0/0。
 
 **次 gate=②**(maintainer 確認)。

@@ -69,7 +69,15 @@ dotnet test フル run 反復中に **exit=1 が 2/15 回発火**したが、内
 
 **過去の「サブタスクでテスト実行が応答なし」の実体は、InvalidCast フレークではなくこのハング(発火率 ~13%)だった可能性が高い。**
 
-### 処置(maintainer 裁定待ち)
+### 処置(maintainer 裁定 2026-07-13)
 
-- 本 ECO(InvalidCast)は再現不能。選択肢: (a) **保留のまま静置**=ECO-081 の診断採取+trx 保全により再発時に証拠が自動的に残る→その時点で診断再開 (b) 再現不能としてクローズ(再発時に再起票)。
+- **(a) 保留静置に裁定**(decide コミット)= ECO-081 の診断採取+trx 保全により再発時に証拠が自動的に残る→その時点で診断再開。クローズしない(症状の実績は確定しているため)。
 - 観測手順の教訓: 再現ループでは**発火時に即停止しログ/ダンプを退避**する(本診断の初回ループは後続 run が TestResults を上書きし run4 の証拠を失った。2 回目から是正)。
+
+## §8 保留静置中の新証拠(2026-07-13・ECO-083 fix 検証中に採取)
+
+ECO-083(PerAssembly 化)検証のフル run ×12 中、**非ハング fail 2 回**を観測(同ファミリーの証拠として記録):
+
+- **run2(スタック全文採取)**: `CpUiRepairViewModelTests.GF_V4_01` が `NullReferenceException` — `Microsoft.Data.Sqlite.SqliteCommand.DisposePreparedStatements` → `SqliteConnection.Close` → `DatabaseManager.Dispose`(:93)→ `TempDb.Dispose`(テスト末尾)。**接続 Close と prepared statement の並列競合**の形= **テスト内で起動した background タスク(疑い: ECO-075 で Task.Run 化した修復候補探索)がテスト終了後も残存し、TempDb.Dispose(接続破棄)と競合**する構造の直接証拠。
+- run7: 詳細不明(後続 run がログ上書き・非ハングのみ確認=観測手順の教訓を再度踏んだ)。
+- **診断仮説の更新**: 本 ECO の InvalidCast(Dapper multi-map)も「壊れた/破棄中の接続・reader を読んだ」結果である可能性が浮上(NRE と InvalidCast は同じ競合の別の顔)。**発火面はクエリでなく「テスト終了時の background 残タスク×TempDb.Dispose」の可能性が高い** — 再開時はこの線(CpUiRepairViewModelTests/CpWorkspace028Tests のテスト終了時の未 await タスク棚卸し+Dispose を gate 内に入れる是正)から。

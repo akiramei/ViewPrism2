@@ -23,7 +23,14 @@ internal static class HeadlessApp
 
     private static HeadlessUnitTestSession Start()
     {
-        var session = HeadlessUnitTestSession.StartNew(typeof(Entry));
+        // ECO-083(真因除去): StartNew(Type) の既定 isolation は PerTest=Dispatch ごとに
+        // Application/Dispatcher を再作成し Avalonia プラットフォーム再初期化(SetupUnsafe→Compositor/
+        // RenderLoop 再構築)が毎回走る。この再構築が間欠的にスレッドアフィニティ違反
+        // (The calling thread cannot access this object)を起こし、保護外(DispatchCore の try 前)の
+        // ためディスパッチループごと死んでいた(実発火スタックで確定)。本セッションは元来
+        // 「プロセス共有・App リソース込み」の設計(上記クラスコメント)なので PerAssembly=
+        // 単一 Application/Dispatcher の再利用へ明示し、毎回再初期化の構造自体を消す。
+        var session = HeadlessUnitTestSession.StartNew(typeof(Entry), AvaloniaTestIsolationLevel.PerAssembly);
 
         // ECO-083: ディスパッチループの静黙死を fail-fast 化。
         // Avalonia.Headless 12.0.4 のループは OperationCanceledException しか握らず、テスト完了処理
