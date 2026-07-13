@@ -1,8 +1,8 @@
-# ECO-078(implemented): ライフサイクル検査器の一括是正 — E19 マージ誤検知+E15/commit-msg hook の trailer 解釈不一致
+# ECO-078(applied / クローズ済み 2026-07-13): ライフサイクル検査器の一括是正 — E19 マージ誤検知+E15/commit-msg hook の trailer 解釈不一致
 
 - 起票: 2026-07-13(maintainer 指示。51-cheat-log の記録 2 件=ECO-076 accept 時+ECO-076/077 統合時を一括起票)
 - 種別: 検査器/台帳の欠陥是正(工程ハーネス。製品コード不変 — ECO-061 と同型)
-- 状態: implemented(2026-07-13 /eco-fix=§7。gate②=golden 待ち=§6)
+- 状態: applied(2026-07-13 gate②合格=§8)
 - 関連: ECO-061(検査器の導入元=E14〜E19+--commit-msg+--selftest-lifecycle)/
   ECO-076・ECO-077(両欠陥の実発生現場)
 
@@ -124,3 +124,33 @@ gate②=maintainer による selftest 実行で受け入れる)。
 - `validate_bom`: 0 error / 0 warning。
 - 製品不変確認: `dotnet build` 0/0・`ViewPrism2.Tests` 655/655・`ViewPrism2.Oracle` 109+2 known skip
   (R6 不変)。R7 並置=対象外(UI サーフェスに触れない)。
+
+## 8. クローズ(2026-07-13 gate②合格)
+
+### 8.1 実行確認(maintainer)
+
+- `validate_bom` 0/0・`--selftest-lifecycle` OK(新ケース (d)(e) 込み)・中間段落 trailer
+  コミットの手元再現が hook でブロックされる(「末尾の trailer ブロックに置く — 中間段落は不可」
+  の説明つき)ことを確認。
+- 副次の実地証拠: fix コミット `609b59e` 自体が staged→implemented の遷移コミットとして
+  **修正後の hook を実運用で通過**し、`%(trailers)` でも認識される(E15 との単一解釈の実地確認)。
+
+### 8.2 再発防止(恒久化の所在)
+
+- `--selftest-lifecycle` (d)(e) が両欠陥様式の陽性対照として恒久 pin(検査器の網の穴自体を塞いだ)。
+- trailer 解釈の正本=`message_trailer_block`(単一実装)。E19 の比較元=`combined_head_status`
+  (親合算)。E15〜E17 が HEAD 祖先基準で足りる理由は本経路に注記コメントで固定。
+- 51-cheat-log の記録 2 件(ECO-076 accept 時・ECO-076/077 統合時)は処置済み注記で closed。
+
+### 8.3 教訓
+
+- **同じ契約を検査する実装が 2 つあるとき、緩い側が fail-closed を破る**: trailer 契約は
+  「hook(メッセージ検査)」と「E15(履歴検査)」の 2 実装を持ち、hook の全行 grep が git の
+  `%(trailers)` より緩かったため、「hook は通るが履歴検査で落ちる」谷間が 2 回実発生した。
+  検査契約は**単一の解釈関数**(message_trailer_block)に集約し、両経路がそれを共有する。
+  ECO-077 教訓「導線変更=パラメータ供給経路の変更」の検査器版=**契約の二重定義は
+  暗黙の分岐であり、どちらかが必ず緩む**。
+- **検査器は自分の暗黙前提(今回=線形履歴)を selftest の陽性対照として持つ**: E19 の
+  マージ盲点は「検査の谷間が selftest の網にも空いていた」二重の欠落だった。欠陥を直すとき、
+  同じ欠陥様式の陽性対照を selftest へ同時に刻む(GF-073-08 教訓「検査手順も工程診断の対象」の
+  検査器実装版・rule of three 2 例目)。
