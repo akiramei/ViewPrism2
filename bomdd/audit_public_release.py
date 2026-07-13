@@ -30,11 +30,15 @@ ALLOWED_TRACKED_MEDIA = set()  # Add only reviewed, redistributable assets with 
 
 def private_terms() -> list[tuple[str, re.Pattern[str]]]:
     private_user = "".join(chr(x) for x in (97, 107, 105, 114, 97))
+    # The public GitHub handle is the private first name + this suffix. Allow the
+    # handle (e.g. in LICENSE / attribution) while still catching the bare name.
+    public_handle_suffix = "".join(chr(x) for x in (109, 101, 105))
     real_fixture = "".join(chr(x) for x in (73, 77, 71, 95, 49, 51, 56, 54))
     third_party_title = "".join(chr(x) for x in (69, 78, 68, 70, 73, 69, 76, 68))
     private_filename = "".join(chr(x) for x in (22818, 20154))
     return [
-        ("private-user", re.compile(re.escape(private_user), re.IGNORECASE)),
+        ("private-user", re.compile(
+            re.escape(private_user) + rf"(?!{re.escape(public_handle_suffix)})", re.IGNORECASE)),
         ("real-image-fixture", re.compile(re.escape(real_fixture), re.IGNORECASE)),
         ("third-party-title", re.compile(re.escape(third_party_title), re.IGNORECASE)),
         ("private-image-name", re.compile(re.escape(private_filename) + r"\.(?:jpe?g|png)", re.IGNORECASE)),
