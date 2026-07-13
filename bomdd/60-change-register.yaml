@@ -1316,7 +1316,7 @@ changes:
   - id: ECO-082
     title: "テスト並列フル run の間欠フレーク(Dapper InvalidCastException Int64→Int32)"
     type: 不具合(テスト基盤 or 潜在製品欠陥=未確定。間欠・並列時のみ。51-cheat-log記録をmaintainer裁定で分離起票)
-    status: staged
+    status: staged   # 2026-07-13 maintainer裁定=(a)保留静置: 再現不能のため fix 非着手。ECO-081 の診断採取(HangDump)+trx により再発時に証拠が自動的に残る→その時点で診断再開。クローズしない(症状の実績は確定しているため)
     golden: "pending"
     baseline: "main 988a01c"
     findings: "2026-07-13にdotnet test(MTP全並列)フルrunで間欠fail 2回観測: runA=CpWorkspace028Tests 4本がInvalidCastException Int64→Int32(Dapper SqlMapper.GenerateMapper/MultiMapImpl)・runB=CpUiRepairViewModelTests 1本(同族疑い)。isolation(-class)は常に緑・直後のxUnit v3 exeフルrun(全並列)も664/664緑=再現せず・runごとにfail対象が変わる。切り分け済み=TempDbはインスタンスごとGUIDディレクトリの独立DBファイル+独立DatabaseManager(実測)=テスト間DB共有はシロ。発火面特定=WorkspaceRepository.GetAllWithNormalCountsAsync(:41 QueryAsync<WorkspaceRow,long,WorkspaceWithCount> splitOn NormalCount)=決定的なら常にfailするはずのクエリが並列時のみ間欠fail。疑い(未検証)=①Dapperマッパー生成/キャッシュの並列競合(最有力=列型取り違えの間欠発火を説明) ②SQLitePCLRaw初期化競合 ③MTPとexeの並列度差が発火率に影響 ④製品潜在欠陥(可能性低いが排除しない)"
