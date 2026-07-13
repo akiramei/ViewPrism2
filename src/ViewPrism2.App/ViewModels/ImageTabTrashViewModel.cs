@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using ViewPrism2.App.Services;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
+using ViewPrism2.Core.Services;
 using ViewPrism2.Core.Services.Repair;
 
 namespace ViewPrism2.App.ViewModels;
@@ -33,6 +34,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
     private int _trashCount; // 選択コレクションの deleted 件数(⋯「ゴミ箱」バッジ)
     private readonly List<string> _trashSel = new();
 
+    private readonly LocalizationService _localization;
+
     public ImageTabTrashViewModel(
         IImageRepository images,
         TrashService trash,
@@ -42,7 +45,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         Action recompute,
         Func<long, string> fmtSize,
         Action closeMoreMenu,
-        Func<string, string> resolveAbsolutePath)
+        Func<string, string> resolveAbsolutePath,
+        LocalizationService localization)
     {
         _images = images;
         _trash = trash;
@@ -53,6 +57,9 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         _fmtSize = fmtSize;
         _closeMoreMenu = closeMoreMenu;
         _resolveAbsolutePath = resolveAbsolutePath;
+        _localization = localization;
+        // ECO-079/GF-079-01: 言語切替で算出文言(選択中ラベル等)を一斉再評価
+        _localization.CultureChanged += (_, _) => OnPropertyChanged(string.Empty);
     }
 
     // ---- ⋯「ゴミ箱」バッジ(ECO-018) ----
@@ -67,8 +74,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
     public bool TrashPopupEmpty => TrashPopupItems.Count == 0;
     public bool HasTrashSel => _trashSel.Count > 0;
     public int TrashSelCount => _trashSel.Count;
-    public string TrashSelCountLabel => HasTrashSel ? $"{_trashSel.Count} 枚選択中" : "画像を選択して操作";
-    public string TrashSelectAllLabel => (TrashPopupItems.Count > 0 && _trashSel.Count == TrashPopupItems.Count) ? "選択を解除" : "すべて選択";
+    public string TrashSelCountLabel => HasTrashSel ? _localization.T("view.selectedCount", new Dictionary<string, string> { ["count"] = _trashSel.Count.ToString() }) : _localization.T("view.selectImagesToAct");
+    public string TrashSelectAllLabel => (TrashPopupItems.Count > 0 && _trashSel.Count == TrashPopupItems.Count) ? _localization.T("view.deselect") : _localization.T("view.selectAll");
     /// <summary>復元・完全削除は選択がある時のみ活性。</summary>
     public bool CanRestoreTrash => _trashSel.Count > 0;
     public bool CanPurgeTrash => _trashSel.Count > 0;
@@ -152,8 +159,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
     {
         if (_trashSel.Count == 0) return;
         int n = _trashSel.Count;
-        if (!await _windows.ConfirmAsync("完全削除",
-                $"{n} 枚を完全に削除します。画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。").ConfigureAwait(true))
+        if (!await _windows.ConfirmAsync(_localization.T("trash.purge"),
+                _localization.T("trash.purgeConfirm", new Dictionary<string, string> { ["count"] = n.ToString() })).ConfigureAwait(true))
             return;
         foreach (var id in _trashSel.ToList())
             await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);
@@ -168,8 +175,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
     {
         if (TrashPopupItems.Count == 0) return;
         int n = TrashPopupItems.Count;
-        if (!await _windows.ConfirmAsync("ゴミ箱を空にする",
-                $"ゴミ箱内の {n} 枚を完全に削除します。画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。").ConfigureAwait(true))
+        if (!await _windows.ConfirmAsync(_localization.T("modals.trash.emptyTrash"),
+                _localization.T("trash.emptyConfirm", new Dictionary<string, string> { ["count"] = n.ToString() })).ConfigureAwait(true))
             return;
         foreach (var id in TrashPopupItems.Select(i => i.Id).ToList())
             await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);

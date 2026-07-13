@@ -101,3 +101,32 @@ TagsTabView と同一の DF-3 パターンで両タブを i18n 配線:
 視覚不変(ja 表示は現状と同一)を機械保証: ①転写ドリフト 0 の実測(上記)②描画テスト(Img014 等)が ja レンダリングで従来の日本語ラベルを検出=現状維持③機能プローブが en 解決を裏取り。CAD captures は ja のため ja 不変=並置一致は構成上自明。en 表示は新規挙動(CAD に en capture 無し)=maintainer 実機の golden 観点(はみ出し/切れ)へ委ねる。
 
 **次 gate=② golden**(下記 golden 基準)。
+
+## §8 GF-079-01(golden 所見 2026-07-13・VM 層の多言語対応漏れ)
+
+### 所見(maintainer 実機・en 切替)
+
+第1回 fix(§7)後の golden で、**ツールバーのモードボタン(タグ編集/整理/作業/○○を終了)・表示軸セレクタの「ファイルシステム」・リスト列見出し(名前/サイズ/更新日)**が en 表示でも日本語固着。「ファイルシステムだけはシステム定義なので翻訳が必要」との指摘。
+
+### 追加診断
+
+§7 の是正は **XAML 直書き**を Loc バインドへ移したが、これらの文言は XAML でなく **VM 算出プロパティ側の直書き日本語**だった(§3 の疑い「VM 文言は T() 経由の可能性が高い」が誤り)。実測: 画像/作業タブの live VM 4 ファイル(ImageTabViewModel/WorkTabViewModel/ImageTabOrganizeViewModel/ImageTabTrashViewModel)+ 共有 POCO に **111 の日本語文字列リテラル**(モードトグルの三項・件数/確認の補間・軸名・列名・タグ種別ラベル・エラー/ステータス)。`ImageTabSeedViewModel` クラス本体はテスト専用(本番未使用)のため対象外。同一 ECO の多言語対応漏れ=GF として是正を延長(R3 分離起票不要)。
+
+### 是正(GF-079-01)
+
+- **サブ VM への localization 注入**: ImageTabOrganizeViewModel・ImageTabTrashViewModel に `LocalizationService` を DI(ImageTabViewModel から伝搬)+ `CultureChanged` 購読で `OnPropertyChanged(string.Empty)`(算出ラベルの一斉再評価)。
+- **主要 VM の言語切替追随**: ImageTabViewModel・WorkTabViewModel の CultureChanged に `OnPropertyChanged(string.Empty)` を追加。WorkTabViewModel は静的 `BasicSortColumns`(列見出しの baked ラベル源)をインスタンス化し、`RebuildBasicSortColumns()`+`BuildSortModels()` を CultureChanged で再構築(静的 baked のままだと言語切替に非追随)。
+- **文言の T() 化**: 111 リテラルを `_localization.T(key[, args])` へ。既存キー再利用 19(navigation.work/toolbar.tagEditExit/collection.fileSystem/common.name…)+ 新規 40(非パラメータ 28+書式テンプレート 12=`{count} 項目`等の補間は T の `{name}` 置換で)。`static BasicColLabel` はインスタンス化して T 化。`OrganizeResultVM`(POCO)の「条件一致」は criteriaLabel 引数化して VM から localized 値を注入。
+- **転写ドリフト 0**: 束ねた全キーの ja 値=元の直書き文字列と完全一致(視覚不変)。
+
+### プローブ(GF-079-01)
+
+- **VM 層 lint 追加**(`CpI18n010XamlLintTests.タブVMに直書き日本語文言が残っていない`): live VM 4 ファイルにコメント除去後の直書き日本語リテラルが無いことを検査(是正前 111 件で赤=`scan_vm.py` 実測、是正後 0)。XAML lint と対で恒久ガード。
+- **VM ラベル切替テスト**(`CpI18n010TabVmLabelTests`): 実 loc で両 VM を構築→ja「タグ編集/整理/作業/ファイルシステム」→en「Tag Edit/Organize/Work/File System」、作業タブ列見出し ja「名前/更新日」⇔en「Name/Modified Date」を end-to-end 固定。
+
+### 機械受入(GF-079-01・全緑)
+
+- build 0/0・Tests **664/664**(§7 の 658+新規プローブ/ラベル 6)・Oracle 109+2skip(R6 不変)・validate_bom 0/0。
+- テスト追随=OrganizeResultVM/ImageTabOrganizeViewModel の新引数へ既存テスト2ファイルを更新。並列フル run の既存フレーク(CpUiRepairViewModelTests/CpWorkspace028=Dapper Int64→Int32)は isolation 緑・exe フル run で 664/664 確定(51-cheat-log 記録・R3・本変更と無関係)。
+
+**gate② golden 再提示**(§7 基準 + 本 GF の観点=ツールバーのモードボタン・軸「ファイルシステム」・リスト列見出しが ja⇔en で切替)。

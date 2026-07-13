@@ -913,8 +913,10 @@ public sealed class OrganizeSlotVM
 public sealed class OrganizeResultVM
 {
     public OrganizeResultVM(string id, string name, string? absolutePath, string sizeLabel, int score,
-        bool isCriteria, bool added, DuplicateRelationship? relationship = null)
-    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; Score = score; IsCriteria = isCriteria; Added = added; Relationship = relationship; }
+        bool isCriteria, bool added, string criteriaLabel, DuplicateRelationship? relationship = null)
+    { Id = id; Name = name; AbsolutePath = absolutePath; SizeLabel = sizeLabel; Score = score; IsCriteria = isCriteria; Added = added; _criteriaLabel = criteriaLabel; Relationship = relationship; }
+
+    private readonly string _criteriaLabel;
     public string Id { get; }
     public string Name { get; }
     public string? AbsolutePath { get; }
@@ -924,6 +926,6 @@ public sealed class OrganizeResultVM
     public bool IsCriteria { get; }
     public DuplicateRelationship? Relationship { get; }
     /// <summary>GF-067-02: 条件検索以外は検証器一致度%だけ。関係語彙/pHash scoreは表示しない。</summary>
-    public string ScoreText => IsCriteria ? "条件一致" : $"{Score}%";
+    public string ScoreText => IsCriteria ? _criteriaLabel : $"{Score}%";
     public bool Added { get; }
 }

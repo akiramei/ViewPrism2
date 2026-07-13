@@ -64,7 +64,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ---- view 軸(M3b): 保存ビューを閲覧軸として消費 ----
     private List<View> _allViews = new();
     private string? _viewId;
-    private string _viewLabel = "タグビュー";
+    private string _viewLabel = ""; // 既定ラベル(view.tagView)は _localization 準備後に ctor で設定(GF-079-01)
     private IReadOnlyList<ViewCondition> _viewConditions = Array.Empty<ViewCondition>();
     private GraphNode? _viewRoot;
     private readonly List<GraphNode> _viewPath = new();
@@ -164,12 +164,15 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _settings = settings;
         Work = new ImageTabWorkViewModel(workspaces);
         _localization = localization;
+        _viewLabel = localization.T("view.tagView"); // 既定ビュー軸ラベル(GF-079-01)
         Loc = new LocalizationProxy(localization);
         localization.CultureChanged += (_, _) =>
         {
             // ECO-079/DF-3: Loc 差し替えで画像タブ全文言バインディングを再評価させる
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            // GF-079-01: VM 算出ラベル(ボタン/軸/列/件数)も言語切替へ追随させる
+            OnPropertyChanged(string.Empty);
         };
         _scans = scanCoordinator;
         if (_scans is not null)
@@ -187,7 +190,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             // MoreMenuOpen は通知なし自動プロパティ — ホスト内の全変更箇所と同じく通知を伴う
             // (golden 所見 G-E36S1-2 の是正: 通知なしラムダではメニューが視覚的に閉じない)
             closeMoreMenu: () => { MoreMenuOpen = false; OnPropertyChanged(string.Empty); },
-            resolveAbsolutePath: ResolveAbsolutePath);
+            resolveAbsolutePath: ResolveAbsolutePath,
+            localization: localization);
         Organize = new ImageTabOrganizeViewModel(
             images,
             similar,
@@ -197,6 +201,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
             recompute: Recompute,
             refreshSelectionMarkers: RefreshSelectionMarkers,
             reloadImagesAsync: ReloadImagesAsync,
+            localization: localization,
             notifySearchState: () => OnPropertyChanged(string.Empty));
     }
 
@@ -341,7 +346,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         {
             if (_loadingStopped || generation != _catalogLoadGeneration) return;
             _isCatalogLoading = false;
-            _catalogError = "コレクションを読み込めませんでした。";
+            _catalogError = _localization.T("view.collectionLoadFailed");
             _catalogLoaded = false;
             OnPropertyChanged(string.Empty);
         }
@@ -405,7 +410,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
             if (_loadingStopped || generation != _contentLoadGeneration ||
                 !string.Equals(_collectionId, collectionId, StringComparison.Ordinal)) return;
             _isContentLoading = false;
-            _contentError = "画像を読み込めませんでした。";
+            _contentError = _localization.T("view.imagesLoadFailed");
             _loaded = false;
             OnPropertyChanged(string.Empty);
         }
@@ -670,7 +675,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (_sortColKey is { } key)
         {
             var def = _listColumnDefs.FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.Ordinal));
-            ColumnSortLabel = $"{def?.Label ?? key}（{(_sortColDir == SortDirection.Desc ? "降順" : "昇順")}）";
+            ColumnSortLabel = _localization.T("view.columnSortLabel", new Dictionary<string, string> { ["column"] = def?.Label ?? key, ["direction"] = _localization.T(_sortColDir == SortDirection.Desc ? "view.descending" : "view.ascending") });
         }
         else
         {
@@ -678,11 +683,11 @@ public sealed partial class ImageTabViewModel : ObservableObject
         }
     }
 
-    private static string BasicColLabel(string key) => key switch
+    private string BasicColLabel(string key) => key switch
     {
-        ViewColumnModel.NameKey => "名前",
-        ViewColumnModel.SizeKey => "サイズ",
-        ViewColumnModel.ModifiedDateKey => "更新日",
+        ViewColumnModel.NameKey => _localization.T("common.name"),
+        ViewColumnModel.SizeKey => _localization.T("common.size"),
+        ViewColumnModel.ModifiedDateKey => _localization.T("common.modifiedDate"),
         _ => key,
     };
 
@@ -777,7 +782,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     public bool IsViewAxis => _axis == "view";
     public bool IsFsActive => _axis == "fs";
-    public string AxisLabel => _axis == "fs" ? "ファイルシステム" : _viewLabel;
+    public string AxisLabel => _axis == "fs" ? _localization.T("collection.fileSystem") : _viewLabel;
     public bool AxisMenuOpen { get; private set; }
     public bool SortMenuOpen { get; private set; }
     public bool MoreMenuOpen { get; private set; }
@@ -790,7 +795,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public double ColumnSortArrowAngle => _sortColDir == SortDirection.Desc ? 180 : 0;
     /// <summary>アイコンの「並び替え」ボタンのバッジ=現在のソート列名(未ソート=「なし」)。</summary>
     public string SortButtonBadge => _sortColKey is null
-        ? "なし"
+        ? _localization.T("view.sortNone")
         : (_listColumnDefs.FirstOrDefault(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal))?.Label ?? _sortColKey);
     /// <summary>並び替えメニュー下部の 昇順/降順 セグメント。</summary>
     public bool SortAscActive => _sortColDir == SortDirection.Asc;
@@ -808,7 +813,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>ポップオーバーが host する列ピッカー(開くたびにアクティブビューから生成)。</summary>
     public ColumnPickerViewModel? ColumnPicker { get; private set; }
     public bool EditMode => _editMode;
-    public string EditButtonLabel => _editMode ? "タグ編集を終了" : "タグ編集";
+    public string EditButtonLabel => _editMode ? _localization.T("toolbar.tagEditExit") : _localization.T("toolbar.tagEdit");
     public bool HomeActive { get; private set; }
     public string CountLabel { get; private set; } = "";
     public bool ShowChips { get; private set; }
@@ -818,7 +823,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool PanelEmpty => _editMode && _selected.Count == 0;
     public bool PanelActive => _editMode && _selected.Count > 0;
     public bool HasSelection => _selected.Count > 0;
-    public string SelectionLabel => $"{_selected.Count} 枚選択中";
+    public string SelectionLabel => _localization.T("view.selectedCount", new Dictionary<string, string> { ["count"] = _selected.Count.ToString() });
     public bool OnCurrentTab => _panelTab == "current";
     public bool OnAddTab => _panelTab == "add";
     public bool HasCurrentTags => CurrentTags.Count > 0;
@@ -845,7 +850,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     // ---- 整理モード(ECO-014)公開契約 ----
     public bool OrganizeMode => _organizeMode;
-    public string OrganizeButtonLabel => _organizeMode ? "整理を終了" : "整理";
+    public string OrganizeButtonLabel => _organizeMode ? _localization.T("toolbar.organizeExit") : _localization.T("toolbar.organize");
     /// <summary>いずれかの文脈モード中(タグ編集 or 整理 or 作業 or 削除)。モード中は他モード入口・⋯ を隠す(集中・排他可視化・幅)。ECO-017/018 で作業・削除へ拡張。</summary>
     public bool InAnyMode => _editMode || _organizeMode || _workMode || _deleteMode;
 
@@ -853,7 +858,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     /// <summary>選択を有効化するモード(タグ編集 or 作業 or 削除)。グリッドの選択視覚=チェック/選択順バッジを出す。</summary>
     public bool InSelectMode => _editMode || _workMode || _deleteMode;
     public bool WorkMode => _workMode;
-    public string WorkButtonLabel => _workMode ? "作業を終了" : "作業";
+    public string WorkButtonLabel => _workMode ? _localization.T("toolbar.workExit") : _localization.T("navigation.work");
     /// <summary>作業モード中に選択がある=「追加」が活性。</summary>
     public bool HasWorkSelection => _workMode && _selected.Count > 0;
     public int WorkSelCount => _selected.Count;
@@ -861,7 +866,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool CanAddToWork => HasWorkSelection;
     /// <summary>作業対象が1件以上ある=「作業対象 N 枚」チップを出す。</summary>
     public bool HasWorkTargets => _workMode && Work.Count > 0;
-    public string WorkTargetLabel => $"作業対象 {Work.Count} 枚";
+    public string WorkTargetLabel => _localization.T("view.workTargetCount", new Dictionary<string, string> { ["count"] = Work.Count.ToString() });
 
     // ---- ツールバー モード入口の出し分け(ECO-017/018: 排他隠し統一) ----
     // 各モード入口は他モードの最中は隠れる(自モード中は「終了」として残る)。削除は ⋯ メニューから入る
@@ -1039,7 +1044,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // ECO-056(v2 3 ゾーン): 下部ピンの検索パネル開閉+検索結果ヘッダ(グリッドへ/件数/方式)
     public bool SearchOpen => Organize.SearchOpen;
     public string SearchMethodLabel => Organize.SearchMethodLabel;
-    public string SearchResultsSubLabel => $"マージ先「{MergeTarget?.Name}」に似た画像 · {SearchResults.Count} 件";
+    public string SearchResultsSubLabel => _localization.T("view.similarToTargetCount", new Dictionary<string, string> { ["name"] = MergeTarget?.Name ?? "", ["count"] = SearchResults.Count.ToString() });
 
     // 実行・完了
     public bool CanExecuteMerge => Organize.CanExecuteMerge;
@@ -1083,9 +1088,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
         // ---- AxisOptions(FS + 保存ビュー) ----
         AxisOptions.Clear();
-        AxisOptions.Add(new AxisOptionVM("fs", "ファイルシステム", "OS のフォルダ階層", isView: false, _axis == "fs"));
+        AxisOptions.Add(new AxisOptionVM("fs", _localization.T("collection.fileSystem"), _localization.T("view.fsAxisDesc"), isView: false, _axis == "fs"));
         foreach (var v in _allViews)
-            AxisOptions.Add(new AxisOptionVM(v.Id, v.Name, "タグで組んだビュー", isView: true, _axis == "view" && _viewId == v.Id));
+            AxisOptions.Add(new AxisOptionVM(v.Id, v.Name, _localization.T("view.tagViewDesc"), isView: true, _axis == "view" && _viewId == v.Id));
 
         var folders = new List<(string Name, int Count)>();
         List<ImageEntry> files;
@@ -1114,7 +1119,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
                 var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
                 Chips.Add(ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
             }
-            if (Chips.Count > 0) { ShowChips = true; ShowChipHint = true; ChipHintLabel = "階層を掘る"; }
+            if (Chips.Count > 0) { ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.drillHierarchy"); }
         }
         else
         {
@@ -1126,8 +1131,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
             HomeActive = _fsPath.Count == 0;
             if (ctx.AnyTagged)
             {
-                ShowChips = true; ShowChipHint = true; ChipHintLabel = "タグで絞り込み";
-                Chips.Add(ChipVM.Neutral("クリア", _tagFilter is null));
+                ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.filterByTag");
+                Chips.Add(ChipVM.Neutral(_localization.T("common.clear"), _tagFilter is null));
                 foreach (var (tid, count) in ctx.Chips.OrderBy(c => c.TagId, StringComparer.Ordinal))
                 {
                     if (!_tagById.TryGetValue(tid, out var def)) continue;
@@ -1144,7 +1149,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Crumbs.Clear();
         for (int i = 0; i < crumbNames.Count; i++)
             Crumbs.Add(new CrumbVM(crumbNames[i], i == crumbNames.Count - 1, i));
-        CountLabel = $"{folders.Count + files.Count} 項目";
+        CountLabel = _localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = (folders.Count + files.Count).ToString() });
 
         // ---- リスト列(ECO-025 β: アクティブビューの display_columns → ヘッダー列 + Grid テンプレート) ----
         BuildListColumns();
@@ -1276,8 +1281,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
                     HexA(col, 0.12), HexA(col, 0.28), HexA(col, 1)));
             }
         }
-        CurrentNote = selectedEntries.Count > 1 ? "選択画像に共通するタグ" : "この画像に付いているタグ";
-        NoCurrentLabel = selectedEntries.Count > 1 ? "共通のタグはありません。" : "まだタグがありません。";
+        CurrentNote = selectedEntries.Count > 1 ? _localization.T("tagging.commonTagsOfSelection") : _localization.T("tagging.tagsOnImage");
+        NoCurrentLabel = selectedEntries.Count > 1 ? _localization.T("tagging.noCommonTags2") : _localization.T("tagging.noTagsYet");
 
         BuildAddGroups(selectedEntries);
 
@@ -1298,7 +1303,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
             if (e is null) continue; // マージ後に deleted 化した候補等は除外
             bool added = inTray.Contains(id) || id == mergeTargetId;
             SearchResults.Add(new OrganizeResultVM(id, e.Record.FileName, e.AbsolutePath,
-                FmtSize(e.Record.FileSize), score, isCrit, added, relationship));
+                FmtSize(e.Record.FileSize), score, isCrit, added, _localization.T("view.criteriaMatch"), relationship));
         }
     }
 
@@ -1318,9 +1323,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
         var groups = new (TagType Type, string Label, string Hint, string Fg, string Bg)[]
         {
-            (TagType.Simple, "シンプル", "タグ名のみ", "#5b6473", "#f0f2f6"),
-            (TagType.Textual, "テキスト", "候補値から選ぶ", "#2459cf", "#eaf1fe"),
-            (TagType.Numeric, "数値", "値を選ぶ", "#0f8a5e", "#eafaf3"),
+            (TagType.Simple, _localization.T("tag.type.simple"), _localization.T("tagging.simpleHint"), "#5b6473", "#f0f2f6"),
+            (TagType.Textual, _localization.T("tag.type.textual"), _localization.T("tagging.textualHint"), "#2459cf", "#eaf1fe"),
+            (TagType.Numeric, _localization.T("tag.type.numeric"), _localization.T("tagging.numericHint"), "#0f8a5e", "#eafaf3"),
         };
         string q = _addQuery.Trim().ToLowerInvariant(); // ECO-041: 検索(mock L811 — trim+大小無視の部分一致)
         foreach (var g in groups)
@@ -1365,7 +1370,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
                     {
                         double step = ns.Step is { } s && s > 0 ? s : 1;
                         row.NumRange = $"{min:0.##}–{max:0.##}";
-                        row.NumCurrent = cur is not null ? $"★ {cur}" : "未設定";
+                        row.NumCurrent = cur is not null ? $"★ {cur}" : _localization.T("common.notSet");
                         for (double v = min; v <= max + 1e-9; v += step)
                         {
                             string label = v.ToString("0.##", CultureInfo.InvariantCulture);
@@ -1380,7 +1385,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
                     else
                     {
                         row.NumRange = ns?.Min is { } mn && ns.Max is { } mx ? $"{mn:0.##}–{mx:0.##}" : "";
-                        row.NumCurrent = cur is not null ? $"★ {cur}" : "未設定";
+                        row.NumCurrent = cur is not null ? $"★ {cur}" : _localization.T("common.notSet");
                     }
                 }
                 rows.Add(row);
@@ -2000,7 +2005,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         if (!_organizeMode || _collectionId is null) return;
         if (SimilarSearchBlocked)
         {
-            _scanNotice = "スキャン完了後に利用できます";
+            _scanNotice = _localization.T("view.availableAfterScan");
             OnPropertyChanged(string.Empty);
             return;
         }
@@ -2110,7 +2115,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
             Items.Add(CreateImageItem(entry, selected));
         }
 
-        CountLabel = $"{_matchedFolders.Count + _matchedFiles.Count} 項目";
+        CountLabel = _localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = (_matchedFolders.Count + _matchedFiles.Count).ToString() });
     }
 
     private void RebuildCollectionRows()

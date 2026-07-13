@@ -244,11 +244,11 @@ public sealed class CpDuplicateQuality030Tests : IDisposable
         Assert.Equal("skia-duplicate-relationship-v3", cached.VerifierAdapter);
 
         var vm = new OrganizeResultVM(b.Id, b.FileName, bPath, "1 KB", result.CandidateScore,
-            isCriteria: false, added: false, result.Relationship);
+            isCriteria: false, added: false, criteriaLabel: "条件一致", relationship: result.Relationship);
         Assert.Equal($"{result.CandidateScore}%", vm.ScoreText);
 
         var substantial = new OrganizeResultVM("s", "same.jpg", null, "1 KB", 94,
-            isCriteria: false, added: false, DuplicateRelationship.SubstantiallySame);
+            isCriteria: false, added: false, criteriaLabel: "条件一致", relationship: DuplicateRelationship.SubstantiallySame);
         Assert.Equal("94%", substantial.ScoreText); // GF-067-02: 利用者向け判断軸は数値ひとつ
     }
 

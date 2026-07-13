@@ -14,14 +14,16 @@ namespace ViewPrism2.Tests;
 /// </summary>
 internal static class TestImageTab
 {
-    public static ImageTabViewModel NewVm(TempDb db) =>
+    public static ImageTabViewModel NewVm(TempDb db) => NewVm(db, TestLoc.Ja());
+
+    public static ImageTabViewModel NewVm(TempDb db, LocalizationService loc) =>
         new(db.Folders, db.Images, db.Tags, new ImageSorter(),
             new ViewService(db.Views, db.Clock), new NodeGraphBuilder(),
             new PathConditionConverter(), new ConditionEvaluator(),
             new SimilaritySearchService(db.Folders, db.Images, db.Features, db.Similarities, new FakePHashImageReader(), db.Clock),
             new MergeService(db.Images, db.Tags, db.Merges),
             new TrashService(db.Images, db.Folders, new FilePresenceProbe()),
-            new StubWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), TestLoc.Ja());
+            new StubWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), loc);
 
     private sealed class StubWindows : IWindowService
     {

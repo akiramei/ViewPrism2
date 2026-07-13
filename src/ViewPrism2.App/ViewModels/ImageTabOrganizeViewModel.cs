@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
+using ViewPrism2.Core.Services;
 using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
 
@@ -20,6 +21,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
 {
     private readonly SimilaritySearchService _similar;
     private readonly MergeService _merge;
+    private readonly LocalizationService _localization;
     private readonly CriteriaSearchService _criteriaSearch;
     private readonly Func<string?> _getCollectionId;
     private readonly Func<IReadOnlyList<ImageRecord>> _getSimilarityScopeCandidates;
@@ -61,6 +63,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         Action recompute,
         Action refreshSelectionMarkers,
         Func<Task> reloadImagesAsync,
+        LocalizationService localization,
         Action? notifySearchState = null)
     {
         _similar = similar;
@@ -72,6 +75,9 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         _recompute = recompute;
         _refreshSelectionMarkers = refreshSelectionMarkers;
         _reloadImagesAsync = reloadImagesAsync;
+        _localization = localization;
+        // ECO-079/GF-079-01: 言語切替で算出文言(ボタンラベル等)を一斉再評価
+        _localization.CultureChanged += (_, _) => OnPropertyChanged(string.Empty);
         _notifySearchState = notifySearchState ?? (() => { });
         _searchSession.PropertyChanged += (_, _) =>
         {
@@ -87,7 +93,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
 
     public bool HasMergeTarget => _mergeTargetId is not null;
     public bool HasOrganizeTargets => _organizeTargets.Count > 0;
-    public string OrganizeTargetsCountLabel => $"{_organizeTargets.Count} 枚";
+    public string OrganizeTargetsCountLabel => _localization.T("view.imagesCount", new Dictionary<string, string> { ["count"] = _organizeTargets.Count.ToString() });
 
     public bool IsSimilarMethod => _searchMethod == "similar";
     public bool IsCriteriaMethod => _searchMethod == "criteria";
@@ -118,7 +124,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
     public bool ShowStartSearch => !_searchSession.ShowProgress;
     public bool ShowCancelSearch => _searchSession.ShowProgress;
     public bool CanCancelSearch => !_searchSession.Cancelling;
-    public string SearchCancelButtonLabel => _searchSession.Cancelling ? "停止中" : "停止";
+    public string SearchCancelButtonLabel => _searchSession.Cancelling ? _localization.T("view.stopping") : _localization.T("view.stop");
     public string SearchProgressLabel => _searchSession.ProgressLabel;
     public double SearchProgressValue => _searchSession.ProgressValue;
     public bool SearchProgressIndeterminate => _searchSession.ProgressIndeterminate;
@@ -129,15 +135,15 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
 
     public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
     // ECO-056(v2 モック): 実行可= 総数(対象+マージ先)→1枚 を明示。不可= 素の文言+下の理由注記
-    public string MergeButtonLabel => CanExecuteMerge ? $"マージを実行（{_organizeTargets.Count + 1}枚 → 1枚）" : "マージを実行";
+    public string MergeButtonLabel => CanExecuteMerge ? _localization.T("merge.executeCount", new Dictionary<string, string> { ["count"] = (_organizeTargets.Count + 1).ToString() }) : _localization.T("modals.imageMerge.executeMerge");
     public bool ShowMergeBlockedNote => !_organizeDone && !CanExecuteMerge;
-    public string MergeBlockedNote => _mergeTargetId is null ? "宛先を選んでください" : "整理対象を1枚以上追加してください";
+    public string MergeBlockedNote => _mergeTargetId is null ? _localization.T("merge.pickDestination") : _localization.T("merge.addAtLeastOne");
     /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン: 畳んで整理対象リストに場所を譲る)。</summary>
     public bool SearchOpen => _searchOpen;
     /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
-    public string SearchMethodLabel => _searchMethod == "similar" ? $"一致度 · {_similarThreshold}% 以上" : "条件検索";
+    public string SearchMethodLabel => _searchMethod == "similar" ? _localization.T("view.similarityAtLeast", new Dictionary<string, string> { ["threshold"] = _similarThreshold.ToString() }) : _localization.T("modals.advancedRepair.conditionalSearch");
     public bool OrganizeDone => _organizeDone;
-    public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
+    public string DoneSummary => _localization.T("merge.doneSummary", new Dictionary<string, string> { ["kept"] = (_doneSourceCount + 1).ToString(), ["deleted"] = _doneSourceCount.ToString() });
 
     // ---- ECO-044(IMG-011 裁定③): ログに基づく補償 Undo ----
     public bool CanUndo => _canUndo;
@@ -343,7 +349,7 @@ public sealed partial class ImageTabOrganizeViewModel : ObservableObject
         if (!result.IsSuccess)
         {
             _canUndo = false;
-            _undoNote = result.Message ?? "取り消しできません。";
+            _undoNote = result.Message ?? _localization.T("view.cannotUndo");
             _recompute();
             return;
         }

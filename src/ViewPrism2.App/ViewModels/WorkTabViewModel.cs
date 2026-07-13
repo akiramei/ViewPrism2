@@ -37,6 +37,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     private readonly IWindowService _windows;
     private readonly ImageSorter _sorter;
     private readonly AppSettings _settings;
+    private readonly LocalizationService _localization;
     private readonly SimilaritySearchSession _searchSession = new();
 
     private readonly Dictionary<string, string> _folderPath = new(StringComparer.Ordinal);
@@ -112,12 +113,21 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _windows = windows;
         _sorter = sorter;
         _settings = settings;
+        _localization = localization;
+        RebuildBasicSortColumns();
+        _chipHintLabel = localization.T("view.filterByTag");
+        _countLabel = localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = "0" });
         Loc = new LocalizationProxy(localization);
         localization.CultureChanged += (_, _) =>
         {
             // ECO-079/DF-3: Loc 差し替えで作業タブ全文言バインディングを再評価させる
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            // GF-079-01: 基本3列見出し(名前/サイズ/更新日)は baked ラベルのため再構築+再射影が必要
+            RebuildBasicSortColumns();
+            BuildSortModels();
+            // GF-079-01: VM 算出ラベル(ボタン/軸/列/件数)も言語切替へ追随させる
+            OnPropertyChanged(string.Empty);
         };
         _searchSession.PropertyChanged += (_, _) => OnPropertyChanged(string.Empty);
     }
@@ -148,7 +158,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     // ---- ワークスペースヘッダ ----
     [ObservableProperty] private string _wsName = string.Empty;
     [ObservableProperty] private bool _wsIsDefault;
-    [ObservableProperty] private string _countLabel = "0 項目";
+    [ObservableProperty] private string _countLabel = ""; // 既定ラベル(view.itemCountLabel 0件)は ctor で設定(GF-079-01)
 
     // ---- 本体表示合成 ----
     [ObservableProperty]
@@ -163,11 +173,11 @@ public sealed partial class WorkTabViewModel : ObservableObject
     // ---- チップ(絞り込み) ----
     [ObservableProperty] private bool _showChips;
     [ObservableProperty] private bool _showChipHint;
-    [ObservableProperty] private string _chipHintLabel = "タグで絞り込み";
+    [ObservableProperty] private string _chipHintLabel = ""; // 既定は ctor で _localization から設定(GF-079-01)
 
     // ---- 作業モード(β-1) ----
     public bool WorkMode => _workMode;
-    public string WorkButtonLabel => _workMode ? "作業を終了" : "作業";
+    public string WorkButtonLabel => _workMode ? _localization.T("toolbar.workExit") : _localization.T("navigation.work");
     public bool HasMoveSelection => _workMode && _selected.Count > 0;
     public int MoveSelCount => _selected.Count;
     [ObservableProperty] private bool _moveMenuOpen;
@@ -199,20 +209,20 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public bool TrashPopupEmpty => TrashPopupItems.Count == 0;
     public bool HasTrashSel => _trashSel.Count > 0;
     public int TrashSelCount => _trashSel.Count;
-    public string TrashSelCountLabel => HasTrashSel ? $"{_trashSel.Count} 枚選択中" : "画像を選択して操作";
-    public string TrashSelectAllLabel => (TrashPopupItems.Count > 0 && _trashSel.Count == TrashPopupItems.Count) ? "選択を解除" : "すべて選択";
+    public string TrashSelCountLabel => HasTrashSel ? _localization.T("view.selectedCount", new Dictionary<string, string> { ["count"] = _trashSel.Count.ToString() }) : _localization.T("view.selectImagesToAct");
+    public string TrashSelectAllLabel => (TrashPopupItems.Count > 0 && _trashSel.Count == TrashPopupItems.Count) ? _localization.T("view.deselect") : _localization.T("view.selectAll");
     public bool CanRestoreTrash => _trashSel.Count > 0;
     public bool CanPurgeTrash => _trashSel.Count > 0;
 
     // ---- 整理モード(β-3) ----
     public bool OrganizeMode => _organizeMode;
-    public string OrganizeButtonLabel => _organizeMode ? "整理を終了" : "整理";
+    public string OrganizeButtonLabel => _organizeMode ? _localization.T("toolbar.organizeExit") : _localization.T("toolbar.organize");
     public bool HasMergeTarget => _mergeTargetId is not null;
     public OrganizeSlotVM? MergeTarget { get; private set; }
     public bool ShowMergeTargetPrompt => _organizeMode && _mergeTargetId is null;
     public bool HasOrganizeTargets => _organizeTargets.Count > 0;
     public bool ShowOrganizeTargetsPrompt => _organizeMode && _mergeTargetId is not null && _organizeTargets.Count == 0;
-    public string OrganizeTargetsCountLabel => $"{_organizeTargets.Count} 枚";
+    public string OrganizeTargetsCountLabel => _localization.T("view.imagesCount", new Dictionary<string, string> { ["count"] = _organizeTargets.Count.ToString() });
     // タグ統合トグルは ECO-044(IMG-011 裁定②)で撤去 — タグ union は常時 ON(選択肢ではない)。
     public bool IsSimilarMethod => _searchMethod == "similar";
     public bool IsCriteriaMethod => _searchMethod == "criteria";
@@ -238,7 +248,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public bool ShowStartSearch => !_searchSession.ShowProgress;
     public bool ShowCancelSearch => _searchSession.ShowProgress;
     public bool CanCancelSearch => !_searchSession.Cancelling;
-    public string SearchCancelButtonLabel => _searchSession.Cancelling ? "停止中" : "停止";
+    public string SearchCancelButtonLabel => _searchSession.Cancelling ? _localization.T("view.stopping") : _localization.T("view.stop");
     public string SearchProgressLabel => _searchSession.ProgressLabel;
     public double SearchProgressValue => _searchSession.ProgressValue;
     public bool SearchProgressIndeterminate => _searchSession.ProgressIndeterminate;
@@ -248,16 +258,16 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public bool CanRunSearch => _mergeTargetId is not null && (!IsCriteriaMethod || HasAnyCond);
     public bool CanExecuteMerge => _mergeTargetId is not null && _organizeTargets.Count > 0 && !_organizeDone;
     // ECO-056(v2 モック): 実行可= 総数(対象+マージ先)→1枚 を明示。不可= 素の文言+理由注記(画像タブと同型)
-    public string MergeButtonLabel => CanExecuteMerge ? $"マージを実行（{_organizeTargets.Count + 1}枚 → 1枚）" : "マージを実行";
+    public string MergeButtonLabel => CanExecuteMerge ? _localization.T("merge.executeCount", new Dictionary<string, string> { ["count"] = (_organizeTargets.Count + 1).ToString() }) : _localization.T("modals.imageMerge.executeMerge");
     public bool ShowMergeBlockedNote => _organizeMode && !_organizeDone && !CanExecuteMerge;
-    public string MergeBlockedNote => _mergeTargetId is null ? "宛先を選んでください" : "整理対象を1枚以上追加してください";
+    public string MergeBlockedNote => _mergeTargetId is null ? _localization.T("merge.pickDestination") : _localization.T("merge.addAtLeastOne");
     /// <summary>下部ピンの「似た画像を探す」折りたたみ(ECO-056/v2 3 ゾーン)。</summary>
     public bool SearchOpen => _searchOpen;
     /// <summary>検索結果ヘッダ右端の方式ラベル(ECO-056/v2 モック searchMethodLabel)。</summary>
-    public string SearchMethodLabel => _searchMethod == "similar" ? $"一致度 · {_similarThreshold}% 以上" : "条件検索";
-    public string SearchResultsSubLabel => $"マージ先「{MergeTarget?.Name}」に似た画像 · {SearchResults.Count} 件";
+    public string SearchMethodLabel => _searchMethod == "similar" ? _localization.T("view.similarityAtLeast", new Dictionary<string, string> { ["threshold"] = _similarThreshold.ToString() }) : _localization.T("modals.advancedRepair.conditionalSearch");
+    public string SearchResultsSubLabel => _localization.T("view.similarToTargetCount", new Dictionary<string, string> { ["name"] = MergeTarget?.Name ?? "", ["count"] = SearchResults.Count.ToString() });
     public bool OrganizeDone => _organizeDone;
-    public string DoneSummary => $"{_doneSourceCount + 1} 枚を 1 枚へまとめ、{_doneSourceCount} 枚を削除しました。";
+    public string DoneSummary => _localization.T("merge.doneSummary", new Dictionary<string, string> { ["kept"] = (_doneSourceCount + 1).ToString(), ["deleted"] = _doneSourceCount.ToString() });
     // ECO-044(IMG-011 裁定③): ログに基づく補償 Undo(画像タブと同型)
     public bool CanUndo => _canUndo;
     public string? UndoNote => _undoNote;
@@ -268,11 +278,11 @@ public sealed partial class WorkTabViewModel : ObservableObject
 
     // ---- タグ編集モード(β-2) ----
     public bool EditMode => _editMode;
-    public string EditButtonLabel => _editMode ? "タグ編集を終了" : "タグ編集";
+    public string EditButtonLabel => _editMode ? _localization.T("toolbar.tagEditExit") : _localization.T("toolbar.tagEdit");
     public bool HasSelection => _selected.Count > 0;
     public bool PanelEmpty => _editMode && _selected.Count == 0;
     public bool PanelActive => _editMode && _selected.Count > 0;
-    public string SelectionLabel => $"{_selected.Count} 枚選択中";
+    public string SelectionLabel => _localization.T("view.selectedCount", new Dictionary<string, string> { ["count"] = _selected.Count.ToString() });
     public bool OnCurrentTab => _panelTab == "current";
     public bool OnAddTab => _panelTab == "add";
     public bool HasCurrentTags => CurrentTags.Count > 0;
@@ -297,21 +307,22 @@ public sealed partial class WorkTabViewModel : ObservableObject
         }
     }
 
-    private static readonly IReadOnlyList<ListColumnDef> BasicSortColumns =
-        ListColumnBuilder.Build(null, new Dictionary<string, Tag>(), BasicColLabel);
+    // GF-079-01: 列見出しラベル(名前/サイズ/更新日)を i18n 化するため BasicColLabel を instance 化。
+    // よって基本3列と列テンプレートも instance 化し、ctor で構築(言語切替では再構築=RebuildBasicSortColumns)。
+    private IReadOnlyList<ListColumnDef> _basicSortColumns = Array.Empty<ListColumnDef>();
 
     // ---- ソート(ECO-069: ImageTab v2の基本3列射影) ----
     [ObservableProperty] private bool _sortMenuOpen;
     public ObservableCollection<ListColumnHeaderVM> ListColumns { get; } = new();
     public ObservableCollection<SortOptionVM> SortColumns { get; } = new();
-    public string ColumnTemplate { get; } = ListColumnBuilder.ColumnTemplate(BasicSortColumns);
+    public string ColumnTemplate { get; private set; } = "";
     public bool IsColumnSorted => _sortColKey is not null;
     public bool ShowSortChip => IsColumnSorted;
     public string ColumnSortLabel { get; private set; } = string.Empty;
     public double ColumnSortArrowAngle => _sortColDir == SortDirection.Desc ? 180 : 0;
     public string SortButtonBadge => _sortColKey is null
-        ? "なし"
-        : BasicSortColumns.First(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal)).Label;
+        ? _localization.T("view.sortNone")
+        : _basicSortColumns.First(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal)).Label;
     public bool SortAscActive => _sortColDir == SortDirection.Asc;
     public bool SortDescActive => _sortColDir == SortDirection.Desc;
 
@@ -358,7 +369,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         {
             Workspaces.Add(new WorkspaceRowVM(
                 w.Workspace.Id, w.Workspace.Name, w.Workspace.IsDefault,
-                w.Workspace.IsDefault ? "自動追加先" : "保存済みスペース",
+                w.Workspace.IsDefault ? _localization.T("workspace.autoAddTarget") : _localization.T("workspace.savedSpace"),
                 w.NormalImageCount.ToString(), w.Workspace.Id == _currentWorkspaceId,
                 editing: w.Workspace.Id == _renameId));
         }
@@ -373,7 +384,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         var current = list.FirstOrDefault(w => w.Workspace.Id == _currentWorkspaceId);
         if (current is null || _currentWorkspaceId is null)
         {
-            WsName = string.Empty; WsIsDefault = false; CountLabel = "0 項目";
+            WsName = string.Empty; WsIsDefault = false; CountLabel = _localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = "0" });
             _sourceImages = new(); _imageTags = new(StringComparer.Ordinal);
             Recompute();
             return;
@@ -402,8 +413,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
                 counts[tid] = counts.GetValueOrDefault(tid) + 1;
         if (counts.Count > 0)
         {
-            ShowChips = true; ShowChipHint = true; ChipHintLabel = "タグで絞り込み";
-            Chips.Add(ChipVM.Neutral("クリア", _tagFilter is null));
+            ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.filterByTag");
+            Chips.Add(ChipVM.Neutral(_localization.T("common.clear"), _tagFilter is null));
             foreach (var (tid, count) in counts.OrderBy(c => c.Key, StringComparer.Ordinal))
             {
                 if (!_tagById.TryGetValue(tid, out var def)) continue;
@@ -416,8 +427,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
         var sorted = VisibleEntriesInDisplayOrder();
         var sortItemIndex = _sortColKey is null or ViewColumnModel.NameKey
             ? -1
-            : BasicSortColumns.ToList().FindIndex(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal));
-        var sortItemLabel = sortItemIndex >= 0 ? BasicSortColumns[sortItemIndex].Label : null;
+            : _basicSortColumns.ToList().FindIndex(c => string.Equals(c.Key, _sortColKey, StringComparison.Ordinal));
+        var sortItemLabel = sortItemIndex >= 0 ? _basicSortColumns[sortItemIndex].Label : null;
 
         // ---- Items ----
         bool inSelect = _editMode || _workMode || _deleteMode; // 整理は選択でなくマージ先/整理対象の割当
@@ -432,7 +443,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
             var tagsOf = ImgTagIds(r);
             var dots = tagsOf.Take(3)
                 .Select(tid => (IBrush)Solid(TagColor(_tagById.GetValueOrDefault(tid)))).ToList();
-            var cells = ListColumnBuilder.BuildCells(entry, BasicSortColumns, FmtSize, FmtDate);
+            var cells = ListColumnBuilder.BuildCells(entry, _basicSortColumns, FmtSize, FmtDate);
             var sortItemCell = sortItemIndex >= 0 ? cells[sortItemIndex] : null;
             Items.Add(new ImageItemVM(r.Id, r.FileName, isFolder: false, isPlaceholder: false, hasThumb: false,
                 thumbBrush: null, selectable: inSelect, isSelected: selected,
@@ -444,7 +455,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
                 sortItemLabel: sortItemCell is not null ? sortItemLabel : null, sortItemCell: sortItemCell));
         }
 
-        CountLabel = $"{Items.Count} 項目";
+        CountLabel = _localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = Items.Count.ToString() });
         WsEmpty = _sourceImages.Count == 0;
         BuildContextPanels(selSet);
         OnPropertyChanged(nameof(ShowGrid));
@@ -497,8 +508,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
                     HexA(col, 0.12), HexA(col, 0.28), HexA(col, 1)));
             }
         }
-        CurrentNote = selected.Count > 1 ? "選択画像に共通するタグ" : "この画像に付いているタグ";
-        NoCurrentLabel = selected.Count > 1 ? "共通のタグはありません。" : "まだタグがありません。";
+        CurrentNote = selected.Count > 1 ? _localization.T("tagging.commonTagsOfSelection") : _localization.T("tagging.tagsOnImage");
+        NoCurrentLabel = selected.Count > 1 ? _localization.T("tagging.noCommonTags2") : _localization.T("tagging.noTagsYet");
 
         BuildAddGroups(selected);
 
@@ -517,7 +528,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
             var r = _sourceImages.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
             if (r is null) continue; // マージ後に deleted 化した候補等は除外
             bool added = inTray.Contains(id) || id == _mergeTargetId;
-            SearchResults.Add(new OrganizeResultVM(id, r.FileName, AbsolutePath(r), FmtSize(r.FileSize), score, isCrit, added, relationship));
+            SearchResults.Add(new OrganizeResultVM(id, r.FileName, AbsolutePath(r), FmtSize(r.FileSize), score, isCrit, added, _localization.T("view.criteriaMatch"), relationship));
         }
 
         OnPropertyChanged(nameof(HasCurrentTags));
@@ -543,9 +554,9 @@ public sealed partial class WorkTabViewModel : ObservableObject
 
         var groups = new (TagType Type, string Label, string Hint, string Fg, string Bg)[]
         {
-            (TagType.Simple, "シンプル", "タグ名のみ", "#5b6473", "#f0f2f6"),
-            (TagType.Textual, "テキスト", "候補値から選ぶ", "#2459cf", "#eaf1fe"),
-            (TagType.Numeric, "数値", "値を選ぶ", "#0f8a5e", "#eafaf3"),
+            (TagType.Simple, _localization.T("tag.type.simple"), _localization.T("tagging.simpleHint"), "#5b6473", "#f0f2f6"),
+            (TagType.Textual, _localization.T("tag.type.textual"), _localization.T("tagging.textualHint"), "#2459cf", "#eaf1fe"),
+            (TagType.Numeric, _localization.T("tag.type.numeric"), _localization.T("tagging.numericHint"), "#0f8a5e", "#eafaf3"),
         };
         string q = _addQuery.Trim().ToLowerInvariant(); // ECO-041: 検索(画像タブと同一意味論)
         foreach (var g in groups)
@@ -588,7 +599,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
                     {
                         double step = ns.Step is { } s && s > 0 ? s : 1;
                         row.NumRange = $"{min:0.##}–{max:0.##}";
-                        row.NumCurrent = cur is not null ? $"★ {cur}" : "未設定";
+                        row.NumCurrent = cur is not null ? $"★ {cur}" : _localization.T("common.notSet");
                         for (double v = min; v <= max + 1e-9; v += step)
                         {
                             string label = v.ToString("0.##", CultureInfo.InvariantCulture);
@@ -603,7 +614,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
                     else
                     {
                         row.NumRange = ns?.Min is { } mn && ns.Max is { } mx ? $"{mn:0.##}–{mx:0.##}" : "";
-                        row.NumCurrent = cur is not null ? $"★ {cur}" : "未設定";
+                        row.NumCurrent = cur is not null ? $"★ {cur}" : _localization.T("common.notSet");
                     }
                 }
                 rows.Add(row);
@@ -702,8 +713,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _wsDeleteId = id;
         var n = int.TryParse(row.CountText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var c) ? c : 0;
         WsDeleteMessage = n > 0
-            ? $"この作業スペースを削除します。中の {n} 枚はスペースから外れますが、画像自体は削除されません。この操作は元に戻せません。"
-            : "この作業スペースを削除します。この操作は元に戻せません。";
+            ? _localization.T("workspace.deleteConfirmWithCount", new Dictionary<string, string> { ["count"] = n.ToString() })
+            : _localization.T("workspace.deleteConfirmEmpty");
         WsDeleteOpen = true;
     }
 
@@ -798,14 +809,20 @@ public sealed partial class WorkTabViewModel : ObservableObject
         return new ImageEntry(record, AbsolutePath(record) ?? string.Empty, tags);
     }
 
+    private void RebuildBasicSortColumns()
+    {
+        _basicSortColumns = ListColumnBuilder.Build(null, new Dictionary<string, Tag>(), BasicColLabel);
+        ColumnTemplate = ListColumnBuilder.ColumnTemplate(_basicSortColumns);
+    }
+
     private void BuildSortModels()
     {
         var arrow = ColumnSortArrowAngle;
         ListColumns.Clear();
         SortColumns.Clear();
-        for (var i = 0; i < BasicSortColumns.Count; i++)
+        for (var i = 0; i < _basicSortColumns.Count; i++)
         {
-            var column = BasicSortColumns[i];
+            var column = _basicSortColumns[i];
             var active = string.Equals(_sortColKey, column.Key, StringComparison.Ordinal);
             ListColumns.Add(new ListColumnHeaderVM(i, column.Key, column.Label, active, active ? arrow : 0));
             SortColumns.Add(new SortOptionVM(column.Key, column.Label,
@@ -813,15 +830,15 @@ public sealed partial class WorkTabViewModel : ObservableObject
         }
 
         ColumnSortLabel = _sortColKey is { } key
-            ? $"{BasicSortColumns.First(c => string.Equals(c.Key, key, StringComparison.Ordinal)).Label}（{(_sortColDir == SortDirection.Desc ? "降順" : "昇順")}）"
+            ? _localization.T("view.columnSortLabel", new Dictionary<string, string> { ["column"] = _basicSortColumns.First(c => string.Equals(c.Key, key, StringComparison.Ordinal)).Label, ["direction"] = _localization.T(_sortColDir == SortDirection.Desc ? "view.descending" : "view.ascending") })
             : string.Empty;
     }
 
-    private static string BasicColLabel(string key) => key switch
+    private string BasicColLabel(string key) => key switch
     {
-        ViewColumnModel.NameKey => "名前",
-        ViewColumnModel.SizeKey => "サイズ",
-        ViewColumnModel.ModifiedDateKey => "更新日",
+        ViewColumnModel.NameKey => _localization.T("common.name"),
+        ViewColumnModel.SizeKey => _localization.T("common.size"),
+        ViewColumnModel.ModifiedDateKey => _localization.T("common.modifiedDate"),
         _ => key,
     };
 
@@ -1172,7 +1189,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
         if (!result.IsSuccess)
         {
             _canUndo = false;
-            _undoNote = result.Message ?? "取り消しできません。";
+            _undoNote = result.Message ?? _localization.T("view.cannotUndo");
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(UndoNote));
             OnPropertyChanged(nameof(HasUndoNote));
@@ -1308,8 +1325,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
     {
         if (_trashSel.Count == 0) return;
         int n = _trashSel.Count;
-        if (!await _windows.ConfirmAsync("完全削除",
-                $"{n} 枚を完全に削除します。画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。").ConfigureAwait(true))
+        if (!await _windows.ConfirmAsync(_localization.T("trash.purge"),
+                _localization.T("trash.purgeConfirm", new Dictionary<string, string> { ["count"] = n.ToString() })).ConfigureAwait(true))
             return;
         foreach (var id in _trashSel.ToList())
             await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);
@@ -1324,8 +1341,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
     {
         if (TrashPopupItems.Count == 0) return;
         int n = TrashPopupItems.Count;
-        if (!await _windows.ConfirmAsync("ゴミ箱を空にする",
-                $"ゴミ箱内の {n} 枚を完全に削除します。画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。").ConfigureAwait(true))
+        if (!await _windows.ConfirmAsync(_localization.T("modals.trash.emptyTrash"),
+                _localization.T("trash.emptyConfirm", new Dictionary<string, string> { ["count"] = n.ToString() })).ConfigureAwait(true))
             return;
         foreach (var id in TrashPopupItems.Select(i => i.Id).ToList())
             await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);
@@ -1419,7 +1436,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
     [RelayCommand]
     private void SelectColumnSort(string? key)
     {
-        if (key is null || !BasicSortColumns.Any(c => string.Equals(c.Key, key, StringComparison.Ordinal))) return;
+        if (key is null || !_basicSortColumns.Any(c => string.Equals(c.Key, key, StringComparison.Ordinal))) return;
         if (string.Equals(_sortColKey, key, StringComparison.Ordinal))
             _sortColDir = _sortColDir == SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc;
         else { _sortColKey = key; _sortColDir = SortDirection.Asc; }

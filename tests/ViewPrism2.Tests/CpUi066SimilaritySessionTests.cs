@@ -161,7 +161,8 @@ public sealed class CpUi066SimilaritySessionTests : IDisposable
             () => scope,
             () => { },
             () => { },
-            () => Task.CompletedTask);
+            () => Task.CompletedTask,
+            TestLoc.Ja());
         vm.SetMergeTarget(baseImage.Id);
         return (vm, reader);
     }
