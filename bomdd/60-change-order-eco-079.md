@@ -1,6 +1,6 @@
 # ECO-079 — 画像タブ・作業タブの多言語対応漏れ(直書き文言が言語切替に非追随)
 
-- status: staged
+- status: applied(2026-07-13 gate② golden 合格・GF-079-01 を経てクローズ)
 - type: 不具合(i18n 未配線。実装逸脱=REQ-051「UI 全体へ即時反映」/K-AVALONIA「XAML 直書き禁止」違反)
 - baseline: main 318eeac
 - 報告者: maintainer(2026-07-13・スクリーンショット3枚添付=en モードで画像タブ/整理モード/作業タブが日本語固着)
@@ -130,3 +130,24 @@ TagsTabView と同一の DF-3 パターンで両タブを i18n 配線:
 - テスト追随=OrganizeResultVM/ImageTabOrganizeViewModel の新引数へ既存テスト2ファイルを更新。並列フル run の既存フレーク(CpUiRepairViewModelTests/CpWorkspace028=Dapper Int64→Int32)は isolation 緑・exe フル run で 664/664 確定(51-cheat-log 記録・R3・本変更と無関係)。
 
 **gate② golden 再提示**(§7 基準 + 本 GF の観点=ツールバーのモードボタン・軸「ファイルシステム」・リスト列見出しが ja⇔en で切替)。
+
+## §9 クローズ(2026-07-13 gate② golden 合格)
+
+### 実機確認内容(maintainer・2026-07-13)
+
+言語切替(ja⇔en)で画像タブ・作業タブの**全文言が追随**することを承認: コレクション/作業スペース見出し・ツールバー・タグ編集/整理/作業/削除の各モード入口と「○○を終了」・表示軸「ファイルシステム」(システム定義=翻訳対象、ユーザー定義ビュー名は非翻訳)・リスト列見出し(名前/サイズ/更新日)・整理トレイ(マージ実行/停止/一致度/件数)・ゴミ箱・タグ追加(種別ラベル/候補ヒント)・件数「N 項目/N 枚」。ja 復帰時の視覚不変、en 表示のはみ出し/切れも確認。第1回 fix(§7=XAML のみ)で残った VM 算出プロパティの直書き(§8=GF-079-01)を是正して再 golden 合格。
+
+### 再発防止の所在
+
+- **CP-UI-G1**(画像/作業タブの golden オラクル)characteristic へ ECO-079 節を追記=「言語切替 ja⇔en で全文言が追随」+**golden は ja/en 双方で実施**(単一言語 golden は i18n 未配線をマスキングする)。tolerance/oracle にも言語切替を明記。
+- **機械 pin**: `CpI18n010XamlLintTests`(両 axaml の非コメント直書き JP=0)+タブ VM lint(live VM 4 ファイルの直書き JP リテラル=0)+`CpI18n010TabVmLabelTests`(実 loc で ja⇔en 切替=ラベル英語化)+`CpI18n010TabKeysTests`(束ねキーの ja/en 解決)。XAML と VM の両層を恒久ガード。
+
+### 教訓
+
+1. **i18n 未配線は「文言の生成層」を横断して棚卸しする**。UI 文言は XAML 直書き・VM 算出プロパティ・共有 POCO・システム定義名(軸/列)の 4 層に散在し得る。XAML だけを検査/是正すると VM 層が残る(本 ECO=第1回 fix が XAML のみで GF-079-01 を招いた実績)。再発防止の lint も**層ごとに**用意する(XAML lint + VM lint)。これは ECO-024 の「原典撤去は依存を全工程で棚卸し」の i18n 版。
+2. **既定ロケール+単一言語 golden は i18n 欠陥をマスキングする**。既定 ja で通常運用は日本語=直書きと i18n 化文言が区別不能、歴代 golden が全て ja 実施で言語切替を実測しなかった(golden の谷間)。**golden は両言語で実施する**を CP へ命題化した。これは「検査の暗黙前提は selftest の陽性対照として持つ」(ECO-078 教訓)の golden 版=**golden の暗黙前提(単一言語)を明示条件へ昇格**。
+3. **sibling の健全さがマスキング要因になる**。TagsTabView が i18n 化済みだったため「i18n 基盤は機能している」に見え、ImageTabView/WorkTabView の未配線が見逃された。同型 surface 群では**1 面の健全は他面の健全を含意しない**=read-across 監査の対象(ECO-058/062 の WorkTab read-across 漏れと同族)。
+
+### M4 同期の要否
+
+**不要**。CAD/mock は不変(視覚不変)・surface 新設や挙動仕様変更なし・DB スキーマ不変。文言配線(実装層)+ i18n 資産(K-BOM 相当だが V1 由来語彙の再利用が主)+ CP 観点追記のみ。REQ-050/051・OC-8・E-I18N-014 は既存契約の適用確認で新規宣言不要。

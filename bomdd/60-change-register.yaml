@@ -1279,8 +1279,8 @@ changes:
   - id: ECO-079
     title: "画像タブ・作業タブの多言語対応漏れ(直書き文言が言語切替に非追随)"
     type: 不具合(i18n 未配線。実装逸脱=REQ-051「言語変更は即時=UI 全体へ反映」/K-AVALONIA「XAML 直書き文字列禁止」違反。ImageTabView/WorkTabView 製造時にモック(日本語)を直接転写し i18n 配線を未適用)
-    status: implemented   # 2026-07-13 /eco-fix完了(是正+機械受入)→golden待ち
-    golden: "pending"
+    status: applied   # 2026-07-13 gate②合格(maintainer実機・GF-079-01を経て)→クローズ
+    golden: "approved(2026-07-13 maintainer 実機: 言語切替 ja⇔en で画像/作業タブの全文言が追随=コレクション/作業スペース見出し・ツールバー・タグ編集/整理/作業/削除の各モードと『○○を終了』・表示軸『ファイルシステム』(システム定義=翻訳)・リスト列見出し(名前/サイズ/更新日)・整理トレイ・ゴミ箱・タグ追加・件数。ja復帰で視覚不変。第1回fixはXAMLのみ是正→GF-079-01でVM算出プロパティの直書きを是正し再golden合格)"
     baseline: "main 318eeac"
     findings: "maintainer報告2026-07-13(en切替スクショ3枚): トップタブ(Tags/Images/Work/Settings)と設定は英語化するのに画像タブ・作業タブの中身(コレクション/作業スペースペイン・ツールバー・タグ編集/整理/作業/削除の各モード・並び替え/表示メニュー・ゴミ箱・検索/類似)が日本語固着。実測(2026-07-13): ImageTabView.axaml=Loc[バインド0/非コメント直書きJP88・WorkTabView.axaml=Loc0/直書き80。他17サーフェス(TagsTabView26・ViewerWindow72・CollectionImportWindow48…)は全てLoc>0/直書き0=欠陥は報告2面に正確に限局。i18n語彙はja/en各1076キー既存でcollection/toolbar/sort/merge/similar/trash/view/common群は英訳込みpopulated=大半再利用可(コレクション→navigation.collections等)。ImageTabViewModelはLocalizationServiceをDI受領済(ECO-025 β-2)だがLocプロキシ未公開・WorkTabViewModelはDI未受領。参照実装=TagsTabViewModel(Locプロキシ+CultureChangedでLoc差替=DF-3の罠対策)。混入=bcd861d「画像タブ製造M1+M2(モック準拠)」で日本語直書き転写・git log -SでImageTabViewにLoc[追加コミット皆無=初出から未配線。マスキング=既定ロケールja(REQ-050)で通常運用は区別不能・golden全ECOがja実施で言語切替未実測(golden谷間)"
     impacted_bom: ["実装=ImageTabView.axaml/WorkTabView.axaml/ImageTabViewModel.cs(Loc公開)/WorkTabViewModel.cs(LocalizationService DI追加+Loc公開)+DI登録", "i18n=ja.json/en.json(不足キーのみ追加=数点見込み・スキャン中/再試行/追加済/既定等)", "CP/Oracle=言語切替網羅 or 直書きJP不在の検査追加(谷間是正・再発防止として推奨・既存固定Oracle不変R6)", "CAD=変更なし(mock準拠・視覚不変)", "REQ/spec=REQ-050/051・OC-8・E-I18N-014の適用確認のみ(新規宣言不要見込み)"]
