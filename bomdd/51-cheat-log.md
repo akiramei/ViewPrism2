@@ -448,4 +448,6 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   既存フレーク(並列 run 間の SQLite 共有/接続状態が疑い・run ごとに fail 対象が変わる)。
   ECO-079 の diff には混ぜない(R3)。処置候補=当該テストの DB 隔離見直し or 並列度制御 —
   分離起票 or 恒久記録は maintainer 判断。機械受入は exe 直接実行で確定(memory の dotnet test
-  実行規律に同じ)。
+  実行規律に同じ)。 **→ 処置着手: ECO-082(2026-07-13)で分離起票**(maintainer 裁定=D は別起票。TempDb の
+  DB ファイル共有はシロと実測済み・発火面=WorkspaceRepository.GetAllWithNormalCountsAsync 特定)。
+  あわせて dotnet test 間欠ハングの fail-closed 化は **ECO-081** で起票。
