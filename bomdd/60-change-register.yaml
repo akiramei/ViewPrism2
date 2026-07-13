@@ -1304,8 +1304,8 @@ changes:
   - id: ECO-081
     title: "テスト実行の時間上限をハーネス自身の宣言へ(dotnet test 間欠ハングの fail-closed 化+正本乖離解消)"
     type: 工程ハーネス是正(検査器の fail-closed 化。製品 src 不変=ECO-061/078/080 同型)
-    status: implemented   # 2026-07-13 /eco-fix完了(是正+機械受入)→gate②待ち
-    golden: "pending"
+    status: applied   # 2026-07-13 gate②合格(maintainer=契約文面の裁定つき)→クローズ
+    golden: "approved(2026-07-13 maintainer: 手元 dotnet test 664/664・16.9秒完走を確認+契約文面を裁定=①5分は総実行時間でなく無活動上限 ②発火時=*_hang.log+miniダンプ+非ゼロ終了・一次調査はテスト名→スレッドスタック ③呼び出し側ごとの独自タイムアウト廃止・ただしHangDump不作動に備えCI/AI基盤にはHangDumpより十分長い共通プロセスツリー上限を最終安全弁として設ける ④exe直接=診断用経路であり正本の機械受入経路とはみなさない。裁定文面をCLAUDE.md/M-HARNESS-015へ正本反映)"
     baseline: "main 988a01c"
     findings: "maintainer工程考察2026-07-13=テスト実行が時間内に完了することを信用できない・現対策(ファイル書き出し+監視+タイムアウト)は観測の工夫であって契約の是正ではない。症状=dotnet testが間欠的に返らない(全緑でもプロセス非終了)実績・運用に『ハングしたらexe直接』の但し書き=検査器のfail-closedの破れ。構造問題=時間上限が誰の契約にもなく呼び出し側が私的タイムアウトを持つ。実測2026-07-13=xunit.v3 3.2.2+MTP(TestingPlatformDotnetTestSupport=true)・xunit.runner.json/testconfig.json不在=タイムアウト設定ゼロ・exe直接は毎回~13秒で確実に返る・本セッションのdotnet testは全run完走=間欠でいま赤probeは作れない。シェル側バッファリング(Select-Object)は2026-07-07診断済み=解決済み・本ECOは残りのtesthost側。疑い(未検証)=testhost graceful exit待ち×残存スレッド(Avalonia Headless Dispatcher/SQLite接続/background Task)。正本乖離=CLAUDE.md機械受入はdotnet test規定だが事実上の標準はexe直接(ECO-079/080の受入もexe)"
     impacted_bom: ["テストハーネス構成=tests/ViewPrism2.Tests(設定ファイル or csprojプロパティ・Oracle側同型適用はfix時判断)", "文書=CLAUDE.md機械受入節(タイムアウト付きdotnet test正 or exe正式経路併記=fix時実測で裁定)", "台帳=M-HARNESS-015系note(該当あれば)", "製品src・テスト内容・CAD・DB=変更なし(R6不変)"]

@@ -34,11 +34,15 @@ dotnet test tests/ViewPrism2.Oracle          # 全緑(skip は既知 2 件)
 python bomdd/validate_bom.py                 # 0 error / 0 warning(pre-commit でも走る)
 ```
 
-テスト実行の時間上限はハーネス自身が宣言する(ECO-081): 5 分間テストイベントが無ければ
-ハングとみなし、残存スレッドのミニダンプ+ハング中テスト名を `TestResults/*_hang.{dmp,log}`
-へ吐いて強制終了する(csproj の `TestingPlatformCommandLineArguments` 既定・呼び出し側の
-私的タイムアウトは不要)。ハング失敗時はまず `*_hang.log` のテスト名とダンプを見る。
-同等の代替経路として xUnit v3 の exe 直接実行(`tests/*/bin/Debug/net10.0/*.exe`)も可。
+**ハング時 fail-closed 契約(ECO-081・gate② 裁定文面が正本)**: 正本の dotnet test 経路は
+Microsoft.Testing.Extensions.HangDump を使用し、`--hangdump --hangdump-timeout 5m --hangdump-type mini`
+をテストプロジェクト自身の既定引数として宣言する。これは総実行時間上限ではなく、MTP が観測する
+**5 分間の無活動上限**である。発火時は、実行中テスト名を含む `*_hang.log` および mini ダンプを
+TestResults へ保存し、テスト実行を非ゼロで終了させる。一次調査は `*_hang.log` のテスト名、
+次にダンプの全スレッドスタックの順で行う。
+呼び出し側ごとの独自タイムアウトは使用しない。ただし HangDump 自体の不作動に備え、CI/AI 実行基盤には
+HangDump より十分に長い共通のプロセスツリー上限を最終安全弁として設ける。
+exe 直接実行は診断用経路であり、正本の機械受入経路とはみなさない。
 
 ## コミット規約
 
