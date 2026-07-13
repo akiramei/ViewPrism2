@@ -1292,12 +1292,12 @@ changes:
   - id: ECO-080
     title: "横断関心事(i18n)の運用 3 点セット完成: XAML lint の全 View 一般化+/eco-fix 横断規約参照"
     type: 工程ハーネス拡張(検査器+スキル手順。製品 src 不変=ECO-061/078 同型。ECO-079 教訓①の運用形)
-    status: staged
+    status: implemented   # 2026-07-13 /eco-fix完了(是正+機械受入)→gate②待ち
     golden: "pending"
     baseline: "main ca3e065"
     findings: "maintainer工程考察2026-07-13=多言語対応漏れの根本原因はモックが横断的決定事項(i18n)に沈黙すること。横断事項は①宣言(正本=REQ-050/051・K-AVALONIA=ECO-079時点で既に健全)②作業時の参照導線(=欠落: /eco-fixスキル手順に横断規約の適合確認がない)③機械ゲート(=部分的: ECO-079のXAML lintはImageTabView/WorkTabViewの2ファイル限定)の3層で運用する。合意=③lintをsrc/**/*.axaml全列挙へ一般化(優先)+②スキル手順2へ1行。実測2026-07-13=全20 axamlの非コメント文言属性(Title含む)に直書きJP 0件=一般化lintは初回から緑。陽性対照(合成違反サンプルの検出固定)を同梱(ECO-078教訓=検査の暗黙前提はselftest陽性対照として持つ)。VM層lintの全VM一般化はスコープ外(将来候補)。CLAUDE.md記述は補助でスコープ外"
     impacted_bom: ["tests=CpI18n010TabBindingTests.cs(XAML lint一般化+Title属性追加+陽性対照)", "工程ハーネス=.claude/skills/eco-fix/SKILL.md(手順2へ横断規約参照1行)", "台帳=33-control-plan.yaml CP-I18N-010 fixture_note", "製品src・CAD・Oracle・DB=変更なし(R6不変)"]
     oracle: "既存固定Oracle行は変更しない(R6・製品不変)。陽性対照=直書きJP属性を含む合成XAML断片を検出器が報告することを固定(lintの空振り防止)。一般化lint=src配下全axaml(bin/obj除外)で違反0"
-    verification: "未実施(/eco-fix で実装)"
+    verification: "2026-07-13 /eco-fix完了: 予防ゲートのため赤probeなし→代わりに陽性対照(合成XAMLの直書きJP 3件=Text/ToolTip.Tip/Titleを検出しコメント/バインド/ASCII非検出)で検出器の空振り不在を固定(初回緑=意図どおり動作の証拠)。lint一般化=2ファイルTheory→src配下全axaml列挙Fact(bin/obj除外・列挙≥20ガードで列挙の空振りも防止)+Title属性追加+検出ロジックをHardcodedJapaneseInXaml(string)へ分離。スキル手順2へ横断規約参照追記+CP-I18N-010 fixture_note/test_vectors同期。build 0/0・Tests 664/664(Theory2本→Fact2本=総数不変)・Oracle 109+2skip(R6不変)・validate_bom 0/0"
     body: 60-change-order-eco-080.md
     notes: "gate①不要(ECO-061/078前例=ハーネス変更・方針はmaintainer工程考察で合意済み)。gate②=maintainer実行確認(dotnet test全緑)・UI変更なしのため実機視覚確認不要。一般形(横断関心事=宣言+参照導線+機械ゲートの3層運用)はBomDD昇格候補=ECO-079教訓①の運用形"

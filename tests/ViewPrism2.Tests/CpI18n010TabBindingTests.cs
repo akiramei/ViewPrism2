@@ -21,8 +21,9 @@ namespace ViewPrism2.Tests;
 [Trait("cp", "CP-I18N-010")]
 public sealed class CpI18n010XamlLintTests
 {
+    // ECO-080: Title を追加(全ウィンドウの Window.Title も検査軸に含める=実測で全 View 配線済み)
     private static readonly string[] TextAttrs =
-        { "Text", "Content", "Watermark", "Header", "ToolTip.Tip", "PlaceholderText" };
+        { "Text", "Content", "Watermark", "Header", "ToolTip.Tip", "PlaceholderText", "Title" };
 
     private static readonly Regex Japanese = new("[぀-ヿ一-鿿]");
 
@@ -39,11 +40,10 @@ public sealed class CpI18n010XamlLintTests
         throw new DirectoryNotFoundException("ViewPrism2.sln が出力パスから見つからない");
     }
 
-    private static List<string> HardcodedJapanese(string axamlPath)
+    internal static List<string> HardcodedJapaneseInXaml(string xaml)
     {
-        var text = File.ReadAllText(axamlPath);
         // コメントブロックを除去(<!-- ... -->・複数行対応)して本文だけを検査する
-        text = Regex.Replace(text, "<!--.*?-->", "", RegexOptions.Singleline);
+        var text = Regex.Replace(xaml, "<!--.*?-->", "", RegexOptions.Singleline);
 
         var findings = new List<string>();
         foreach (var attr in TextAttrs)
@@ -66,17 +66,52 @@ public sealed class CpI18n010XamlLintTests
         return findings;
     }
 
-    [Theory]
-    [InlineData("src/ViewPrism2.App/Views/ImageTabView.axaml")]
-    [InlineData("src/ViewPrism2.App/Views/WorkTabView.axaml")]
-    public void タブViewに直書き日本語文言が残っていない(string relativePath)
+    // ECO-080: ECO-079 の 2 ファイル固定 pin を src 配下の全 axaml へ一般化(横断関心事の機械ゲート化)。
+    // 将来の新画面が文書参照に依存せず lint で強制される。bin/obj は列挙から除外。
+    [Fact]
+    public void 全Viewに直書き日本語文言が残っていない()
     {
-        var findings = HardcodedJapanese(Path.Combine(RepoRoot(), relativePath));
+        var root = RepoRoot();
+        var files = Directory.EnumerateFiles(Path.Combine(root, "src"), "*.axaml", SearchOption.AllDirectories)
+            .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                     && !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .ToList();
+        Assert.True(files.Count >= 20, $"axaml 列挙が少なすぎる({files.Count} 件)— 列挙ロジックの空振りを疑う");
 
-        Assert.True(
-            findings.Count == 0,
-            $"{relativePath} に i18n 未配線の直書き日本語が {findings.Count} 件残存: "
-            + string.Join(" | ", findings.Take(12)));
+        var report = new List<string>();
+        foreach (var file in files)
+        {
+            var findings = HardcodedJapaneseInXaml(File.ReadAllText(file));
+            if (findings.Count > 0)
+            {
+                report.Add($"{Path.GetRelativePath(root, file)}: {findings.Count} 件 [{string.Join(" | ", findings.Take(6))}]");
+            }
+        }
+
+        Assert.True(report.Count == 0,
+            "i18n 未配線の直書き日本語が残存(K-AVALONIA 違反=言語切替に非追随):\n" + string.Join("\n", report));
+    }
+
+    // ECO-080(ECO-078 教訓=検査の暗黙前提は陽性対照として持つ): 検出器が空振りしていないことを固定。
+    [Fact]
+    public void 陽性対照_直書き日本語とバインドを検出器が正しく分別する()
+    {
+        const string sample = """
+            <StackPanel>
+              <!-- コメント内の日本語「無視される」は検出しない -->
+              <TextBlock Text="直書きの日本語" />
+              <TextBlock Text="{Binding Loc[some.key]}" />
+              <Button Content="OK" ToolTip.Tip="ヒント文言" />
+              <Window Title="タイトル直書き" />
+            </StackPanel>
+            """;
+
+        var findings = HardcodedJapaneseInXaml(sample);
+
+        Assert.Equal(3, findings.Count); // Text 直書き+ToolTip.Tip+Title(コメント/バインド/ASCII は非検出)
+        Assert.Contains(findings, f => f.StartsWith("Text=", StringComparison.Ordinal));
+        Assert.Contains(findings, f => f.StartsWith("ToolTip.Tip=", StringComparison.Ordinal));
+        Assert.Contains(findings, f => f.StartsWith("Title=", StringComparison.Ordinal));
     }
 
     private static List<string> HardcodedJapaneseLiterals(string csPath)

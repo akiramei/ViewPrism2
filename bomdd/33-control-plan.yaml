@@ -327,13 +327,14 @@ control_plan:
       depth: unit
       tolerance: exact
       fixture: tests/ViewPrism2.Tests/CpI18n010Tests.cs
-      fixture_note: "Trait cp=CP-I18N-010。テスト用ミニ辞書"
+      fixture_note: "Trait cp=CP-I18N-010。テスト用ミニ辞書。加えて CpI18n010TabBindingTests.cs=①XAML lint(ECO-079→**ECO-080 で src 配下全 axaml へ一般化**: 非コメント文言属性 Text/Content/Watermark/Header/ToolTip.Tip/PlaceholderText/**Title** に直書き日本語 0=K-AVALONIA の機械ゲート。陽性対照=合成違反サンプルの検出固定で空振り防止=ECO-078 教訓の適用)②タブ VM lint(live VM 4 ファイルの直書き JP リテラル 0)③VM ラベル切替(ja⇔en end-to-end)④束ねキーの ja/en 解決"
       oracle: 解決文字列の完全一致
       approver: automated
       test_vectors:
         - "en に存在 → en 文言 / en 欠落 → ja 文言 / 両方欠落 → キー文字列"
         - "補間: 'Hello {name}' + {name=Tom} → 'Hello Tom' / 引数欠落 → '{name}' のまま"
         - "SetLocale → CultureChanged 発火 1 回"
+        - "(ECO-080)src 配下の全 axaml: 文言属性の非コメント直書き日本語 0 / 陽性対照: 合成 XAML の直書き JP 3 件(Text/ToolTip.Tip/Title)を検出しコメント・バインド・ASCII は非検出"
 
     - id: CP-NFR-001
       characteristic: 条件評価 1,000 画像(各 5 タグ)× 3 条件 ≦ 200ms(NFR-001)
