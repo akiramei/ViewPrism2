@@ -149,4 +149,4 @@ InvalidOperationException: The calling thread cannot access this object because 
 ### 残課題(スコープ外)
 
 - ECO-082(保留静置): 本 ECO 検証中に新証拠(SqliteCommand.Dispose の NRE=background 残タスク×TempDb.Dispose 競合疑い)を §8 へ記録済み。再開時の起点。
-- Avalonia 上流への issue 報告(案F: ディスパッチループの catch 網羅化・DispatchCore 保護範囲)は任意・未実施。
+- Avalonia 上流への issue 報告(案F)→ **処置済み(2026-07-14): ドラフト作成+12.1.0 再測定まで実施・投稿はしない(maintainer 裁定)**。12.1.0 で構築時例外は #21688 により修正済みだが、**cleanup 経路の故障増幅(消費者ループ静黙死→永久ハング)は 12.1.0 でも決定論的に再現**を実測。英文 issue ドラフト 2 本(主=故障増幅・関連=PerTest 再初期化レース)+最小再現を [bomdd/reports/upstream-avalonia-headless-eco083/](reports/upstream-avalonia-headless-eco083/README.md) に収載(将来投稿する場合の手順つき)。
