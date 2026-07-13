@@ -1322,6 +1322,18 @@ changes:
     findings: "2026-07-13にdotnet test(MTP全並列)フルrunで間欠fail 2回観測: runA=CpWorkspace028Tests 4本がInvalidCastException Int64→Int32(Dapper SqlMapper.GenerateMapper/MultiMapImpl)・runB=CpUiRepairViewModelTests 1本(同族疑い)。isolation(-class)は常に緑・直後のxUnit v3 exeフルrun(全並列)も664/664緑=再現せず・runごとにfail対象が変わる。切り分け済み=TempDbはインスタンスごとGUIDディレクトリの独立DBファイル+独立DatabaseManager(実測)=テスト間DB共有はシロ。発火面特定=WorkspaceRepository.GetAllWithNormalCountsAsync(:41 QueryAsync<WorkspaceRow,long,WorkspaceWithCount> splitOn NormalCount)=決定的なら常にfailするはずのクエリが並列時のみ間欠fail。疑い(未検証)=①Dapperマッパー生成/キャッシュの並列競合(最有力=列型取り違えの間欠発火を説明) ②SQLitePCLRaw初期化競合 ③MTPとexeの並列度差が発火率に影響 ④製品潜在欠陥(可能性低いが排除しない)"
     impacted_bom: ["真因がテスト基盤なら=tests(再現ハーネス+是正)", "真因が製品なら=Infrastructure WorkspaceRepository等+CP追補(typeを製品不具合へ改訂)", "既存固定Oracle不変(R6)"]
     oracle: "既存固定Oracle行は変更しない(R6)。プローブ先行=再現ハーネス(当該クエリを高並列反復・発火率実測・条件掃引=並列度/初回性/複数TempDb同時生成)。再現できない場合は診断不能として停止報告(推測でコードを触らない)"
-    verification: "未実施(/eco-fix で再現プローブから)"
+    verification: "2026-07-13 /eco-fix 診断実施→停止(§3 宣言どおり): InvalidCast は単独プローブ 1,200 回(16並列×25反復×3run の TempDb 新規生成+初回 multi-map)+exe フル run×5+dotnet test フル run×30 で再現 0 件=診断不能として停止。診断中の副産物=別種の間欠ハング(Headless UI テスト 8 本が全緑のまま無活動)を 2/15 回捕獲し ECO-083 へ R3 分離起票(ダンプ+デコンパイルで真因構造確定)。過去の『応答なし』の実体はハング側の可能性が高い。処置=maintainer 裁定待ち: (a)保留静置(ECO-081 の診断採取により再発時に証拠が自動的に残る→診断再開) (b)再現不能クローズ(再発時に再起票)。本文§7"
     body: 60-change-order-eco-082.md
     notes: "gate①不要(欠陥是正・診断は実測で確定)。gate②=maintainer実行確認(フルrun複数回でfail 0 or 発火率の有意低下)。関連=ECO-081(時間上限+診断採取が観測性を改善=081先行が望ましい)。51-cheat-logのECO-079並列フレーク記録は本ECOで起票済みマーク"
+  - id: ECO-083
+    title: "Headless ディスパッチループの静黙死で以後の UI テストが全て無限待ちになる(並列フル run 間欠ハングの真因)"
+    type: 不具合(テストハーネス基盤。上流=Avalonia.Headless 12.0.4 の設計脆弱性+自リポの防御不在。ECO-082 診断中に実測捕獲・R3 分離起票)
+    status: staged
+    golden: "pending"
+    baseline: "main 2f967ce"
+    findings: "2026-07-13 ECO-082 診断中に dotnet test フル run 2/15 回で捕獲(証拠完備): Headless(共有 HeadlessApp.Session)利用の UI テスト 8 本が実行中のまま無活動 4 分超→ECO-081 の HangDump(5分)が発火し hang.log(ハング中テスト名)+mini ダンプ自動採取=fail-closed 化の初実運用が機能。テスト失敗としては一切報告されない(全緑のまま停止)。ダンプ解析(clrstack -all 13スレッド)=実行スレッド不在・全ワーカーアイドル・セッションスレッド消滅=消費者死亡による滞留。真因構造(Avalonia.Headless 12.0.4 HeadlessUnitTestSession デコンパイル読解で確定)=①ディスパッチループの catch は OperationCanceledException のみ ②DispatchCore の保護外 2 箇所=(a)EnsureSharedApplication(try 前) (b)finally 内 Dispatcher.UIThread.RunJobs=テスト完了後の残留ジョブ(Post された継続/タイマー等)の未処理例外が finally からループへ伝播しループ死亡→後続 Dispatch の TCS 永遠未完=無限待ち・例外は誰のテストにも帰属しない(静黙死)。間欠(残留ジョブはタイミング依存)・並列で発火しやすい(負荷でタイミング変動)・全緑のまま停止を全て説明。未確定=ループを殺した具体例外(mini=ヒープ非含有・heap 再現 15 run 不発)→案D で次回発火時に顕在化。過去の『サブタスクでテスト実行が応答なし』の実体は本件の可能性が高い"
+    impacted_bom: ["tests=HeadlessApp.cs(dispatchTask 監視+FailFast)", "台帳=M-HARNESS-015(Headless セッションの fail-fast 契約)", "製品 src・CAD・Oracle=変更なし(R6 不変)"]
+    oracle: "既存固定Oracle行は変更しない(R6)。プローブ=一時注入(Dispatch 内で Dispatcher.UIThread.Post(() => throw) → finally の RunJobs で例外→ループ死)で赤(後続 Dispatch 無限待ち)を決定論的に実測→案D 適用後は即時 FailFast+原因例外表示へ緑転(共有セッションを殺すため恒久テスト化不可=ECO-081 陽性対照方式で実測記録)"
+    verification: "未実施(/eco-fix で実装)"
+    body: 60-change-order-eco-083.md
+    notes: "是正案D(推奨)=HeadlessApp で _dispatchTask をリフレクション監視・OnlyOnFaulted で原因例外全文つき Environment.FailFast=沈黙ハング(5分待ち原因不明)→即時クラッシュ+真犯人顕在化。フィールド不在時は監視スキップ(Avalonia 更新耐性)。案E=D で顕在化した例外の発生源を潰す(後続)・案F=Avalonia 上流 issue(並行可)。gate①不要(ハーネス欠陥・ECO-061/078 前例)。gate②=maintainer 実行確認。関連=ECO-081(HangDump=捕獲装置・5分の最終安全弁として維持)・ECO-082(診断中の副産物捕獲・本体 InvalidCast は再現不能で停止)"
