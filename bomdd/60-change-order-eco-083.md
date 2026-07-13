@@ -1,6 +1,6 @@
 # ECO-083 — Headless ディスパッチループの静黙死で以後の UI テストが全て無限待ちになる(並列フル run 間欠ハングの真因)
 
-- status: staged
+- status: applied(2026-07-13 gate② 合格・クローズ)
 - type: 不具合(テストハーネス基盤。上流= Avalonia.Headless 12.0.4 の設計脆弱性+自リポの防御不在。ECO-082 診断中に実測捕獲・R3 分離起票)
 - baseline: main 2f967ce(+ECO-081 の HangDump 恒久化が捕獲装置として前提)
 - 発端: ECO-082(InvalidCast フレーク)の再現診断中、dotnet test フル run 反復で**別種の間欠ハングを 2/15 回捕獲**(2026-07-13)
@@ -127,3 +127,26 @@ InvalidOperationException: The calling thread cannot access this object because 
 - build 0/0・`dotnet test` Tests **665/665**(単発確認・正本経路)・Oracle 109+2skip・validate_bom 0/0。
 
 **次 gate=②**(maintainer 確認)。
+
+## §10 クローズ(2026-07-13 gate② 合格)
+
+### 確認内容(maintainer・2026-07-13)
+
+手元 `dotnet test tests/ViewPrism2.Tests` の全緑完走(テスト概要)を確認し合格。実測記録(フル run ×12 ハング/FailFast 0=是正前 2/15・是正前後の挙動変化・実発火スタックによる真因確定・PerAssembly 化の挙動不変)を承認。
+
+### 再発防止の所在
+
+- **M-HARNESS-015 `fail_closed`**: ①PerAssembly 明示=**既定値(PerTest)に戻してはならない**の契約化(戻すと毎 Dispatch 再初期化レースが復活) ②FailFast 監視=多層防御+診断装置。
+- **機械 pin**: `CpHarnessEco083Tests`(監視の前提=`_dispatchTask` フィールドの存在を検査。Avalonia 更新で監視が黙って無効化される事態を顕在化)。
+- 防御の層構造(ECO-081 と合わせた完成形): **PerAssembly(構造除去)→ FailFast 監視(即時診断)→ HangDump 5 分(最終安全弁)→ 基盤プロセスツリー上限**。
+
+### 教訓
+
+1. **fail-fast 監視は防御であると同時に診断装置**。第 1 段(FailFast 化)を入れた直後のフル run で実発火を捕獲し、原因例外+完全スタックが真因確定の決め手になった(「沈黙する故障は、まず喋らせてから治す」)。ECO-081 教訓①「fail-closed は実測で選定」の続編=**fail-fast 化は真因調査の加速装置を兼ねる**。
+2. **ライブラリ既定値とコード内コメントの意図の乖離は実測でしか出ない**。HeadlessApp のコメントは「プロセス共有」を謳いながら、StartNew の既定 isolation=PerTest が毎回再初期化していた。既定値は「書かれていない設定」であり、横断規約(ECO-080)と同じく**沈黙する決定事項** — 重要なライブラリ挙動は既定に任せず明示する。
+3. **再現ループは発火時に即停止し、ログ/ダンプを先に退避する**。同一パスへの上書きで証拠を 2 回失った(run4 の初回・run7)。証拠の揮発性を前提に採取を自動化・先行させる。
+
+### 残課題(スコープ外)
+
+- ECO-082(保留静置): 本 ECO 検証中に新証拠(SqliteCommand.Dispose の NRE=background 残タスク×TempDb.Dispose 競合疑い)を §8 へ記録済み。再開時の起点。
+- Avalonia 上流への issue 報告(案F: ディスパッチループの catch 網羅化・DispatchCore 保護範囲)は任意・未実施。

@@ -1328,8 +1328,8 @@ changes:
   - id: ECO-083
     title: "Headless ディスパッチループの静黙死で以後の UI テストが全て無限待ちになる(並列フル run 間欠ハングの真因)"
     type: 不具合(テストハーネス基盤。上流=Avalonia.Headless 12.0.4 の設計脆弱性+自リポの防御不在。ECO-082 診断中に実測捕獲・R3 分離起票)
-    status: implemented   # 2026-07-13 /eco-fix完了(是正+機械受入)→gate②待ち
-    golden: "pending"
+    status: applied   # 2026-07-13 gate②合格(maintainer実行確認)→クローズ
+    golden: "approved(2026-07-13 maintainer 実行確認: 手元 dotnet test の全緑完走=テスト概要を確認。実測記録=フルrun×12ハング/FailFast 0(是正前2/15)・是正前後の挙動変化(無限待ち→即時FailFast+原因例外全文)・実発火スタックによる真因確定(PerTest既定の毎Dispatch再初期化レース)・PerAssembly化の挙動不変(665/665)を承認)"
     baseline: "main 2f967ce"
     findings: "2026-07-13 ECO-082 診断中に dotnet test フル run 2/15 回で捕獲(証拠完備): Headless(共有 HeadlessApp.Session)利用の UI テスト 8 本が実行中のまま無活動 4 分超→ECO-081 の HangDump(5分)が発火し hang.log(ハング中テスト名)+mini ダンプ自動採取=fail-closed 化の初実運用が機能。テスト失敗としては一切報告されない(全緑のまま停止)。ダンプ解析(clrstack -all 13スレッド)=実行スレッド不在・全ワーカーアイドル・セッションスレッド消滅=消費者死亡による滞留。真因構造(Avalonia.Headless 12.0.4 HeadlessUnitTestSession デコンパイル読解で確定)=①ディスパッチループの catch は OperationCanceledException のみ ②DispatchCore の保護外 2 箇所=(a)EnsureSharedApplication(try 前) (b)finally 内 Dispatcher.UIThread.RunJobs=テスト完了後の残留ジョブ(Post された継続/タイマー等)の未処理例外が finally からループへ伝播しループ死亡→後続 Dispatch の TCS 永遠未完=無限待ち・例外は誰のテストにも帰属しない(静黙死)。間欠(残留ジョブはタイミング依存)・並列で発火しやすい(負荷でタイミング変動)・全緑のまま停止を全て説明。未確定=ループを殺した具体例外(mini=ヒープ非含有・heap 再現 15 run 不発)→案D で次回発火時に顕在化。過去の『サブタスクでテスト実行が応答なし』の実体は本件の可能性が高い"
     impacted_bom: ["tests=HeadlessApp.cs(dispatchTask 監視+FailFast)", "台帳=M-HARNESS-015(Headless セッションの fail-fast 契約)", "製品 src・CAD・Oracle=変更なし(R6 不変)"]
