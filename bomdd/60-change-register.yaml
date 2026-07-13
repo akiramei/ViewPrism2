@@ -1301,3 +1301,27 @@ changes:
     verification: "2026-07-13 /eco-fix完了: 予防ゲートのため赤probeなし→代わりに陽性対照(合成XAMLの直書きJP 3件=Text/ToolTip.Tip/Titleを検出しコメント/バインド/ASCII非検出)で検出器の空振り不在を固定(初回緑=意図どおり動作の証拠)。lint一般化=2ファイルTheory→src配下全axaml列挙Fact(bin/obj除外・列挙≥20ガードで列挙の空振りも防止)+Title属性追加+検出ロジックをHardcodedJapaneseInXaml(string)へ分離。スキル手順2へ横断規約参照追記+CP-I18N-010 fixture_note/test_vectors同期。build 0/0・Tests 664/664(Theory2本→Fact2本=総数不変)・Oracle 109+2skip(R6不変)・validate_bom 0/0"
     body: 60-change-order-eco-080.md
     notes: "gate①不要(ECO-061/078前例=ハーネス変更・方針はmaintainer工程考察で合意済み)。gate②=maintainer実行確認(dotnet test全緑)・UI変更なしのため実機視覚確認不要。一般形(横断関心事=宣言+参照導線+機械ゲートの3層運用)はBomDD昇格候補=ECO-079教訓①の運用形"
+  - id: ECO-081
+    title: "テスト実行の時間上限をハーネス自身の宣言へ(dotnet test 間欠ハングの fail-closed 化+正本乖離解消)"
+    type: 工程ハーネス是正(検査器の fail-closed 化。製品 src 不変=ECO-061/078/080 同型)
+    status: staged
+    golden: "pending"
+    baseline: "main 988a01c"
+    findings: "maintainer工程考察2026-07-13=テスト実行が時間内に完了することを信用できない・現対策(ファイル書き出し+監視+タイムアウト)は観測の工夫であって契約の是正ではない。症状=dotnet testが間欠的に返らない(全緑でもプロセス非終了)実績・運用に『ハングしたらexe直接』の但し書き=検査器のfail-closedの破れ。構造問題=時間上限が誰の契約にもなく呼び出し側が私的タイムアウトを持つ。実測2026-07-13=xunit.v3 3.2.2+MTP(TestingPlatformDotnetTestSupport=true)・xunit.runner.json/testconfig.json不在=タイムアウト設定ゼロ・exe直接は毎回~13秒で確実に返る・本セッションのdotnet testは全run完走=間欠でいま赤probeは作れない。シェル側バッファリング(Select-Object)は2026-07-07診断済み=解決済み・本ECOは残りのtesthost側。疑い(未検証)=testhost graceful exit待ち×残存スレッド(Avalonia Headless Dispatcher/SQLite接続/background Task)。正本乖離=CLAUDE.md機械受入はdotnet test規定だが事実上の標準はexe直接(ECO-079/080の受入もexe)"
+    impacted_bom: ["テストハーネス構成=tests/ViewPrism2.Tests(設定ファイル or csprojプロパティ・Oracle側同型適用はfix時判断)", "文書=CLAUDE.md機械受入節(タイムアウト付きdotnet test正 or exe正式経路併記=fix時実測で裁定)", "台帳=M-HARNESS-015系note(該当あれば)", "製品src・テスト内容・CAD・DB=変更なし(R6不変)"]
+    oracle: "既存固定Oracle行は変更しない(R6)。陽性対照(ECO-078/080教訓=予防ゲートに赤probeなし)=人工ハング(無限待ち)テストを一時注入し上限が発火して診断つき失敗になることを実測してから恒久設定を出荷。実装手段はxunit.v3 3.2.2+MTPで実際に効くものを実測選定"
+    verification: "未実施(/eco-fix で実装)"
+    body: 60-change-order-eco-081.md
+    notes: "原則=タイムアウトを呼び出し側の防御からハーネス自身の宣言へ(超過時=残存スレッド診断つき失敗=次の発火で真因証拠が自動採取)。gate①不要(ハーネス変更)・gate②=maintainer確認(上限つき完走+人工ハング発火実測記録+CLAUDE.md改訂文面)。関連=ECO-082(並列フレーク=別欠陥R3分離・本ECOが観測性を先に改善するため081先行が望ましい)・memory実行規律はクローズ時更新"
+  - id: ECO-082
+    title: "テスト並列フル run の間欠フレーク(Dapper InvalidCastException Int64→Int32)"
+    type: 不具合(テスト基盤 or 潜在製品欠陥=未確定。間欠・並列時のみ。51-cheat-log記録をmaintainer裁定で分離起票)
+    status: staged
+    golden: "pending"
+    baseline: "main 988a01c"
+    findings: "2026-07-13にdotnet test(MTP全並列)フルrunで間欠fail 2回観測: runA=CpWorkspace028Tests 4本がInvalidCastException Int64→Int32(Dapper SqlMapper.GenerateMapper/MultiMapImpl)・runB=CpUiRepairViewModelTests 1本(同族疑い)。isolation(-class)は常に緑・直後のxUnit v3 exeフルrun(全並列)も664/664緑=再現せず・runごとにfail対象が変わる。切り分け済み=TempDbはインスタンスごとGUIDディレクトリの独立DBファイル+独立DatabaseManager(実測)=テスト間DB共有はシロ。発火面特定=WorkspaceRepository.GetAllWithNormalCountsAsync(:41 QueryAsync<WorkspaceRow,long,WorkspaceWithCount> splitOn NormalCount)=決定的なら常にfailするはずのクエリが並列時のみ間欠fail。疑い(未検証)=①Dapperマッパー生成/キャッシュの並列競合(最有力=列型取り違えの間欠発火を説明) ②SQLitePCLRaw初期化競合 ③MTPとexeの並列度差が発火率に影響 ④製品潜在欠陥(可能性低いが排除しない)"
+    impacted_bom: ["真因がテスト基盤なら=tests(再現ハーネス+是正)", "真因が製品なら=Infrastructure WorkspaceRepository等+CP追補(typeを製品不具合へ改訂)", "既存固定Oracle不変(R6)"]
+    oracle: "既存固定Oracle行は変更しない(R6)。プローブ先行=再現ハーネス(当該クエリを高並列反復・発火率実測・条件掃引=並列度/初回性/複数TempDb同時生成)。再現できない場合は診断不能として停止報告(推測でコードを触らない)"
+    verification: "未実施(/eco-fix で再現プローブから)"
+    body: 60-change-order-eco-082.md
+    notes: "gate①不要(欠陥是正・診断は実測で確定)。gate②=maintainer実行確認(フルrun複数回でfail 0 or 発火率の有意低下)。関連=ECO-081(時間上限+診断採取が観測性を改善=081先行が望ましい)。51-cheat-logのECO-079並列フレーク記録は本ECOで起票済みマーク"
