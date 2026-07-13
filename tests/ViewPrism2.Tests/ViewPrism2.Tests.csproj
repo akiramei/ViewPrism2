@@ -6,11 +6,19 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- ECO-081: 時間上限をハーネス自身の宣言に(fail-closed 化)。テストイベントが 5 分間ゼロ=ハングと
+         みなし、残存スレッドのミニダンプ(TestResults/*_hang.dmp + ハング中テスト名の *_hang.log)を
+         採取してプロセスを強制終了する。進捗がある限り発火しないため実行時間の増加では誤爆しない。
+         呼び出し側からは -p:TestingPlatformCommandLineArguments で上書き可能。 -->
+    <TestingPlatformCommandLineArguments Condition="'$(TestingPlatformCommandLineArguments)' == ''">--hangdump --hangdump-timeout 5m --hangdump-type mini</TestingPlatformCommandLineArguments>
     <!-- NU1903(SQLitePCLRaw.lib.e_sqlite3 2.1.11・GHSA-2m69-gcr7-jv3q)は ECO-026 で Infrastructure が
          SQLitePCLRaw.bundle_e_sqlite3 3.0.3 を明示ピンして根本解消したため、暫定の WarningsNotAsErrors 回避は撤去。 -->
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <!-- ECO-081: ハング時の残存スレッドダンプ採取+プロセス強制終了(fail-closed 化)。
+         MTP の - -timeout は協調キャンセルで真のハング(無限待ちスレッド)を切れないことを実測済み。 -->
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="1.9.1" />
     <!-- ECO-022 GF-TAGCTRL-01: ビューア設定ドロワー ScrollViewer の有界化(Extent/Viewport)を
          実描画レイアウトで回帰検査するためのヘッドレス基盤(App バージョンに合わせ 12.0.4)。 -->
     <PackageReference Include="Avalonia.Headless" Version="12.0.4" />

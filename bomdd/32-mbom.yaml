@@ -574,6 +574,7 @@ mbom:
         traits: "各テストに [Trait(\"cp\", \"CP-xxx\")] を付与し Control Plan へトレース"
         fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
         l2: "スキーマ同値(新規 DB vs マイグレーション適用 DB)・サムネイル出力メタデータ検査を含む"
+        fail_closed: "(ECO-081)時間上限はハーネス自身が宣言: HangDump 拡張=5分間テストイベント無しでミニダンプ(TestResults/*_hang.{dmp,log}=残存スレッド+ハング中テスト名)を採取し強制終了。csproj の TestingPlatformCommandLineArguments 既定(-p: で上書き可・Oracle 側も同型)。実測済み前提=MTP --timeout は協調キャンセルのため真のハング(無限待ちスレッド)を切れない"
 
     # ---- ECO-058/GF-058-01: 通常profileへ接続しない10,000件golden実行経路 ----
     - id: M-GOLDEN-HARNESS-039

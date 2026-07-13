@@ -34,6 +34,12 @@ dotnet test tests/ViewPrism2.Oracle          # 全緑(skip は既知 2 件)
 python bomdd/validate_bom.py                 # 0 error / 0 warning(pre-commit でも走る)
 ```
 
+テスト実行の時間上限はハーネス自身が宣言する(ECO-081): 5 分間テストイベントが無ければ
+ハングとみなし、残存スレッドのミニダンプ+ハング中テスト名を `TestResults/*_hang.{dmp,log}`
+へ吐いて強制終了する(csproj の `TestingPlatformCommandLineArguments` 既定・呼び出し側の
+私的タイムアウトは不要)。ハング失敗時はまず `*_hang.log` のテスト名とダンプを見る。
+同等の代替経路として xUnit v3 の exe 直接実行(`tests/*/bin/Debug/net10.0/*.exe`)も可。
+
 ## コミット規約
 
 `起票(eco-NNN):` → `decide(eco-NNN):`(裁定のみ) → `fix(eco-NNN):` → `accept(eco-NNN):`。

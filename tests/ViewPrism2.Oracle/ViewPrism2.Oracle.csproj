@@ -6,9 +6,12 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- ECO-081: Tests 側と同型のハング fail-closed 化(5 分無活動でミニダンプ+強制終了)。 -->
+    <TestingPlatformCommandLineArguments Condition="'$(TestingPlatformCommandLineArguments)' == ''">--hangdump --hangdump-timeout 5m --hangdump-type mini</TestingPlatformCommandLineArguments>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="1.9.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ViewPrism2.Core\ViewPrism2.Core.csproj" />

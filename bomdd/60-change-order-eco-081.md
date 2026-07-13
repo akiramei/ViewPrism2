@@ -59,3 +59,39 @@
 
 - ECO-082(同時分離起票): 並列フレーク(Dapper Int64→Int32)= 「テスト実行を信用できない」のもう一つの構成要素。別欠陥のため R3 分離。
 - memory: dotnet-test-execution-discipline(2026-07-07 のシェル側診断)。本 ECO クローズ時に更新。
+
+## §8 実施記録(2026-07-13 /eco-fix)
+
+### 実測裏取り(陽性対照=人工ハング注入・全て一時注入で実測後に削除)
+
+一時テスト `HangProbe_TEMP_ECO081`(`Thread.Sleep(Timeout.Infinite)` の 1 本)を注入して 3 通りを実測:
+
+| # | 構成 | 結果 |
+|---|---|---|
+| A | タイムアウトなし(現行構成) | **60 秒(外部ガード)経過してもプロセス非終了=外部 kill(exit 124)でのみ終了** — 「無限に待ち得る」の赤の実証 |
+| B | MTP 組み込み `--timeout 30s` | `-v d` の Tool command で**引数が exe に到達していることを確認した上で** 121 秒(外部 kill)まで切られず = **MTP `--timeout` は協調キャンセルであり、真のハング(無限待ちスレッド)を切れない**(手段選定の決定的実測) |
+| C | HangDump 拡張 `--hangdump --hangdump-timeout 30s` | **45 秒で exit=1**。`TestResults/ViewPrism2.Tests_<pid>_hang.log` に**ハング中テスト名**(`HangProbe_TEMP_ECO081.人工ハング_無限待ち`)、`.dmp` に全スレッドスタック(full=395MB → `--hangdump-type mini` 指定で 7.2MB・mini でも発火+テスト名ログを再実測確認) |
+
+### 是正内容
+
+1. **HangDump の恒久宣言**(A の実現): `Microsoft.Testing.Extensions.HangDump 1.9.1`(MTP 1.9.1 と同系)を Tests/Oracle 両 csproj へ追加し、`TestingPlatformCommandLineArguments` 既定値として `--hangdump --hangdump-timeout 5m --hangdump-type mini` を宣言(`Condition="''"` で `-p:` からの上書き可)。**activity ベース検出**(テストイベントが 5 分間ゼロの時のみ発火)のため、テスト数増加による実行時間の伸びでは誤爆しない。発火時=残存スレッドのミニダンプ+ハング中テスト名を `TestResults/*_hang.{dmp,log}` へ採取して強制終了=**次の実発火で真因特定の証拠が自動的に残る**。
+2. **恒久設定の適用実証**: 引数なしの `dotnet test` の Tool command に `--hangdump --hangdump-timeout 5m --hangdump-type mini` が自動付与されることを `-v d` で確認。フル run 664/664 が 15-16 秒で完走(従来同等・誤爆なし)。Oracle も同型で 109+2skip 11 秒。exe 直接(xunit ネイティブ CLI)は無影響(664/664・13 秒=回帰なし)。
+3. **正本乖離解消(C)**: CLAUDE.md 機械受入節へ「時間上限はハーネス自身が宣言する(ECO-081)」を追記=ハング時の一次調査先(`*_hang.log` のテスト名→ダンプ)と exe 直接の代替経路を明記。呼び出し側の私的タイムアウトを不要化。
+4. **台帳同期**: 32-mbom M-HARNESS-015 の interface_contract へ `fail_closed` 次元を追加(HangDump 宣言+「MTP --timeout は協調キャンセルで真のハングを切れない」の実測済み前提を記録)。
+
+### 検討して不採用にした手段(実測理由つき)
+
+- MTP `--timeout`: 実測 B のとおり協調キャンセルで真のハングに無力。
+- `testconfig.json`: MTP 1.9.1 の `platformOptions` 定義キーを DLL から実測=6 種のみで timeout/hangdump 系なし(コマンドライン専用)→ csproj プロパティ既定を採用。
+- xunit ネイティブ `-longRunning`: 診断メッセージのみで終了させない。
+
+### 機械受入(4 点・全緑=正本コマンドどおりタイムアウト宣言込み)
+
+- `dotnet build ViewPrism2.sln`: 0 warning / 0 error。
+- `dotnet test tests/ViewPrism2.Tests`: **664/664**(15 秒・hangdump 自動付与)。
+- `dotnet test tests/ViewPrism2.Oracle`: 109 pass / 2 known skip(11 秒・R6 不変)。
+- `python bomdd/validate_bom.py`: 0 error / 0 warning。
+
+R7 セルフゴールデン: 対象外(UI 不変・製品 src 不変)。一時注入した HangProbe は削除済み(リポジトリに残さない)。
+
+**次 gate=②**(maintainer 確認)。
