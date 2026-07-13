@@ -149,4 +149,4 @@ InvalidOperationException: The calling thread cannot access this object because 
 ### 残課題(スコープ外)
 
 - ECO-082(保留静置): 本 ECO 検証中に新証拠(SqliteCommand.Dispose の NRE=background 残タスク×TempDb.Dispose 競合疑い)を §8 へ記録済み。再開時の起点。
-- Avalonia 上流への issue 報告(案F)→ **処置済み(2026-07-14): ドラフト作成+12.1.0 再測定まで実施・投稿はしない(maintainer 裁定)**。12.1.0 で構築時例外は #21688 により修正済みだが、**cleanup 経路の故障増幅(消費者ループ静黙死→永久ハング)は 12.1.0 でも決定論的に再現**を実測。英文 issue ドラフト 2 本(主=故障増幅・関連=PerTest 再初期化レース)+最小再現を [bomdd/reports/upstream-avalonia-headless-eco083/](reports/upstream-avalonia-headless-eco083/README.md) に収載(将来投稿する場合の手順つき)。
+- Avalonia 上流への issue 報告(案F)→ **投稿済み(2026-07-14 裁定変更)**: 主 issue(cleanup 経路の故障増幅=消費者ループ静黙死→永久ハング・**12.1.0 でも決定論的に再現を実測**・構築時のみ #21688 で修正済み)を maintainer が投稿= [AvaloniaUI/Avalonia#21770](https://github.com/AvaloniaUI/Avalonia/issues/21770)。関連 issue(PerTest 再初期化レース)は**保留**(求められたら対応)。ドラフト・12.1.0 実測記録・最小再現・Issue 2 投稿手順は [bomdd/reports/upstream-avalonia-headless-eco083/](reports/upstream-avalonia-headless-eco083/README.md)。上流修正時はリフレクション監視の撤去を ECO 起票で検討。
