@@ -67,3 +67,30 @@
 - ECO-081: HangDump(捕獲装置)— 本件の発見はその初実運用の成果。5 分の最終安全弁として引き続き有効(D は一次防衛=即時化)。
 - ECO-082: 診断中の副産物として本件を捕獲(§7)。InvalidCast 本体は再現不能で停止。
 - HeadlessApp.cs コメント「Dispatch は単一 UI スレッドへ直列化されるため、テストクラス間の並列実行とも安全」— **ループが生きている限り**という暗黙前提が破れていた(検査の暗黙前提の一種)。
+
+## §8 実施記録(2026-07-13 /eco-fix)
+
+### プローブ先行(R5)= 赤の実測(一時注入 `HangProbe_TEMP_ECO083`・実測後に削除)
+
+`Dispatch(() => Dispatcher.UIThread.Post(() => throw new InvalidOperationException("ECO-083 probe")))` の一時テストで、§2 の真因構造を**決定論的に再現**:
+
+- **是正前(赤)**: 残留ジョブの例外 1 発で、①post した Dispatch **自身も未完**(`WaitingForActivation` のまま=TrySetException に到達しない → finally 内で例外がループへ伝播した診断の直接証拠)②後続 `Dispatch(() => 1)` も 10 秒経過で未完=**静黙死→無限待ちを実証**。
+- **是正後**: 同一プローブが **3.2 秒で exit=35(FailFast)**。stderr に「ECO-083: HeadlessUnitTestSession のディスパッチループが未処理例外で死亡。…原因例外: System.AggregateException … ---> **System.InvalidOperationException: ECO-083 probe: 残留ジョブの未処理例外**」= **ループを殺した真犯人の例外全文が顕在化**(本 ECO 唯一の未確定=「実発火時の具体例外」が次回発火で自動確定する状態になった)。
+
+### 是正内容(案D)
+
+1. `HeadlessApp.Session` の生成を `Start()` へ切り出し、`HeadlessUnitTestSession` の内部 `_dispatchTask` をリフレクション取得。`ContinueWith(OnlyOnFaulted)` で**原因例外全文つき `Environment.FailFast`**(即時クラッシュ=沈黙ハング 5 分待ちの前段の一次防衛+真犯人顕在化)。フィールド不在(Avalonia 更新)時は監視スキップ=実行時は安全側。
+2. **恒久 pin** `CpHarnessEco083Tests`: 監視が前提とする `_dispatchTask` フィールドの存在+Task 型互換を機械検査(実行時スキップ+機械ゲートで前提崩れを顕在化=ECO-080 の 3 層原則)。症状再現テストは共有セッションを殺すため恒久化せず(§4 の宣言どおり一時注入の実測記録で代替)。
+3. `HeadlessApp` クラスコメントへ「並列安全はループが生きている限り」の但し書きを追記(暗黙前提の明示化)。
+4. 台帳同期: M-HARNESS-015 `fail_closed` へ ECO-083 節(Headless fail-fast 契約)。
+
+### 機械受入(4 点・全緑)
+
+- `dotnet build ViewPrism2.sln`: 0 warning / 0 error。
+- `dotnet test tests/ViewPrism2.Tests`: **666/666**(665+新規 pin 1・16.9 秒・正本経路=HangDump 宣言込み)。
+- `dotnet test tests/ViewPrism2.Oracle`: 109 pass / 2 known skip(R6 不変)。
+- `python bomdd/validate_bom.py`: 0 error / 0 warning。
+
+R7 セルフゴールデン: 対象外(UI 不変・製品 src 不変)。一時プローブは削除済み。
+
+**次 gate=②**(maintainer 確認)。
