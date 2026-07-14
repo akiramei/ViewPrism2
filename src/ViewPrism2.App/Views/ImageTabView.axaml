@@ -783,20 +783,21 @@
 
             <!-- 表示モード(ECO-084/REQ-094): すべて(累積) / 未分類(最深配置)。表示軸セレクタ直後・
                  ビュー軸選択時のみ(CAD image_tab.md「表示モード」節)。セグメントは狭幅収納(IMG-014)の
-                 対象外=畳まない・非表示にしない(未分類のまま戻す手段を失わせない — 離脱ボタンのラベル維持と同型)。 -->
+                 対象外=畳まない・非表示にしない(未分類のまま戻す手段を失わせない — 離脱ボタンのラベル維持と同型)。
+                 GF-084-01: ボタンはアイコン用 segBtn(Width=38 固定)でなくテキスト用 segBtnText
+                 (Padding 14,0・内容幅=整理トレイ 類似/条件 切替と同一の共有部品)。en「Unclassified」の
+                 はみ出し・ja の密着(実測: 余白 0px)の真因=部品の取り違えを差し替えで是正。 -->
             <Border x:Name="DisplayModeSegment" Classes="segmented" Margin="14,0,0,0"
                     IsVisible="{Binding ShowDisplayModeToggle}" VerticalAlignment="Center">
               <StackPanel Orientation="Horizontal" Spacing="2">
-                <Button x:Name="DisplayModeAllButton" Classes="segBtn" Classes.active="{Binding IsAllDisplayMode}"
+                <Button x:Name="DisplayModeAllButton" Classes="segBtnText" Classes.active="{Binding IsAllDisplayMode}"
                         Command="{Binding SetDisplayModeAllCommand}"
-                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeAllTip]}">
-                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeAll]}" FontSize="12.5" />
-                </Button>
-                <Button x:Name="DisplayModeUncButton" Classes="segBtn" Classes.active="{Binding IsUnclassifiedDisplayMode}"
+                        Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeAll]}"
+                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeAllTip]}" />
+                <Button x:Name="DisplayModeUncButton" Classes="segBtnText" Classes.active="{Binding IsUnclassifiedDisplayMode}"
                         Command="{Binding SetDisplayModeUnclassifiedCommand}"
-                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeUncTip]}">
-                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeUnclassified]}" FontSize="12.5" />
-                </Button>
+                        Content="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeUnclassified]}"
+                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeUncTip]}" />
               </StackPanel>
             </Border>
 

@@ -13,4 +13,8 @@ internal static class TestLoc
     /// <summary>実 Assets/i18n を読み込んだ loc(既定 ja)。View 描画+文言検査のあるテストはこれを使う。</summary>
     public static LocalizationService Ja() =>
         new(I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")), "ja");
+
+    /// <summary>en ロケールの実アセット loc(GF-084-01: 英語ラベルのはみ出し検査など、en 面の視覚検査に使う)。</summary>
+    public static LocalizationService En() =>
+        new(I18nResourceLoader.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "i18n")), "en");
 }

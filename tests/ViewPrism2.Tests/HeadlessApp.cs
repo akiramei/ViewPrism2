@@ -1,6 +1,9 @@
 using System.Reflection;
 using Avalonia;
 using Avalonia.Headless;
+using Xunit;
+
+[assembly: AssemblyFixture(typeof(ViewPrism2.Tests.HeadlessApp.SessionInitFixture))]
 
 namespace ViewPrism2.Tests;
 
@@ -17,6 +20,23 @@ internal static class HeadlessApp
 {
     // Owner/DB は不要(lifetime 無し=App の重い DI/DB 初期化はスキップされる)。
     public static readonly HeadlessUnitTestSession Session = Start();
+
+    /// <summary>
+    /// (ECO-084 是正中に定常化した初期化 race の恒久対処・51-cheat-log 2026-07-14 ①)
+    /// セッションのプラットフォーム初期化(EnsureSharedApplication)は最初の Dispatch まで遅延される。
+    /// テストクラスは並列に走るため、「初期化前に worker スレッドの VM 構築が Dispatcher.UIThread を
+    /// 先取り → 初回初期化が VerifyAccess で死ぬ」race があり(ECO-083 の FailFast 監視が捕捉)、
+    /// テスト集合の増減で発火配置が変わる(ECO-084 の 9 本追加で 3/3 定常発火を実測)。
+    /// 対処= xunit v3 の AssemblyFixture: どのテストよりも先に初期化 Dispatch を同期完了させ、
+    /// 順序を構造的に消す。注: [ModuleInitializer] での同期待ちは不可 — dispatch コールバック
+    /// (本モジュールのラムダ)の実行がモジュール初期化完了を要求し、ローダーと相互待ちで
+    /// デッドロックする(実測: 起動前ハングで HangDump 発火)。
+    /// </summary>
+    public sealed class SessionInitFixture
+    {
+        public SessionInitFixture() =>
+            Session.Dispatch(() => true, CancellationToken.None).GetAwaiter().GetResult();
+    }
 
     /// <summary>ECO-083 監視が前提とする内部フィールド名(存在は CpHarnessEco083Tests が固定)。</summary>
     internal const string DispatchTaskFieldName = "_dispatchTask";

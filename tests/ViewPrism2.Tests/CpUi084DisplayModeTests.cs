@@ -179,6 +179,39 @@ public sealed class CpUi084DisplayModeTests : IDisposable
         }, CancellationToken.None);
     }
 
+    [Theory]
+    [InlineData("ja")]
+    [InlineData("en")]
+    public async Task セグメントラベルは日英ともはみ出さず余白を持つ(string locale)
+    {
+        // GF-084-01(golden 所見 2026-07-14 実機キャプチャ): en「Unclassified」がはみ出しクリップ・
+        // ja も mock(padding 0 13px)比で密着。真因= アイコン用 segBtn(Width=38 固定・Padding 0)の
+        // 流用=部品の取り違え。テキストセグメントの正は segBtnText(Padding 14,0・内容幅・
+        // 整理トレイ 類似/条件 切替で golden 承認済みの共有部品・Components.axaml の導入コメントに
+        // 「固定幅でなく内容に合わせる」と明記済み)。両ロケールの実レイアウトで余白を実測して封止する。
+        await SeedAsync();
+        await HeadlessApp.Session.Dispatch(async () =>
+        {
+            var vm = await BuildViewVmAsync(loc: locale == "en" ? TestLoc.En() : TestLoc.Ja());
+            var window = new Window { Content = new ImageTabView { DataContext = vm }, Width = 1366, Height = 900 };
+            window.Show();
+            RunJobs();
+
+            foreach (var name in new[] { "DisplayModeAllButton", "DisplayModeUncButton" })
+            {
+                var btn = window.GetVisualDescendants().OfType<Button>().First(b => b.Name == name);
+                var label = btn.GetVisualDescendants().OfType<TextBlock>().First();
+                double slack = btn.Bounds.Width - label.Bounds.Width; // 左右余白の合計
+                Assert.True(label.Bounds.Width > 0 && slack >= 20,
+                    $"{locale}/{name}: ラベル幅 {label.Bounds.Width:0.0} / ボタン幅 {btn.Bounds.Width:0.0} = "
+                    + $"余白合計 {slack:0.0}px(<20)— はみ出し/密着(GF-084-01。mock=片側 13px・segBtnText=14px)");
+            }
+
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
     [Fact]
     public async Task 狭幅でもセグメントは可視のままコントロールが重ならない()
     {
@@ -279,9 +312,9 @@ public sealed class CpUi084DisplayModeTests : IDisposable
     }
 
     /// <summary>VM 構築+ビュー軸選択(ChipVM の Brush 生成を伴う — 描画するテストは UI スレッド内で呼ぶ)。</summary>
-    private async Task<ImageTabViewModel> BuildViewVmAsync(AppSettings? settings = null)
+    private async Task<ImageTabViewModel> BuildViewVmAsync(AppSettings? settings = null, LocalizationService? loc = null)
     {
-        var vm = NewVm(settings ?? new AppSettings());
+        var vm = TestImageTab.NewVm(_db, settings ?? new AppSettings(), loc);
         await vm.InitializeAsync(_col.Id);
         await vm.SelectAxisCommand.ExecuteAsync(_view.Id);
         Assert.True(vm.IsViewAxis);

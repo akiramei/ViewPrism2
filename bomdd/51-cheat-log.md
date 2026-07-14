@@ -461,6 +461,13 @@ ECO-084 の probe/受入で実測した ECO-082/083 ファミリーの新知見 
    触れると、共有セッションの初回 EnsureSharedApplication が VerifyAccess で死ぬ**(ECO-083 の FailFast
    監視が正しく exit=7 で顕在化=監視の実運用 2 例目)。フル run では他クラスが先にセッションを温めるため
    潜伏する。回避=fixture 冒頭で `HeadlessApp.Session.Dispatch(() => true)` の先行 warm-up(順序の決定化)。
+   **→ 同日更新(GF-084-01 是正後)**: テスト集合の増加(CpUi084 の 9 本)で並列スケジュールが変わり、
+   フル run でも 3/3 **定常発火**へ転化(warm-up はクラス単位の対症でしかなかった)。恒久対処=
+   HeadlessApp へ **xunit v3 AssemblyFixture(SessionInitFixture)** を追加し、どのテストよりも先に
+   初期化 Dispatch を同期完了(順序の構造的決定化)。適用後フル run×6 連続 675/675 全緑。
+   **罠**: 初案の `[ModuleInitializer]` 内同期待ちは不可 — dispatch コールバック(本モジュールの
+   ラムダ)の実行がモジュール初期化完了を要求し、ローダーと相互待ちでデッドロック
+   (実測: 起動前ハング→HangDump 発火=ECO-081 最終安全弁の実運用)。(結果は ECO-084 §8)
 2. **worker スレッドで生成した SolidColorBrush(タグ色チップ)を compositor が参照すると VerifyAccess 死**
    (決定的・フル run でも再現)。タグ色チップ付き ImageTabView を headless 描画する初のクラスで顕在化 —
    既存描画テストはタグなし fixture のため潜伏していた。回避=描画するテストは VM 構築(Recompute=Brush

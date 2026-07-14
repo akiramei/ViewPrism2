@@ -93,7 +93,7 @@ BOM 宣言 → 実装。gate① = ViewPrismUI 側のモック承認。
 
 ## 6. 残ゲート
 
-- **gate①(裁定+CAD)**: ✅ **合格(2026-07-14 maintainer・実機モック確認)** — 詳細 §8
+- **gate①(裁定+CAD)**: ✅ **合格(2026-07-14 maintainer・実機モック確認)** — 詳細 §9
 - **gate②(golden)**: 実機で「すべて/未分類」切替・ルート未分類・textual 値ノード帰結・
   ビュー毎記憶の復元・**狭幅ツールバー収納(セグメント込み)** を maintainer 確認。
   是正+機械受入は完了(§7)— golden 待ち。
@@ -139,7 +139,36 @@ probe を先行生成。並置突合の結果=**転写漏れ 0**:
 51-cheat-log へ記録(①単独実行の初期化順序 race=FailFast 監視の実運用 2 例目 ②worker 生成 Brush の
 compositor 参照死=タグ色チップ描画の初クラスで顕在化)。テスト側書法で決定化済み・製品コード無関係。
 
-## 8. gate① 合格記録(2026-07-14)
+## 8. GF-084-01 是正記録(2026-07-14 — golden 所見→同日是正)
+
+**所見(maintainer 実機キャプチャ・mock 並置)**: en「Unclassified」がセグメントからはみ出しクリップ・
+ja も mock(padding 0 13px)比で密着。
+
+**工程診断=実装層(部品の取り違え)**: テキストセグメントの正部品 `segBtnText`(Padding 14,0・
+内容幅・整理トレイ 類似/条件 切替で golden 承認済み・Components.axaml 導入コメントに「固定幅でなく
+内容に合わせる」と明記)が既存なのに、アイコン用 `segBtn`(**Width=38 固定・Padding 0**)を流用した。
+R7 並置の盲点=VC-IMG-1 が「segBtn 共有部品に委譲」とだけ書き、**文字量(特に en)の収まり**を検査
+次元に持たなかった(ラベル可視・active 追随は検査済みだった)。
+
+**プローブ先行(R5)**: 日英両ロケールの headless 実レイアウトで余白を実測する Theory を追加
+(TestLoc.En 新設)。是正前赤= **ja/en とも「ボタン幅 38.0=ラベル幅 38.0・余白 0px」**
+(en はみ出しの正体=固定幅クリップ)→ 是正後 9/9 緑転。
+
+**是正(最小 diff)**: DisplayModeSegment の 2 ボタンを `segBtn`→`segBtnText` へ差し替え
+(TextBlock 子→Content バインド・整理トレイと同型)。スタイル定義・VM・意味論は不変。
+
+**再発防止**: CAD VC-IMG-1 へ「ラベルは日英とも切れない・密着しない(テキストセグメント=
+segBtnText 系部品)」の検査次元を追補。機械側は上記 Theory(CP-DISPMODE-084 へ追記)で恒久 pin。
+
+**副産物(ハーネス恒久対処)**: GF 是正後のフル run で、Headless セッション初期化 race
+(51-cheat-log 2026-07-14 ①)が**テスト集合の増加により 3/3 定常発火へ転化**(初期化が最初の
+Dispatch まで遅延される構造×クラス並列実行)。HeadlessApp へ **xunit v3 AssemblyFixture**
+(SessionInitFixture)を追加し、**どのテストよりも先に初期化 Dispatch を同期完了**させて順序を
+構造的に決定化。注: 初案の `[ModuleInitializer]` 同期待ちはローダーと dispatch コールバックの
+相互待ちでデッドロックする(実測: 起動前ハング→HangDump 発火=最終安全弁の実運用)。
+適用後フル run ×6 連続全緑(675/675)。
+
+## 9. gate① 合格記録(2026-07-14)
 
 CAD 改版(ViewPrismUI `bf6d4cf`: mock `ViewPrism2 画像タブ.dc.html`+`docs/screens/image_tab.md`
 表示モード節新設)を maintainer が実機モックで確認し承認。論点の確定:
