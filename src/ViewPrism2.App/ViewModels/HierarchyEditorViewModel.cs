@@ -58,6 +58,12 @@ public sealed partial class EditNodeViewModel : ObservableObject
 
     public string? ConditionValue { get; private set; }
 
+    /// <summary>展開モード(REQ-096/ECO-086)。既定 Observed=従来挙動。</summary>
+    public HierarchyExpansionMode ExpansionMode { get; private set; } = HierarchyExpansionMode.Observed;
+
+    /// <summary>0 件の値ノードを隠す(REQ-096/裁定 d)。</summary>
+    public bool HideEmptyValues { get; private set; }
+
     public string DisplayName => Alias ?? Tag?.Name ?? TagId;
 
     /// <summary>条件設定は textual/numeric のみ(仕様 §2.6)。</summary>
@@ -112,6 +118,38 @@ public sealed partial class EditNodeViewModel : ObservableObject
         OnPropertyChanged(nameof(IsConditionMono));
     }
 
+    /// <summary>展開モードの設定(REQ-096)。行バッジ(非既定のみ表示=CAD VC-TAG-3)を再評価する。</summary>
+    public void SetExpansion(HierarchyExpansionMode mode, bool hideEmptyValues)
+    {
+        ExpansionMode = mode;
+        HideEmptyValues = hideEmptyValues;
+        OnPropertyChanged(nameof(HasExpansionBadge));
+        OnPropertyChanged(nameof(ExpansionBadgeText));
+    }
+
+    /// <summary>展開バッジは非既定(観測値以外)のときだけ表示(ノイズ回避=CAD VC-TAG-3)。</summary>
+    public bool HasExpansionBadge => ExpansionMode != HierarchyExpansionMode.Observed;
+
+    public string ExpansionBadgeText
+    {
+        get
+        {
+            if (_localization is null)
+            {
+                return string.Empty;
+            }
+
+            var mode = _localization.T(ExpansionMode switch
+            {
+                HierarchyExpansionMode.Manual => "hierarchy.expansionMode.manual",
+                HierarchyExpansionMode.Defined => "hierarchy.expansionMode.defined",
+                HierarchyExpansionMode.DefinedAndObserved => "hierarchy.expansionMode.definedAndObserved",
+                _ => "hierarchy.expansionMode.observed",
+            });
+            return HideEmptyValues ? mode + _localization.T("hierarchy.expansionBadge.hideEmptySuffix") : mode;
+        }
+    }
+
     partial void OnAliasChanged(string? value) => OnPropertyChanged(nameof(DisplayName));
 }
 
@@ -127,14 +165,18 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     private readonly ViewService _views;
     private readonly LocalizationService _localization;
     private readonly IWindowService _windows;
+    private readonly Core.Repositories.ITagRepository? _tags;
     private IReadOnlyDictionary<string, Tag> _tagById = new Dictionary<string, Tag>(StringComparer.Ordinal);
     private View? _view;
 
-    public HierarchyEditorViewModel(ViewService views, LocalizationService localization, IWindowService windows)
+    public HierarchyEditorViewModel(
+        ViewService views, LocalizationService localization, IWindowService windows,
+        Core.Repositories.ITagRepository? tags = null)
     {
         _views = views;
         _localization = localization;
         _windows = windows;
+        _tags = tags; // ECO-086: 定義値の生成可否判定(裁定 e 警告)。null なら判定不能=警告なしで開く
         Loc = new LocalizationProxy(localization);
         localization.CultureChanged += (_, _) =>
         {
@@ -208,6 +250,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
                     IsHome = string.Equals(view.HomeTagId, node.Id, StringComparison.Ordinal),
                 };
                 vm.SetCondition(node.ConditionType, node.ConditionValue);
+                vm.SetExpansion(node.ExpansionMode, node.HideEmptyValues); // REQ-096
                 vmById[node.Id] = vm;
             }
 
@@ -321,7 +364,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         SetDirty(true);
     }
 
-    /// <summary>条件設定ダイアログ(textual/numeric のみ、仕様 §2.6)。</summary>
+    /// <summary>配置タグの設定ダイアログ(展開モード+条件・textual/numeric のみ、仕様 §2.4/§2.6・ECO-086)。</summary>
     [RelayCommand]
     private async Task EditConditionAsync(EditNodeViewModel node)
     {
@@ -330,11 +373,56 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             return;
         }
 
-        var result = await _windows.ShowNodeConditionDialogAsync(node.Tag, node.ConditionType, node.ConditionValue);
+        var result = await _windows.ShowNodeSettingsDialogAsync(node.Tag, new NodeSettingsRequest(
+            node.ConditionType, node.ConditionValue, node.ExpansionMode, node.HideEmptyValues,
+            await DefinedValuesAvailableAsync(node.Tag)));
         if (result is not null)
         {
             SetCondition(node, result.ConditionType, result.ConditionValueJson);
+            SetExpansion(node, result.ExpansionMode, result.HideEmptyValues);
         }
+    }
+
+    /// <summary>
+    /// 定義値を生成できるか(裁定 e の事前警告用)。判定は Core の生成規則そのもの
+    /// (TagDefinedValueIndex)へ委譲し、二重定義しない。リポジトリ未注入なら true(警告なし)。
+    /// </summary>
+    private async Task<bool> DefinedValuesAvailableAsync(Tag tag)
+    {
+        if (_tags is null)
+        {
+            return true;
+        }
+
+        if (tag.Type == TagType.Textual)
+        {
+            var settings = await _tags.GetTextualSettingsAsync(tag.Id)
+                ?? new TextualTagSettings { TagId = tag.Id };
+            return TagDefinedValueIndex.Build(
+                new Dictionary<string, TextualTagSettings>(StringComparer.Ordinal) { [tag.Id] = settings },
+                new Dictionary<string, NumericTagSettings>(StringComparer.Ordinal))
+                .GetDefinedValues(tag.Id) is not null;
+        }
+
+        var numeric = await _tags.GetNumericSettingsAsync(tag.Id)
+            ?? new NumericTagSettings { TagId = tag.Id };
+        return TagDefinedValueIndex.Build(
+            new Dictionary<string, TextualTagSettings>(StringComparer.Ordinal),
+            new Dictionary<string, NumericTagSettings>(StringComparer.Ordinal) { [tag.Id] = numeric })
+            .GetDefinedValues(tag.Id) is not null;
+    }
+
+    /// <summary>展開モードの直接設定(メモリ内、unit 検査用エントリポイント・REQ-096)。</summary>
+    public void SetExpansion(EditNodeViewModel node, HierarchyExpansionMode mode, bool hideEmptyValues)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (node.ExpansionMode == mode && node.HideEmptyValues == hideEmptyValues)
+        {
+            return;
+        }
+
+        node.SetExpansion(mode, hideEmptyValues);
+        SetDirty(true);
     }
 
     /// <summary>条件の直接設定(メモリ内、unit 検査用エントリポイント)。</summary>
@@ -463,6 +551,8 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
                 Alias = node.Alias,
                 ConditionType = node.ConditionType,
                 ConditionValue = node.ConditionValue,
+                ExpansionMode = node.ExpansionMode,
+                HideEmptyValues = node.HideEmptyValues,
             });
             Flatten(node.Children, node.Id, target);
         }

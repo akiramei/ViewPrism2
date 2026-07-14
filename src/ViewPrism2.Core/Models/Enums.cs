@@ -52,6 +52,34 @@ public enum HierarchyConditionType
     Values,
 }
 
+/// <summary>
+/// textual タグの候補値リストの意味(仕様 §2.2 REQ-095 / ECO-086 裁定 b)。既定 Suggest。
+/// Closed でも付与は拒否しない(リスト外の付与値は保持され、定義値展開で未定義値として検出される)。
+/// </summary>
+public enum TagValueDomain
+{
+    /// <summary>入力補助(REQ-024 の現行意味論)。</summary>
+    Suggest,
+    /// <summary>閉じた値集合(定義済みリストを値の正とする)。</summary>
+    Closed,
+}
+
+/// <summary>
+/// ビュー階層ノードの展開モード(仕様 §2.4 REQ-096 / ECO-086 裁定 a)。既定 Observed。
+/// DB 列 NULL は Observed として読む(既存ビュー完全互換)。
+/// </summary>
+public enum HierarchyExpansionMode
+{
+    /// <summary>値ノードを自動生成しない(タグ名ノードのみ)。</summary>
+    Manual,
+    /// <summary>観測値展開=REQ-035 の現行挙動(既定)。</summary>
+    Observed,
+    /// <summary>定義値展開: textual=predefined_values 定義順 / numeric=min..max step 刻み。0 件でも生成。</summary>
+    Defined,
+    /// <summary>定義値を定義順で先に、定義にない付与値を末尾に序数昇順で追加(裁定 f)。</summary>
+    DefinedAndObserved,
+}
+
 /// <summary>NodeGraph ノードの種別(仕様 §2.4 REQ-035)。</summary>
 public enum NodeKind
 {

@@ -114,8 +114,9 @@ public sealed class TagService
         return Result.Ok();
     }
 
-    /// <summary>textual の定義済み値リストを設定する(順序保持、REQ-024)。</summary>
-    public async Task<Result> SetTextualSettingsAsync(string tagId, IReadOnlyList<string> predefinedValues)
+    /// <summary>textual の定義済み値リストと値の扱いを設定する(順序保持、REQ-024/REQ-095)。</summary>
+    public async Task<Result> SetTextualSettingsAsync(
+        string tagId, IReadOnlyList<string> predefinedValues, TagValueDomain valueDomain = TagValueDomain.Suggest)
     {
         ArgumentNullException.ThrowIfNull(predefinedValues);
         var tag = await _tags.GetByIdAsync(tagId).ConfigureAwait(false);
@@ -135,6 +136,7 @@ public sealed class TagService
             {
                 TagId = tagId,
                 PredefinedValues = predefinedValues,
+                ValueDomain = valueDomain,
             }).ConfigureAwait(false);
             return Result.Ok();
         }

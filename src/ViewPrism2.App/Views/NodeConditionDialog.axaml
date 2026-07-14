@@ -8,11 +8,44 @@
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- 階層ノードの条件設定(仕様 §2.6 v1.2 / §2.4): textual=equals/pattern/values、numeric=equals/range -->
+  <!-- 配置タグの設定(仕様 §2.4/§2.6・ECO-086): 展開モード+条件の 2 セクション。
+       条件: textual=equals/pattern/values、numeric=equals/range -->
   <StackPanel Margin="16" Spacing="8">
     <TextBlock Text="{Binding Loc[hierarchy.conditionDialog.title]}" FontSize="16" />
     <TextBlock Text="{Binding TagName}" Foreground="{StaticResource TextMutedBrush}" FontSize="12" />
 
+    <!-- 展開モード(REQ-096/ECO-086・CAD tag_tab.md 展開モード節/VC-TAG-2) -->
+    <TextBlock Text="{Binding Loc[hierarchy.expansionMode.label]}" FontSize="12"
+               Foreground="{StaticResource TextMutedBrush}" />
+    <ItemsControl ItemsSource="{Binding ExpansionOptions}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal" Spacing="4" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ExpansionModeOption">
+          <RadioButton GroupName="expansionMode"
+                       Content="{Binding Label}"
+                       IsChecked="{Binding IsActive, Mode=OneWay}"
+                       Command="{Binding $parent[Window].((vm:NodeConditionDialogViewModel)DataContext).SelectExpansionCommand}"
+                       CommandParameter="{Binding}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Text="{Binding ExpansionNote}" FontSize="11" TextWrapping="Wrap"
+               Foreground="{StaticResource TextMutedBrush}" />
+    <Border IsVisible="{Binding ShowExpansionWarning}" Background="#fdf6ec" BorderBrush="#f4e3cf"
+            BorderThickness="1" CornerRadius="8" Padding="10,8">
+      <TextBlock Text="{Binding ExpansionWarningText}" FontSize="12" TextWrapping="Wrap" Foreground="#8a5a20" />
+    </Border>
+    <CheckBox IsVisible="{Binding UsesDefinedValues}" IsChecked="{Binding HideEmptyValues}"
+              Content="{Binding Loc[hierarchy.hideEmptyValues]}" FontSize="12" />
+
+    <Separator Background="{StaticResource BorderLineBrush}" Height="1" Margin="0,4" />
+
+    <TextBlock Text="{Binding Loc[hierarchy.conditionSection]}" FontSize="12"
+               Foreground="{StaticResource TextMutedBrush}" />
     <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType}"
               HorizontalAlignment="Stretch">
       <ComboBox.ItemTemplate>

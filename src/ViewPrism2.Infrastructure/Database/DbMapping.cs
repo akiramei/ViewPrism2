@@ -115,6 +115,38 @@ internal static class DbMapping
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, null),
     };
 
+    public static string ToDb(this TagValueDomain domain) => domain switch
+    {
+        TagValueDomain.Suggest => "suggest",
+        TagValueDomain.Closed => "closed",
+        _ => throw new ArgumentOutOfRangeException(nameof(domain), domain, null),
+    };
+
+    /// <summary>NULL/未知トークンは Suggest(既存行互換・INV-008: 破損データで停止しない)。</summary>
+    public static TagValueDomain ToTagValueDomain(string? value) => value switch
+    {
+        "closed" => TagValueDomain.Closed,
+        _ => TagValueDomain.Suggest,
+    };
+
+    public static string ToDb(this HierarchyExpansionMode mode) => mode switch
+    {
+        HierarchyExpansionMode.Manual => "manual",
+        HierarchyExpansionMode.Observed => "observed",
+        HierarchyExpansionMode.Defined => "defined",
+        HierarchyExpansionMode.DefinedAndObserved => "defined_and_observed",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
+    };
+
+    /// <summary>NULL/未知トークンは Observed(REQ-096: 既存ビュー完全互換・INV-008)。</summary>
+    public static HierarchyExpansionMode ToHierarchyExpansionMode(string? value) => value switch
+    {
+        "manual" => HierarchyExpansionMode.Manual,
+        "defined" => HierarchyExpansionMode.Defined,
+        "defined_and_observed" => HierarchyExpansionMode.DefinedAndObserved,
+        _ => HierarchyExpansionMode.Observed,
+    };
+
     /// <summary>文字列配列 ↔ JSON TEXT 列(exclude_patterns / predefined_values)。</summary>
     public static string ToJsonArray(IReadOnlyList<string> values) => JsonSerializer.Serialize(values);
 

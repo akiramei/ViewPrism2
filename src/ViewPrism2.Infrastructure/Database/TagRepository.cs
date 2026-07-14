@@ -85,7 +85,7 @@ public sealed class TagRepository : ITagRepository
         return _db.RunAsync(async conn =>
         {
             var row = await conn.QuerySingleOrDefaultAsync<TextualRow>(
-                "SELECT tag_id AS TagId, predefined_values AS PredefinedValues FROM textual_tag_settings WHERE tag_id = @TagId",
+                "SELECT tag_id AS TagId, predefined_values AS PredefinedValues, value_domain AS ValueDomain FROM textual_tag_settings WHERE tag_id = @TagId",
                 new { TagId = tagId }).ConfigureAwait(false);
             return row is null
                 ? null
@@ -93,6 +93,7 @@ public sealed class TagRepository : ITagRepository
                 {
                     TagId = row.TagId,
                     PredefinedValues = DbMapping.FromJsonArray(row.PredefinedValues),
+                    ValueDomain = DbMapping.ToTagValueDomain(row.ValueDomain),
                 };
         });
     }
@@ -101,11 +102,17 @@ public sealed class TagRepository : ITagRepository
     {
         ArgumentNullException.ThrowIfNull(settings);
         return _db.RunAsync(conn => conn.ExecuteAsync("""
-            INSERT INTO textual_tag_settings (tag_id, predefined_values)
-            VALUES (@TagId, @PredefinedValues)
-            ON CONFLICT(tag_id) DO UPDATE SET predefined_values = excluded.predefined_values
+            INSERT INTO textual_tag_settings (tag_id, predefined_values, value_domain)
+            VALUES (@TagId, @PredefinedValues, @ValueDomain)
+            ON CONFLICT(tag_id) DO UPDATE SET predefined_values = excluded.predefined_values,
+                                              value_domain = excluded.value_domain
             """,
-            new { settings.TagId, PredefinedValues = DbMapping.ToJsonArray(settings.PredefinedValues) }));
+            new
+            {
+                settings.TagId,
+                PredefinedValues = DbMapping.ToJsonArray(settings.PredefinedValues),
+                ValueDomain = settings.ValueDomain.ToDb(),
+            }));
     }
 
     public Task<NumericTagSettings?> GetNumericSettingsAsync(string tagId)
@@ -326,7 +333,7 @@ public sealed class TagRepository : ITagRepository
     private sealed record Row(
         string Id, string Name, string Type, string? ParentId, string? Color, string? Description);
 
-    private sealed record TextualRow(string TagId, string PredefinedValues);
+    private sealed record TextualRow(string TagId, string PredefinedValues, string? ValueDomain);
 
     private sealed record NumericRow(string TagId, double? Min, double? Max, double? Step, string? Unit);
 

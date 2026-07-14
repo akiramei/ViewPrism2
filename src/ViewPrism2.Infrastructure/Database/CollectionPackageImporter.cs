@@ -332,11 +332,11 @@ public sealed class CollectionPackageImporter(DatabaseManager db, IClock clock)
                         t.Color,
                         t.Description,
                     }, tx);
-                if (t.Type == TagType.Textual && t.PredefinedValues.Count > 0)
+                if (t.Type == TagType.Textual && (t.PredefinedValues.Count > 0 || t.ValueDomain == TagValueDomain.Closed))
                 {
                     conn.Execute(
-                        "INSERT INTO textual_tag_settings (tag_id, predefined_values) VALUES (@Id, @Values)",
-                        new { Id = t.SourceId, Values = DbMapping.ToJsonArray(t.PredefinedValues) }, tx);
+                        "INSERT INTO textual_tag_settings (tag_id, predefined_values, value_domain) VALUES (@Id, @Values, @Domain)",
+                        new { Id = t.SourceId, Values = DbMapping.ToJsonArray(t.PredefinedValues), Domain = t.ValueDomain.ToDb() }, tx);
                 }
 
                 if (t.Type == TagType.Numeric && ((t.Min ?? t.Max ?? t.Step) is not null || t.Unit is not null))

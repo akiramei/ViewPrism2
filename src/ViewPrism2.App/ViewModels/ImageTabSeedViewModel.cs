@@ -707,6 +707,12 @@ public sealed class ChipVM
     public string Count { get; private init; } = "";
     public bool IsNav { get; private init; }
     public bool IsNeutral { get; private init; }
+
+    /// <summary>未定義値の検出チップ(REQ-095/096・CAD VC-IMG-6: 琥珀・破線+「未定義」バッジ)。</summary>
+    public bool IsUndef { get; private init; }
+
+    /// <summary>「未定義」バッジ文言(Loc 解決済みで受け取る=K-AVALONIA 直書き禁止)。</summary>
+    public string UndefLabel { get; private init; } = "";
     public IBrush? DotBrush { get; private init; }
     public IBrush Background { get; private init; } = Brushes.White;
     public IBrush BorderBrush { get; private init; } = Brushes.Transparent;
@@ -740,6 +746,31 @@ public sealed class ChipVM
         LabelBrush = active ? A(color, 1) : S("#3a4150"),
         CountBackground = active ? S(color) : A(color, 0.14),
         CountForeground = active ? Brushes.White : A(color, 1),
+    };
+
+    /// <summary>件数 0 の定義値ノード=淡色で表示維持(REQ-096/裁定 d・CAD VC-IMG-6)。</summary>
+    public static ChipVM ColoredZero(string id, string label, string color, bool isNav) => new()
+    {
+        Id = id, Label = label, IsNav = isNav, HasDot = true, HasCount = true, Count = "0",
+        DotBrush = A(color, 0.35),
+        Background = S("#fbfcfd"),
+        BorderBrush = S("#e9edf2"),
+        LabelBrush = S("#8a93a2"),
+        CountBackground = S("#eef1f5"),
+        CountForeground = S("#98a0ad"),
+    };
+
+    /// <summary>未定義値の検出チップ=琥珀・破線+「未定義」バッジ(REQ-095/096 裁定 b/c・CAD VC-IMG-6)。</summary>
+    public static ChipVM Undefined(string id, string label, int count, string undefLabel) => new()
+    {
+        Id = id, Label = label, IsNav = true, HasDot = true, HasCount = true, Count = count.ToString(),
+        IsUndef = true, UndefLabel = undefLabel,
+        DotBrush = S("#d97a18"),
+        Background = S("#fdf8ef"),
+        BorderBrush = Brushes.Transparent, // 枠は破線 Rectangle 側(#e0b36a)が担う
+        LabelBrush = S("#8a5a20"),
+        CountBackground = S("#f8ecd8"),
+        CountForeground = S("#b5670c"),
     };
 }
 

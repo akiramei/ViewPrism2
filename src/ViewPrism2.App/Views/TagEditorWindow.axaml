@@ -228,6 +228,12 @@
           <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding StepText}" />
           <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Unit}" />
         </Grid>
+        <!-- 定義域→定義値展開の情報カード(REQ-096/ECO-086・CAD tag_tab.md 値の扱い節) -->
+        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="10,8">
+          <TextBlock Text="{Binding Loc[tag.editor.numericDefinedNote]}" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{StaticResource TextMutedBrush}" />
+        </Border>
       </StackPanel>
 
       <!-- textual 定義済み値(REQ-024: 順序保持。D&D または ↑↓ で並べ替え — 仕様 §2.6 v1.2) -->
@@ -249,6 +255,27 @@
           <Button Content="↓" Command="{Binding MoveValueDownCommand}" />
           <Button Content="{Binding Loc[common.delete]}" Command="{Binding RemovePredefinedValueCommand}" />
         </StackPanel>
+
+        <!-- 値の扱い(REQ-095/ECO-086 裁定 b・CAD tag_tab.md「値の扱い」節/VC-TAG-1) -->
+        <TextBlock Text="{Binding Loc[tag.editor.valueDomain]}" FontSize="12"
+                   Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,0" />
+        <Border Classes="segment" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal">
+            <RadioButton Classes="segmentTab" GroupName="valueDomain"
+                         Content="{Binding Loc[tag.editor.valueDomainSuggest]}"
+                         IsChecked="{Binding IsSuggestDomain, Mode=OneWay}"
+                         Command="{Binding SelectDomainSuggestCommand}" />
+            <RadioButton Classes="segmentTab" GroupName="valueDomain"
+                         Content="{Binding Loc[tag.editor.valueDomainClosed]}"
+                         IsChecked="{Binding IsClosedDomain, Mode=OneWay}"
+                         Command="{Binding SelectDomainClosedCommand}" />
+          </StackPanel>
+        </Border>
+        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="10,8">
+          <TextBlock Text="{Binding DomainNote}" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{StaticResource TextMutedBrush}" />
+        </Border>
       </StackPanel>
 
     </StackPanel>

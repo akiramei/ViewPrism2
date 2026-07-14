@@ -24,6 +24,9 @@ public enum GraphWarningKind
 
     /// <summary>condition_value が不正で値制限を適用できなかった(制限結果は 0 件扱い)。</summary>
     InvalidConditionValue,
+
+    /// <summary>定義値を生成できず観測値へフォールバックした(REQ-096/裁定 e: 候補値 0 件・定義域欠落・step≤0・上限超)。</summary>
+    DefinedValuesUnavailable,
 }
 
 /// <summary>NodeGraph 構築の警告(UI 通知用)。</summary>
@@ -42,10 +45,18 @@ public sealed class NodeGraphBuilder
 {
     private static readonly TimeSpan PatternTimeout = TimeSpan.FromSeconds(1);
 
+    /// <summary>観測値のみの構築(既存経路)。全ノードが expansion_mode=observed のときと同値(REQ-096 互換)。</summary>
     public NodeGraphResult BuildGraph(
         IReadOnlyList<HierarchyNode> hierarchy,
         IReadOnlyDictionary<string, Tag> tags,
         ITagValueSource values)
+        => BuildGraph(hierarchy, tags, values, definedValues: null);
+
+    public NodeGraphResult BuildGraph(
+        IReadOnlyList<HierarchyNode> hierarchy,
+        IReadOnlyDictionary<string, Tag> tags,
+        ITagValueSource values,
+        ITagDefinedValueSource? definedValues)
     {
         ArgumentNullException.ThrowIfNull(hierarchy);
         ArgumentNullException.ThrowIfNull(tags);
@@ -60,7 +71,7 @@ public sealed class NodeGraphBuilder
 
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var path = new HashSet<string>(StringComparer.Ordinal);
-        ExpandChildren(root.Children, parentHierarchyId: string.Empty, byParent, tags, values, path, visited, warnings);
+        ExpandChildren(root.Children, parentHierarchyId: string.Empty, byParent, tags, values, definedValues, path, visited, warnings);
 
         // ルートから到達できないノード = 循環(自己親・相互参照)に巻き込まれた枝。打ち切り+警告(FMEA-008)
         foreach (var node in hierarchy)
@@ -142,6 +153,7 @@ public sealed class NodeGraphBuilder
         IReadOnlyDictionary<string, List<HierarchyNode>> byParent,
         IReadOnlyDictionary<string, Tag> tags,
         ITagValueSource values,
+        ITagDefinedValueSource? definedValues,
         HashSet<string> path,
         HashSet<string> visited,
         List<GraphWarning> warnings)
@@ -153,7 +165,7 @@ public sealed class NodeGraphBuilder
 
         foreach (var node in children)
         {
-            ExpandNode(target, node, byParent, tags, values, path, visited, warnings);
+            ExpandNode(target, node, byParent, tags, values, definedValues, path, visited, warnings);
         }
     }
 
@@ -163,6 +175,7 @@ public sealed class NodeGraphBuilder
         IReadOnlyDictionary<string, List<HierarchyNode>> byParent,
         IReadOnlyDictionary<string, Tag> tags,
         ITagValueSource values,
+        ITagDefinedValueSource? definedValues,
         HashSet<string> path,
         HashSet<string> visited,
         List<GraphWarning> warnings)
@@ -187,11 +200,43 @@ public sealed class NodeGraphBuilder
             }
 
             var displayBase = node.Alias ?? tag.Name;
+
+            // ---- 展開モードの解決(REQ-096)。simple はモード非適用=常に単一ノード ----
+            var mode = tag.Type == TagType.Simple ? HierarchyExpansionMode.Observed : node.ExpansionMode;
+            IReadOnlyList<string>? defined = null;
+            if (mode is HierarchyExpansionMode.Defined or HierarchyExpansionMode.DefinedAndObserved)
+            {
+                defined = definedValues?.GetDefinedValues(tag.Id);
+                if (defined is null)
+                {
+                    // 裁定 e: 定義不能は警告+観測値フォールバック(選択自体は保存できる)
+                    warnings.Add(new GraphWarning(
+                        node.Id, GraphWarningKind.DefinedValuesUnavailable,
+                        "定義値を生成できないため観測値で展開します。"));
+                    mode = HierarchyExpansionMode.Observed;
+                }
+            }
+
+            if (mode == HierarchyExpansionMode.Manual)
+            {
+                // 値ノードを自動生成しない(タグ名ノードのみ・子はタグ名ノード配下)(REQ-096)
+                var manualNode = NewNode(NodeKind.TagName, displayBase, node, tag, value: null);
+                ExpandChildren(manualNode.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
+                target.Add(manualNode);
+                return;
+            }
+
+            if (mode is HierarchyExpansionMode.Defined or HierarchyExpansionMode.DefinedAndObserved)
+            {
+                ExpandDefined(target, node, tag, displayBase, defined!, mode, byParent, tags, values, definedValues, path, visited, warnings);
+                return;
+            }
+
             if (tag.Type != TagType.Textual)
             {
                 // simple/numeric タグ → 1 ノード(配下に階層上の子ノードを接続)(REQ-035)
                 var graphNode = NewNode(NodeKind.TagName, displayBase, node, tag, value: null);
-                ExpandChildren(graphNode.Children, node.Id, byParent, tags, values, path, visited, warnings);
+                ExpandChildren(graphNode.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
                 target.Add(graphNode);
                 return;
             }
@@ -202,7 +247,7 @@ public sealed class NodeGraphBuilder
                 case 0:
                     // タグ名ノードのみ(値ノードなし)。選択時は exists 条件として評価される(REQ-035)
                     var emptyNode = NewNode(NodeKind.TagName, displayBase, node, tag, value: null);
-                    ExpandChildren(emptyNode.Children, node.Id, byParent, tags, values, path, visited, warnings);
+                    ExpandChildren(emptyNode.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
                     target.Add(emptyNode);
                     return;
 
@@ -210,7 +255,7 @@ public sealed class NodeGraphBuilder
                     // 一体型ノード「タグ名: 値」。階層上の子ノードは一体型ノードの配下に接続(REQ-035)
                     var combined = NewNode(
                         NodeKind.Combined, $"{displayBase}: {distinct[0]}", node, tag, distinct[0]);
-                    ExpandChildren(combined.Children, node.Id, byParent, tags, values, path, visited, warnings);
+                    ExpandChildren(combined.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
                     target.Add(combined);
                     return;
 
@@ -220,7 +265,7 @@ public sealed class NodeGraphBuilder
                     foreach (var value in distinct)
                     {
                         var valueNode = NewNode(NodeKind.Value, value, node, tag, value);
-                        ExpandChildren(valueNode.Children, node.Id, byParent, tags, values, path, visited, warnings);
+                        ExpandChildren(valueNode.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
                         tagNameNode.Children.Add(valueNode);
                     }
 
@@ -234,7 +279,72 @@ public sealed class NodeGraphBuilder
         }
     }
 
-    private static GraphNode NewNode(NodeKind kind, string displayName, HierarchyNode source, Tag tag, string? value)
+    /// <summary>
+    /// 定義値展開(REQ-096/ECO-086): 定義値を定義順・0 件でも生成(構造安定=一体型統合なし)。
+    /// defined_and_observed は定義にない付与値を末尾に序数昇順で追加(裁定 f)。
+    /// 閉じた値集合(REQ-095)では定義外の付与値を未定義値として検出マークし、defined でも末尾に
+    /// 検出ノードとして追加する(付与済み画像への到達性を保つ=裁定 b)。
+    /// condition_type(値制限)はモードを問わず生成後の値集合へ適用(裁定 a: 直交)。
+    /// </summary>
+    private void ExpandDefined(
+        List<GraphNode> target,
+        HierarchyNode node,
+        Tag tag,
+        string displayBase,
+        IReadOnlyList<string> defined,
+        HierarchyExpansionMode mode,
+        IReadOnlyDictionary<string, List<HierarchyNode>> byParent,
+        IReadOnlyDictionary<string, Tag> tags,
+        ITagValueSource values,
+        ITagDefinedValueSource? definedValues,
+        HashSet<string> path,
+        HashSet<string> visited,
+        List<GraphWarning> warnings)
+    {
+        var closed = definedValues!.IsClosedDomain(tag.Id);
+
+        // 定義外の付与値(観測のみ値)を末尾に序数昇順で: defined_and_observed=常に /
+        // defined=閉集合の未定義値検出時のみ(裁定 b: 画像への到達性を保つ)
+        var definedSet = new HashSet<string>(defined, StringComparer.Ordinal);
+        IEnumerable<string> extras = [];
+        if (mode == HierarchyExpansionMode.DefinedAndObserved || closed)
+        {
+            extras = values.GetDistinctValues(tag.Id)
+                .Where(v => v is not null && !definedSet.Contains(v))
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal);
+        }
+
+        // 値制限(condition_type)は生成後の値集合へ適用(裁定 a)
+        Func<string, bool> filter = _ => true;
+        if (node.ConditionType is { } conditionType)
+        {
+            filter = HierarchyConditionFilter.Create(node.Id, conditionType, node.ConditionValue, warnings)
+                ?? (_ => false);
+        }
+
+        var tagNameNode = NewNode(NodeKind.TagName, displayBase, node, tag, value: null);
+        foreach (var value in defined.Where(filter))
+        {
+            var valueNode = NewNode(NodeKind.Value, value, node, tag, value, isDefinedExpansion: true);
+            ExpandChildren(valueNode.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
+            tagNameNode.Children.Add(valueNode);
+        }
+
+        foreach (var value in extras.Where(filter))
+        {
+            // 開集合の defined_and_observed=通常の値ノード / 閉集合=未定義値の検出ノード(裁定 b/c)
+            var valueNode = NewNode(NodeKind.Value, value, node, tag, value, isUndefinedValue: closed);
+            ExpandChildren(valueNode.Children, node.Id, byParent, tags, values, definedValues, path, visited, warnings);
+            tagNameNode.Children.Add(valueNode);
+        }
+
+        target.Add(tagNameNode);
+    }
+
+    private static GraphNode NewNode(
+        NodeKind kind, string displayName, HierarchyNode source, Tag tag, string? value,
+        bool isDefinedExpansion = false, bool isUndefinedValue = false)
     {
         return new GraphNode
         {
@@ -246,6 +356,9 @@ public sealed class NodeGraphBuilder
             Value = value,
             ConditionType = source.ConditionType,
             ConditionValue = source.ConditionValue,
+            IsDefinedExpansion = isDefinedExpansion,
+            IsUndefinedValue = isUndefinedValue,
+            HideEmptyValues = source.HideEmptyValues,
         };
     }
 

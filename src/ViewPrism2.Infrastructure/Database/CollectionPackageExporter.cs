@@ -257,6 +257,12 @@ public sealed class CollectionPackageExporter(DatabaseManager db, IClock clock, 
             writer.WriteEndArray();
         }
 
+        // REQ-095/ECO-086: 値の扱い。suggest(既定)は省略=旧 reader 互換・旧パッケージ欠落=suggest
+        if (t.ValueDomain == TagValueDomain.Closed)
+        {
+            writer.WriteString("valueDomain", "closed");
+        }
+
         WriteOptionalNumber(writer, "minimum", t.Min);
         WriteOptionalNumber(writer, "maximum", t.Max);
         WriteOptionalNumber(writer, "step", t.Step);
@@ -282,9 +288,9 @@ public sealed class CollectionPackageExporter(DatabaseManager db, IClock clock, 
         var allTags = (await conn.QueryAsync<(string Id, string Name, string Type, string? ParentId, string? Color, string? Description)>(
             "SELECT id, name, type, parent_id, color, description FROM tags").ConfigureAwait(false))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);
-        var textual = (await conn.QueryAsync<(string TagId, string PredefinedValues)>(
-            "SELECT tag_id, predefined_values FROM textual_tag_settings").ConfigureAwait(false))
-            .ToDictionary(t => t.TagId, t => t.PredefinedValues, StringComparer.Ordinal);
+        var textual = (await conn.QueryAsync<(string TagId, string PredefinedValues, string? ValueDomain)>(
+            "SELECT tag_id, predefined_values, value_domain FROM textual_tag_settings").ConfigureAwait(false))
+            .ToDictionary(t => t.TagId, t => (t.PredefinedValues, t.ValueDomain), StringComparer.Ordinal);
         var numeric = (await conn.QueryAsync<(string TagId, double? Min, double? Max, double? Step, string? Unit)>(
             "SELECT tag_id, min, max, step, unit FROM numeric_tag_settings").ConfigureAwait(false))
             .ToDictionary(t => t.TagId, StringComparer.Ordinal);
@@ -317,11 +323,12 @@ public sealed class CollectionPackageExporter(DatabaseManager db, IClock clock, 
                 t.Id, t.Name,
                 t.Type switch { "simple" => TagType.Simple, "textual" => TagType.Textual, _ => TagType.Numeric },
                 t.ParentId, t.Color, t.Description,
-                textual.TryGetValue(t.Id, out var pv) ? DbMapping.FromJsonArray(pv) : [],
+                textual.TryGetValue(t.Id, out var pv) ? DbMapping.FromJsonArray(pv.PredefinedValues) : [],
                 numeric.TryGetValue(t.Id, out var n) ? n.Min : null,
                 numeric.TryGetValue(t.Id, out n) ? n.Max : null,
                 numeric.TryGetValue(t.Id, out n) ? n.Step : null,
-                numeric.TryGetValue(t.Id, out n) ? n.Unit : null));
+                numeric.TryGetValue(t.Id, out n) ? n.Unit : null,
+                textual.TryGetValue(t.Id, out pv) ? DbMapping.ToTagValueDomain(pv.ValueDomain) : TagValueDomain.Suggest));
         }
 
         foreach (var id in used)

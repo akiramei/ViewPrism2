@@ -3,7 +3,11 @@ using ViewPrism2.Core.Models;
 
 namespace ViewPrism2.Core.Services.Package;
 
-/// <summary>パッケージ内タグ定義(ECO-073 §3.1。JSON 表現から独立した Core 入力)。</summary>
+/// <summary>
+/// パッケージ内タグ定義(ECO-073 §3.1。JSON 表現から独立した Core 入力)。
+/// ValueDomain(REQ-095/ECO-086)は解釈属性のため意味定義一致(③)の比較対象に含めない
+/// (旧パッケージ=欠落は Suggest 扱い・新規作成時のみ適用)。
+/// </summary>
 public sealed record PackageTagDef(
     string SourceId,
     string Name,
@@ -15,7 +19,8 @@ public sealed record PackageTagDef(
     double? Min,
     double? Max,
     double? Step,
-    string? Unit);
+    string? Unit,
+    TagValueDomain ValueDomain = TagValueDomain.Suggest);
 
 /// <summary>タグ 1 件の取り込み分類(§3.2 の照合 5 段)。</summary>
 public enum TagImportDecision

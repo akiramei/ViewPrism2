@@ -77,6 +77,7 @@ public sealed partial class TagEditorViewModel : ObservableObject
             // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            OnPropertyChanged(nameof(DomainNote)); // VM 算出文言も追随(ECO-079 GF-079-01 教訓)
         };
 
         TypeOptions =
@@ -139,6 +140,16 @@ public sealed partial class TagEditorViewModel : ObservableObject
     private string _unit = string.Empty;
 
     public ObservableCollection<string> PredefinedValues { get; } = [];
+
+    /// <summary>値の扱い(REQ-095/ECO-086 裁定 b)。false=入力補助(既定)/true=閉じた値集合。</summary>
+    [ObservableProperty]
+    private bool _isClosedDomain;
+
+    public bool IsSuggestDomain => !IsClosedDomain;
+
+    /// <summary>値の扱いの説明カード(選択に追随・CAD VC-TAG-1)。</summary>
+    public string DomainNote => _localization.T(
+        IsClosedDomain ? "tag.editor.valueDomainClosedNote" : "tag.editor.valueDomainSuggestNote");
 
     [ObservableProperty]
     private string? _selectedPredefinedValue;
@@ -217,6 +228,8 @@ public sealed partial class TagEditorViewModel : ObservableObject
             {
                 PredefinedValues.Add(value);
             }
+
+            IsClosedDomain = settings?.ValueDomain == TagValueDomain.Closed; // REQ-095
         }
         else if (_existing.Type == TagType.Numeric)
         {
@@ -271,6 +284,20 @@ public sealed partial class TagEditorViewModel : ObservableObject
         }
 
         SelectedType = option;
+    }
+
+    /// <summary>値の扱いセグメント(REQ-095)。入力補助を選択。</summary>
+    [RelayCommand]
+    private void SelectDomainSuggest() => IsClosedDomain = false;
+
+    /// <summary>値の扱いセグメント(REQ-095)。閉じた値集合を選択。</summary>
+    [RelayCommand]
+    private void SelectDomainClosed() => IsClosedDomain = true;
+
+    partial void OnIsClosedDomainChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsSuggestDomain));
+        OnPropertyChanged(nameof(DomainNote));
     }
 
     /// <summary>候補値の D&D 並べ替え(順序保持、REQ-024。View 層の Drop ハンドラから呼ぶ)。</summary>
@@ -333,7 +360,9 @@ public sealed partial class TagEditorViewModel : ObservableObject
 
         if (tag.Type == TagType.Textual)
         {
-            var result = await _tagService.SetTextualSettingsAsync(tag.Id, PredefinedValues.ToList());
+            var result = await _tagService.SetTextualSettingsAsync(
+                tag.Id, PredefinedValues.ToList(),
+                IsClosedDomain ? TagValueDomain.Closed : TagValueDomain.Suggest);
             if (!result.IsSuccess)
             {
                 ErrorMessage = ErrorMessages.Resolve(_localization, result.Error);

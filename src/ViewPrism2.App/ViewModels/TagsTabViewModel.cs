@@ -74,7 +74,7 @@ public sealed partial class TagsTabViewModel : ObservableObject
         _localization = localization;
         _windows = windows;
         Loc = new LocalizationProxy(localization);
-        Editor = new HierarchyEditorViewModel(views, localization, windows);
+        Editor = new HierarchyEditorViewModel(views, localization, windows, tags);
         Palette = new TagPaletteViewModel(tagService, localization, windows);
 
         Editor.Saved += (_, _) => DataChanged?.Invoke(this, EventArgs.Empty);

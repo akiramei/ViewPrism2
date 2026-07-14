@@ -205,6 +205,12 @@
                       <Border Classes="homePill" IsVisible="{Binding IsHome}">
                         <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.homePill]}" />
                       </Border>
+                      <!-- 展開モードバッジ(REQ-096/ECO-086・非既定のみ表示=CAD VC-TAG-3・紫) -->
+                      <Border IsVisible="{Binding HasExpansionBadge}" Background="#f2edfc" CornerRadius="6"
+                              Padding="7,2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ExpansionBadgeText}" FontSize="11" Foreground="#7c53d6"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      </Border>
                       <Border Classes="condChip" Classes.amber="{Binding IsConditionAmber}" Classes.mono="{Binding IsConditionMono}"
                               IsVisible="{Binding HasCondition}">
                         <StackPanel Orientation="Horizontal" Spacing="4">

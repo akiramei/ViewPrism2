@@ -53,7 +53,8 @@ public static class DatabaseSchema
 
         CREATE TABLE textual_tag_settings (
             tag_id            TEXT NOT NULL PRIMARY KEY REFERENCES tags(id) ON DELETE CASCADE,
-            predefined_values TEXT NOT NULL DEFAULT '[]'
+            predefined_values TEXT NOT NULL DEFAULT '[]',
+            value_domain      TEXT NOT NULL DEFAULT 'suggest'
         );
 
         CREATE TABLE numeric_tag_settings (
@@ -95,14 +96,16 @@ public static class DatabaseSchema
         CREATE INDEX idx_view_conditions_view ON view_conditions(view_id);
 
         CREATE TABLE view_tag_hierarchies (
-            id              TEXT    NOT NULL PRIMARY KEY,
-            view_id         TEXT    NOT NULL REFERENCES views(id) ON DELETE CASCADE,
-            tag_id          TEXT    NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-            parent_id       TEXT    NULL REFERENCES view_tag_hierarchies(id) ON DELETE SET NULL,
-            position        INTEGER NOT NULL DEFAULT 0,
-            alias           TEXT    NULL,
-            condition_type  TEXT    NULL,
-            condition_value TEXT    NULL
+            id                TEXT    NOT NULL PRIMARY KEY,
+            view_id           TEXT    NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+            tag_id            TEXT    NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            parent_id         TEXT    NULL REFERENCES view_tag_hierarchies(id) ON DELETE SET NULL,
+            position          INTEGER NOT NULL DEFAULT 0,
+            alias             TEXT    NULL,
+            condition_type    TEXT    NULL,
+            condition_value   TEXT    NULL,
+            expansion_mode    TEXT    NULL,
+            hide_empty_values INTEGER NOT NULL DEFAULT 0
         );
         CREATE INDEX idx_view_tag_hierarchies_view ON view_tag_hierarchies(view_id);
 
@@ -295,6 +298,17 @@ public static class DatabaseSchema
                 updated_at        TEXT NOT NULL,
                 PRIMARY KEY (source_library_id, source_tag_id)
             );
+            """),
+
+        // ECO-086(REQ-095/096): 定義値展開モード+閉じた値集合。
+        // textual_tag_settings.value_domain='suggest' 既定(既存行=入力補助のまま=REQ-095 完全互換)。
+        // view_tag_hierarchies.expansion_mode は NULL 既定(NULL=observed として読む=REQ-096 完全互換)、
+        // hide_empty_values は 0 既定。ALTER ADD COLUMN は末尾に列を足す。LatestDdl も同じ列順(末尾)で
+        // 定義しスキーマ同値を保つ(CP-DB-006・ECO-020 前例)。
+        new("009-defined-value-expansion", """
+            ALTER TABLE textual_tag_settings ADD COLUMN value_domain TEXT NOT NULL DEFAULT 'suggest';
+            ALTER TABLE view_tag_hierarchies ADD COLUMN expansion_mode TEXT NULL;
+            ALTER TABLE view_tag_hierarchies ADD COLUMN hide_empty_values INTEGER NOT NULL DEFAULT 0;
             """),
     ];
 }

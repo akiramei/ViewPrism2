@@ -23,7 +23,8 @@ public sealed class ViewRepository : IViewRepository
     private const string SelectNodeColumns = """
         SELECT id AS Id, view_id AS ViewId, tag_id AS TagId, parent_id AS ParentId,
                position AS Position, alias AS Alias, condition_type AS ConditionType,
-               condition_value AS ConditionValue
+               condition_value AS ConditionValue, expansion_mode AS ExpansionMode,
+               hide_empty_values AS HideEmptyValues
         FROM view_tag_hierarchies
         """;
 
@@ -183,8 +184,8 @@ public sealed class ViewRepository : IViewRepository
     {
         ArgumentNullException.ThrowIfNull(node);
         return _db.RunAsync(conn => conn.ExecuteAsync("""
-            INSERT INTO view_tag_hierarchies (id, view_id, tag_id, parent_id, position, alias, condition_type, condition_value)
-            VALUES (@Id, @ViewId, @TagId, @ParentId, @Position, @Alias, @ConditionType, @ConditionValue)
+            INSERT INTO view_tag_hierarchies (id, view_id, tag_id, parent_id, position, alias, condition_type, condition_value, expansion_mode, hide_empty_values)
+            VALUES (@Id, @ViewId, @TagId, @ParentId, @Position, @Alias, @ConditionType, @ConditionValue, @ExpansionMode, @HideEmptyValues)
             """,
             new
             {
@@ -196,6 +197,8 @@ public sealed class ViewRepository : IViewRepository
                 node.Alias,
                 ConditionType = node.ConditionType.ToDb(),
                 node.ConditionValue,
+                ExpansionMode = node.ExpansionMode.ToDb(),
+                node.HideEmptyValues,
             }));
     }
 
@@ -226,7 +229,8 @@ public sealed class ViewRepository : IViewRepository
         return _db.RunAsync(conn => conn.ExecuteAsync("""
             UPDATE view_tag_hierarchies
             SET tag_id = @TagId, parent_id = @ParentId, position = @Position, alias = @Alias,
-                condition_type = @ConditionType, condition_value = @ConditionValue
+                condition_type = @ConditionType, condition_value = @ConditionValue,
+                expansion_mode = @ExpansionMode, hide_empty_values = @HideEmptyValues
             WHERE id = @Id
             """,
             new
@@ -238,6 +242,8 @@ public sealed class ViewRepository : IViewRepository
                 node.Alias,
                 ConditionType = node.ConditionType.ToDb(),
                 node.ConditionValue,
+                ExpansionMode = node.ExpansionMode.ToDb(),
+                node.HideEmptyValues,
             }));
     }
 
@@ -267,8 +273,8 @@ public sealed class ViewRepository : IViewRepository
                 foreach (var node in OrderParentsFirst(nodes))
                 {
                     await conn.ExecuteAsync("""
-                        INSERT INTO view_tag_hierarchies (id, view_id, tag_id, parent_id, position, alias, condition_type, condition_value)
-                        VALUES (@Id, @ViewId, @TagId, @ParentId, @Position, @Alias, @ConditionType, @ConditionValue)
+                        INSERT INTO view_tag_hierarchies (id, view_id, tag_id, parent_id, position, alias, condition_type, condition_value, expansion_mode, hide_empty_values)
+                        VALUES (@Id, @ViewId, @TagId, @ParentId, @Position, @Alias, @ConditionType, @ConditionValue, @ExpansionMode, @HideEmptyValues)
                         """,
                         new
                         {
@@ -280,6 +286,8 @@ public sealed class ViewRepository : IViewRepository
                             node.Alias,
                             ConditionType = node.ConditionType.ToDb(),
                             node.ConditionValue,
+                            ExpansionMode = node.ExpansionMode.ToDb(),
+                            node.HideEmptyValues,
                         }, tx).ConfigureAwait(false);
                 }
 
@@ -345,7 +353,7 @@ public sealed class ViewRepository : IViewRepository
 
     private sealed record NodeRow(
         string Id, string ViewId, string TagId, string? ParentId, long Position, string? Alias,
-        string? ConditionType, string? ConditionValue);
+        string? ConditionType, string? ConditionValue, string? ExpansionMode, long HideEmptyValues);
 
     private static View? ToView(ViewRow? row)
     {
@@ -394,6 +402,8 @@ public sealed class ViewRepository : IViewRepository
                 Alias = row.Alias,
                 ConditionType = DbMapping.ToHierarchyConditionType(row.ConditionType),
                 ConditionValue = row.ConditionValue,
+                ExpansionMode = DbMapping.ToHierarchyExpansionMode(row.ExpansionMode),
+                HideEmptyValues = row.HideEmptyValues != 0,
             };
     }
 }

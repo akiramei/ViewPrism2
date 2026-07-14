@@ -1294,3 +1294,44 @@ requirements:
       - "FS 軸でセグメントを表示する/狭幅でセグメントを畳む・隠す(未分類のまま戻せなくなる)"
       - "未分類 0 件を汎用の「画像がありません」で表示する(分類完了と画像なしの区別が付かない)"
       - "選択母集合・ビューアー順が表示集合と食い違う(非表示画像が選択・閲覧に混ざる)"
+
+  - id: REQ-095
+    statement: "textual タグの定義済み値リストは「値の扱い」属性(value_domain ∈ {suggest, closed}・既定=suggest)を持つ。suggest=入力補助(REQ-024 の現行意味論・不変)。closed=閉じた値集合(定義済みリストを値の正とする)。closed でも値の付与は拒否しない — リスト外の付与値はデータとして保持され、定義値展開(REQ-096)で「未定義値」として検出表示される"
+    rationale: |
+      ECO-086 裁定 b(2026-07-14 maintainer): 閉集合の候補外付与値は検出警告(表示のみ)・付与時拒否は
+      しない=閉集合化した時点で既に付与済みの候補外値もデータとして保持し、検出表示で気づかせる。
+      REQ-024(候補値=入力補助・自由入力可)は不変で併存 — 本属性は候補値リストの「解釈」を宣言する。
+      CAD=ViewPrismUI docs/screens/tag_tab.md「値の扱い」節(gate① 0d63066)。
+      受入: value_domain の永続往復と既定値(既存行=suggest)を exact 検査(unit)。
+    rationale_precision: ok
+    classification_hint: core+surface
+    external_source: "ViewPrismUI docs/screens/tag_tab.md 値の扱い節+VC-TAG-1(`0d63066`) / ECO-086 裁定 b"
+    counterexamples:
+      - "closed で候補外の値の付与がエラーになる(裁定 b 違反=既存データが救えない)"
+      - "既存 DB の textual_tag_settings 行が closed 扱いになる(既定は suggest=完全互換)"
+
+  - id: REQ-096
+    statement: "ビュー階層ノードは展開モード(expansion_mode ∈ {manual, observed, defined, defined_and_observed}・既定=observed)と「0 件の値ノードを隠す」フラグ(hide_empty_values・既定=false)を持つ。observed=REQ-035 の観測値展開(現行と同一・0/1/2 件の一体型統合を含めて不変)。manual=値ノードを自動生成せずタグ名ノードのみ(階層上の子はタグ名ノード配下に接続)。defined=タグの定義値 — textual は predefined_values を定義順・numeric は min から max まで step 刻み(InvariantCulture 数値文字列・小数を含み得る)— から値ノードを生成し、付与 0 件でも全値ノードを生成する(構造安定: 一体型統合はせず、常にタグ名ノード+値ノード群。階層上の子は各値ノード配下に接続)。defined_and_observed=定義値を定義順で先に並べ、定義にない付与値(観測値)を末尾に序数昇順で加える。閉じた値集合(REQ-095 closed)のタグでは、定義にない付与値の値ノードを未定義値として検出マークし(defined でも末尾に検出ノードとして追加し画像への到達性を保つ)、UI は通常の値ノードと区別して表示する。ノードの condition_type(REQ-034 の値制限)はモードを問わず生成後の値集合へ適用する。定義値を生成できない場合 — textual=候補値 0 件 / numeric=min・max・step のいずれか欠落・step≤0・生成数が 256 を超える — は警告を発し observed の挙動へフォールバックする。パス→条件変換(REQ-036)は不変: 値ノード=equals(numeric は数値比較=REQ-031)。既存ノード(列 NULL)は observed として扱う(完全互換)"
+    rationale: |
+      ECO-086 裁定 a/d/e/f(2026-07-14 maintainer): a=モード 4 値・既定 observed・condition_type は
+      値制限として直交維持 / d=0 件は既定表示+ノード単位の隠すオプション / e=定義不能は警告+
+      observed フォールバック(上限 256 は本仕様で採番 — 47 都道府県・0-100 step1=101 を許容し
+      暴走を止める)/ f=マージ順序=定義順先+観測のみ値を末尾序数。動機=都道府県(候補値 47)級で
+      47 条件手書きは非現実的・観測値展開は付与状況で構造が不安定・定義順にならない(ECO-086 §1)。
+      REQ-035 は不変で併存(observed の意味論)。定義値の供給は観測値契約(ITagValueSource/INV-010)と
+      別契約とする(ECO-086 §3 実測=契約の混同はハック)。
+      CAD=ViewPrismUI docs/screens/tag_tab.md 展開モード節+image_tab.md 定義値展開の見え方節
+      (gate① 0d63066: 0 件チップ淡色・未定義値チップ=琥珀破線+バッジ・多段リーフ)。
+      受入: 固定フィクスチャで定義順展開・0 件安定・numeric 定義域・未定義値検出・フォールバック・
+      マージ順序・既定互換を exact 検査(unit)。多段(textual 値ノード→numeric 定義値リーフ)の
+      パス選択が「親 equals AND 子 equals」になることを含む。
+    rationale_precision: ok
+    classification_hint: core+surface
+    external_source: "ViewPrismUI docs/screens/tag_tab.md 展開モード節+VC-TAG-2/3・image_tab.md 定義値展開の見え方節+VC-IMG-6/7(`0d63066`) / ECO-086 裁定 a-f"
+    counterexamples:
+      - "既存ビュー(expansion_mode NULL)の展開結果が現行と変わる(既定=observed の互換破れ)"
+      - "defined の値ノードが序数ソートされ定義順にならない(北海道より京都が先に来る)"
+      - "defined で付与 0 件の値ノードが消え、付与状況で構造が変わる(構造安定の目的が崩れる)"
+      - "numeric の定義値リーフ選択が exists 評価になる(equals 数値比較でなく全付与画像が出る)"
+      - "閉集合の未定義値が通常の 48 番目ノードとして紛れる(検出マークなし)/ defined で未定義値の画像へ到達できなくなる"
+      - "min=0,max=1000000,step=0.001 で百万ノードを生成しようとして固まる(上限 256 のフォールバック不在)"

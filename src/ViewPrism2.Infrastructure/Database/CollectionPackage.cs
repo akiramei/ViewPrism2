@@ -208,7 +208,9 @@ public static class PackageJson
             GetOptionalDouble(node["minimum"]),
             GetOptionalDouble(node["maximum"]),
             GetOptionalDouble(node["step"]),
-            node["unit"]?.GetValue<string>());
+            node["unit"]?.GetValue<string>(),
+            // REQ-095/ECO-086: 欠落(旧パッケージ)・未知トークンは suggest
+            node["valueDomain"]?.GetValue<string>() == "closed" ? TagValueDomain.Closed : TagValueDomain.Suggest);
     }
 
     /// <summary>整数/実数の両トークンを受ける(JsonValue(long) は GetValue&lt;double&gt; で読めない)。</summary>

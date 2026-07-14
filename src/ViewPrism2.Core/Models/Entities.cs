@@ -91,13 +91,16 @@ public sealed record Tag
     public string? Description { get; init; }
 }
 
-/// <summary>textual タグの型別設定(REQ-024)。</summary>
+/// <summary>textual タグの型別設定(REQ-024, REQ-095)。</summary>
 public sealed record TextualTagSettings
 {
     public required string TagId { get; init; }
 
     /// <summary>順序保持の定義済み値リスト。付与値はリスト外も許可(入力補助のみ)。</summary>
     public IReadOnlyList<string> PredefinedValues { get; init; } = [];
+
+    /// <summary>候補値リストの意味(REQ-095/ECO-086)。既定 Suggest。Closed でも付与は拒否しない。</summary>
+    public TagValueDomain ValueDomain { get; init; } = TagValueDomain.Suggest;
 }
 
 /// <summary>numeric タグの型別設定(REQ-025)。すべて null 可。</summary>
@@ -177,6 +180,12 @@ public sealed record HierarchyNode
 
     /// <summary>condition_type 別 JSON(仕様 §2.4 のスキーマ)。</summary>
     public string? ConditionValue { get; init; }
+
+    /// <summary>展開モード(REQ-096/ECO-086)。既定 Observed=REQ-035 の現行挙動(DB 列 NULL 互換)。</summary>
+    public HierarchyExpansionMode ExpansionMode { get; init; } = HierarchyExpansionMode.Observed;
+
+    /// <summary>件数 0 の定義値ノードを表示側で隠す(REQ-096/裁定 d)。既定 false=0 件も表示。</summary>
+    public bool HideEmptyValues { get; init; }
 }
 
 /// <summary>NodeGraph の展開済みノード(仕様 §2.4 REQ-035、OC-2 出力)。</summary>
@@ -201,6 +210,15 @@ public sealed class GraphNode
 
     /// <summary>展開元の階層ノードの condition_value JSON(仕様 §2.4 のスキーマ)。</summary>
     public string? ConditionValue { get; init; }
+
+    /// <summary>定義値展開(defined/defined_and_observed)由来の値ノード(REQ-096)。0 件淡色表示の判定に使う。</summary>
+    public bool IsDefinedExpansion { get; init; }
+
+    /// <summary>未定義値の検出ノード(REQ-095 closed の定義外付与値・REQ-096/裁定 c)。UI は通常ノードと区別する。</summary>
+    public bool IsUndefinedValue { get; init; }
+
+    /// <summary>展開元ノードの hide_empty_values(REQ-096/裁定 d)。表示側が件数 0 の定義値ノードを隠す判定に使う。</summary>
+    public bool HideEmptyValues { get; init; }
 
     public List<GraphNode> Children { get; } = [];
 }

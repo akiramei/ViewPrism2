@@ -3,8 +3,26 @@ using ViewPrism2.Core.Models;
 
 namespace ViewPrism2.App.Services;
 
-/// <summary>ノード条件ダイアログの結果(OK 時のみ非 null。ConditionType=null は「条件なし」)。</summary>
-public sealed record NodeConditionResult(HierarchyConditionType? ConditionType, string? ConditionValueJson);
+/// <summary>
+/// 配置タグの設定ダイアログの結果(OK 時のみ非 null。ConditionType=null は「条件なし」)。
+/// ExpansionMode/HideEmptyValues は ECO-086(REQ-096)の展開モード(既定=Observed で従来互換)。
+/// </summary>
+public sealed record NodeConditionResult(
+    HierarchyConditionType? ConditionType,
+    string? ConditionValueJson,
+    HierarchyExpansionMode ExpansionMode = HierarchyExpansionMode.Observed,
+    bool HideEmptyValues = false);
+
+/// <summary>
+/// 配置タグの設定ダイアログへの入力(ECO-086: 展開モード+条件の 2 セクション)。
+/// DefinedValuesAvailable=false のとき、定義値/定義+観測の選択で警告(観測値フォールバック)を表示する(裁定 e)。
+/// </summary>
+public sealed record NodeSettingsRequest(
+    HierarchyConditionType? ConditionType,
+    string? ConditionValueJson,
+    HierarchyExpansionMode ExpansionMode,
+    bool HideEmptyValues,
+    bool DefinedValuesAvailable);
 
 /// <summary>設定ウィンドウの節(ECO-077/E-1: 誘導導線が「データとバックアップ」節を直接開くための指定)。</summary>
 public enum SettingsSection
@@ -70,6 +88,13 @@ public interface IWindowService
     /// <summary>階層ノードの条件設定ダイアログ(textual/numeric のみ)。キャンセルなら null。</summary>
     Task<NodeConditionResult?> ShowNodeConditionDialogAsync(
         Tag tag, HierarchyConditionType? currentType, string? currentValueJson);
+
+    /// <summary>
+    /// 配置タグの設定ダイアログ(ECO-086: 展開モード+条件)。キャンセルなら null。
+    /// 既定実装は条件のみの旧ダイアログへ委譲(テストスタブ互換)。実装(WindowService)が上書きする。
+    /// </summary>
+    Task<NodeConditionResult?> ShowNodeSettingsDialogAsync(Tag tag, NodeSettingsRequest request)
+        => ShowNodeConditionDialogAsync(tag, request.ConditionType, request.ConditionValueJson);
 
     /// <summary>再リンクウィンドウ(対象フォルダ)。</summary>
     Task ShowRelinkAsync(string folderId);

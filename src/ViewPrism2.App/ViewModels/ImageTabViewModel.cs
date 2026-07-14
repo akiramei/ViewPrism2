@@ -1145,14 +1145,25 @@ public sealed partial class ImageTabViewModel : ObservableObject
             int ci = 0;
             foreach (var (child, matched) in childMatched)
             {
-                var key = "vc" + ci++;
-                _currentChildren[key] = child;
                 // (REQ-094) 未分類モードの件数はその子自身の未分類件数(孫 matched を減算)=表示とチップの数字を一致させる
                 int count = _viewUnclassified
                     ? Unclassified(matched, child.Children.Select(g => ViewMatched(Append(Append(fullPath, child), g), matched))).Count
                     : matched.Count;
+                // (REQ-096 裁定 d) 「0件の値ノードを隠す」: 表示のみスキップ(構築・意味論は不変)
+                if (child.IsDefinedExpansion && child.HideEmptyValues && matched.Count == 0)
+                {
+                    continue;
+                }
+
+                var key = "vc" + ci++;
+                _currentChildren[key] = child;
                 var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
-                Chips.Add(ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
+                // (REQ-095/096・CAD VC-IMG-6) 未定義値=琥珀破線+バッジ / 0 件の定義値=淡色で表示維持
+                Chips.Add(child.IsUndefinedValue
+                    ? ChipVM.Undefined(key, child.DisplayName, count, _localization.T("view.undefinedBadge"))
+                    : child.IsDefinedExpansion && count == 0
+                        ? ChipVM.ColoredZero(key, child.DisplayName, color, isNav: true)
+                        : ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
             }
             if (Chips.Count > 0) { ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.drillHierarchy"); }
         }
@@ -1517,13 +1528,54 @@ public sealed partial class ImageTabViewModel : ObservableObject
         _viewConditions = await _views.GetConditionsAsync(viewId).ConfigureAwait(true);
         var hierarchy = await _views.GetHierarchyAsync(viewId).ConfigureAwait(true);
         var valueIndex = TagValueIndex.Build(_entries.Select(e => e.ToImageWithTags()));
-        var result = _graphBuilder.BuildGraph(hierarchy, _tagById, valueIndex);
+        var definedIndex = await BuildDefinedIndexAsync(hierarchy).ConfigureAwait(true);
+        var result = _graphBuilder.BuildGraph(hierarchy, _tagById, valueIndex, definedIndex);
         _viewRoot = result.Root;
         _viewPath.Clear();
         // ECO-063/REQ-037: 保存済み home を画像タブの初期 path へ接続。
         // null/参照切れは空 path のまま=root fallback。独自 DFS は持たず Core の決定規則を消費する。
         _viewPath.AddRange(_graphBuilder.ResolveHomePath(_viewRoot, view.HomeTagId));
         Recompute();
+    }
+
+    /// <summary>
+    /// 定義値展開(REQ-096/ECO-086)の定義値供給。defined/defined_and_observed のノードがある場合のみ
+    /// 対象タグの型別設定を取得して構築する(観測値契約 TagValueIndex とは別系統=INV-010 の混同禁止)。
+    /// </summary>
+    private async Task<TagDefinedValueIndex?> BuildDefinedIndexAsync(IReadOnlyList<HierarchyNode> hierarchy)
+    {
+        var tagIds = hierarchy
+            .Where(n => n.ExpansionMode is HierarchyExpansionMode.Defined or HierarchyExpansionMode.DefinedAndObserved)
+            .Select(n => n.TagId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (tagIds.Count == 0)
+        {
+            return null;
+        }
+
+        var textual = new Dictionary<string, TextualTagSettings>(StringComparer.Ordinal);
+        var numeric = new Dictionary<string, NumericTagSettings>(StringComparer.Ordinal);
+        foreach (var tagId in tagIds)
+        {
+            if (!_tagById.TryGetValue(tagId, out var tag))
+            {
+                continue; // 参照切れは NodeGraphBuilder 側の INV-008 に委ねる
+            }
+
+            if (tag.Type == TagType.Textual &&
+                await _tags.GetTextualSettingsAsync(tagId).ConfigureAwait(true) is { } ts)
+            {
+                textual[tagId] = ts;
+            }
+            else if (tag.Type == TagType.Numeric &&
+                await _tags.GetNumericSettingsAsync(tagId).ConfigureAwait(true) is { } ns)
+            {
+                numeric[tagId] = ns;
+            }
+        }
+
+        return TagDefinedValueIndex.Build(textual, numeric);
     }
 
     [RelayCommand]

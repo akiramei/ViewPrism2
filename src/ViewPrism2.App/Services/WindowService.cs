@@ -353,6 +353,21 @@ public sealed class WindowService : IWindowService
         return await window.ShowDialog<NodeConditionResult?>(Owner);
     }
 
+    public async Task<NodeConditionResult?> ShowNodeSettingsDialogAsync(Tag tag, NodeSettingsRequest request)
+    {
+        if (Owner is null)
+        {
+            return null;
+        }
+
+        // ECO-086: 配置タグの設定(展開モード+条件)。同一ダイアログを拡張入力で開く
+        var vm = new NodeConditionDialogViewModel(
+            tag, request.ConditionType, request.ConditionValueJson, _localization,
+            request.ExpansionMode, request.HideEmptyValues, request.DefinedValuesAvailable);
+        var window = new NodeConditionDialog { DataContext = vm };
+        return await window.ShowDialog<NodeConditionResult?>(Owner);
+    }
+
     public async Task ShowRelinkAsync(string folderId)
     {
         if (Owner is null)
