@@ -1340,8 +1340,8 @@ changes:
   - id: ECO-084
     title: "階層ビューの表示モード切替「すべて/未分類」(累積フィルタ+最深配置)"
     type: 新機能(ビュー軸ブラウズの表示意味論拡張。maintainer要求2026-07-14・方式/ルート意味論/概念語は起票前相談で裁定済み)
-    status: implemented   # 2026-07-14 是正+機械受入完了・golden(gate②)待ち
-    golden: "pending"
+    status: applied   # 2026-07-14 gate②合格(maintainer実機・GF-084-01を経て)→クローズ
+    golden: "approved(2026-07-14 maintainer 実機: ビュー軸で「すべて/未分類」セグメント出現(FS軸非表示)・未分類=最深配置(ルート=未分類発見器・潜っても直下の子分類済みが消える)・チップ件数のモード追随・分類進捗の動的減算と専用空状態・ビュー毎記憶の再起動復元・狭幅収納(セグメント込み重なりなし)・en切替=All/Unclassified。第1回goldenでGF-084-01(enはみ出し/ja密着=アイコン用segBtn固定幅の流用)→segBtnText差し替え+日英Theory恒久pinを経て再golden合格=セグメント日英の収まりもmock同等を確認)"
     baseline: "main cfdf071"
     findings: "maintainer要求2026-07-14: 現行ノード選択=パス条件の累積ANDフィルタ(REQ-036・子孫リーフにマッチする画像は祖先にも表示)に加え、各ノードで直下の子ノードのいずれにもマッチしない画像だけを表示する最深配置モードを追加し切替可能に。裁定済み=①方式案B改(画像タブのビュー軸にトグル・ビュー定義DBに持たせない・ビュー毎の最終選択をsettings.json記憶=DBマイグレーションなし/パッケージREQ-093不変) ②ルート意味論=未分類(どのトップノードにもマッチしない画像=未分類発見器) ③概念語=全て/未分類・文言はja/en設計時確定(ECO-079教訓)。実測済み=評価はin-memory(ImageTabViewModel.ViewMatched:719→OC-3→OC-1・DB往復なし)・子matchedは親の部分集合で件数表示のため計算済み(ECO-026 within最適化)→display(N)=matched(N)−⋃matched(child)は直下の子のみで十分(子孫条件は子条件の上位集合)・HashSet差集合O(n)=性能影響ほぼゼロ。settings.json閲覧状態の追加前例=E-SETTINGS-013(REQ-052→059→077)。意味論副作用(仕様化必須)=textualタグ名ノード(値2件以上)は直下ほぼ0件・多重タグ画像は複数リーフに同時に現れる(意図どおり)"
     impacted_bom: ["CAD=ViewPrismUI docs/screens/image_tab.md+mock(gate①対象・トグル形態/置き場所/ECO-027狭幅収納整合/文言)", "spec=20-spec.md §2.4新REQ(表示モード2値・既定=すべて・display(N)定義・ルート=未分類・textual帰結・settings.json記憶=ビューid毎・パッケージ非搬送)", "E-BOM=E-GRAPH-003/E-EVAL-002(意味論note)・E-UI-NODEGRAPH-025/E-UI-AXIS-NAV-040/E-UI-BROWSE-022(surface)・E-SETTINGS-013(記憶キー)", "実装=ImageTabViewModel(表示集合解決+トグル状態)/ImageTabView.axaml(トグルUI・i18n配線=ECO-079/080 lintが機械ゲート)/SettingsService系", "i18n=ja/en各4キー前後", "DB・マイグレーション・パッケージREQ-093・スナップショットREQ-092=変更なし(裁定①)"]

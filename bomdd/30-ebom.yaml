@@ -169,10 +169,10 @@ ebom:
       acceptance_refs: [CP-CACHE-008]
 
     - id: E-SETTINGS-013
-      name: 設定ストア(settings.json・破損耐性)— v2.0 でビューア設定 7 項目を追加(REQ-059)+ ECO-022 でタグ制御設定(enableTagControl+action→tag_id 6個)を追加(REQ-077)
+      name: 設定ストア(settings.json・破損耐性)— v2.0 でビューア設定 7 項目を追加(REQ-059)+ ECO-022 でタグ制御設定(enableTagControl+action→tag_id 6個)を追加(REQ-077)+ ECO-084 でビュー毎表示モード viewDisplayModes(REQ-094・ViewDisplayModeMap=値等価辞書で record 全体等価のラウンドトリップ契約 CP-SET-009 を保持)を追加
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-052, REQ-059, REQ-077]
+      requirement_refs: [REQ-052, REQ-059, REQ-077, REQ-094]
       depends_on: []
       invariants:
         - 破損ファイルで例外を外に漏らさない(既定値+再生成)
@@ -449,11 +449,11 @@ ebom:
       fmea_refs: [FMEA-013]
 
     - id: E-UI-AXIS-NAV-040
-      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割
+      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割。ECO-084 で表示モード「すべて/未分類」セグメント(REQ-094・ビュー軸のみ・チップ件数モード追随・未分類専用空状態)を追加
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-037, REQ-053, REQ-060]
+      requirement_refs: [REQ-037, REQ-053, REQ-060, REQ-094]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       supersedes: E-UI-GRID-022
