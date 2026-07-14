@@ -78,6 +78,8 @@ public sealed partial class TagEditorViewModel : ObservableObject
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
             OnPropertyChanged(nameof(DomainNote)); // VM 算出文言も追随(ECO-079 GF-079-01 教訓)
+            OnPropertyChanged(nameof(Subtitle));
+            OnPropertyChanged(nameof(OptionCountText));
         };
 
         TypeOptions =
@@ -99,8 +101,14 @@ public sealed partial class TagEditorViewModel : ObservableObject
         // ECO-007/E6: セグメントタブの選択強調(IsActive)を初期同期する
         SyncTypeActive();
 
-        // 候補値の追加/削除/並べ替えでプレビュー(テキストチップ)を再評価する
-        PredefinedValues.CollectionChanged += (_, _) => RaisePreviewChanged();
+        // 候補値の追加/削除/並べ替えでプレビュー(テキストチップ)と件数ヘッダを再評価する
+        PredefinedValues.CollectionChanged += (_, _) =>
+        {
+            RaisePreviewChanged();
+            OnPropertyChanged(nameof(OptionCountText)); // ECO-087/VC-TAG-6
+            OnPropertyChanged(nameof(NoOptions));
+            OnPropertyChanged(nameof(HasOptions));
+        };
 
         // Loc 差し替え(CultureChanged)でプレビューのプレースホルダも再評価
         localization.CultureChanged += (_, _) => RaisePreviewChanged();
@@ -163,6 +171,28 @@ public sealed partial class TagEditorViewModel : ObservableObject
     public bool IsTextual => SelectedType.Value == TagType.Textual;
 
     public bool IsNumeric => SelectedType.Value == TagType.Numeric;
+
+    public bool IsSimple => SelectedType.Value == TagType.Simple;
+
+    /// <summary>ヘッダの種別サブタイトル(ECO-087/VC-TAG-5: 種別セグメント切替で追随)。</summary>
+    public string Subtitle => _localization.T(SelectedType.Value switch
+    {
+        TagType.Textual => "tag.editor.subtitle.textual",
+        TagType.Numeric => "tag.editor.subtitle.numeric",
+        _ => "tag.editor.subtitle.simple",
+    });
+
+    /// <summary>「登録済みの選択肢 (N)」(ECO-087/VC-TAG-6)。</summary>
+    public string OptionCountText => _localization.T("tag.editor.registeredOptions",
+        new Dictionary<string, string>
+        {
+            ["count"] = PredefinedValues.Count.ToString(CultureInfo.InvariantCulture),
+        });
+
+    /// <summary>候補値 0 件(破線プレースホルダの表示制御・ECO-087/VC-TAG-6)。</summary>
+    public bool NoOptions => PredefinedValues.Count == 0;
+
+    public bool HasOptions => PredefinedValues.Count > 0;
 
     /// <summary>
     /// 付与プレビュー(DC-TAGPREVIEW-001・E5)。「画像に付けたときの見え方」を種別別に整形する。
@@ -241,7 +271,10 @@ public sealed partial class TagEditorViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    /// <summary>入力が空の間は非活性(ECO-087/mock DD02 の addReady)。</summary>
+    public bool CanAddValue => NewValueText.Trim().Length > 0;
+
+    [RelayCommand(CanExecute = nameof(CanAddValue))]
     private void AddPredefinedValue()
     {
         var value = NewValueText.Trim();
@@ -252,6 +285,12 @@ public sealed partial class TagEditorViewModel : ObservableObject
         }
     }
 
+    partial void OnNewValueTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(CanAddValue));
+        AddPredefinedValueCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand]
     private void RemovePredefinedValue()
     {
@@ -259,6 +298,22 @@ public sealed partial class TagEditorViewModel : ObservableObject
         {
             PredefinedValues.Remove(value);
         }
+    }
+
+    /// <summary>ピル行の × 削除(ECO-087/VC-TAG-6: 行ごとの削除ボタン)。</summary>
+    [RelayCommand]
+    private void RemovePredefinedValueItem(string value) => PredefinedValues.Remove(value);
+
+    /// <summary>数値プリセット(ECO-087/mock DD02: ★評価 1–5 / % 0–100 / pt 0–10)。</summary>
+    [RelayCommand]
+    private void ApplyNumericPreset(string preset)
+    {
+        (MinText, MaxText, StepText, Unit) = preset switch
+        {
+            "percent" => ("0", "100", "5", "%"),
+            "point" => ("0", "10", "1", "pt"),
+            _ => ("1", "5", "1", "★"),
+        };
     }
 
     [RelayCommand]
@@ -388,6 +443,8 @@ public sealed partial class TagEditorViewModel : ObservableObject
         SyncTypeActive();
         OnPropertyChanged(nameof(IsTextual));
         OnPropertyChanged(nameof(IsNumeric));
+        OnPropertyChanged(nameof(IsSimple));
+        OnPropertyChanged(nameof(Subtitle)); // ECO-087/VC-TAG-5: 種別切替でヘッダ追随
         RaisePreviewChanged();
     }
 

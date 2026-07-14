@@ -3,16 +3,17 @@
         xmlns:vm="using:ViewPrism2.App.ViewModels"
         x:Class="ViewPrism2.App.Views.TagEditorWindow"
         x:DataType="vm:TagEditorViewModel"
-        Width="440" SizeToContent="Height" MaxHeight="820"
+        Width="768" SizeToContent="Height" MaxHeight="820"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
   <!-- タグ編集(REQ-021〜025): 名前・種別(既存は変更不可)・色・説明・型別設定。
-       GF-01(REQ-060(a)): 外側 ScrollViewer で全体を包まない。SizeToContent=Height で窓は内容に
-       フィットし、候補値リスト(ValuesList)は固定 Height=140 で内部スクロール。リストが固定高のため
-       候補値を追加しても窓は伸長せず(最初から固定サイズ・リスト内でスクロール)、保存/キャンセルは
-       下端固定で常に見える。MaxHeight=820 は小画面の安全網。
+       ECO-087(CAD VC-TAG-4〜8=mock DD02 忠実化): 幅 768・4 段クローム(ヘッダ/2 カラムボディ/
+       プレビュー帯/フッター)。左=基本情報・右=種別別設定。
+       GF-01(REQ-060(a))+GF-086-01: 窓は内容フィット(MaxHeight=820 は小画面の安全網)、
+       候補値リスト(ValuesList)は固定 Height で内部スクロール、種別別設定の増加はボディ単一
+       スクロールで吸収。保存/キャンセル・プレビュー帯は下端固定で常に見える。
        ECO-007: E6=種別セグメント3タブ / E7=カラー9色(Radix) / E5=付与プレビュー帯。 -->
   <Window.Styles>
     <!-- E6: 種別セグメント(3タブ横並びトグル)。コンテナは控えめな背景・選択タブは塗りで強調。 -->
@@ -46,13 +47,56 @@
       <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <!-- ECO-087(VC-TAG-4/6/7): セクションラベル・選択肢ピル行・強調ボタン・プリセットチップ -->
+    <Style Selector="TextBlock.sectionLabel">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+    <Style Selector="Button.accent">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="CornerRadius" Value="9" />
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Opacity" Value="0.9" />
+    </Style>
+    <Style Selector="Border.pillRow">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="Height" Value="40" />
+    </Style>
+    <Style Selector="Button.pillRemove">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ListBox#ValuesList ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,0,6" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.presetChip">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="CornerRadius" Value="7" />
+    </Style>
     <!-- E5: 付与プレビュー帯 -->
     <Style Selector="Border.previewStrip">
       <Setter Property="Background" Value="{StaticResource PanelBrush}" />
       <Setter Property="BorderBrush" Value="{StaticResource BorderLineBrush}" />
       <Setter Property="BorderThickness" Value="0,1,0,0" />
-      <Setter Property="Padding" Value="0,10,0,0" />
-      <Setter Property="Margin" Value="0,4,0,0" />
+      <Setter Property="Padding" Value="20,10" />   <!-- ECO-087: DockPanel Margin 0 化に伴い帯自身が余白を持つ -->
     </Style>
     <Style Selector="Border.previewChip">
       <Setter Property="CornerRadius" Value="8" />
@@ -75,16 +119,45 @@
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </Window.Styles>
-  <DockPanel Margin="16" LastChildFill="True">
-    <!-- 下端固定: エラー文言+保存/キャンセル(候補値が増えても常に見える) -->
-    <StackPanel DockPanel.Dock="Bottom" Spacing="8">
-      <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
-                 FontSize="12" TextWrapping="Wrap" />
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="{Binding Loc[tag.editor.cancel]}" Click="OnCancelClick" MinWidth="80" />
-        <Button Content="{Binding Loc[tag.editor.save]}" Command="{Binding SaveCommand}" MinWidth="80" />
+  <DockPanel LastChildFill="True">
+    <!-- ヘッダ(ECO-087/VC-TAG-5): アイコンバッジ+タイトル+種別サブタイトル+X(キャンセル同等)。
+         サブタイトルは作成時のみ(mock は作成ダイアログを定義 — 編集時の文言は未定義=発明しない) -->
+    <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1"
+            Padding="20,14">
+      <DockPanel>
+        <Border DockPanel.Dock="Left" Width="42" Height="42" CornerRadius="11"
+                Background="{StaticResource CardSelectedBgBrush}" Margin="0,0,12,0">
+          <PathIcon Data="{StaticResource TagIcon}" Width="20" Height="20"
+                    Foreground="{StaticResource AccentBrush}" />
+        </Border>
+        <Button DockPanel.Dock="Right" Classes="pillRemove" Click="OnCancelClick" VerticalAlignment="Top">
+          <PathIcon Data="{StaticResource CloseIcon}" Width="14" Height="14"
+                    Foreground="{StaticResource TextMutedBrush}" />
+        </Button>
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock x:Name="TitleText" FontSize="17" FontWeight="Bold" />
+          <TextBlock x:Name="HeaderSubtitle" Text="{Binding Subtitle}" FontSize="12.5"
+                     Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding IsCreate}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- 下端固定フッター(ECO-087/VC-TAG-7): エラー文言+キャンセル/強調保存(常時可視) -->
+    <Border DockPanel.Dock="Bottom" Padding="20,12">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}"
+                   FontSize="12" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+          <Button Content="{Binding Loc[tag.editor.cancel]}" Click="OnCancelClick" MinWidth="90" />
+          <Button x:Name="SaveButton" Classes="accent" Command="{Binding SaveCommand}" MinWidth="90">
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+              <TextBlock Text="✓" FontWeight="Bold" />
+              <TextBlock Text="{Binding Loc[tag.editor.save]}" FontWeight="SemiBold" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
       </StackPanel>
-    </StackPanel>
+    </Border>
 
     <!-- ECO-007/E5(DC-TAGPREVIEW-001): 付与プレビュー帯(下端固定・保存ボタンの上)。
          「画像に付けたときの見え方」を種別別に表示し、画像タブ実付与 UI と表現を一致させる。
@@ -164,127 +237,210 @@
          全体を包まない」はフッター/プレビュー帯込みの全体が対象 — 本体だけのスクロールは契約どおりで、
          種別別設定の増加(ECO-086 値の扱い等)を吸収する。プレビュー帯・保存/キャンセルは Dock 固定のまま。 -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-    <StackPanel Spacing="8">
-      <TextBlock x:Name="TitleText" FontSize="16" />
-      <TextBlock Text="{Binding Loc[tag.editor.name]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-      <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[tag.editor.namePlaceholder]}" />
-      <TextBlock Text="{Binding Loc[tag.editor.typeLabel]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-      <!-- ECO-007/E6: 種別セグメント(3タブ横並びトグル: シンプル/テキスト/数値)。従来 ComboBox を置換。
-           SelectedType/TypeOptions にバインド。TypeEditable=false(既存タグ編集時)は非活性のまま
-           (ECO-008: 種別は作成後変更不可・挙動は不変)。 -->
-      <Border Classes="segment" IsEnabled="{Binding TypeEditable}">
-        <ItemsControl ItemsSource="{Binding TypeOptions}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <UniformGrid Rows="1" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:TagTypeOption">
-              <RadioButton Classes="segmentTab" GroupName="tagType"
-                           Content="{Binding Label}"
-                           IsChecked="{Binding IsActive, Mode=OneWay}"
-                           Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).SelectTypeCommand}"
-                           CommandParameter="{Binding}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </Border>
-      <TextBlock Text="{Binding Loc[tag.editor.typeCannotChange]}" IsVisible="{Binding !TypeEditable}"
-                 FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-      <TextBlock Text="{Binding Loc[tag.editor.color]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-      <!-- カラー: プリセット+hex 表示(仕様 §2.6 v1.2) -->
-      <TextBlock Text="{Binding Loc[tag.colorPicker.presetColors]}" FontSize="11"
-                 Foreground="{StaticResource TextMutedBrush}" />
-      <ItemsControl ItemsSource="{x:Static vm:TagEditorViewModel.ColorPresets}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <WrapPanel />
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:ColorPresetViewModel">
-            <Button Padding="0" Margin="2" Width="20" Height="20" CornerRadius="10"
-                    Background="{Binding Hex}"
-                    Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).PickColorCommand}"
-                    CommandParameter="{Binding}" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-      <DockPanel>
-        <Ellipse DockPanel.Dock="Right" Width="16" Height="16" Margin="8,0,0,0"
-                 Fill="{Binding Color, FallbackValue=Transparent}" VerticalAlignment="Center" />
-        <TextBox Text="{Binding Color}" PlaceholderText="#3B82F6" />
-      </DockPanel>
-      <TextBlock Text="{Binding Loc[tag.editor.description]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-      <TextBox Text="{Binding Description}" PlaceholderText="{Binding Loc[tag.editor.descriptionPlaceholder]}" />
+      <!-- ECO-087(VC-TAG-4): 2 カラムボディ — 左=基本情報(316px 級)/縦区切り/右=種別別設定 -->
+      <Grid ColumnDefinitions="316,24,1,24,*" Margin="20,14,20,14">
 
-      <!-- numeric 設定(REQ-025) -->
-      <StackPanel IsVisible="{Binding IsNumeric}" Spacing="8">
-        <TextBlock Text="{Binding Loc[tag.editor.numericRange]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-        <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto,Auto">
-          <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc[tag.editor.minValue]}" FontSize="12" />
-          <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Loc[tag.editor.maxValue]}" FontSize="12" />
-          <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding MinText}" PlaceholderText="{Binding Loc[tag.editor.noLimit]}" />
-          <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding MaxText}" PlaceholderText="{Binding Loc[tag.editor.noLimit]}" />
-          <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Loc[tag.editor.step]}" FontSize="12" Margin="0,8,0,0" />
-          <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Loc[tag.editor.unit]}" FontSize="12" Margin="0,8,0,0" />
-          <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding StepText}" />
-          <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Unit}" />
-        </Grid>
-        <!-- 定義域→定義値展開の情報カード(REQ-096/ECO-086・CAD tag_tab.md 値の扱い節) -->
-        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
-                BorderThickness="1" CornerRadius="8" Padding="10,8">
-          <TextBlock Text="{Binding Loc[tag.editor.numericDefinedNote]}" FontSize="12" TextWrapping="Wrap"
+        <!-- 左カラム: 基本情報 -->
+        <StackPanel Grid.Column="0" Spacing="8">
+          <TextBlock Classes="sectionLabel" Text="{Binding Loc[tag.editor.basicInfo]}" />
+          <TextBlock Text="{Binding Loc[tag.editor.name]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBox Text="{Binding Name}" PlaceholderText="{Binding Loc[tag.editor.namePlaceholder]}" />
+          <TextBlock Text="{Binding Loc[tag.editor.typeLabel]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <!-- ECO-007/E6: 種別セグメント(3タブ)。TypeEditable=false(既存タグ編集時)は非活性(ECO-008) -->
+          <Border Classes="segment" IsEnabled="{Binding TypeEditable}">
+            <ItemsControl ItemsSource="{Binding TypeOptions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TagTypeOption">
+                  <RadioButton Classes="segmentTab" GroupName="tagType"
+                               Content="{Binding Label}"
+                               IsChecked="{Binding IsActive, Mode=OneWay}"
+                               Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).SelectTypeCommand}"
+                               CommandParameter="{Binding}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+          <TextBlock Text="{Binding Loc[tag.editor.typeCannotChange]}" IsVisible="{Binding !TypeEditable}"
+                     FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="{Binding Loc[tag.editor.color]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <!-- カラー: プリセット+hex 表示(仕様 §2.6 v1.2) -->
+          <TextBlock Text="{Binding Loc[tag.colorPicker.presetColors]}" FontSize="11"
                      Foreground="{StaticResource TextMutedBrush}" />
-        </Border>
-      </StackPanel>
-
-      <!-- textual 定義済み値(REQ-024: 順序保持。D&D または ↑↓ で並べ替え — 仕様 §2.6 v1.2) -->
-      <StackPanel IsVisible="{Binding IsTextual}" Spacing="8">
-        <TextBlock Text="{Binding Loc[tag.editor.optionsConfig]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Content="{Binding Loc[tag.options.add]}"
-                  Command="{Binding AddPredefinedValueCommand}" Margin="8,0,0,0" />
-          <TextBox Text="{Binding NewValueText}" PlaceholderText="{Binding Loc[tag.options.newOptionPlaceholder]}" />
-        </DockPanel>
-        <ListBox x:Name="ValuesList" ItemsSource="{Binding PredefinedValues}"
-                 SelectedItem="{Binding SelectedPredefinedValue}"
-                 Height="140" DragDrop.AllowDrop="True"
-                 PointerPressed="OnValuePressed" />
-        <TextBlock Text="{Binding Loc[tag.options.dragToReorder]}" FontSize="11"
-                   Foreground="{StaticResource TextMutedBrush}" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="↑" Command="{Binding MoveValueUpCommand}" />
-          <Button Content="↓" Command="{Binding MoveValueDownCommand}" />
-          <Button Content="{Binding Loc[common.delete]}" Command="{Binding RemovePredefinedValueCommand}" />
+          <ItemsControl ItemsSource="{x:Static vm:TagEditorViewModel.ColorPresets}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ColorPresetViewModel">
+                <Button Padding="0" Margin="2" Width="20" Height="20" CornerRadius="10"
+                        Background="{Binding Hex}"
+                        Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).PickColorCommand}"
+                        CommandParameter="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <DockPanel>
+            <Ellipse DockPanel.Dock="Right" Width="16" Height="16" Margin="8,0,0,0"
+                     Fill="{Binding Color, FallbackValue=Transparent}" VerticalAlignment="Center" />
+            <TextBox Text="{Binding Color}" PlaceholderText="#3B82F6" />
+          </DockPanel>
+          <TextBlock Text="{Binding Loc[tag.editor.description]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+          <!-- ECO-087: mock は textarea(複数行・高さ 74px 級) -->
+          <TextBox Text="{Binding Description}" PlaceholderText="{Binding Loc[tag.editor.descriptionPlaceholder]}"
+                   AcceptsReturn="True" TextWrapping="Wrap" MinHeight="74" VerticalContentAlignment="Top" />
         </StackPanel>
 
-        <!-- 値の扱い(REQ-095/ECO-086 裁定 b・CAD tag_tab.md「値の扱い」節/VC-TAG-1)。
-             GF-086-01: セグメントは種別セグメントと同型の等分 Stretch(UniformGrid)にする —
-             segmentTab テンプレは左右 Padding 0 の等分前提で、内容幅で流用すると密着する(GF-084-01 同型)。 -->
-        <TextBlock Text="{Binding Loc[tag.editor.valueDomain]}" FontSize="12"
-                   Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,0" />
-        <Border Classes="segment">
-          <UniformGrid Rows="1">
-            <RadioButton Classes="segmentTab" GroupName="valueDomain"
-                         Content="{Binding Loc[tag.editor.valueDomainSuggest]}"
-                         IsChecked="{Binding IsSuggestDomain, Mode=OneWay}"
-                         Command="{Binding SelectDomainSuggestCommand}" />
-            <RadioButton Classes="segmentTab" GroupName="valueDomain"
-                         Content="{Binding Loc[tag.editor.valueDomainClosed]}"
-                         IsChecked="{Binding IsClosedDomain, Mode=OneWay}"
-                         Command="{Binding SelectDomainClosedCommand}" />
-          </UniformGrid>
-        </Border>
-        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
-                BorderThickness="1" CornerRadius="8" Padding="10,8">
-          <TextBlock Text="{Binding DomainNote}" FontSize="12" TextWrapping="Wrap"
-                     Foreground="{StaticResource TextMutedBrush}" />
-        </Border>
-      </StackPanel>
+        <!-- 縦区切り(VC-TAG-4) -->
+        <Border Grid.Column="2" Background="{StaticResource BorderLineBrush}" />
 
-    </StackPanel>
+        <!-- 右カラム: 種別別設定 -->
+        <StackPanel Grid.Column="4" Spacing="8">
+
+          <!-- simple(ECO-087/mock DD02): 用途説明カード。「あとから種別変更可」の一文は
+               ECO-008(作成後変更不可)により転写しない=意図的差分(CAD tag_tab.md 注記) -->
+          <StackPanel IsVisible="{Binding IsSimple}" Spacing="8">
+            <TextBlock Classes="sectionLabel" Text="{Binding Loc[tag.editor.previewAndUsage]}" />
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
+                    BorderThickness="1" CornerRadius="10" Padding="12,10">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource TagIcon}" Width="16" Height="16"
+                          Foreground="{StaticResource AccentBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <TextBlock Text="{Binding Loc[tag.editor.simpleNote]}" FontSize="12.5" TextWrapping="Wrap"
+                           MaxWidth="300" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource InfoIcon}" Width="13" Height="13"
+                        Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding Loc[tag.editor.simpleNote2]}" FontSize="12"
+                         Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" MaxWidth="300" />
+            </StackPanel>
+          </StackPanel>
+
+          <!-- numeric 設定(REQ-025)+プリセット(ECO-087/mock DD02) -->
+          <StackPanel IsVisible="{Binding IsNumeric}" Spacing="8">
+            <TextBlock Classes="sectionLabel" Text="{Binding Loc[tag.editor.numericRange]}" />
+            <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc[tag.editor.minValue]}" FontSize="12" />
+              <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Loc[tag.editor.maxValue]}" FontSize="12" />
+              <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding MinText}" PlaceholderText="{Binding Loc[tag.editor.noLimit]}" />
+              <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding MaxText}" PlaceholderText="{Binding Loc[tag.editor.noLimit]}" />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Loc[tag.editor.step]}" FontSize="12" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Loc[tag.editor.unit]}" FontSize="12" Margin="0,8,0,0" />
+              <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding StepText}" />
+              <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Unit}" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding Loc[tag.editor.presetLabel]}" FontSize="11"
+                         Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+              <Button Classes="presetChip" Content="{Binding Loc[tag.editor.preset.rating]}"
+                      Command="{Binding ApplyNumericPresetCommand}" CommandParameter="rating" />
+              <Button Classes="presetChip" Content="{Binding Loc[tag.editor.preset.percent]}"
+                      Command="{Binding ApplyNumericPresetCommand}" CommandParameter="percent" />
+              <Button Classes="presetChip" Content="{Binding Loc[tag.editor.preset.point]}"
+                      Command="{Binding ApplyNumericPresetCommand}" CommandParameter="point" />
+            </StackPanel>
+            <!-- 定義域→定義値展開の情報カード(REQ-096/ECO-086・ⓘ=ECO-087 差分⑤) -->
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="10,8">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource InfoIcon}" Width="13" Height="13"
+                          Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <TextBlock Text="{Binding Loc[tag.editor.numericDefinedNote]}" FontSize="12" TextWrapping="Wrap"
+                           MaxWidth="300" Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- textual 定義済み値(REQ-024)— ECO-087(VC-TAG-6): ピル行+件数ヘッダ+0 件プレースホルダ。
+               並べ替えは D&D(↑↓ボタン列は mock に無いため撤去。VM の Move コマンドは unit 検査用に存続) -->
+          <StackPanel IsVisible="{Binding IsTextual}" Spacing="8">
+            <TextBlock Classes="sectionLabel" Text="{Binding Loc[tag.editor.optionsConfig]}" />
+            <TextBlock Text="{Binding Loc[tag.editor.addOptionLabel]}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" />
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="accent" Command="{Binding AddPredefinedValueCommand}"
+                      Margin="8,0,0,0" VerticalAlignment="Stretch">
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource PlusIcon}" Width="12" Height="12" Foreground="White" />
+                  <TextBlock Text="{Binding Loc[tag.options.add]}" FontWeight="SemiBold" />
+                </StackPanel>
+              </Button>
+              <TextBox Text="{Binding NewValueText}" PlaceholderText="{Binding Loc[tag.options.newOptionPlaceholder]}" />
+            </DockPanel>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Text="{Binding Loc[tag.options.dragToReorder]}" FontSize="11"
+                         Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+              <TextBlock x:Name="OptionCountHeader" Text="{Binding OptionCountText}" FontSize="12"
+                         Foreground="{StaticResource TextMutedBrush}" />
+            </DockPanel>
+            <ListBox x:Name="ValuesList" ItemsSource="{Binding PredefinedValues}"
+                     SelectedItem="{Binding SelectedPredefinedValue}" IsVisible="{Binding HasOptions}"
+                     Height="150" Background="Transparent" BorderThickness="0" Padding="0"
+                     DragDrop.AllowDrop="True" PointerPressed="OnValuePressed">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Border Classes="pillRow">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Text="⠿" Foreground="{StaticResource TextMutedBrush}"
+                                 Opacity="0.55" Margin="0,0,10,0" VerticalAlignment="Center" />
+                      <Button DockPanel.Dock="Right" Classes="pillRemove"
+                              Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).RemovePredefinedValueItemCommand}"
+                              CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource CloseIcon}" Width="10" Height="10"
+                                  Foreground="{StaticResource TextMutedBrush}" />
+                      </Button>
+                      <TextBlock Text="{Binding}" VerticalAlignment="Center" FontWeight="Medium" />
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <!-- 0 件プレースホルダ(破線=Rectangle 重ね・Border は破線非対応) -->
+            <Panel Height="44" IsVisible="{Binding NoOptions}">
+              <Rectangle Stroke="{StaticResource BorderLineBrush}" StrokeThickness="1"
+                         StrokeDashArray="4,3" RadiusX="10" RadiusY="10" />
+              <TextBlock Text="{Binding Loc[tag.editor.noOptionsPlaceholder]}" FontSize="12"
+                         Foreground="{StaticResource TextMutedBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Panel>
+
+            <!-- 値の扱い(REQ-095/ECO-086 裁定 b・CAD tag_tab.md「値の扱い」節/VC-TAG-1)。
+                 GF-086-01: セグメントは種別セグメントと同型の等分 Stretch(UniformGrid) -->
+            <TextBlock Text="{Binding Loc[tag.editor.valueDomain]}" FontSize="12"
+                       Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,0" />
+            <Border Classes="segment">
+              <UniformGrid Rows="1">
+                <RadioButton Classes="segmentTab" GroupName="valueDomain"
+                             Content="{Binding Loc[tag.editor.valueDomainSuggest]}"
+                             IsChecked="{Binding IsSuggestDomain, Mode=OneWay}"
+                             Command="{Binding SelectDomainSuggestCommand}" />
+                <RadioButton Classes="segmentTab" GroupName="valueDomain"
+                             Content="{Binding Loc[tag.editor.valueDomainClosed]}"
+                             IsChecked="{Binding IsClosedDomain, Mode=OneWay}"
+                             Command="{Binding SelectDomainClosedCommand}" />
+              </UniformGrid>
+            </Border>
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="10,8">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource InfoIcon}" Width="13" Height="13"
+                          Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <TextBlock Text="{Binding DomainNote}" FontSize="12" TextWrapping="Wrap" MaxWidth="300"
+                           Foreground="{StaticResource TextMutedBrush}" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+        </StackPanel>
+      </Grid>
     </ScrollViewer>
   </DockPanel>
 </Window>

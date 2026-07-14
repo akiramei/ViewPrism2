@@ -1376,9 +1376,10 @@ changes:
   - id: ECO-087
     title: "タグ作成/編集ダイアログの mock 忠実化(2 カラム化・ヘッダ・選択肢 UI・意匠)"
     type: 不具合(実装の CAD 乖離=ECO-007 製造時の部品単位転写で全体形態が未転写の面欠陥+golden 検査次元の谷間。ECO-086 golden 所見からの R3 分離起票=2026-07-14 maintainer 裁定 A)
-    status: staged
+    status: implemented   # 2026-07-14 /eco-fix完了=是正+機械受入完了・golden待ち(本文§8)
     golden: "pending"
     baseline: "main c43a286"
+    verification: "2026-07-14 /eco-fix完了: CAD lazy遡及=VC-TAG-4〜8(tag_tab.md d432596・mock不変・意図的差分=ECO-008の種別変更可一文は転写しない)→先行probe赤=CpTagDlg087Tests 6/6不合格(1カラム・HeaderSubtitle/OptionCountHeader/ピル×/0件プレースホルダ不在)→是正=TagEditorWindow全面(幅768・4段クローム=ヘッダ種別サブタイトル+X/2カラム=左316基本情報+右種別別/固定プレビュー帯/docked強調保存・ピル行+件数ヘッダ+破線0件・↑↓撤去=D&D+×集約・数値プリセット3チップ+ⓘ・シンプル用途カード・説明textarea・追加ボタン入力空非活性)+i18n ja/en各15キー→6/6緑転。GF-086-01/ECO-086既存probe全緑=スクロール/値の扱い契約維持。機械受入=build 0/0・Tests 706/706・Oracle 109+2skip(R6不変)・validate 0/0。R7面全体3分類(ECO-086教訓③)=転写漏れ0・意図的差分2(ECO-008一文/編集時サブタイトル非表示)・裁定済み許容1(hex入力可=REQ-023既存)。CP-TAGDLG-087登録"
     findings: "ECO-086 golden(2026-07-14)で maintainer が mock(タグ作成ダイアログ.dc.html=DD02・幅768)と実機(幅440)を並置し大差を確認。差分全列挙=①全体形態: mock 2カラム(左=基本情報/右=種別別設定)/実機 1カラム — CAD prose(tag_tab.md レイアウト節)も左右分割を明記 ②ヘッダ: アイコン+種別サブタイトル+X 不在 ③選択肢UI: ピル行(ハンドル+×)+青「+追加」+件数ヘッダでなく素の ListBox+↑↓/削除 ④フッター意匠 ⑤値の扱いカードの ⓘ(ECO-086 新設面の小差)。工程診断=CAD 健全(mock+prose とも 2カラム明記)・実装逸脱と確定(gate①裁定不要)。挙動(REQ-021〜025/095)は全適合=乖離は視覚・レイアウトのみ。潜伏機序=過去 golden(G-6/ECO-007)が項目列挙検査で面全体並置が検査次元に無かった(GF-084-01 同族)— tag_tab.md visualContract は ECO-086 で VC-TAG-1〜3(新設要素)のみ=面全体 VC 未整備"
     impacted_bom: ["CAD=ViewPrismUI tag_tab.md visualContract へ VC-TAG-4〜(面全体の検査次元)を lazy 遡及追補(mock 不変=既に正)", "実装=TagEditorWindow.axaml 全面+TagEditorViewModel(表示派生の小改修)", "テスト=VC-TAG-4〜 から headless 実レイアウト probe 生成(2カラム・ヘッダ・ピル行・日英収まり)", "既存固定 Oracle・DB・i18n 語彙=変更なし(R6)"]
     oracle: "既存固定Oracle行は変更しない(R6)。プローブ先行=VC-TAG-4〜 から生成した headless 実レイアウト検査を是正前赤(1カラム・ヘッダ/ピル行不在)で実測→是正後緑転。GF-086-01 で入れたボディ単一スクロール/セグメント余白 probe は 2カラム化後も維持"
