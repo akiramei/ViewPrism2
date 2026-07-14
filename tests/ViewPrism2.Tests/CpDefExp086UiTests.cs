@@ -178,10 +178,11 @@ public sealed class CpDefExp086UiTests : IDisposable
     [Theory]
     [InlineData("ja")]
     [InlineData("en")]
-    public async Task 値の扱いセグメントは日英ともラベルが切れない(string locale)
+    public async Task 値の扱いセグメントは日英ともラベルが切れず余白を持つ(string locale)
     {
-        // R7/CAD VC-TAG-1+GF-084-01 教訓: 可変内容(文字量・ロケール)の収まりを両ロケールで実測する。
-        // Suggestions/Closed set(en)がセグメントからはみ出さない(RadioButton=内容幅の segmentTab 共有部品)。
+        // R7/CAD VC-TAG-1+GF-084-01/GF-086-01: 可変内容(文字量・ロケール)の収まりは**余白まで**実測する。
+        // GF-086-01 所見=segmentTab テンプレ(Padding 左右 0・3 等分 Stretch 前提)を内容幅で流用し
+        // 余白 0 で密着/はみ出し — 初版 probe は「radio 幅≥ラベル幅」しか見ておらず素通しした。
         var tagService = new TagService(_db.Tags);
         var tag = (await tagService.CreateAsync("県", TagType.Textual)).Value!;
         await HeadlessApp.Session.Dispatch(() =>
@@ -201,8 +202,104 @@ public sealed class CpDefExp086UiTests : IDisposable
                 var label = radio.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault();
                 Assert.True(label is not null && label.Bounds.Width > 0,
                     $"{locale}: 値の扱いラベルが描画されない");
-                Assert.True(radio.Bounds.Width >= label!.Bounds.Width,
-                    $"{locale}: ラベルがセグメントからはみ出す({label.Bounds.Width:0.0} > {radio.Bounds.Width:0.0})");
+                double slack = radio.Bounds.Width - label!.Bounds.Width; // 左右余白の合計
+                Assert.True(slack >= 20,
+                    $"{locale}: ラベル幅 {label.Bounds.Width:0.0} / ボタン幅 {radio.Bounds.Width:0.0} = "
+                    + $"余白合計 {slack:0.0}px(<20)— はみ出し/密着(GF-086-01・GF-084-01 同型)");
+            }
+
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task テキストタブの値の扱いはプレビュー帯と重ならずスクロールで到達できる()
+    {
+        // GF-086-01: 「値の扱い」追加でテキストタブの内容高が MaxHeight を超え、本体
+        // (ClipToBounds=false)が下端固定のプレビュー帯・フッターへ重なって描画された。
+        // CAD 契約(tag_tab.md layoutInvariant)=ボディ単一スクロール・docked フッター常時可視・
+        // プレビュー帯固定。説明カードの実描画矩形がプレビュー帯と交差しないことを実測で封止する。
+        var tagService = new TagService(_db.Tags);
+        var tag = (await tagService.CreateAsync("性別", TagType.Textual)).Value!;
+        Assert.True((await tagService.SetTextualSettingsAsync(tag.Id, ["男", "女"])).IsSuccess);
+        await HeadlessApp.Session.Dispatch(async () =>
+        {
+            var vm = new TagEditorViewModel(tag, tagService, _db.Tags, TestLoc.Ja());
+            await vm.LoadAsync();
+            var window = new TagEditorWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+
+            var note = window.GetVisualDescendants().OfType<TextBlock>()
+                .First(t => t.Text == vm.DomainNote);
+            var preview = window.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("previewStrip"));
+
+            // ボディ単一スクロール(CAD 契約)が存在し、説明カードはその中にある
+            var scroller = window.GetVisualDescendants().OfType<ScrollViewer>()
+                .FirstOrDefault(s => s.GetVisualDescendants().Contains(note));
+            Assert.True(scroller is not null, "本体のボディ単一スクロール(CAD layoutInvariant)が無い(GF-086-01)");
+
+            // 末尾までスクロールしても、本体の要素が固定領域(プレビュー帯)へ重なって描画されない
+            scroller!.ScrollToEnd();
+            RunJobs();
+            var noteTb = note.GetTransformedBounds()!.Value;
+            var previewTb = preview.GetTransformedBounds()!.Value;
+            var noteRect = noteTb.Bounds.TransformToAABB(noteTb.Transform);     // 実描画矩形(global)
+            var previewRect = previewTb.Bounds.TransformToAABB(previewTb.Transform);
+            Assert.False(noteRect.Intersects(previewRect),
+                $"値の扱いの説明カードがプレビュー帯へ重なって描画される(GF-086-01: note={noteRect} preview={previewRect})");
+            // 到達可能性: 末尾スクロールで説明カードが viewport 内に完全可視(クリップされない)
+            var visible = noteRect.Intersect(noteTb.Clip);
+            Assert.True(visible.Height >= noteRect.Height - 0.5,
+                $"説明カードがスクロールで完全表示できない(可視 {visible.Height:0.0}/{noteRect.Height:0.0}px)");
+
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData("ja")]
+    [InlineData("en")]
+    public async Task 配置タグ設定の展開モード選択肢は日英ともウィンドウ内に収まる(string locale)
+    {
+        // GF-086-01 の read-across(GF-073 教訓=同じ失敗は面を変えて連鎖する):
+        // 幅 400 のダイアログで展開モード 4 値がはみ出さない・互いに重ならないことを日英で実測。
+        var loc = locale == "en" ? TestLoc.En() : TestLoc.Ja();
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var tag = new Tag { Id = "t1", Name = "県", Type = TagType.Textual };
+            var vm = new NodeConditionDialogViewModel(tag, null, null, loc);
+            var window = new NodeConditionDialog { DataContext = vm };
+            window.Show();
+            RunJobs();
+
+            var radios = window.GetVisualDescendants().OfType<RadioButton>()
+                .Where(r => r.GroupName == "expansionMode")
+                .ToList();
+            Assert.Equal(4, radios.Count);
+            var rects = radios.Select(r =>
+            {
+                var tb = r.GetTransformedBounds()!.Value;
+                return tb.Bounds.TransformToAABB(tb.Transform);
+            }).ToList();
+            foreach (var (radio, rect) in radios.Zip(rects))
+            {
+                var label = radio.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault();
+                Assert.True(label is not null && label.Bounds.Width > 0, $"{locale}: 展開モードラベルが描画されない");
+                Assert.True(rect.Right <= window.Bounds.Width + 0.5,
+                    $"{locale}: 展開モード選択肢がウィンドウからはみ出す(right={rect.Right:0.0} > {window.Bounds.Width:0.0})");
+            }
+
+            for (var i = 0; i < rects.Count; i++)
+            {
+                for (var j = i + 1; j < rects.Count; j++)
+                {
+                    Assert.False(rects[i].Intersects(rects[j]),
+                        $"{locale}: 展開モード選択肢 {i} と {j} が重なる");
+                }
             }
 
             window.Close();

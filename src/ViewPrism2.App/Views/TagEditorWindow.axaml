@@ -160,6 +160,10 @@
         </StackPanel>
       </DockPanel>
     </Border>
+    <!-- GF-086-01: ボディ単一スクロール(CAD tag_tab.md layoutInvariant)。GF-01 の「外側 ScrollViewer で
+         全体を包まない」はフッター/プレビュー帯込みの全体が対象 — 本体だけのスクロールは契約どおりで、
+         種別別設定の増加(ECO-086 値の扱い等)を吸収する。プレビュー帯・保存/キャンセルは Dock 固定のまま。 -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Spacing="8">
       <TextBlock x:Name="TitleText" FontSize="16" />
       <TextBlock Text="{Binding Loc[tag.editor.name]}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
@@ -256,11 +260,13 @@
           <Button Content="{Binding Loc[common.delete]}" Command="{Binding RemovePredefinedValueCommand}" />
         </StackPanel>
 
-        <!-- 値の扱い(REQ-095/ECO-086 裁定 b・CAD tag_tab.md「値の扱い」節/VC-TAG-1) -->
+        <!-- 値の扱い(REQ-095/ECO-086 裁定 b・CAD tag_tab.md「値の扱い」節/VC-TAG-1)。
+             GF-086-01: セグメントは種別セグメントと同型の等分 Stretch(UniformGrid)にする —
+             segmentTab テンプレは左右 Padding 0 の等分前提で、内容幅で流用すると密着する(GF-084-01 同型)。 -->
         <TextBlock Text="{Binding Loc[tag.editor.valueDomain]}" FontSize="12"
                    Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,0" />
-        <Border Classes="segment" HorizontalAlignment="Left">
-          <StackPanel Orientation="Horizontal">
+        <Border Classes="segment">
+          <UniformGrid Rows="1">
             <RadioButton Classes="segmentTab" GroupName="valueDomain"
                          Content="{Binding Loc[tag.editor.valueDomainSuggest]}"
                          IsChecked="{Binding IsSuggestDomain, Mode=OneWay}"
@@ -269,7 +275,7 @@
                          Content="{Binding Loc[tag.editor.valueDomainClosed]}"
                          IsChecked="{Binding IsClosedDomain, Mode=OneWay}"
                          Command="{Binding SelectDomainClosedCommand}" />
-          </StackPanel>
+          </UniformGrid>
         </Border>
         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderLineBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="10,8">
@@ -279,5 +285,6 @@
       </StackPanel>
 
     </StackPanel>
+    </ScrollViewer>
   </DockPanel>
 </Window>

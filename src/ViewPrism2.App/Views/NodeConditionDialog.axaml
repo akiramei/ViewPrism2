@@ -17,10 +17,11 @@
     <!-- 展開モード(REQ-096/ECO-086・CAD tag_tab.md 展開モード節/VC-TAG-2) -->
     <TextBlock Text="{Binding Loc[hierarchy.expansionMode.label]}" FontSize="12"
                Foreground="{StaticResource TextMutedBrush}" />
+    <!-- GF-086-01 read-across: 幅 400 に 4 値の横並びは en ではみ出す(実測 437px)→ 2×2 グリッド -->
     <ItemsControl ItemsSource="{Binding ExpansionOptions}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
-          <StackPanel Orientation="Horizontal" Spacing="4" />
+          <UniformGrid Columns="2" />
         </ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
