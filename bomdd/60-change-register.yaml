@@ -1386,3 +1386,14 @@ changes:
     oracle: "既存固定Oracle行は変更しない(R6)。プローブ先行=VC-TAG-4〜 から生成した headless 実レイアウト検査を是正前赤(1カラム・ヘッダ/ピル行不在)で実測→是正後緑転。GF-086-01 で入れたボディ単一スクロール/セグメント余白 probe は 2カラム化後も維持"
     body: 60-change-order-eco-087.md
     notes: "R3 分離起票(発見元=ECO-086 golden 2/6)。gate①不要(CAD 健全・実装逸脱)。fix 手順=CAD 側 VC-TAG-4〜 生成→probe 赤→2カラム化(値の扱いは右カラムへ移設)→R7 面全体並置(GF-084-01/086-01 教訓=可変内容の収まり・日英・面全体を検査次元に)。gate②=mock 並置 golden。小画面時の 2カラム縮退は mock 未定義=発明せず必要なら review_points へ。関連=ECO-007(混入元)・ECO-086(発見元)"
+  - id: ECO-088
+    title: "ビュー軸チップ行の折返し不動作 — WrapPanel が横 StackPanel の無限幅測定で無効化されクリップ(47 件級で 21 件目以降へ到達不能)"
+    type: 不具合(実装の CAD 乖離 — mock の flex-wrap は WrapPanel として転写済みだが親コンテナが折返し契機を奪う配線欠陥。IMG-023 実害確認の実測で顕在化)
+    status: staged
+    golden: "pending(gate②=実機: 47 件級の折返し表示+既存 5 件級デモの視覚不変・R7 面全体並置・en 切替込み)"
+    baseline: "main b6d42db"
+    findings: "実測(2026-07-15・スクラッチ DB=VIEWPRISM2_DATA_DIR 差し替え・実ライブラリ不変): 都道府県 47 定義値の展開で最大化 2896px=20/47 件のみ可視・幅 1400px=8/47 件・水平/垂直ホイールとも行不動・オーバーフローの視覚手がかりなし=切り捨て分へ到達不能。定義値展開の中核価値(0 件でも全定義値を定義順表示=ECO-086 裁定 d)が REQ-095/096 の起票動機の規模(47 件級)で沈黙的に機能しない。工程診断=CAD 健全(mock タグチップ行コンテナ=display:flex+flex-wrap:wrap を grep 実測=折返しが正典)・実装逸脱と確定: ImageTabView.axaml:991-994 の ItemsPanel=WrapPanel は正しい転写だが親が Orientation=Horizontal の StackPanel のため子が無限幅で測定され折返し契機を得られず親 Border でクリップ。混入=bcd861d(2026-06-17 画像タブ製造 M1+M2・チップ行初版から)。潜伏 28 日。マスキング=チップ数が常に 1 行に収まる少数(mock デモ=職種 5 件級・ECO-086 golden も同規模で素通り=1 行に収まる限り折返し不動作は視覚に現れない機能等価潜伏)。CP-DEFEXP-086 はチップ内容(破線/バッジ/0件)を検査するが行コンテナのオーバーフロー挙動は検査次元になかった。review_points IMG-023(行数上限・行内スクロール・検索導線=未設計)はこの欠陥の先にある別論点=スコープ外に保つ"
+    impacted_bom: ["src/ViewPrism2.App/Views/ImageTabView.axaml(チップ行コンテナのみ=横 StackPanel 撤去・WrapPanel を有限幅測定へ)", "テスト=47 件級の折返し probe 新設(是正前赤=21 件目以降の実描画矩形が可視幅超過)", "CAD=mock/prose は既に正で変更なし。image_tab.md visualContract へチップ行オーバーフロー次元を lazy 遡及", "ViewPrismUI review_points IMG-023 へ実測追記(未設計次元を折返し後の行数上限等へ精緻化)", "E-BOM=E-UI-AXIS-NAV-040 受入観点の追補のみ"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。新規=headless 47 チップ折返し配置検査(是正前赤で実測)・既存 5 件級=1 行時の視覚不変(WrapPanel の単一行配置は同一)"
+    body: 60-change-order-eco-088.md
+    notes: "gate①=不要(CAD 健全・実装逸脱と確定)。gate②=実機 golden(47 件級の折返し表示+5 件級デモの視覚不変・R7 面全体並置・en 切替込み)。是正は折返しの回復のみ=行数上限/行内スクロール/検索導線の新設計は持ち込まない(IMG-023=CAD 裁定待ちに残置。gate② の折返し実機観測が IMG-023 裁定の入力データになる)。関連=ECO-086(定義値展開=可視化条件の供給元)・ECO-084(GF-084-01=検査次元の谷間の同族)・bcd861d(混入元)"
