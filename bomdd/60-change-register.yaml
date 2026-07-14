@@ -1350,3 +1350,13 @@ changes:
     gf: "GF-084-01(2026-07-14 golden 所見・実機/mock並置キャプチャ): en「Unclassified」がセグメントからはみ出しクリップ・jaもmock(padding 0 13px)比で密着。診断=部品の取り違え(テキスト正部品segBtnText=Padding 14,0・内容幅・整理トレイgolden承認済が既存なのにアイコン用segBtn=Width38固定/Padding 0を流用)。R7盲点=VC-IMG-1が文字量(特にen)の収まりを検査次元に持たず。probe先行=日英Theory(TestLoc.En新設)で余白実測→赤=ja/enとも「ボタン幅38.0=ラベル幅38.0・余白0px」→segBtnText差し替えで9/9緑転。再発防止=CAD VC-IMG-1へ日英ラベル収まり次元追補(VPUI)+Theory恒久pin。副産物=Headlessセッション初期化race(cheat-log①)がテスト集合増で3/3定常発火へ転化→HeadlessAppへ[ModuleInitializer](アセンブリロード時に初期化Dispatch同期完了=順序の構造的決定化)。本文§8"
     body: 60-change-order-eco-084.md
     notes: "工程診断=新機能・CAD未定義が正(image_tab.mdに表示モード言及なし=2026-07-14 grep実測)→CAD先行。**gate①合格(2026-07-14 maintainer実機モック確認・VPUI bf6d4cf)**: (a)件数表示=追随(未分類ではチップ件数=子自身の未分類件数・モック実測34⇄27) (b)セグメントコントロール(グリッド/リスト同型)・表示軸セレクタ直後・ビュー軸のみ (c)ja すべて/未分類・en案 All/Unclassified+tooltip。承認時指摘をCAD契約化=セグメントは収納対象外・入口ボタン畳み/…退避のしきい値がセグメント幅分早発火可(ECO-027契約①②③不変)・再調整はビュー軸+セグメント表示の最混雑状態で実測・FS軸収納不変=/eco-fixのプローブ対象。副産物知見=.dc.htmlはdc-runtimeがfetch(location.href)使用のためfile://直開き不可(HTTP配信で確認)。gate②=実機golden(切替・ルート未分類・textual帰結・ビュー毎記憶の復元・狭幅収納セグメント込み)"
+  - id: ECO-085
+    title: "REQ-087 裁定の取り込み — 類似候補スコープは表示モード(REQ-094)非追随(ノード matched 全体)"
+    type: 設計確定の取り込み(現状追認=src 変更ゼロ・doc-only。ECO-042/043 同型・ECO-084 残課題の裁定)
+    status: staged
+    golden: n/a   # 現状追認(視覚不変・src 変更ゼロ)
+    baseline: "main 6c31979"
+    findings: "ECO-084 の表示モード導入で REQ-087「タグビュー軸の候補=表示母集合」が二義化(ノード matched 全体 vs 表示中の未分類のみ)。maintainer 裁定(2026-07-14)=現状維持(matched 全体)を正式仕様化: ①未分類画像の重複相手は典型的に分類済み側(表示追随は本来見つけたい候補を消す) ②ECO-062 の目的=全域走査抑止はノード限定で達成済み ③候補パネルは表示グリッドと別文脈。実装は当初から matched 全体(ViewMatched(fullPath)=モード非依存)でコード変更なし"
+    impacted_bom: ["spec §2.10 候補スコープ(REQ-087)へ非追随を裁定理由つき明文化", "10-requirements.yaml REQ-087 statement(表示母集合→条件一致母集合+非追随の一文)", "ECO-084 本文 §7 相互参照", "src/tests/CAD/DB=変更なし。既存 CP-SIM-017/CP-SIMSESSION-029 が機械ガードとして有効"]
+    body: 60-change-order-eco-085.md
+    notes: "教訓(小)=「表示」を含む仕様文言は表示のモード化で二義化する — 母集合は評価規則(条件一致母集合)で書く。ECO-084 の残課題はこれで全解消"

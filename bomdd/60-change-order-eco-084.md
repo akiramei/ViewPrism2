@@ -117,7 +117,7 @@ BOM 宣言 → 実装。gate① = ViewPrismUI 側のモック承認。
   ビュー軸のみ)+未分類専用空状態ブロック。文言は全て Loc バインド(K-AVALONIA/ECO-080 lint 適合)
 - i18n: ja/en 各 6 キー(view.displayModeAll/Unclassified/AllTip/UncTip/unclassifiedEmpty/EmptyHint)
 - 類似検索スコープ(REQ-087)は**現状維持**= matched(N) 全体(表示モード非追随。仕様化していない挙動を
-  変えない — 必要なら別途裁定)
+  変えない — 必要なら別途裁定 **→ ECO-085(2026-07-14 maintainer 裁定)で現状維持を正式仕様化・解消済み**)
 
 **機械受入**: build 0/0・**Tests 672/672 ×3 連続全緑**(新規 CpUi084 7 本+CpSet009 V4 1 本込み)・
 Oracle 109+2skip(R6 不変)・validate_bom 0/0。
