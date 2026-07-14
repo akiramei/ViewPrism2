@@ -793,10 +793,14 @@
       <!-- タグ絞り込みチップ行 -->
       <Border DockPanel.Dock="Top" IsVisible="{Binding ShowChips}" Background="{StaticResource AppBackgroundBrush}"
               BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="18,11">
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <TextBlock Classes="chipHint" Text="{Binding ChipHintLabel}" IsVisible="{Binding ShowChipHint}" />
-          <ItemsControl ItemsSource="{Binding Chips}">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <!-- ECO-089(ECO-088 の read-across 閉包): WrapPanel の折返し(mock flex-wrap)は
+             有限幅測定が前提 — 横 StackPanel は無限幅測定で折返し契機を奪う(VC-WORK-1=VC-IMG-8)。
+             ImageTabView チップ行(ECO-088)と同一の是正。 -->
+        <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+          <TextBlock Classes="chipHint" Text="{Binding ChipHintLabel}" IsVisible="{Binding ShowChipHint}"
+                     Margin="0,0,8,0" VerticalAlignment="Center" />
+          <ItemsControl Grid.Column="1" ItemsSource="{Binding Chips}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel LineSpacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ChipVM">
                 <Border Classes="tagChip" Background="{Binding Background}" BorderBrush="{Binding BorderBrush}"
@@ -812,7 +816,7 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-        </StackPanel>
+        </Grid>
       </Border>
 
       <!-- 本体: 空 / グリッド / リスト -->

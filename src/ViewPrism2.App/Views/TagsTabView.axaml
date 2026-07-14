@@ -306,12 +306,16 @@
                         </Border>
                       </StackPanel>
                     </DockPanel>
-                    <!-- テキスト: 候補値チップ -->
-                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="20,0,0,0"
-                                IsVisible="{Binding HasCandidateValues}">
+                    <!-- テキスト: 候補値チップ。
+                         ECO-089(ECO-088 同型): WrapPanel の折返し(mock flex-wrap)は有限幅測定が
+                         前提 — 横 StackPanel は無限幅測定で折返し契機を奪い、多数候補値でカードが
+                         押し広がり右端要素(編集/削除アイコン)が見切れる(VC-TAG-9)。 -->
+                    <Grid ColumnDefinitions="Auto,*" Margin="20,0,0,0"
+                          IsVisible="{Binding HasCandidateValues}">
                       <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.candidateValues]}"
-                                 FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
-                      <ItemsControl ItemsSource="{Binding CandidateValues}">
+                                 FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center"
+                                 Margin="0,0,6,0" />
+                      <ItemsControl Grid.Column="1" ItemsSource="{Binding CandidateValues}">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
@@ -323,7 +327,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                    </StackPanel>
+                    </Grid>
                     <!-- 数値: 範囲ピル+刻み -->
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="20,0,0,0"
                                 IsVisible="{Binding HasRange}" VerticalAlignment="Center">

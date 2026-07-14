@@ -499,7 +499,7 @@ ebom:
       acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10, CP-TOOLBAR-RESPONSIVE-027]
 
     - id: E-UI-WORKSPACE-043
-      name: 作業タブ shell + 作業スペースサイドバー(一覧/選択/追加=デフォルト回転/リネーム/件数/折り畳み・ワークスペースヘッダ・グリッド/リスト・ソート・空状態)— ECO-020/ECO-α 新設
+      name: 作業タブ shell + 作業スペースサイドバー(一覧/選択/追加=デフォルト回転/リネーム/件数/折り畳み・ワークスペースヘッダ・グリッド/リスト・ソート・空状態)— ECO-020/ECO-α 新設。ECO-089 でチップ行の折返し(CAD flex-wrap=VC-WORK-1)を回復=ECO-088 画像タブ是正の read-across 閉包(受入=CP-CHIPWRAP-088)
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
@@ -606,7 +606,7 @@ ebom:
       acceptance_refs: [CP-UI-G6, CP-GF-015, CP-UI-G1]
 
     - id: E-UI-TAGS-026
-      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)+ ビュー編集モーダル(表示列構成)— v1.2 改訂+v2.0 GF-01/04 是正+ECO-025(α)+ECO-087(作成/編集ダイアログの mock DD02 忠実化=2 カラム+4 段クローム・ピル行 D&D=ハンドル起点)
+      name: タグタブ右「タグパレット」+左「ビュー管理」(検索・作成/編集ダイアログ・色選択・候補値並べ替え)+ ビュー編集モーダル(表示列構成)— v1.2 改訂+v2.0 GF-01/04 是正+ECO-025(α)+ECO-087(作成/編集ダイアログの mock DD02 忠実化=2 カラム+4 段クローム・ピル行 D&D=ハンドル起点)+ECO-089(パレットカード候補値行の折返し回復=CAD flex-wrap/VC-TAG-9・多数候補値でも編集/削除アイコンとチップ全数が可視。受入=CP-CHIPWRAP-088)
       classification: surface
       rationale_type: external-knowledge
       requirement_refs: [REQ-021, REQ-023, REQ-024, REQ-025, REQ-029, REQ-030, REQ-060, REQ-079, REQ-080, REQ-083, REQ-095]
