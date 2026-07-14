@@ -1389,8 +1389,8 @@ changes:
   - id: ECO-088
     title: "ビュー軸チップ行の折返し不動作 — WrapPanel が横 StackPanel の無限幅測定で無効化されクリップ(47 件級で 21 件目以降へ到達不能)"
     type: 不具合(実装の CAD 乖離 — mock の flex-wrap は WrapPanel として転写済みだが親コンテナが折返し契機を奪う配線欠陥。IMG-023 実害確認の実測で顕在化)
-    status: implemented   # 2026-07-15 是正+機械受入完了・golden 待ち
-    golden: "pending(gate②=実機: 47 件級の折返し表示+既存 5 件級デモの視覚不変+多段時の 2 行目開始位置の判定(未裁定の候補差分=Grid はヒント列の右/mock flex はコンテナ左端だが mock は多段デモを持たず未定義)・en 切替込み)"
+    status: applied   # 2026-07-15 gate②合格(maintainer実機)→クローズ
+    golden: "approved(2026-07-15 maintainer 実機: 47 件級の複数行折返し=全数到達・狭幅 1400px 級での行数追随・1 行時の視覚不変(少数チップ+FS 軸絞り込み)・多段時 2 行目開始位置=ヒント列の右(Grid)を許容=mock 多段未定義・最終形は IMG-023 裁定・en 切替)"
     verification: "2026-07-15 /eco-fix完了: CAD lazy遡及=VC-IMG-8(image_tab.md・チップ行オーバーフロー次元=折返し正典/クリップ切り捨て不可/1行時不変。行数上限等はIMG-023と明示区分)→先行probe赤=CpUi088ChipWrapTests 47件テストFAIL(8件目「茨城県」right=1460.0>1366=1行のまま溢れBorderクリップ・診断どおり)/5件pin緑→是正=横StackPanel撤去→Grid(Auto=ヒント/*=ItemsControl)で WrapPanel を有限幅測定化+LineSpacing=8(mock gap:8転写・1行時不作動=視覚不変)・ヒント間隔=旧Spacing同値Margin。diff=ImageTabView.axaml 1コンテナのみ(新設計持ち込みなし)。横断規約=新規文言なし・VM/DB不変。機械受入=build 0/0・Tests 709/709(probe+2緑転)・Oracle 109+2skip(R6不変)・validate 0/0。R7面全体3分類=転写漏れ0・不変(VC-IMG-5/6/7・FS軸共用チップ・1行時配置)・未裁定候補差分1(多段時2行目開始位置=golden判定へ)。CP-CHIPWRAP-088登録"
     baseline: "main b6d42db"
     findings: "実測(2026-07-15・スクラッチ DB=VIEWPRISM2_DATA_DIR 差し替え・実ライブラリ不変): 都道府県 47 定義値の展開で最大化 2896px=20/47 件のみ可視・幅 1400px=8/47 件・水平/垂直ホイールとも行不動・オーバーフローの視覚手がかりなし=切り捨て分へ到達不能。定義値展開の中核価値(0 件でも全定義値を定義順表示=ECO-086 裁定 d)が REQ-095/096 の起票動機の規模(47 件級)で沈黙的に機能しない。工程診断=CAD 健全(mock タグチップ行コンテナ=display:flex+flex-wrap:wrap を grep 実測=折返しが正典)・実装逸脱と確定: ImageTabView.axaml:991-994 の ItemsPanel=WrapPanel は正しい転写だが親が Orientation=Horizontal の StackPanel のため子が無限幅で測定され折返し契機を得られず親 Border でクリップ。混入=bcd861d(2026-06-17 画像タブ製造 M1+M2・チップ行初版から)。潜伏 28 日。マスキング=チップ数が常に 1 行に収まる少数(mock デモ=職種 5 件級・ECO-086 golden も同規模で素通り=1 行に収まる限り折返し不動作は視覚に現れない機能等価潜伏)。CP-DEFEXP-086 はチップ内容(破線/バッジ/0件)を検査するが行コンテナのオーバーフロー挙動は検査次元になかった。review_points IMG-023(行数上限・行内スクロール・検索導線=未設計)はこの欠陥の先にある別論点=スコープ外に保つ"

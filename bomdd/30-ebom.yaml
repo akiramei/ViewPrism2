@@ -450,7 +450,7 @@ ebom:
       fmea_refs: [FMEA-013]
 
     - id: E-UI-AXIS-NAV-040
-      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割。ECO-084 で表示モード「すべて/未分類」セグメント(REQ-094・ビュー軸のみ・チップ件数モード追随・未分類専用空状態)を追加。ECO-086 で定義値展開チップ(定義順・0 件淡色・未定義値=琥珀破線+バッジ・hide_empty 表示スキップ)を追加
+      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割。ECO-084 で表示モード「すべて/未分類」セグメント(REQ-094・ビュー軸のみ・チップ件数モード追随・未分類専用空状態)を追加。ECO-086 で定義値展開チップ(定義順・0 件淡色・未定義値=琥珀破線+バッジ・hide_empty 表示スキップ)を追加。ECO-088 でチップ行の折返し(CAD flex-wrap=VC-IMG-8)を回復=可視幅超過時は複数行で全数到達・クリップ切り捨て不可(受入=CP-CHIPWRAP-088)
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
