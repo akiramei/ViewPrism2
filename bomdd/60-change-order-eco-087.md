@@ -111,6 +111,30 @@ validate_bom 0/0。CP-TAGDLG-087 を 33-control-plan へ登録。
 矛盾する旧記述(CAD prose 内の残骸)— CAD 注記に既記載・prose 本文の是正は ViewPrismUI 側の軽微
 doc 課題として残置(発見時に是正)。
 
+## 9. GF-087-01 是正記録(2026-07-14 — golden 所見→同日是正)
+
+**所見(maintainer 実機)**: 候補値をドラッグで並べ替えられない。
+
+**工程診断=従来からの潜伏欠陥の顕在化**: Avalonia の ListBox(SelectingItemsControl)はクラスハンドラが
+「未選択項目の押下=選択更新成功」で `e.Handled=true` にするため、XAML の `PointerPressed`
+(bubble・handledEventsToo=false)へイベントが届かず、**未選択の行では D&D を開始できない**
+(選択済みの行なら 2 度目の押下で動く)。従来は ①↑↓ボタンが並べ替えの実用経路としてマスク
+②選択視覚があり「選択→再ドラッグ」が成立し得た — ECO-087 で ↑↓ を撤去(mock 準拠)+ピル化で
+選択視覚も消えたため「並べ替え不能」として顕在化した。
+
+**プローブ先行(R5)**: 是正前赤=ピル行にドラッグハンドル要素(pillHandle)が存在しない(0/2)。
+headless の実ポインタ注入(MouseDown)で「未選択行のハンドル押下がドラッグ起点へ届き Handled で
+消費される(選択と分離)」ことを是正後に実測(D&D フル経路=DoDragDropAsync 以降は headless で
+再現不能のため golden の検査項目)。
+
+**是正(真因構造を消す)**: mock どおり**ドラッグハンドル(⠿)を明示のドラッグ起点**にする —
+ハンドル Border の direct `PointerPressed` で D&D を開始し `e.Handled=true`(クラスハンドラの選択処理と
+競合しない・選択とドラッグの分離)。行全体からの D&D(選択済み行のみ有効=従来のバブル経路)は併存。
+×ボタン・追加・件数ヘッダ等の既存 probe は全緑(無影響)。
+
+**機械受入(再)**: build 0/0・**Tests 707/707**(GF probe +1=計 CpTagDlg087Tests 7 本)・
+Oracle 109+2skip(R6 不変)・validate 0/0。
+
 ## 7. 関連
 
 - ECO-086(発見元 golden・値の扱い面は本 ECO の 2 カラム化で右カラムへ移設される)

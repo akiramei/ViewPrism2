@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ViewPrism2.App.ViewModels;
@@ -146,6 +147,51 @@ public sealed class CpTagDlg087Tests : IDisposable
             var placeholder = window.GetVisualDescendants().OfType<TextBlock>()
                 .FirstOrDefault(t => t.IsVisible && t.Text == "選択肢を1つ以上追加してください");
             Assert.True(placeholder is not null, "0 件プレースホルダが出ない(VC-TAG-6 プローブ)");
+
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task 未選択のピルでもドラッグハンドルから並べ替えを開始できる()
+    {
+        // GF-087-01(golden 所見: ドラッグで並べ替えられない)。真因=ListBox(SelectingItemsControl)の
+        // クラスハンドラが「未選択項目の押下=選択更新成功」で e.Handled=true にするため、XAML の
+        // PointerPressed(bubble・handledEventsToo=false)へ届かず D&D が始まらない(従来からの潜伏欠陥。
+        // ↑↓ボタンが実用経路としてマスクし、ECO-087 の撤去で顕在化)。
+        // 是正=mock どおりドラッグハンドル(⠿)を明示のドラッグ起点(direct ハンドラ・選択と競合しない)へ。
+        // 是正前赤=pillHandle 不在。press 到達は handled より内側(バブルの先頭)で受けることを実測。
+        // DoDragDropAsync 以降の実ドラッグは headless で再現不能=golden(実機)の検査項目。
+        var (vm, _) = await NewTextualVmAsync();
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var window = new TagEditorWindow { DataContext = vm };
+            window.Show();
+            RunJobs();
+
+            var valuesList = window.GetVisualDescendants().OfType<ListBox>().First(l => l.Name == "ValuesList");
+            var handles = valuesList.GetVisualDescendants().OfType<Border>()
+                .Where(b => b.Classes.Contains("pillHandle"))
+                .ToList();
+            Assert.True(handles.Count == 2, $"ドラッグハンドルが行ごとに無い(実測 {handles.Count}/2=GF-087-01 プローブ)");
+
+            // 未選択状態の 2 行目ハンドルへの press が、選択処理(クラスハンドラ)に食われる前に
+            // ハンドル(direct)へ届き Handled=true で消費される(=ドラッグ起点が成立し選択と分離)
+            Assert.Null(vm.SelectedPredefinedValue);
+            var reached = false;
+            var handledByHandle = false;
+            handles[1].AddHandler(Avalonia.Input.InputElement.PointerPressedEvent,
+                (_, args) => { reached = true; handledByHandle = args.Handled; },
+                Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
+            var tb = handles[1].GetTransformedBounds()!.Value;
+            var rect = tb.Bounds.TransformToAABB(tb.Transform);
+            window.MouseDown(rect.Center, Avalonia.Input.MouseButton.Left);
+            RunJobs();
+            Assert.True(reached, "未選択ピルのハンドル押下がドラッグ起点へ届かない(選択処理に食われる=GF-087-01)");
+            Assert.True(handledByHandle, "ハンドル押下がドラッグ起点で消費されない(選択処理と分離されていない=GF-087-01)");
+            window.MouseUp(rect.Center, Avalonia.Input.MouseButton.Left);
+            RunJobs();
 
             window.Close();
             return true;

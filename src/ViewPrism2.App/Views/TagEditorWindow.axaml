@@ -389,8 +389,15 @@
                 <DataTemplate x:DataType="x:String">
                   <Border Classes="pillRow">
                     <DockPanel>
-                      <TextBlock DockPanel.Dock="Left" Text="⠿" Foreground="{StaticResource TextMutedBrush}"
-                                 Opacity="0.55" Margin="0,0,10,0" VerticalAlignment="Center" />
+                      <!-- GF-087-01: ハンドル=明示のドラッグ起点(direct ハンドラ)。ListBox の選択処理
+                           (クラスハンドラ)は未選択項目の押下を e.Handled=true で食うため、行バブル頼みの
+                           D&D は未選択行で開始できない(従来からの潜伏欠陥・↑↓撤去で顕在化) -->
+                      <Border DockPanel.Dock="Left" Classes="pillHandle" Background="Transparent"
+                              Padding="2,0" Margin="0,0,8,0" Cursor="Hand"
+                              PointerPressed="OnValueHandlePressed">
+                        <TextBlock Text="⠿" Foreground="{StaticResource TextMutedBrush}"
+                                   Opacity="0.55" VerticalAlignment="Center" />
+                      </Border>
                       <Button DockPanel.Dock="Right" Classes="pillRemove"
                               Command="{Binding $parent[Window].((vm:TagEditorViewModel)DataContext).RemovePredefinedValueItemCommand}"
                               CommandParameter="{Binding}">
@@ -401,6 +408,7 @@
                     </DockPanel>
                   </Border>
                 </DataTemplate>
+                <!-- 注: 行全体からの D&D(選択済み行のみ有効=ListBox バブル経路)は従来どおり併存 -->
               </ListBox.ItemTemplate>
             </ListBox>
             <!-- 0 件プレースホルダ(破線=Rectangle 重ね・Border は破線非対応) -->
