@@ -16,14 +16,17 @@ internal static class TestImageTab
 {
     public static ImageTabViewModel NewVm(TempDb db) => NewVm(db, TestLoc.Ja());
 
-    public static ImageTabViewModel NewVm(TempDb db, LocalizationService loc) =>
+    public static ImageTabViewModel NewVm(TempDb db, LocalizationService loc) => NewVm(db, new AppSettings(), loc);
+
+    /// <summary>settings を注入する版(ECO-084: ビュー毎表示モード記憶の往復検査に使う)。</summary>
+    public static ImageTabViewModel NewVm(TempDb db, AppSettings settings, LocalizationService? loc = null) =>
         new(db.Folders, db.Images, db.Tags, new ImageSorter(),
             new ViewService(db.Views, db.Clock), new NodeGraphBuilder(),
             new PathConditionConverter(), new ConditionEvaluator(),
             new SimilaritySearchService(db.Folders, db.Images, db.Features, db.Similarities, new FakePHashImageReader(), db.Clock),
             new MergeService(db.Images, db.Tags, db.Merges),
             new TrashService(db.Images, db.Folders, new FilePresenceProbe()),
-            new StubWindows(), new AppSettings(), new WorkspaceService(db.Workspaces, db.Clock), loc);
+            new StubWindows(), settings, new WorkspaceService(db.Workspaces, db.Clock), loc ?? TestLoc.Ja());
 
     private sealed class StubWindows : IWindowService
     {

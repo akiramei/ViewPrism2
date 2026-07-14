@@ -68,6 +68,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
     private IReadOnlyList<ViewCondition> _viewConditions = Array.Empty<ViewCondition>();
     private GraphNode? _viewRoot;
     private readonly List<GraphNode> _viewPath = new();
+    /// <summary>ビュー軸の表示モード(ECO-084/REQ-094): false=すべて(累積フィルタ) / true=未分類(最深配置)。</summary>
+    private bool _viewUnclassified;
     private readonly Dictionary<string, GraphNode> _currentChildren = new(StringComparer.Ordinal);
     private string _layout = "grid";
     // ECO-025 β/FL-003 v2: ソートはアクティブビューの表示列を軸に grid/list で共有(旧 名前/更新日/サイズ 固定ソートは廃止)。
@@ -699,9 +701,24 @@ public sealed partial class ImageTabViewModel : ObservableObject
         {
             var fullPath = new List<GraphNode> { _viewRoot };
             fullPath.AddRange(_viewPath);
-            return SortFiles(ViewMatched(fullPath));
+            var matched = ViewMatched(fullPath);
+            // (ECO-084/REQ-094) 未分類モードでは母集合も表示中の集合に一致させる(子 matched を減算)
+            if (_viewUnclassified)
+                matched = Unclassified(matched, fullPath[^1].Children.Select(c => ViewMatched(Append(fullPath, c), matched)));
+            return SortFiles(matched);
         }
         return SortFiles(ResolveFs().Files); // FS: 現在のフォルダに直接ある画像(サブフォルダは含めない)
+    }
+
+    /// <summary>
+    /// (ECO-084/REQ-094) 最深配置の減算: matched から「直下の子のいずれかにマッチする画像」を引く。
+    /// 直下の子だけで十分(子孫の条件列は子の条件列の上位集合 — 仕様 §2.4 REQ-094)。
+    /// </summary>
+    private static List<ImageEntry> Unclassified(List<ImageEntry> matched, IEnumerable<List<ImageEntry>> childMatched)
+    {
+        var classified = new HashSet<string>(
+            childMatched.SelectMany(m => m).Select(e => e.Record.Id), StringComparer.Ordinal);
+        return classified.Count == 0 ? matched : matched.Where(e => !classified.Contains(e.Record.Id)).ToList();
     }
 
     private static List<GraphNode> Append(List<GraphNode> path, GraphNode child)
@@ -772,8 +789,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
     public bool ShowGridPane => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && IsGrid;
     /// <summary>リストペイン表示(コレクション選択済み かつ リストモード)。</summary>
     public bool ShowListPane => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && IsList;
-    /// <summary>画像 0 件の空状態(コレクション選択済みのときのみ・未選択はプロンプトを優先)。</summary>
-    public bool ShowEmptyMessage => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && Items.Count == 0;
+    /// <summary>画像 0 件の空状態(コレクション選択済みのときのみ・未選択はプロンプトを優先。
+    /// 未分類 0 件は専用の ShowUnclassifiedEmpty を優先する — ECO-084/REQ-094)。</summary>
+    public bool ShowEmptyMessage => _loaded && !IsContentLoading && !HasContentError && IsCollectionSelected && Items.Count == 0 && !ShowUnclassifiedEmpty;
     /// <summary>ECO-060: 選択中collectionのbackground scan状態。</summary>
     public bool IsSelectedCollectionScanning =>
         _collectionId is not null && _scanningCollections.Contains(_collectionId);
@@ -782,6 +800,12 @@ public sealed partial class ImageTabViewModel : ObservableObject
 
     public bool IsViewAxis => _axis == "view";
     public bool IsFsActive => _axis == "fs";
+    // ---- 表示モード(ECO-084/REQ-094): ビュー軸のみ表示。セグメントは狭幅収納の対象外(CAD image_tab.md 契約) ----
+    public bool ShowDisplayModeToggle => _axis == "view" && _viewRoot is not null;
+    public bool IsAllDisplayMode => !_viewUnclassified;
+    public bool IsUnclassifiedDisplayMode => _viewUnclassified;
+    /// <summary>未分類 0 件の専用空状態(REQ-094。汎用 ShowEmptyMessage とは区別して出す)。</summary>
+    public bool ShowUnclassifiedEmpty { get; private set; }
     public string AxisLabel => _axis == "fs" ? _localization.T("collection.fileSystem") : _viewLabel;
     public bool AxisMenuOpen { get; private set; }
     public bool SortMenuOpen { get; private set; }
@@ -1096,7 +1120,7 @@ public sealed partial class ImageTabViewModel : ObservableObject
         List<ImageEntry> files;
         List<string> crumbNames;
         Chips.Clear();
-        ShowChips = false; ShowChipHint = false; ShowEmptyTagNote = false;
+        ShowChips = false; ShowChipHint = false; ShowEmptyTagNote = false; ShowUnclassifiedEmpty = false;
         _currentChildren.Clear();
 
         if (_axis == "view" && _viewRoot is not null)
@@ -1105,17 +1129,28 @@ public sealed partial class ImageTabViewModel : ObservableObject
             var fullPath = new List<GraphNode> { _viewRoot };
             fullPath.AddRange(_viewPath);
             var current = fullPath[^1];
-            files = SortFiles(ViewMatched(fullPath));
+            // (ECO-026/#3) 子 matched は現ノードの matched 内で評価=全 _entries を子数ぶん再評価しない。
+            // (ECO-084/REQ-094) 子 matched は件数表示と未分類モードの減算の両方に使うため先に確保する。
+            var allMatched = ViewMatched(fullPath);
+            var childMatched = new List<(GraphNode Child, List<ImageEntry> Matched)>();
+            foreach (var child in current.Children)
+                childMatched.Add((child, ViewMatched(Append(fullPath, child), allMatched)));
+            files = SortFiles(_viewUnclassified
+                ? Unclassified(allMatched, childMatched.Select(c => c.Matched))
+                : allMatched);
+            ShowUnclassifiedEmpty = _viewUnclassified && files.Count == 0; // 専用空状態(REQ-094)
             crumbNames = _viewPath.Select(n => n.DisplayName).ToList();
             HomeActive = _viewPath.Count == 0;
 
             int ci = 0;
-            foreach (var child in current.Children)
+            foreach (var (child, matched) in childMatched)
             {
                 var key = "vc" + ci++;
                 _currentChildren[key] = child;
-                // (ECO-026/#3) 子件数は現ノードの matched(files)内で評価=全 _entries を子数ぶん再評価しない
-                int count = ViewMatched(Append(fullPath, child), files).Count;
+                // (REQ-094) 未分類モードの件数はその子自身の未分類件数(孫 matched を減算)=表示とチップの数字を一致させる
+                int count = _viewUnclassified
+                    ? Unclassified(matched, child.Children.Select(g => ViewMatched(Append(Append(fullPath, child), g), matched))).Count
+                    : matched.Count;
                 var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
                 Chips.Add(ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
             }
@@ -1476,6 +1511,9 @@ public sealed partial class ImageTabViewModel : ObservableObject
         var view = _allViews.FirstOrDefault(v => v.Id == viewId);
         if (view is null) { _axis = "fs"; _viewId = null; _viewRoot = null; Recompute(); return; }
         _axis = "view"; _viewId = viewId; _viewLabel = view.Name;
+        // (ECO-084/REQ-094) ビュー毎の最終選択モードを復元。列挙外・欠落は既定「すべて」(裁定①=デバイスローカル)
+        _viewUnclassified = _settings.ViewDisplayModes.TryGetValue(viewId, out var displayMode)
+            && string.Equals(displayMode, "unclassified", StringComparison.Ordinal);
         _viewConditions = await _views.GetConditionsAsync(viewId).ConfigureAwait(true);
         var hierarchy = await _views.GetHierarchyAsync(viewId).ConfigureAwait(true);
         var valueIndex = TagValueIndex.Build(_entries.Select(e => e.ToImageWithTags()));
@@ -1639,6 +1677,24 @@ public sealed partial class ImageTabViewModel : ObservableObject
     // grid/list は同じ ImageItemVM(cells + ソート項目)を別レイアウトで描画するだけで、母集合・列・ソートは不変。
     [RelayCommand]
     private void SetGrid() { if (_layout == "grid") return; _layout = "grid"; _settings.DisplayMode = "grid"; OnPropertyChanged(string.Empty); } // CR-6
+
+    // ---- 表示モード切替(ECO-084/REQ-094): すべて(累積) ⇄ 未分類(最深配置) ----
+    [RelayCommand]
+    private void SetDisplayModeAll() => SetDisplayMode(unclassified: false);
+
+    [RelayCommand]
+    private void SetDisplayModeUnclassified() => SetDisplayMode(unclassified: true);
+
+    private void SetDisplayMode(bool unclassified)
+    {
+        if (_viewUnclassified == unclassified) return;
+        _viewUnclassified = unclassified;
+        // ビュー毎の最終選択モードをデバイスローカルに記憶(REQ-094。ファイル書き出しは CaptureSettings 経路=REQ-052)
+        if (_viewId is { } viewId)
+            _settings.ViewDisplayModes[viewId] = unclassified ? "unclassified" : "all";
+        _selected.Clear(); // 表示集合の membership が変わる=非表示画像の選択残留を防ぐ(ClickChip の潜りと同型)
+        Recompute();
+    }
 
     [RelayCommand]
     private void SetList() { _layout = "list"; _settings.DisplayMode = "list"; SortMenuOpen = false; OnPropertyChanged(string.Empty); } // CR-6・FL-003 リスト切替で並び替えメニューを閉じる

@@ -781,6 +781,25 @@
               </Panel>
             </StackPanel>
 
+            <!-- 表示モード(ECO-084/REQ-094): すべて(累積) / 未分類(最深配置)。表示軸セレクタ直後・
+                 ビュー軸選択時のみ(CAD image_tab.md「表示モード」節)。セグメントは狭幅収納(IMG-014)の
+                 対象外=畳まない・非表示にしない(未分類のまま戻す手段を失わせない — 離脱ボタンのラベル維持と同型)。 -->
+            <Border x:Name="DisplayModeSegment" Classes="segmented" Margin="14,0,0,0"
+                    IsVisible="{Binding ShowDisplayModeToggle}" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button x:Name="DisplayModeAllButton" Classes="segBtn" Classes.active="{Binding IsAllDisplayMode}"
+                        Command="{Binding SetDisplayModeAllCommand}"
+                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeAllTip]}">
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeAll]}" FontSize="12.5" />
+                </Button>
+                <Button x:Name="DisplayModeUncButton" Classes="segBtn" Classes.active="{Binding IsUnclassifiedDisplayMode}"
+                        Command="{Binding SetDisplayModeUnclassifiedCommand}"
+                        ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeUncTip]}">
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.displayModeUnclassified]}" FontSize="12.5" />
+                </Button>
+              </StackPanel>
+            </Border>
+
             <!-- 表示列(ECO-025 β-2): アクティブビューの display_columns を編集(ライブ書き戻し=VE-003)。
                  view 軸+ビュー選択時のみ表示(FS 軸は書き戻し先が無い)。さらに CAD 準拠で文脈モード中は隠す
                  (残すのは表示軸・ソート・グリッド/リスト・終了だけ=ShowColumnsEntry・IMG-014)。列ピッカー=ColumnPickerView。 -->
@@ -1025,6 +1044,12 @@
         <StackPanel IsVisible="{Binding ShowEmptyMessage}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
           <PathIcon Data="{StaticResource ImageIcon}" Width="40" Height="40" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
           <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[collection.noImages]}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- 未分類 0 件の専用空状態(ECO-084/REQ-094・CAD: 補足文つき) -->
+        <StackPanel IsVisible="{Binding ShowUnclassifiedEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.unclassifiedEmpty]}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[view.unclassifiedEmptyHint]}" FontSize="12" Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
         </StackPanel>
 
         <!-- グリッド(ECO-026/#1: REQ-041/KBOM 適合の仮想化。旧 ItemsControl+WrapPanel=非仮想化 → ItemsRepeater+

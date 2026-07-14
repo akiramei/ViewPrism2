@@ -56,6 +56,29 @@ public sealed class CpSet009Tests : IDisposable
     }
 
     [Fact]
+    public void V4_ECO084_ビュー毎表示モードのラウンドトリップ()
+    {
+        // ECO-084/REQ-094: viewDisplayModes(view_id → "all"|"unclassified")の往復。
+        // 値等価辞書(ViewDisplayModeMap)により record 全体等価の既存契約を保つ。
+        var store = new SettingsStore(_directory);
+        var settings = new AppSettings
+        {
+            ViewDisplayModes = { ["view-001"] = "unclassified", ["view-002"] = "all" },
+        };
+
+        store.Save(settings);
+        var loaded = new SettingsStore(_directory).Load();
+
+        Assert.Equal(settings, loaded); // 全体等価(辞書は内容一致)
+        Assert.Equal("unclassified", loaded.ViewDisplayModes["view-001"]);
+        Assert.Equal("all", loaded.ViewDisplayModes["view-002"]);
+
+        // 旧ファイル(キー欠落)は空辞書= 読出し側の既定「すべて」へ落ちる(REQ-094)
+        File.WriteAllText(store.SettingsFilePath, """{ "locale": "ja" }""");
+        Assert.Empty(store.Load().ViewDisplayModes);
+    }
+
+    [Fact]
     public void 旧grid_columnsキーは残存しても無視され書き出されない()
     {
         // REQ-052 v1.3/CR-1: グリッド列数キーは廃止(残存しても無視)

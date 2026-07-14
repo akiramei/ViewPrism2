@@ -93,11 +93,53 @@ BOM 宣言 → 実装。gate① = ViewPrismUI 側のモック承認。
 
 ## 6. 残ゲート
 
-- **gate①(裁定+CAD)**: ✅ **合格(2026-07-14 maintainer・実機モック確認)** — 詳細 §7
+- **gate①(裁定+CAD)**: ✅ **合格(2026-07-14 maintainer・実機モック確認)** — 詳細 §8
 - **gate②(golden)**: 実機で「すべて/未分類」切替・ルート未分類・textual 値ノード帰結・
   ビュー毎記憶の復元・**狭幅ツールバー収納(セグメント込み)** を maintainer 確認。
+  是正+機械受入は完了(§7)— golden 待ち。
 
-## 7. gate① 合格記録(2026-07-14)
+## 7. 実施記録(2026-07-14 — 是正+機械受入完了・golden 待ち)
+
+**プローブ先行(R5)**: CpUi084DisplayModeTests 新設(ECO-056 様式=コマンドはリフレクション解決)。
+是正前実測= **6/6 不合格**(全て「SetDisplayModeUnclassifiedCommand が存在しない=表示モード導線の
+不在」)→ 是正後 7/7 緑転(active 追随の VC probe 1 本を追加)。
+
+**是正内容(最小 diff・真因構造=機能不存在の解消)**:
+
+- 仕様: §2.4 へ **REQ-094** 新設(表示モード 2 値・display(N) 定義・ルート=未分類・チップ件数追随・
+  専用空状態・母集合一致・settings 記憶=パッケージ非搬送)
+- Core: `AppSettings.ViewDisplayModes`(**ViewDisplayModeMap=値等価辞書**。素の Dictionary は参照等価で
+  CP-SET-009 の record 全体等価ラウンドトリップ契約を壊すことを実測→値等価型で契約保持)
+- VM(ImageTabViewModel): `_viewUnclassified` 状態・`Unclassified()` 減算ヘルパ(直下の子のみ=仕様の
+  上位集合性質)・Recompute の view 分岐(childMatched を件数と減算で共用=ECO-026 within 最適化維持)・
+  チップ件数のモード追随・`ShowUnclassifiedEmpty`(汎用 ShowEmptyMessage と排他)・
+  `SetDisplayModeAll/Unclassified` コマンド(切替で選択クリア=ClickChip 同型)・LoadViewAsync で復元・
+  `AllLoadedImagesInContext` も表示集合に一致(タグ編集母集合・ビューアー順)
+- axaml: DisplayModeSegment(segmented/segBtn 共有部品・AxisTrigger 直後・`ShowDisplayModeToggle` で
+  ビュー軸のみ)+未分類専用空状態ブロック。文言は全て Loc バインド(K-AVALONIA/ECO-080 lint 適合)
+- i18n: ja/en 各 6 キー(view.displayModeAll/Unclassified/AllTip/UncTip/unclassifiedEmpty/EmptyHint)
+- 類似検索スコープ(REQ-087)は**現状維持**= matched(N) 全体(表示モード非追随。仕様化していない挙動を
+  変えない — 必要なら別途裁定)
+
+**機械受入**: build 0/0・**Tests 672/672 ×3 連続全緑**(新規 CpUi084 7 本+CpSet009 V4 1 本込み)・
+Oracle 109+2skip(R6 不変)・validate_bom 0/0。
+
+**セルフゴールデン(R7)**: CAD 側に visualContract 節を lazy 遡及で新設(image_tab.md VC-IMG-1〜5)し、
+probe を先行生成。並置突合の結果=**転写漏れ 0**:
+
+| VC | 検査 | 結果 |
+|---|---|---|
+| VC-IMG-1 セグメント形態・ラベル・active | headless 実レイアウト+active クラス追随(視覚言語= segBtn 共有部品に委譲=golden 承認済) | ✅ |
+| VC-IMG-2 FS 軸非表示 | 同一 Window で軸切替→ IsVisible 出没 | ✅ |
+| VC-IMG-3 狭幅で可視・畳みなし | 760px で可視+両ラベル幅>0 | ✅ |
+| VC-IMG-4 専用空状態 | ShowUnclassifiedEmpty=true / 汎用と非重複。文言は Loc キー経由で mock と完全一致 | ✅ |
+| VC-IMG-5 件数追随 | チップ 2⇄1(mock 実測 34⇄27 と同型) | ✅ |
+
+**スコープ外所見(R3)**: Headless ハーネスのスレッドアフィニティ 2 態(ECO-082/083 ファミリー新知見)を
+51-cheat-log へ記録(①単独実行の初期化順序 race=FailFast 監視の実運用 2 例目 ②worker 生成 Brush の
+compositor 参照死=タグ色チップ描画の初クラスで顕在化)。テスト側書法で決定化済み・製品コード無関係。
+
+## 8. gate① 合格記録(2026-07-14)
 
 CAD 改版(ViewPrismUI `bf6d4cf`: mock `ViewPrism2 画像タブ.dc.html`+`docs/screens/image_tab.md`
 表示モード節新設)を maintainer が実機モックで確認し承認。論点の確定:

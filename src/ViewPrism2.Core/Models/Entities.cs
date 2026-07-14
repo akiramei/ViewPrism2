@@ -231,6 +231,21 @@ public sealed record ScanSummary
 /// v1.3/ECO-002 CR-1/5/6: グリッド列数キーは廃止(JsonIgnore — 書き出さず、
 /// 旧ファイルに残存していても読み込まず無視する)。表示モード・最後に選択したコレクションを追加。
 /// </summary>
+/// <summary>
+/// ビュー毎の表示モード記憶の値等価辞書(ECO-084/REQ-094)。
+/// AppSettings(record)の全体等価契約(CP-SET-009 ラウンドトリップ)を保つため、
+/// 内容一致で Equals する。JSON へは素の object map として往復する(Dictionary 派生)。
+/// </summary>
+public sealed class ViewDisplayModeMap : Dictionary<string, string>
+{
+    public override bool Equals(object? obj) =>
+        obj is ViewDisplayModeMap other && Count == other.Count &&
+        this.All(kv => other.TryGetValue(kv.Key, out var v) && string.Equals(v, kv.Value, StringComparison.Ordinal));
+
+    // 等価なら必ず同数(キー順に依存しない安定ハッシュとして件数で十分 — 設定用途で衝突性能は無関係)
+    public override int GetHashCode() => Count;
+}
+
 public sealed record AppSettings
 {
     public string Locale { get; set; } = "ja";
@@ -259,6 +274,15 @@ public sealed record AppSettings
     public string? WorkTabDisplayMode { get; set; }
 
     public string? LastViewId { get; set; }
+
+    /// <summary>
+    /// ビュー毎の表示モード記憶(ECO-084/REQ-094): view_id → "all"|"unclassified"。
+    /// デバイスローカル — ビュー定義(DB)には持たず、パッケージ(REQ-093)/スナップショット(REQ-092)
+    /// では搬送しない(裁定①)。列挙外・欠落は読出し側で既定「すべて」へ落とす。
+    /// 型は値等価の辞書(<see cref="ViewDisplayModeMap"/>)— AppSettings は record で、設定の
+    /// ラウンドトリップ契約(CP-SET-009)が全体等価に依存するため、参照等価の素の Dictionary は使えない。
+    /// </summary>
+    public ViewDisplayModeMap ViewDisplayModes { get; set; } = new();
 
     /// <summary>最後に選択したコレクション(同期フォルダ)id(REQ-052 v1.3/CR-5)。null=未選択。</summary>
     public string? LastCollectionId { get; set; }

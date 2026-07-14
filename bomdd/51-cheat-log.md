@@ -451,3 +451,18 @@ method 還元候補(3件目): リファクタ系移送表に「**通知トポロ
   実行規律に同じ)。 **→ 処置着手: ECO-082(2026-07-13)で分離起票**(maintainer 裁定=D は別起票。TempDb の
   DB ファイル共有はシロと実測済み・発火面=WorkspaceRepository.GetAllWithNormalCountsAsync 特定)。
   あわせて dotnet test 間欠ハングの fail-closed 化は **ECO-081** で起票。
+
+## 2026-07-14 — ECO-084 是正中のスコープ外所見(Headless ハーネスのスレッドアフィニティ 2 態・R3 記録)
+
+ECO-084 の probe/受入で実測した ECO-082/083 ファミリーの新知見 2 件(製品欠陥ではなくテストハーネス知見。
+本 ECO ではテスト側の書法で決定化して回避済み・恒久テスト様式として CP-DISPMODE-084 fixture_note に記載):
+
+1. **クラス単独実行(--filter-class)で Headless プラットフォーム初期化前に VM が Dispatcher.UIThread へ
+   触れると、共有セッションの初回 EnsureSharedApplication が VerifyAccess で死ぬ**(ECO-083 の FailFast
+   監視が正しく exit=7 で顕在化=監視の実運用 2 例目)。フル run では他クラスが先にセッションを温めるため
+   潜伏する。回避=fixture 冒頭で `HeadlessApp.Session.Dispatch(() => true)` の先行 warm-up(順序の決定化)。
+2. **worker スレッドで生成した SolidColorBrush(タグ色チップ)を compositor が参照すると VerifyAccess 死**
+   (決定的・フル run でも再現)。タグ色チップ付き ImageTabView を headless 描画する初のクラスで顕在化 —
+   既存描画テストはタグなし fixture のため潜伏していた。回避=描画するテストは VM 構築(Recompute=Brush
+   生成)ごと `Session.Dispatch(async)` 内で行う。処置候補=headless 描画テストの共通書法として
+   TestImageTab へ UI スレッド構築ヘルパを一般化(将来 ECO 候補・maintainer 判断)。
