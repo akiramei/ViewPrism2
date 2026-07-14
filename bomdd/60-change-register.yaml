@@ -1360,3 +1360,14 @@ changes:
     impacted_bom: ["spec §2.10 候補スコープ(REQ-087)へ非追随を裁定理由つき明文化", "10-requirements.yaml REQ-087 statement(表示母集合→条件一致母集合+非追随の一文)", "ECO-084 本文 §7 相互参照", "src/tests/CAD/DB=変更なし。既存 CP-SIM-017/CP-SIMSESSION-029 が機械ガードとして有効"]
     body: 60-change-order-eco-085.md
     notes: "教訓(小)=「表示」を含む仕様文言は表示のモード化で二義化する — 母集合は評価規則(条件一致母集合)で書く。ECO-084 の残課題はこれで全解消"
+  - id: ECO-086
+    title: "ビュー階層ノードの定義値展開モード+タグ定義の閉じた値集合属性(値ドメイン展開の新設)"
+    type: 新機能(NodeGraph 展開意味論の拡張=観測値展開 REQ-035 と併存する定義値展開の新系統。maintainer 要求 2026-07-14・設計方針はメンバー助言を起票前相談で整理)
+    status: staged   # gate①(裁定 a〜f+CAD モック承認)待ち
+    golden: "pending"
+    baseline: "main 350d345"
+    findings: "要求=都道府県(候補値47)級の textual タグで 47 条件手書きは非現実的・観測値展開は付与状況で構造が 0/1/2+ 件分岐し不安定・定義順にならない → タグに定義された値ドメインを付与状況にかかわらず定義順で安定展開する定義値展開を新設。骨子=①ビュー階層ノードに展開モード(Manual/ObservedValues/DefinedValues/DefinedAndObservedValues・既定=ObservedValues で既存ビュー互換) ②numeric も定義域(min/max/step 例: 評価1-5)から値ノード展開(現行は単一ノードのみ=NodeGraphBuilder.cs:190-196 実測。評価=5 リーフは condition_type 付きノード5個手書きが唯一手段=textual 47 条件と同型の非現実問題) ③タグ定義側に値集合の意味属性(入力補助/閉集合)を新設し閉集合では候補外値(蝦夷)を 48 番目ノードでなく未定義値として検出 ④多段(都道府県→評価)で各値ノード配下に定義値リーフ+パス選択(北海道→評価5)の AND 変換を回帰固定。確定実測=定義順維持は ExtractValues の序数ソート(NodeGraphBuilder.cs:267-270)で潰される=値源差し替えでは不可・ITagValueSource 契約は観測値専用(INV-010 明記)=定義値供給は別契約が必要・0/1/2+ 分岐は REQ-035 の仕様=モード別迂回の新 REQ 必要(REQ-035 は不変で併存)・PathConditionConverter は NodeKind.Value をタグ型無関係に Equals 変換=無改変見込み・候補値の器(predefined_values 順序保持/numeric min/max/step)は既存で不足は解釈と展開経路のみ。疑い(未検証)=OC-1 numeric Equals の文字列値評価・ECO-084 表示モード×0 件ノードの件数表示・REQ-092/093 の新列搬送(形式バージョン繰り上げ要否)。責務分担=タグ定義: 値集合の意味/定義値/順序/候補外値の扱い・ビューノード: 展開の値源/0 件ノード表示"
+    impacted_bom: ["CAD=ViewPrismUI docs/screens/tag_tab.md(タグ定義モーダル+階層エディタ)・image_tab.md(ビュー軸の見え方・0件・未定義値)+mock(gate①対象)", "spec=20-spec.md §2.2/§2.4 新 REQ 群(REQ-024/034/035 は不変で併存・相互参照 note)", "E-BOM=E-GRAPH-003(中核)・E-DOMAIN-001・E-DB-010/M-DB-007(マイグレーション=ECO-020 方式)・E-VIEWSVC-009・E-UI-NODEGRAPH-025・タグ定義モーダル surface・E-UI-AXIS-NAV-040", "DB=view_tag_hierarchies 展開モード列+textual_tag_settings 値集合の意味列(既存行の既定=ObservedValues 相当で完全互換)", "i18n=ja/en(モード名・閉集合設定・未定義値表示)"]
+    oracle: "既存固定Oracle行は変更しない(R6)。新規行=定義順 47 展開・画像 0 件での構造安定・numeric 1-5 リーフ生成・「北海道→評価5」= 都道府県 Equals 北海道 AND 評価 Equals 5・閉集合の未定義値検出・既存ビューの既定モード互換・DefinedAndObservedValues のマージ順序"
+    body: 60-change-order-eco-086.md
+    notes: "gate①=裁定論点 a〜f(本文§4: a=モード体系と Manual×condition_type の直交性整理 b=閉集合×既存候補外付与値の遷移措置(拒否/検出警告) c=未定義値の検出表示(ECO-084 未分類との概念区別=未分類はタグなし/未定義は閉集合外の値) d=0 件ノード表示の既定とオプション e=numeric 定義域 NULL/step 過大時の挙動 f=DefinedAndObservedValues のマージ順序)+ViewPrismUI モック承認。CAD 是正が先・製品コードは後。gate②=実機 golden(定義順展開・0 件安定・多段リーフ・未定義値検出・既存ビュー互換)。関連=REQ-024(候補値=入力補助は不変)・REQ-035(観測値展開は不変で併存)・ECO-084(表示モードとの相互作用)・ECO-020(マイグレーション前例)"
