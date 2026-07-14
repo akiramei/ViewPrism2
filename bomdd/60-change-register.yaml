@@ -1353,7 +1353,7 @@ changes:
   - id: ECO-085
     title: "REQ-087 裁定の取り込み — 類似候補スコープは表示モード(REQ-094)非追随(ノード matched 全体)"
     type: 設計確定の取り込み(現状追認=src 変更ゼロ・doc-only。ECO-042/043 同型・ECO-084 残課題の裁定)
-    status: staged
+    status: implemented   # 2026-07-14 doc-only 追補完了(現状追認)
     golden: n/a   # 現状追認(視覚不変・src 変更ゼロ)
     baseline: "main 6c31979"
     findings: "ECO-084 の表示モード導入で REQ-087「タグビュー軸の候補=表示母集合」が二義化(ノード matched 全体 vs 表示中の未分類のみ)。maintainer 裁定(2026-07-14)=現状維持(matched 全体)を正式仕様化: ①未分類画像の重複相手は典型的に分類済み側(表示追随は本来見つけたい候補を消す) ②ECO-062 の目的=全域走査抑止はノード限定で達成済み ③候補パネルは表示グリッドと別文脈。実装は当初から matched 全体(ViewMatched(fullPath)=モード非依存)でコード変更なし"
