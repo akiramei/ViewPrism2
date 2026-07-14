@@ -1376,8 +1376,8 @@ changes:
   - id: ECO-087
     title: "タグ作成/編集ダイアログの mock 忠実化(2 カラム化・ヘッダ・選択肢 UI・意匠)"
     type: 不具合(実装の CAD 乖離=ECO-007 製造時の部品単位転写で全体形態が未転写の面欠陥+golden 検査次元の谷間。ECO-086 golden 所見からの R3 分離起票=2026-07-14 maintainer 裁定 A)
-    status: implemented   # 2026-07-14 /eco-fix完了=是正+機械受入完了・golden待ち(本文§8)
-    golden: "pending"
+    status: applied   # 2026-07-14 gate②合格(maintainer実機・GF-087-01是正を経て)→クローズ
+    golden: "approved(2026-07-14 maintainer 実機: mock DD02 並置で 2 カラム+4 段クローム・種別サブタイトル追随・選択肢ピル行=ハンドル D&D 並べ替え(GF-087-01 是正後=未選択行でも 1 回で掴める)+×削除+件数追随+0 件破線プレースホルダ・数値プリセット 3 チップ・シンプル用途カード・説明 textarea・値の扱い/ボディ単一スクロール(ECO-086/GF-086-01)維持・en 切替。意図的差分=ECO-008 一文非転写/編集時サブタイトル非表示/hex 自由入力=承認)"
     baseline: "main c43a286"
     verification: "2026-07-14 /eco-fix完了: CAD lazy遡及=VC-TAG-4〜8(tag_tab.md d432596・mock不変・意図的差分=ECO-008の種別変更可一文は転写しない)→先行probe赤=CpTagDlg087Tests 6/6不合格(1カラム・HeaderSubtitle/OptionCountHeader/ピル×/0件プレースホルダ不在)→是正=TagEditorWindow全面(幅768・4段クローム=ヘッダ種別サブタイトル+X/2カラム=左316基本情報+右種別別/固定プレビュー帯/docked強調保存・ピル行+件数ヘッダ+破線0件・↑↓撤去=D&D+×集約・数値プリセット3チップ+ⓘ・シンプル用途カード・説明textarea・追加ボタン入力空非活性)+i18n ja/en各15キー→6/6緑転。GF-086-01/ECO-086既存probe全緑=スクロール/値の扱い契約維持。機械受入=build 0/0・Tests 706/706・Oracle 109+2skip(R6不変)・validate 0/0。R7面全体3分類(ECO-086教訓③)=転写漏れ0・意図的差分2(ECO-008一文/編集時サブタイトル非表示)・裁定済み許容1(hex入力可=REQ-023既存)。CP-TAGDLG-087登録"
     gf: "GF-087-01(2026-07-14 golden 所見): 候補値を D&D で並べ替えられない。診断=従来からの潜伏欠陥の顕在化 — ListBox のクラスハンドラが未選択項目の押下を選択更新で e.Handled=true にし、XAML PointerPressed(bubble)へ届かず D&D 不開始(選択済み行なら 2 度目で動く)。従来は ↑↓ボタン+選択視覚がマスク・ECO-087 の ↑↓撤去+ピル化で顕在化。probe 先行=赤(pillHandle 0/2)→是正=ハンドル(⠿)を明示のドラッグ起点(direct ハンドラ+Handled=選択と分離)・行掴み(選択済みのみ)は併存→headless 実ポインタ注入で緑転(D&D フル経路は golden 検査項目)。機械受入再=Tests 707/707・Oracle 109+2skip・validate 0/0。本文§9"
