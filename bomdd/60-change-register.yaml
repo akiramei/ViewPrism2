@@ -1398,3 +1398,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。新規=headless 47 チップ折返し配置検査(是正前赤で実測)・既存 5 件級=1 行時の視覚不変(WrapPanel の単一行配置は同一)"
     body: 60-change-order-eco-088.md
     notes: "gate①=不要(CAD 健全・実装逸脱と確定)。gate②=実機 golden(47 件級の折返し表示+5 件級デモの視覚不変・R7 面全体並置・en 切替込み)。是正は折返しの回復のみ=行数上限/行内スクロール/検索導線の新設計は持ち込まない(IMG-023=CAD 裁定待ちに残置。gate② の折返し実機観測が IMG-023 裁定の入力データになる)。関連=ECO-086(定義値展開=可視化条件の供給元)・ECO-084(GF-084-01=検査次元の谷間の同族)・bcd861d(混入元)"
+  - id: ECO-089
+    title: "WrapPanel×横 StackPanel の同型残存 2 面 — タグパレット候補値行(編集/削除アイコンずれ+候補値見切れ)+作業タブチップ行(ECO-088 の read-across 閉包)"
+    type: 不具合(実装の CAD 乖離 — ECO-088 と同一様式の残存。起票時の全数走査で閉包確定)
+    status: staged
+    golden: "pending(gate②=実機: 面A=タグパレットで候補値多数タグの編集/削除アイコン可視+候補値の複数行折返し+少数タグの視覚不変 / 面B=作業タブの多量チップ折返し+少数不変=ECO-088 gate②と同一基準・en 切替込み)"
+    baseline: "main 4c83038"
+    findings: "面A(maintainer 実機 2026-07-15): タグパレットで候補値 5 件級以上のテキストタグ(職種)のカードの編集アイコンが右へずれ・削除アイコン見切れ・候補値チップ末尾見切れ(少数=地域3件/性別2件は正常)。面B(構造から確定・症状未顕在): WorkTabView:796-799 のチップ行が ECO-088 是正前の ImageTabView と同一構造のまま残存。工程診断=CAD 健全(タグ管理 mock 候補値行=flex-wrap:wrap・作業タブ mock チップ行=flex-wrap:wrap を抽出実測)・実装逸脱 2 面と確定: ①TagsTabView:310-316 候補値 ItemsControl(WrapPanel)が横 StackPanel 内=無限幅測定 ②WorkTabView:796-799 同型。混入=面A `3536ffb`(2026-06-16 ECO-009 タグパレット再実装・潜伏29日)/面B `f211fa9`(2026-06-29 ECO-020/021 作業タブ・潜伏16日)=いずれも初版から。マスキング=ECO-088 同一(1 行に収まる限り不可視の機能等価潜伏)。**工程所見=ECO-088 の read-across 漏れ**: 真因様式を特定したのに同型構造の全数走査を是正範囲に含めなかった(§8.2 到達閉包/GF-073 様式の漏れ)— 本起票で全数走査を実施: WrapPanel 14 箇所中 横 StackPanel 直下は当該 2 面のみ・他 12 は健全=閉包確定。疑い(未検証)=面A 外側 ScrollViewer(水平可視性未指定)が無限幅を渡す場合は水平測定制約の明示も要る(fix プローブで確定)"
+    impacted_bom: ["src/ViewPrism2.App/Views/TagsTabView.axaml(候補値行コンテナ)", "src/ViewPrism2.App/Views/WorkTabView.axaml(チップ行コンテナ=ECO-088 と同一是正)", "テスト=両面の折返し probe 新設(CpUi089 系・是正前赤)", "CAD=mock/prose 既に正で変更なし。tag_tab.md VC-TAG-9 級+work_tab.md VC-WORK-1 級を lazy 遡及", "E-BOM=該当 surface 説明へ ECO-089 追補", "CP=CP-CHIPWRAP-088 への統合 or 089 新設(fix 時判断)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。新規=面A 候補値12件級でカード内チップ+編集/削除アイコンの実描画矩形がペイン可視幅内(是正前赤)・面B 47チップ折返し(CpUi088 同一アサーション)・両面の少数件 1 行不変 pin"
+    body: 60-change-order-eco-089.md
+    notes: "gate①=不要(CAD 健全・実装逸脱 2 面)。ECO-088 の read-across 閉包=同型全数走査済み(残存ゼロ保証は probe と grep の 2 面)。スコープ外=タグパレット多量候補値の面設計(行数上限・+N 畳み=mock 未定義・必要なら TAG-013 級で review_points へ)・チップ行の共有部品化(DRY=将来判断)。関連=ECO-088(様式の初出+是正済み画像タブ面)・ECO-009(面A混入元)・ECO-020/021(面B混入元)"
