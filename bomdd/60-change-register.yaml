@@ -1363,7 +1363,7 @@ changes:
   - id: ECO-086
     title: "ビュー階層ノードの定義値展開モード+タグ定義の閉じた値集合属性(値ドメイン展開の新設)"
     type: 新機能(NodeGraph 展開意味論の拡張=観測値展開 REQ-035 と併存する定義値展開の新系統。maintainer 要求 2026-07-14・設計方針はメンバー助言を起票前相談で整理)
-    status: staged   # 2026-07-14 裁定a〜f=案どおり承認(decide)。残gate①=CAD改版→maintainerモック承認
+    status: staged   # 2026-07-14 裁定a〜f承認(decide)+CAD改版済み(VPUI 0d63066=mock3面+prose・機械検証全PASS・本文§7)。残gate①=maintainer実機モック確認
     golden: "pending"
     baseline: "main 350d345"
     findings: "要求=都道府県(候補値47)級の textual タグで 47 条件手書きは非現実的・観測値展開は付与状況で構造が 0/1/2+ 件分岐し不安定・定義順にならない → タグに定義された値ドメインを付与状況にかかわらず定義順で安定展開する定義値展開を新設。骨子=①ビュー階層ノードに展開モード(Manual/ObservedValues/DefinedValues/DefinedAndObservedValues・既定=ObservedValues で既存ビュー互換) ②numeric も定義域(min/max/step 例: 評価1-5)から値ノード展開(現行は単一ノードのみ=NodeGraphBuilder.cs:190-196 実測。評価=5 リーフは condition_type 付きノード5個手書きが唯一手段=textual 47 条件と同型の非現実問題) ③タグ定義側に値集合の意味属性(入力補助/閉集合)を新設し閉集合では候補外値(蝦夷)を 48 番目ノードでなく未定義値として検出 ④多段(都道府県→評価)で各値ノード配下に定義値リーフ+パス選択(北海道→評価5)の AND 変換を回帰固定。確定実測=定義順維持は ExtractValues の序数ソート(NodeGraphBuilder.cs:267-270)で潰される=値源差し替えでは不可・ITagValueSource 契約は観測値専用(INV-010 明記)=定義値供給は別契約が必要・0/1/2+ 分岐は REQ-035 の仕様=モード別迂回の新 REQ 必要(REQ-035 は不変で併存)・PathConditionConverter は NodeKind.Value をタグ型無関係に Equals 変換=無改変見込み・候補値の器(predefined_values 順序保持/numeric min/max/step)は既存で不足は解釈と展開経路のみ。疑い(未検証)=OC-1 numeric Equals の文字列値評価・ECO-084 表示モード×0 件ノードの件数表示・REQ-092/093 の新列搬送(形式バージョン繰り上げ要否)。責務分担=タグ定義: 値集合の意味/定義値/順序/候補外値の扱い・ビューノード: 展開の値源/0 件ノード表示"
