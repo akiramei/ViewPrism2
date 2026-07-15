@@ -118,6 +118,8 @@ public sealed partial class WorkTabViewModel : ObservableObject
         _chipHintLabel = localization.T("view.filterByTag");
         _countLabel = localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = "0" });
         Loc = new LocalizationProxy(localization);
+        // ECO-091: チップ行の容量・overflow(最大2行+ほかN件→ポップオーバー)。画像タブと同一意味論(ECO-090 同期宣言)
+        ChipStrip = new ChipStripViewModel(localization, Chips, ClickChip);
         localization.CultureChanged += (_, _) =>
         {
             // ECO-079/DF-3: Loc 差し替えで作業タブ全文言バインディングを再評価させる
@@ -128,6 +130,7 @@ public sealed partial class WorkTabViewModel : ObservableObject
             BuildSortModels();
             // GF-079-01: VM 算出ラベル(ボタン/軸/列/件数)も言語切替へ追随させる
             OnPropertyChanged(string.Empty);
+            ChipStrip.OnCultureChanged(); // 「ほか N 件」ラベルの追随(ECO-091)
         };
         _searchSession.PropertyChanged += (_, _) => OnPropertyChanged(string.Empty);
     }
@@ -135,6 +138,10 @@ public sealed partial class WorkTabViewModel : ObservableObject
     public ObservableCollection<WorkspaceRowVM> Workspaces { get; } = new();
     public ObservableCollection<ImageItemVM> Items { get; } = new();
     public ObservableCollection<ChipVM> Chips { get; } = new();
+
+    /// <summary>チップ行の容量・overflow 状態(ECO-091・VC-WORK-2/3。画像タブと同一意味論=ECO-090 同期宣言)。</summary>
+    public ChipStripViewModel ChipStrip { get; }
+
     public ObservableCollection<CurrentTagVM> CurrentTags { get; } = new();
     public ObservableCollection<AddGroupVM> AddGroups { get; } = new();
     public ObservableCollection<OrganizeSlotVM> OrganizeTargets { get; } = new();

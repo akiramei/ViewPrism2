@@ -112,9 +112,10 @@ public sealed class CpUi089ChipWrapTests : IDisposable
     // ---- 面 B: 作業タブ チップ行 ----
 
     [Fact]
-    public async Task 作業タブの47件チップは可視幅内へ折り返して全数配置される()
+    public async Task 作業タブの47件チップは折り返しつつ最大2行とほかN件に収まる()
     {
         // VC-WORK-1(=VC-IMG-8 と同文): ECO-088 是正前の ImageTabView と同一構造の残存の回復。
+        // since ECO-091(IMG-023A=A-b): 全数直接表示は「最大 2 行+ほか N 件」へ進化(CpUi091 が容量契約を検査)。
         await HeadlessApp.Session.Dispatch(() =>
         {
             var vm = NewWorkVm(); // Brush 生成を伴うため UI スレッド内で構築(ECO-084 教訓)
@@ -135,14 +136,14 @@ public sealed class CpUi089ChipWrapTests : IDisposable
                 .Where(b => b.Classes.Contains("tagChip") && b.IsVisible)
                 .Select(b => GlobalRect(b).Rect)
                 .ToList();
-            Assert.Equal(47, rects.Count);
+            Assert.InRange(rects.Count, 2, 46); // 一部が直接表示・残りは「ほか N 件」(ECO-091)
             foreach (var rect in rects)
             {
                 Assert.True(rect.Right <= WindowWidth + 0.5,
                     $"作業タブのチップが可視幅からはみ出す(right={rect.Right:0.0} > {WindowWidth})— ECO-089 面B");
             }
             var rowCount = rects.Select(r => Math.Round(r.Y)).Distinct().Count();
-            Assert.True(rowCount >= 2, $"47 チップが {rowCount} 行 — 折返しが機能していない(ECO-089 面B)");
+            Assert.Equal(2, rowCount);
 
             window.Close();
             return true;

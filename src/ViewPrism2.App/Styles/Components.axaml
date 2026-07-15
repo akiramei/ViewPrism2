@@ -617,6 +617,67 @@
     <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- ============ extend: チップ行 overflow(ECO-091・IMG-023A=A-b/CAD VC-IMG-9/10) ============ -->
+  <!-- 「ほか N 件」: 破線枠の中立チップ(mock chipMore 転写)。フォーカス対象(キーボード契約)。
+       破線は Border 非対応のため Rectangle 重ね(undef チップと同じ技法) -->
+  <Style Selector="Button.chipMore">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.chipMore:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#f6f8fb" />
+  </Style>
+  <!-- ポップオーバー(検索+全項目一覧・mock 転写) -->
+  <Style Selector="Border.chipPopCard">
+    <Setter Property="Width" Value="360" />
+    <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="BoxShadow" Value="0 18 44 -14 #48142040" />
+  </Style>
+  <Style Selector="Border.chipPopSearch">
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Background" Value="#fbfcfd" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="TextBox.chipPopSearchBox">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.chipPopRow">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="9,7" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.chipPopRow:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#f3f6fb" />
+  </Style>
+  <Style Selector="TextBlock.chipPopEmpty">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,14" />
+  </Style>
 
   <!-- ============ extend: 空タグ注記バー TMP-UI-CMP-0029 ============ -->
   <Style Selector="Border.noteBar">

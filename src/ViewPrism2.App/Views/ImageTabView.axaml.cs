@@ -24,6 +24,10 @@ public partial class ImageTabView : UserControl
     private Border? _toolbarRoot;
     private Panel? _leftCluster;
     private Panel? _rightCluster;
+    private ItemsControl? _chipDisplay;
+    private Avalonia.Controls.Primitives.Popup? _chipPopover;
+    private TextBox? _chipSearchBox;
+    private double _lastChipPanelWidth;
 
     public ImageTabView()
     {
@@ -36,10 +40,67 @@ public partial class ImageTabView : UserControl
         _toolbarRoot = this.FindControl<Border>("ToolbarRoot");
         _leftCluster = this.FindControl<Panel>("LeftCluster");
         _rightCluster = this.FindControl<Panel>("RightCluster");
-        LayoutUpdated += (_, _) => EvaluateToolbar();
+        // ECO-091: チップ行の容量(最大2行+ほかN件)。実測供給は View 責務(ECO-027 と同じ流儀)
+        _chipDisplay = this.FindControl<ItemsControl>("ChipDisplay");
+        _chipPopover = this.FindControl<Avalonia.Controls.Primitives.Popup>("ChipPopover");
+        _chipSearchBox = this.FindControl<TextBox>("ChipSearchBox");
+        if (_chipPopover is { } pop)
+        {
+            // 開いたら検索欄へフォーカス(VC-IMG-10 キーボード契約: 検索欄→一覧の順)
+            pop.Opened += (_, _) => _chipSearchBox?.Focus();
+        }
+        LayoutUpdated += (_, _) => { EvaluateToolbar(); EvaluateChipRow(); };
     }
 
     private ImageTabViewModel? Vm => DataContext as ImageTabViewModel;
+
+    /// <summary>
+    /// ECO-091(IMG-023A=A-b): チップ行の実描画からの折畳み評価。全表示時に 3 行目が出るなら
+    /// ChipStripViewModel が可視件数を計算して「ほか N 件」へ畳む。幅変更時は全表示へ戻して測り直す
+    /// (表示件数と N の再計算=選択・ナビ状態は不変)。計算は ChipRowOverflow(unit 検査可能)。
+    /// </summary>
+    private void EvaluateChipRow()
+    {
+        if (Vm is not { } vm || !vm.ShowChips) return;
+        var panel = _chipDisplay?.ItemsPanelRoot;
+        if (panel is null || panel.Bounds.Width <= 0) return;
+
+        var width = panel.Bounds.Width;
+        if (Math.Abs(width - _lastChipPanelWidth) > 0.5)
+        {
+            _lastChipPanelWidth = width;
+            // 折畳み中だった場合のみ次パスへ(全表示へ戻した=矩形が古い)。未折畳みなら同一パスで計測可
+            if (vm.ChipStrip.ResetFold()) return;
+        }
+
+        var chipRects = new System.Collections.Generic.List<Avalonia.Rect>();
+        Avalonia.Rect? moreRect = null;
+        foreach (var child in panel.Children)
+        {
+            if (!child.IsVisible) continue;
+            if (child.DataContext is ChipVM) chipRects.Add(child.Bounds);
+            else if (child.DataContext is ChipMoreVM) moreRect = child.Bounds;
+        }
+        vm.ChipStrip.ReportLayout(chipRects, moreRect, width);
+    }
+
+    /// <summary>Escape でポップオーバーを閉じ「ほか N 件」へフォーカスを戻す(VC-IMG-10)。</summary>
+    private void OnChipPopoverKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || Vm is not { } vm) return;
+        vm.ChipStrip.ClosePopoverCommand.Execute(null);
+        FocusChipMoreButton();
+        e.Handled = true;
+    }
+
+    private void FocusChipMoreButton()
+    {
+        if (_chipDisplay is null) return;
+        foreach (var btn in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(_chipDisplay))
+        {
+            if (btn is Button b && b.Classes.Contains("chipMore")) { b.Focus(); return; }
+        }
+    }
 
     /// <summary>
     /// レイアウト確定後にツールバー実測幅で段階収納(ラベル/退避)と tier3 回り込みを更新する。

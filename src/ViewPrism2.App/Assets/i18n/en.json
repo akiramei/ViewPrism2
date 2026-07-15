@@ -811,7 +811,7 @@
   "tag.description": "Description",
   "tag.duplicateName": "A tag with the same name already exists",
   "tag.editingTag": "Editing tag:",
-  "tag.editor.basicInfo": "Basic Information",
+  "tag.editor.basicInfo": "Basic info",
   "tag.editor.cancel": "Cancel",
   "tag.editor.color": "Color",
   "tag.editor.colorSelect": "Select color",
@@ -826,7 +826,6 @@
   "tag.editor.nameRequired": "*",
   "tag.editor.noLimit": "No limit",
   "tag.editor.addOptionLabel": "Add options",
-  "tag.editor.basicInfo": "Basic info",
   "tag.editor.noOptionsPlaceholder": "Add at least one option",
   "tag.editor.numericDefinedNote": "When min, max and step are all set, defined-value expansion in views can generate value nodes for this range (e.g. Rating 1–5 → 5 nodes).",
   "tag.editor.preset.percent": "% 0–100",
@@ -1213,5 +1212,8 @@
   "filelist.columnsButton": "Display columns",
   "filelist.addColumn": "Add column",
   "filelist.atMaxNote": "Maximum {max} columns. Remove a column to add another.",
-  "filelist.noAvailableColumns": "No columns available to add"
+  "filelist.noAvailableColumns": "No columns available to add",
+  "chip.moreItems": "+{count} more",
+  "chip.searchPlaceholder": "Search chips…",
+  "chip.noMatch": "No matching chips"
 }

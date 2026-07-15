@@ -826,7 +826,6 @@
   "tag.editor.nameRequired": "*",
   "tag.editor.noLimit": "制限なし",
   "tag.editor.addOptionLabel": "選択肢を追加",
-  "tag.editor.basicInfo": "基本情報",
   "tag.editor.noOptionsPlaceholder": "選択肢を1つ以上追加してください",
   "tag.editor.numericDefinedNote": "最小・最大・ステップがそろっていると、ビューの定義値展開でこの範囲の値ノードを生成できます（例: 評価 1–5 → 5 ノード）。",
   "tag.editor.preset.percent": "% 0–100",
@@ -1213,5 +1212,8 @@
   "filelist.columnsButton": "表示列",
   "filelist.addColumn": "列を追加",
   "filelist.atMaxNote": "最大 {max} 列です。追加するには列を削除してください。",
-  "filelist.noAvailableColumns": "追加できる列はありません"
+  "filelist.noAvailableColumns": "追加できる列はありません",
+  "chip.moreItems": "ほか {count} 件",
+  "chip.searchPlaceholder": "チップを検索…",
+  "chip.noMatch": "一致するチップがありません"
 }

@@ -1424,8 +1424,8 @@ changes:
   - id: ECO-091
     title: "チップ行の容量・到達性契約の取り込み — 最大 2 行+「ほか N 件」ポップオーバー(IMG-023A=A-b/B=B-a 裁定・画像タブ+作業タブ同時反映)"
     type: 機能拡張(CAD 裁定済み仕様の実装 — 現実装は折返しまで=ECO-088/089・容量/overflow UI が net-new)
-    status: staged
-    golden: pending   # gate②=両タブ実機承認(47件級 最大2行+ほかN件・ポップオーバー検索/選択/Escape・少数不変・active/クリア残留・幅変更再計算・en・両タブ同一契約)
+    status: implemented   # 2026-07-15 fix+機械受入完了(build 0/0・Tests 734/734=probe 9 本緑転+旧契約 5 本容量改訂・Oracle 109+2skip・validate 0/0)・R7 転写漏れ 0(候補差分 1=チップ自体のフォーカス可否→golden 判定)→ golden 待ち
+    golden: pending   # gate②=両タブ実機承認(47件級 最大2行+ほかN件・ポップオーバー検索/選択/Escape・少数不変・active/クリア残留・幅変更再計算・en・両タブ同一契約+候補差分1=チップ自体のフォーカス可否の判定)
     baseline: "main 716eb59"
     findings: "IMG-023A/B 裁定(2026-07-15 maintainer・A-b+B-a)の取り込み。CAD 正典= ViewPrismUI 17dc9f3(裁定資料 §7+image_tab.md 容量 overflow 節+VC-IMG-9/10+work_tab.md VC-WORK-2/3+画像タブ mock 実装済みデモ=実測折畳み・ポップオーバー・47 件級都道府県・ブラウザ実測確認済み)。確定契約=①最大 2 行(行内スクロールなし)②2 行目末尾「ほか N 件」→ポップオーバー(検索+全項目一覧・内部スクロール許容)・N=非表示数・幅変更で再計算(選択/ナビ不変)③view 軸=定義順・全ノード到達・選択で閉じてナビ/FS・作業=active+クリア通常領域必須(優先配置後は定義順)・単一選択反映で閉じる④キーボード(ほかN件=フォーカス対象・検索→一覧・Escape 復帰・視覚順=フォーカス順)⑤継続行=吊り下げ(B-a=現行 Grid 正式追認=実装変更なし見込み)。工程診断=CAD 健全(裁定済み)・実装乖離と確定: ImageTabView.axaml:994-998/WorkTabView.axaml:799-803 は折返しのみで行数上限・ほかN件・ポップオーバー・キーボード契約が存在しない(grep 実測)。mock 実測アルゴリズム(描画後実測・検証パス収束・リサイズ再計算・ほかN件の行判定許容差)が Avalonia 移植の参照実装"
     impacted_bom: ["src=ImageTabView.axaml+WorkTabView.axaml(チップ行)+対応 VM(可視件数/N/ポップオーバー状態)", "テスト=容量・N 一致・到達・フォーカスの probe 新設(両タブ同一ベクトル)。既存固定 Oracle 不変(R6)", "REQ=チップ行容量・到達性の新設(REQ-097 級・fix 時 M4 採番)+spec §2.6", "CP=CP-CHIPWRAP-088 を容量・到達性・キーボード契約へ拡張(裁定 §7 受入条件 1〜6・9)", "i18n=chip.moreItems 級 ja/en(ECO-080 3 層)", "E-BOM=E-UI-AXIS-NAV-040/E-UI-WORKSPACE-043 追補", "CAD=変更なし(正典 VPUI 17dc9f3)"]

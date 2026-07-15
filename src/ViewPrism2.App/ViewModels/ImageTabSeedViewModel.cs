@@ -708,6 +708,9 @@ public sealed class ChipVM
     public bool IsNav { get; private init; }
     public bool IsNeutral { get; private init; }
 
+    /// <summary>選択中(単一フィルタ active)。折畳み時の優先配置に使う(ECO-091/IMG-023A: active は通常領域から消えない)。</summary>
+    public bool IsActive { get; private init; }
+
     /// <summary>未定義値の検出チップ(REQ-095/096・CAD VC-IMG-6: 琥珀・破線+「未定義」バッジ)。</summary>
     public bool IsUndef { get; private init; }
 
@@ -740,6 +743,7 @@ public sealed class ChipVM
     public static ChipVM Colored(string id, string label, string color, int count, bool active, bool isNav) => new()
     {
         Id = id, Label = label, IsNav = isNav, HasDot = true, HasCount = true, Count = count.ToString(),
+        IsActive = active,
         DotBrush = S(color),
         Background = active ? A(color, 0.14) : S("#ffffff"),
         BorderBrush = active ? A(color, 0.45) : S("#e3e7ee"),

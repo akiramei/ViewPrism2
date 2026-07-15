@@ -43,86 +43,82 @@ public sealed class CpUi090ChipStripParityTests : IDisposable
 
     [Theory]
     [MemberData(nameof(CommonVectors))]
-    public async Task 画像タブ_チップ行は共通ベクトルで全数可視かつ行数契約を満たす(string vector, int count, double width, int rowContract)
+    public async Task 画像タブ_チップ行は共通ベクトルで容量と到達の契約を満たす(string vector, int count, double width, int rowContract)
     {
         var labels = ResolveLabels(count);
         await SeedImageTabAsync(labels, "共通" + vector);
         await HeadlessApp.Session.Dispatch(async () =>
         {
-            var rects = await RenderImageTabChipRectsAsync("共通" + vector, width);
-            AssertChipContract("画像タブ/" + vector, rects, labels.Count, width, rowContract);
+            var (rects, moreN) = await RenderImageTabChipsAsync("共通" + vector, width);
+            AssertChipContract("画像タブ/" + vector, rects, moreN, labels.Count, width, rowContract);
             return true;
         }, CancellationToken.None);
     }
 
     [Theory]
     [MemberData(nameof(CommonVectors))]
-    public async Task 作業タブ_チップ行は共通ベクトルで全数可視かつ行数契約を満たす(string vector, int count, double width, int rowContract)
+    public async Task 作業タブ_チップ行は共通ベクトルで容量と到達の契約を満たす(string vector, int count, double width, int rowContract)
     {
         var labels = ResolveLabels(count);
         await HeadlessApp.Session.Dispatch(() =>
         {
-            var rects = RenderWorkTabChipRects(labels, width);
-            AssertChipContract("作業タブ/" + vector, rects, labels.Count, width, rowContract);
+            var (rects, moreN) = RenderWorkTabChips(labels, width);
+            AssertChipContract("作業タブ/" + vector, rects, moreN, labels.Count, width, rowContract);
             return true;
         }, CancellationToken.None);
     }
 
-    // ---- 折返し境界(実行時較正: 47 件描画の 1 行目件数 R を測り、R 件=1 行 / R+1 件=2 行) ----
+    // ---- 折畳み境界(実行時較正・ECO-091 で容量契約へ改訂):
+    //      47 件折畳みの可視件数 k を測り、k 件だけなら「ほか N 件」なしで 2 行以内に全数可視 ----
 
     [Fact]
-    public async Task 画像タブ_折返し境界の両側で行数が変わる()
+    public async Task 画像タブ_折畳み境界の両側でほかN件の有無が変わる()
     {
         await SeedImageTabAsync(PrefectureNames47, "境界47");
-        var boundary = 0;
+        var visibleAtFold = 0;
         await HeadlessApp.Session.Dispatch(async () =>
         {
-            var rects = await RenderImageTabChipRectsAsync("境界47", 1366);
-            boundary = FirstRowCount(rects);
+            var (rects, moreN) = await RenderImageTabChipsAsync("境界47", 1366);
+            Assert.True(moreN > 0, "47 件で折畳みが発生していない(較正の前提)");
+            visibleAtFold = rects.Count;
             return true;
         }, CancellationToken.None);
-        Assert.InRange(boundary, 2, 46); // 較正値が退化していない(1 行に全数や 1 件だけは異常)
+        Assert.InRange(visibleAtFold, 2, 46); // 較正値が退化していない
 
-        await SeedImageTabAsync(PrefectureNames47.Take(boundary).ToArray(), "境界R");
+        await SeedImageTabAsync(PrefectureNames47.Take(visibleAtFold).ToArray(), "境界K");
         await HeadlessApp.Session.Dispatch(async () =>
         {
-            var rects = await RenderImageTabChipRectsAsync("境界R", 1366);
-            Assert.Equal(1, RowCount(rects));
-            return true;
-        }, CancellationToken.None);
-
-        await SeedImageTabAsync(PrefectureNames47.Take(boundary + 1).ToArray(), "境界R1");
-        await HeadlessApp.Session.Dispatch(async () =>
-        {
-            var rects = await RenderImageTabChipRectsAsync("境界R1", 1366);
-            Assert.Equal(2, RowCount(rects));
+            var (rects, moreN) = await RenderImageTabChipsAsync("境界K", 1366);
+            Assert.Equal(0, moreN); // 境界内=折畳みなし(全数可視)
+            Assert.Equal(visibleAtFold, rects.Count);
+            Assert.InRange(RowCount(rects), 1, 2);
             return true;
         }, CancellationToken.None);
     }
 
     [Fact]
-    public async Task 作業タブ_折返し境界の両側で行数が変わる()
+    public async Task 作業タブ_折畳み境界の両側でほかN件の有無が変わる()
     {
         await HeadlessApp.Session.Dispatch(() =>
         {
-            var all = RenderWorkTabChipRects(PrefectureNames47, 1366);
-            var boundary = FirstRowCount(all);
-            Assert.InRange(boundary, 2, 46);
+            var (all, moreN47) = RenderWorkTabChips(PrefectureNames47, 1366);
+            Assert.True(moreN47 > 0, "47 件で折畳みが発生していない(較正の前提)");
+            var k = all.Count;
+            Assert.InRange(k, 2, 46);
 
-            var atBoundary = RenderWorkTabChipRects(PrefectureNames47.Take(boundary).ToArray(), 1366);
-            Assert.Equal(1, RowCount(atBoundary));
-
-            var overBoundary = RenderWorkTabChipRects(PrefectureNames47.Take(boundary + 1).ToArray(), 1366);
-            Assert.Equal(2, RowCount(overBoundary));
+            var (atBoundary, moreNk) = RenderWorkTabChips(PrefectureNames47.Take(k).ToArray(), 1366);
+            Assert.Equal(0, moreNk); // 境界内=折畳みなし(全数可視)
+            Assert.Equal(k, atBoundary.Count);
+            Assert.InRange(RowCount(atBoundary), 1, 2);
             return true;
         }, CancellationToken.None);
     }
 
-    // ---- 共通アサーション ----
+    // ---- 共通アサーション(ECO-091 容量契約: 可視+ほかN件=全数・最大 2 行) ----
 
-    private static void AssertChipContract(string face, IReadOnlyList<Rect> rects, int expectedCount, double width, int rowContract)
+    private static void AssertChipContract(string face, IReadOnlyList<Rect> rects, int moreN, int expectedCount, double width, int rowContract)
     {
-        Assert.Equal(expectedCount, rects.Count);
+        Assert.Equal(expectedCount, rects.Count + moreN); // 可視+非表示 N=全数(到達性の会計)
         foreach (var rect in rects)
         {
             Assert.True(rect.Right <= width + 0.5,
@@ -131,21 +127,32 @@ public sealed class CpUi090ChipStripParityTests : IDisposable
         var rows = RowCount(rects);
         if (rowContract == 1)
         {
+            Assert.Equal(0, moreN); // 少数は畳まれない
             Assert.True(rows == 1, $"{face}: {expectedCount} チップが {rows} 行(1 行不変の pin)");
         }
         else if (rowContract == 2)
         {
-            Assert.True(rows >= 2, $"{face}: {expectedCount} チップが {rows} 行 — 折返しが機能していない");
+            Assert.True(moreN > 0, $"{face}: {expectedCount} 件で「ほか N 件」が出ていない(容量契約=ECO-091)");
+            Assert.True(rows <= 2, $"{face}: チップ領域が {rows} 行 — 最大 2 行(IMG-023A=A-b)を超過");
+        }
+        else
+        {
+            Assert.True(rows <= 2, $"{face}: チップ領域が {rows} 行 — 最大 2 行(IMG-023A=A-b)を超過");
         }
     }
 
     private static int RowCount(IReadOnlyList<Rect> rects) =>
         rects.Select(r => Math.Round(r.Y)).Distinct().Count();
 
-    private static int FirstRowCount(IReadOnlyList<Rect> rects)
+    /// <summary>「ほか N 件」の N(非表示件数)。ボタンがなければ 0。</summary>
+    private static int MoreCount(Window window)
     {
-        var firstTop = rects.Min(r => Math.Round(r.Y));
-        return rects.Count(r => Math.Round(r.Y) == firstTop);
+        var btn = window.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.Classes.Contains("chipMore") && b.IsVisible);
+        if (btn is null) return 0;
+        var text = btn.Content as string ?? "";
+        var digits = new string(text.Where(char.IsDigit).ToArray());
+        return digits.Length == 0 ? 0 : int.Parse(digits);
     }
 
     private static IReadOnlyList<string> ResolveLabels(int count) =>
@@ -173,7 +180,7 @@ public sealed class CpUi090ChipStripParityTests : IDisposable
         Assert.True((await viewService.SaveHierarchyAsync(_view.Id, [node], null)).IsSuccess);
     }
 
-    private async Task<List<Rect>> RenderImageTabChipRectsAsync(string tagName, double width)
+    private async Task<(List<Rect> Rects, int MoreN)> RenderImageTabChipsAsync(string tagName, double width)
     {
         var vm = TestImageTab.NewVm(_db);
         await vm.InitializeAsync(_col.Id);
@@ -189,13 +196,14 @@ public sealed class CpUi090ChipStripParityTests : IDisposable
             .Where(b => b.Classes.Contains("tagChip") && b.IsVisible)
             .Select(GlobalRect)
             .ToList();
+        var moreN = MoreCount(window);
         window.Close();
-        return rects;
+        return (rects, moreN);
     }
 
     // ---- 作業タブ(ChipVM 直積み・CpUi089 面 B と同系) ----
 
-    private List<Rect> RenderWorkTabChipRects(IReadOnlyList<string> labels, double width)
+    private (List<Rect> Rects, int MoreN) RenderWorkTabChips(IReadOnlyList<string> labels, double width)
     {
         var vm = NewWorkVm(); // Brush 生成を伴うため UI スレッド内で構築(ECO-084 教訓)
         vm.ShowChips = true;
@@ -215,8 +223,9 @@ public sealed class CpUi090ChipStripParityTests : IDisposable
             .Where(b => b.Classes.Contains("tagChip") && b.IsVisible)
             .Select(GlobalRect)
             .ToList();
+        var moreN = MoreCount(window);
         window.Close();
-        return rects;
+        return (rects, moreN);
     }
 
     // ---- ヘルパ ----

@@ -28,15 +28,16 @@ public sealed class CpUi088ChipWrapTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task 定義値47件のチップは可視幅内へ折り返して全数配置される()
+    public async Task 定義値47件のチップは折り返しつつ最大2行とほかN件に収まる()
     {
-        // VC-IMG-8: チップ数が可視幅を超えたら折返し(mock flex-wrap)。是正前=1 行のまま右へ
-        // 溢れて Border クリップ= 21 件目以降の実描画矩形 Right が可視幅を超える(赤)。
+        // VC-IMG-8: 折返し(mock flex-wrap)が機能し、クリップ切り捨てで到達不能にならない。
+        // since ECO-091(IMG-023A=A-b): 47 件の全数直接表示は「最大 2 行+ほか N 件」へ進化 —
+        // 可視チップは折返し(行数 2)で全て可視幅内・残りは「ほか N 件」(ポップオーバーで到達=CpUi091)。
         await SeedAsync(PrefectureNames47);
         await HeadlessApp.Session.Dispatch(async () =>
         {
             var rects = await RenderChipRectsAsync();
-            Assert.Equal(47, rects.Count);
+            Assert.InRange(rects.Count, 2, 46); // 一部が直接表示・残りは「ほか N 件」(ECO-091)
 
             foreach (var (label, rect) in rects)
             {
@@ -45,10 +46,9 @@ public sealed class CpUi088ChipWrapTests : IDisposable
                     + "折返し不動作のクリップ切り捨て(ECO-088)");
             }
 
-            // 47 件が 1366px に 1 行で収まることはない= 折返しが実際に起きている
+            // 折返し自体は機能している(容量上限まで使う=2 行)
             var rowCount = rects.Select(r => Math.Round(r.Rect.Y)).Distinct().Count();
-            Assert.True(rowCount >= 2,
-                $"47 チップが {rowCount} 行に配置されている— 折返しが機能していない(ECO-088)");
+            Assert.Equal(2, rowCount);
             return true;
         }, CancellationToken.None);
     }
