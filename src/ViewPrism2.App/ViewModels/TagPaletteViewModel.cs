@@ -71,7 +71,12 @@ public sealed partial class TagPaletteRowViewModel : ObservableObject
     /// </summary>
     public void ReportCandidateLayout(IReadOnlyList<Avalonia.Rect> chipRects, Avalonia.Rect? moreRect, double panelWidth)
     {
-        if (Math.Abs(panelWidth - _lastCandidateWidth) > 0.5)
+        // GF-092-02: パレットは ScrollViewer 内=折畳みでカード高さが変わるとバーが出没し
+        // 幅が ±16px 級で変わる。微小変化で折畳みを解除すると「解除→伸長→バー出現→幅減→再折畳み→…」の
+        // 発振で UI が沈黙的に重くなる(実機=en 切替で顕在化)— バー幅より大きいヒステリシスで縁を切る。
+        // 縮小側の 2 行契約はヒステリシス内でも検証パス(VerifyFolded)が担保する。
+        const double WidthHysteresis = 24;
+        if (Math.Abs(panelWidth - _lastCandidateWidth) > WidthHysteresis)
         {
             _lastCandidateWidth = panelWidth;
             if (_candidateVisibleCount is not null)

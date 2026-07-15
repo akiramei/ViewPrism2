@@ -134,6 +134,49 @@ public sealed class CpUi092CandidatePreviewTests : IDisposable
         }, CancellationToken.None);
     }
 
+    // ---- GF-092-02: スクロールバー出没(±16px 級の幅変化)で折畳みが発振しない ----
+
+    [Fact]
+    public void 折畳み後の微小な幅変化では折畳みを維持する()
+    {
+        // パレットは ScrollViewer 内=折畳みでカード高さが変わるとバーが出没し幅が ±16px 級で変わる。
+        // 微小変化で折畳みを解除すると「解除→カード伸長→バー出現→幅減→再折畳み→…」の発振になり
+        // UI が異様に重くなる(GF-092-02=maintainer 実機・en 切替で顕在化)。
+        var row = NewRow47();
+        row.ReportCandidateLayout(SynthRects(47, panelWidth: 300), null, 300);
+        Assert.Contains(row.CandidateDisplay, o => o is ChipMoreVM); // 折畳み成立(前提)
+        var folded = row.CandidateDisplay.Count;
+
+        // スクロールバー相当(−16px)。折畳み後の実描画(可視 k 件・2 行以内)を報告
+        var visibleChips = folded - 1;
+        row.ReportCandidateLayout(SynthRects(visibleChips, panelWidth: 284), new Rect(200, 26, 60, 20), 284);
+        Assert.Contains(row.CandidateDisplay, o => o is ChipMoreVM); // 折畳み維持(発振しない)
+
+        // 実質的な幅変化(>24px)は再計算(全表示へ戻して測り直す)
+        row.ReportCandidateLayout(SynthRects(visibleChips, panelWidth: 360), new Rect(200, 26, 60, 20), 360);
+        Assert.DoesNotContain(row.CandidateDisplay, o => o is ChipMoreVM); // リセット=次の描画で再計測
+    }
+
+    private static TagPaletteRowViewModel NewRow47() =>
+        new(new Tag { Id = "t47", Name = "都道府県", Type = TagType.Textual },
+            typeText: "テキスト", predefinedValues: PrefectureNames47, numeric: null,
+            moreLabel: n => $"ほか {n} 件");
+
+    /// <summary>合成矩形: チップ幅 55+ギャップ 6 で panelWidth に流し込む(折返しは行送り 26px)。</summary>
+    private static List<Rect> SynthRects(int count, double panelWidth)
+    {
+        const double W = 55, H = 20, GapX = 6, RowH = 26;
+        var rects = new List<Rect>();
+        double x = 0, y = 0;
+        for (var i = 0; i < count; i++)
+        {
+            if (x + W > panelWidth) { x = 0; y += RowH; }
+            rects.Add(new Rect(x, y, W, H));
+            x += W + GapX;
+        }
+        return rects;
+    }
+
     // ---- ヘルパ ----
 
     private async Task<(Window Window, TagsTabViewModel Vm)> RenderAsync()
