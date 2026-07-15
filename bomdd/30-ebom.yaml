@@ -450,11 +450,11 @@ ebom:
       fmea_refs: [FMEA-013]
 
     - id: E-UI-AXIS-NAV-040
-      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割。ECO-084 で表示モード「すべて/未分類」セグメント(REQ-094・ビュー軸のみ・チップ件数モード追随・未分類専用空状態)を追加。ECO-086 で定義値展開チップ(定義順・0 件淡色・未定義値=琥珀破線+バッジ・hide_empty 表示スキップ)を追加。ECO-088 でチップ行の折返し(CAD flex-wrap=VC-IMG-8)を回復=可視幅超過時は複数行で全数到達・クリップ切り捨て不可(受入=CP-CHIPWRAP-088)
+      name: 画像タブ表示軸ナビゲーション(FS フォルダ軸・タグビュー軸・全画像入口・チップ+パンくず)— 旧 E-UI-GRID-022 から ECO-016 で分割。ECO-084 で表示モード「すべて/未分類」セグメント(REQ-094・ビュー軸のみ・チップ件数モード追随・未分類専用空状態)を追加。ECO-086 で定義値展開チップ(定義順・0 件淡色・未定義値=琥珀破線+バッジ・hide_empty 表示スキップ)を追加。ECO-088 でチップ行の折返し(CAD flex-wrap=VC-IMG-8)を回復=可視幅超過時は複数行で全数到達・クリップ切り捨て不可(受入=CP-CHIPWRAP-088)。ECO-091 でチップ行の容量・到達性契約(REQ-097=最大 2 行+「ほか N 件」ポップオーバー・IMG-023A/B 裁定・VC-IMG-9/10)を実装
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-037, REQ-053, REQ-060, REQ-094, REQ-095, REQ-096]
+      requirement_refs: [REQ-037, REQ-053, REQ-060, REQ-094, REQ-095, REQ-096, REQ-097]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       supersedes: E-UI-GRID-022
@@ -500,11 +500,11 @@ ebom:
       acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10, CP-TOOLBAR-RESPONSIVE-027]
 
     - id: E-UI-WORKSPACE-043
-      name: 作業タブ shell + 作業スペースサイドバー(一覧/選択/追加=デフォルト回転/リネーム/件数/折り畳み・ワークスペースヘッダ・グリッド/リスト・ソート・空状態)— ECO-020/ECO-α 新設。ECO-089 でチップ行の折返し(CAD flex-wrap=VC-WORK-1)を回復=ECO-088 画像タブ是正の read-across 閉包(受入=CP-CHIPWRAP-088)
+      name: 作業タブ shell + 作業スペースサイドバー(一覧/選択/追加=デフォルト回転/リネーム/件数/折り畳み・ワークスペースヘッダ・グリッド/リスト・ソート・空状態)— ECO-020/ECO-α 新設。ECO-089 でチップ行の折返し(CAD flex-wrap=VC-WORK-1)を回復=ECO-088 画像タブ是正の read-across 閉包(受入=CP-CHIPWRAP-088)。ECO-091 でチップ行の容量・到達性契約(REQ-097=画像タブと同一契約・VC-WORK-2/3)を同時実装
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-041, REQ-074]
+      requirement_refs: [REQ-041, REQ-074, REQ-097]
       external_source_ref: "ViewPrismUI:資料/作業タブ/ViewPrism2 作業タブ.html"
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       depends_on: [E-WORKSPACE-042, E-UI-SHELL-021, E-UI-BROWSE-022]

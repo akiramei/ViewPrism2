@@ -3,7 +3,7 @@
 - 起票日: 2026-07-15
 - 報告者: maintainer(IMG-023A/B 裁定=2026-07-15 maintainer・A-b+B-a)→ CAD 正典化済みの取り込み
 - 種別: 機能拡張(CAD 裁定済み仕様の実装 — 現実装は折返しまで=ECO-088/089・容量/overflow UI が net-new)
-- status: staged
+- status: applied(2026-07-15 gate② 合格でクローズ)
 
 ## 1. 要求(症状)
 
@@ -171,3 +171,33 @@ diff= Components.axaml 2 行。
 **教訓の芽(N=1)**: **Stretch されたコンテンツは「中心一致」検査を素通りする** — 垂直整列の layout probe は
 中心比較だけでなく**ボックスが内容サイズであること**(非 Stretch)を併せて検査する。グリフ描画位置は
 ボックス上端であり、中心はボックスの属性でしかない(51-cheat-log 記録・2 例目で BomDD 昇格判定)。
+
+## 10. クローズ(2026-07-15 golden 合格)
+
+**gate② 承認(maintainer 実機)**: golden 基準 1〜8 全 OK — 47 件級の最大 2 行+「ほか N 件」(N 一致)・
+ポップオーバー(検索/選択で閉じてナビ/Escape でフォーカス復帰)・FS 軸/作業タブの active+「クリア」残留・
+幅変更の再計算(選択不変)・少数/FS 軸/未定義値チップの視覚不変・両タブ同一契約(裁定 §7 受入条件 9)・
+en 切替。**候補差分の裁定=通常領域チップ自体の非フォーカスを許容**(キーボード契約の明文範囲=
+「ほか N 件」+ポップオーバー内。チップの Button 化は将来要望が出た時の別 ECO)。
+GF-091-01(「ほか N 件」ラベル上寄り)は同日是正し再確認 OK(§9)。
+
+**クローズ 3 点セット**: CP-CHIPWRAP-088 へ golden 承認+GF-091-01 潜伏実績(Stretch 素通りの検査盲点)を
+明記(再発防止)/ register `applied`+golden approved / 本節。
+
+**M4 同期**: **REQ-097 新設**(チップ行の容量・到達性=裁定内容の要求化)・spec §2.6 へ容量節追記・
+E-BOM(E-UI-AXIS-NAV-040/E-UI-WORKSPACE-043)へ REQ-097 参照+ECO-091 追補・
+M-BOM(M-UI-016/M-UI-WORKSPACE-029)へ chip_strip 製造トレース(ChipStripViewModel/ChipRowOverflow 共有)。
+CAD 正典= ViewPrismUI `17dc9f3`(変更なし)。
+
+**教訓**:
+
+1. **「mock の実測アルゴリズム」を先に mock で動かしたことが移植の設計図になった** — CAD 側で
+   折畳み・検証パス・許容差の罠まで実証済みだったため、Avalonia 移植は「アルゴリズム移植+
+   プラットフォーム差(レイアウトパス誘発・Stretch 既定)の吸収」に集中できた。振る舞いの複雑な
+   UI 契約は、裁定時に mock を動くリファレンスまで作り込むと取り込み ECO の不確実性が大きく減る
+   (観測 1 例目・IMG-023A の A-b のような対話的契約で特に有効)。
+2. **同期実装 2 面への同時反映は「意味論の単一実装+実測供給の 2 面」で分担する** — ChipStripViewModel/
+   ChipRowOverflow に意味論を集約し View は実測供給のみとしたことで、両タブの契約一致
+   (裁定受入条件 9)が構造的に保証され、probe も共通ベクトルで済んだ。ECO-090 の統制宣言
+   (read-across 必須)と対で機能した(LabeledChipStrip 級の UI 部品統合は次段=残課題)。
+3. §9 の教訓の芽(Stretch 素通り)は 51-cheat-log 管理(N=1)。
