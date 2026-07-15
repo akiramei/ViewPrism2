@@ -1479,12 +1479,12 @@ changes:
   - id: ECO-096
     title: "階層定義保存後も画像タブの選択中ビューが旧グラフを保持する — 0件ノード非表示の反映に別ビュー往復が必要"
     type: 不具合(タブ間の永続変更反映漏れ・選択中ビューのグラフ再構築漏れ)
-    status: implemented   # 2026-07-16 /eco-fix完了・機械受入751/751・golden待ち
-    golden: "pending"
+    status: applied       # 2026-07-16 maintainer実機golden承認・/eco-acceptでクローズ
+    golden: "approved(2026-07-16 maintainer 実機: タグタブで選択中ビューの0件隠しを保存後、画像タブへ戻るだけで0件ノードが即時消失・別ビュー往復不要・現在ビュー/階層位置/表示モード維持を確認)"
     baseline: "main 1e5eed2"
     findings: "maintainer実機所見2026-07-16: タグタブで配置タグを定義値+『画像が0件の値ノードを隠す』にして階層保存後、画像タブの同一選択中ビューでは0件ノードが残り、別ビュー往復後に初めて消える。工程診断=CAD健全(tag_tab.md=適用/保存+0件隠し設定、image_tab.md=オン時のみ非表示)・BOM健全(REQ-096/CP-DEFEXP-086)・実装逸脱と確定。保存通知はHierarchyEditor Saved→TagsTab DataChanged→MainWindow stale→画像タブ復帰時ReloadTagCatalogAsyncまで到達するが、同メソッドはタグ台帳/ビュー一覧/画像タグを更新して旧_viewRootをRecomputeするだけで階層を再取得/BuildGraphしない。別ビュー往復はLoadViewAsyncがGetHierarchyAsync→BuildGraphするため直る=症状と一致。混入=e81a37a(ECO-022軽量再読込追加)・ECO-086検査は初回ロードを固定したが選択中同一ビューの保存後再同期を未検査。未確定TAG/FL/VEとの関係なし"
     impacted_bom: ["src=ImageTabViewModel.ReloadTagCatalogAsync+ReloadViewGraphAsync+RebindViewPath(active viewの階層/条件/定義値再取得+新graph再束縛・path安全化)", "tests=CpDefExp086UiTests(hide_empty false→true保存後に追加ビュー切替なしで0件chip消失+別名path再束縛+削除済みpath root縮退+headless実描画)", "CP=CP-DEFEXP-086へ選択中ビューの階層保存後再同期次元", "CAD/DB/Oracle/i18n=XAML/style含め変更なし(R6固定Oracle不変)"]
     oracle: "既存固定Oracle行は変更しない(R6)。先行probe=選択中ビューで0件定義値chip表示→DB階層をhide_empty=trueへ保存→ReloadTagCatalogAsync相当のタブ復帰経路だけでchipが消える(是正前赤)。ビュー/コレクション/表示モード/画像選択保持+削除済みpathのroot/home安全fallback"
     verification: "2026-07-16 /eco-fix完了: 先行probe=CpDefExp086UiTests新規1本が是正前1/1不合格(期待=北海道/蝦夷、実際=北海道/青森県/沖縄県/蝦夷)で旧_viewRoot診断を裏取り→是正後緑転。是正=ReloadTagCatalogAsyncがactive viewの階層/条件/定義値を再取得し、通常LoadViewAsyncと共通のReloadViewGraphAsyncでgraph再構築。現在pathはHierarchyNodeId+Kind+Valueで新graphへ再束縛(別名変更に追随・削除段は最長prefix/root縮退)・view削除はFS root退避。read-across=別名即時追随+階層削除安全化+headless実描画(地域/北海道/蝦夷可視・青森県/沖縄県不可視)。build 0/0・Tests 751/751・Oracle 109+2skip(R6不変)・validate 0/0。R7=VC-IMG-6並置・XAML/style/i18n変更なし・転写漏れ0"
     body: 60-change-order-eco-096.md
-    notes: "gate①不要(CAD/BOM健全・実装逸脱)。是正+機械受入完了・gate②待ち。golden=maintainer実機で報告手順再走(画像タブへ戻るだけで0件ノード消失・別ビュー往復不要・現在状態維持)。read-across=展開モード/条件/別名/ホーム/構造は同一graph再構築で同期・別真因/R3所見なし"
+    notes: "2026-07-16クローズ。gate①不要(CAD/BOM健全・実装逸脱)、gate②=maintainer実機承認済み。再発防止=CP-DEFEXP-086へ軽量再読込時のactive graph再構築+path論理identity再束縛を潜伏実績付きで刻印。read-across=展開モード/条件/別名/ホーム/構造は同一graph再構築で同期・別真因/R3所見なし。M4同期不要(VM内部是正・as-built契約不変)"
