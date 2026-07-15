@@ -1468,8 +1468,8 @@ changes:
   - id: ECO-095
     title: "デフォルト作業スペース名の多言語不追随 — UI ロケール文字列の永続データ焼き込み(Core シード)"
     type: 不具合(i18n 漏れ・第 3 の様態= Core 層シードデータへのロケール文字列焼き込み)
-    status: implemented   # 2026-07-15 是正+機械受入完了(案A=表示時解決・WorkTabViewModel のみ・Core 不変。probe 赤3→緑転・build 0-0/Tests 750/750/Oracle 109+2skip/validate 0-0)・golden 待ち
-    golden: "pending(是正後に ja/en 切替の実機確認)"
+    status: applied   # 2026-07-15 gate②合格(maintainer実機)→クローズ。decide=88d9f20(案A)・fix=fc35bf1(Tests 750/750)。M4=CP-I18N-010 第3様態次元+CP-UI-G1 観点+E-UI-WORKSPACE-043 as-built 注記
+    golden: "approved(2026-07-15 maintainer 実機: ja 起動の視覚不変・en 切替でデフォルト行/ヘッダー/移動先が Default へ即追随(バッジと言語一致=報告症状解消)・ja 往復・回転降格の時刻名不変)"
     baseline: "main 8e866a9"
     findings: "ECO-094 gate② 中の maintainer 実機所見(en 切替検査)— R3 分離(別サーフェス=作業スペースサイドバー・ECO-094 のチップ行と無関係)。症状= en 切替でデフォルト作業スペース行の名前が「デフォルト」のまま(既定バッジ workspace.defaultAutoAdd は ja/en 完備で追随=名前だけ残る)。工程診断=実装欠陥と確定: WorkspaceService.cs:17 の const DefaultName=「デフォルト」が EnsureDefaultExistsAsync(:40)+デフォルト回転(:77)で DB シード名として永続化・表示は DB Name 直(WorkTabViewModel.cs:378/:400)=ロケール切替が作用しない構造。混入= f211fa9(ECO-020/021 作業タブ初期実装)・潜伏= ja 環境で機能等価・en 切替検査(ECO-094 golden 基準 6)が初可視化。検査の谷間= ECO-079 の i18n 全数走査(XAML+VM の 2 層)は Core 層シード永続データを検査次元に含まず(第 3 の様態=ECO-080 暗黙前提 3 様態への追補候補)。是正を単純化する既存制約=デフォルトは改名不可+回転降格時は時刻名へ改名=is_default 行の Name は事実上固定→表示専用化がユーザー編集と衝突しない。副所見(スコープ外・51-cheat-log)= i18n キー image.feature.defaultWorkspace が全ソース未使用=デッドキー(未使用キーを i18n lint が検出しない谷間・ECO-091 重複キー所見と同族)"
     impacted_bom: ["src(案A)=WorkTabViewModel(サイドバー行/ヘッダーの表示解決)+Name 表示面の全数(fix 時走査で確定)。Core(WorkspaceService)不変=DB 名は識別子残置", "テスト=en 切替でデフォルト行が Default 表示になる probe(是正前赤)+ja 不変 pin", "CP=i18n 検査(ECO-080)へ永続データ焼き込み次元の追補", "i18n=common.default 再利用見込み=キー新設なし", "CAD=変更なし見込み(ja 視覚不変)"]

@@ -521,6 +521,7 @@ ebom:
         - (ECO-021/β-3) 整理モード(類似+マージ整理トレイ)を E-UI-SIMILARITY-035 + E-UI-MERGE-036 から再利用配線。マージ先/整理対象の割当(グリッドクリック分岐・マージ先リング/整理対象チェック)・似た画像を探す(条件=CriteriaMatcher 純粋関数で現スペース内絞り込み / 類似=FindSimilarAsync 結果を workspace に限定)・マージ=MergeService(E-MERGE-034・原子・タグ union・source=deleted・物理非破壊 INV-009)。タグ編集・作業・整理の3モード排他(ECO-014§8 排他隠し)。Core 意味論不変・新 Core/DS なし。タグ統合 OFF/取り消しは IMG-011(別 ECO)
         - (ECO-021/β-4) ⋯メニュー(削除/ゴミ箱)を E-TRASH-038 / E-UI-REPAIR-039 から再利用配線。削除モード=4つ目の排他文脈モード(⋯から入る)→「ゴミ箱へ移動」=DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009)。ゴミ箱 in-tab popup(ECO-019 再利用・複数選択/すべて選択/復元 RestoreAsync/完全削除 PermanentDeleteAsync/空・確認文言は INV-009 忠実)。**修復はコレクションスコープで作業スペースに対応しないため作業タブ ⋯ から非搭載**(設計判断)。ゴミ箱は workspace スコープ(workspace_images × images status=deleted・E-WORKSPACE-042.GetDeletedImagesAsync 読み取りクエリ追加=新状態遷移なし)。完全削除は FK CASCADE で workspace_images も消滅。**ECO-β 完了**(β-1〜β-4)
         - (ECO-090 暫定統制 → **ECO-094 で移管完了**) チップ行(ヒント見出し+WrapPanel)は E-UI-AXIS-NAV-040 画像タブチップ行と同一意味論 — 暫定統制は **SC-CHIPSTRIP-001(LabeledChipStrip=35-dsbom)への構造的 DRY で置換済み**(2026-07-15・宣言の詳細は E-UI-AXIS-NAV-040 側と対)。両タブは同一部品を消費し同期は構造保証・構造 probe(CpUi094)が後退を検出
+        - (ECO-095/REQ-050) デフォルト作業スペースの表示名は **DB 名でなく表示時解決**(is_default=1 → Loc common.default。サイドバー行/中央ヘッダー/移動先メニューの 3 面一貫+文化切替で行再射影)。DB シード名(WorkspaceService.DefaultName)は識別子として残置=スキーマ/データ不変。回転降格した旧デフォルト(時刻名)はユーザーデータ=非翻訳。デフォルトは改名不可のため表示名乖離はユーザー編集と衝突しない
       acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-NFR-026, CP-UI-G1]
       fmea_refs: [FMEA-038]
 
