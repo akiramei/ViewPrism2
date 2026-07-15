@@ -496,7 +496,7 @@ ebom:
         - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(旧 E-UI-DETAIL-023)は ECO-023 で撤回(REQ-043 リバース誤り)=新 surface に配置しない
         - since ECO-027(IMG-014): モード中に残すツールバー項目は「表示軸・ソート・グリッド/リスト・当該モードの終了(+モード固有操作)」**だけ**とし、`表示列`(E-UI-BROWSE-022/ECO-025)も隠す(CAD image_tab.md「ツールバー」準拠。列編集はモードを抜けてから)。ECO-014 §8 の「他モード入口・作業・⋯ を隠す」規律に表示列を追加。モード突入時に開いていた列ピッカーは閉じる(プレースメント対象消失の浮き残り防止)
         - since ECO-027(IMG-014): ツールバーの**狭幅レスポンシブ収納**。判定はビューポート幅でなく**ツールバー実測幅**(左ペイン折り畳み・右ペイン開閉で使える幅が変わるため)。段階=①入口ボタンのラベルをアイコン化(<約820px・ToolTip 維持)→②「整理」を`⋯`へ退避(<約640px)→③回り込み(左右クラスタが単一行に収まらない時に右クラスタを2段目へ・左クラスタも極狭では内部折り返し)。確定契約(px 値でなく挙動)=①どの幅でも重ならない/潜り込まない ②畳む順序(ラベル→退避→回り込み) ③離脱/実行ボタンのラベルは狭幅でも維持(モード中の可視ボタン=終了/実行はラベルを畳まない)。判定/回り込みの状態計算は描画から独立して unit 検査可能(実測供給は View 責務)
-        - (ECO-090 暫定統制) チップ行(ヒント見出し+WrapPanel)は **E-UI-WORKSPACE-043 作業タブチップ行と同一意味論の同期実装**(別ファイル 2 面)。**一方のチップ行を変更する ECO は、他方への read-across 結果(適用 or 非該当の理由)を ECO 本文に必須記録する**(ECO-088→089 の片側修正漏れの再発防止)。共通受入= CP-CHIPWRAP-088 の共通ベクトル(CpUi090=1 件/5 件/折返し境界/47 件/長ラベル/狭幅を両タブへ同一適用)。共有部品化(LabeledChipStrip 級)は ECO-091/092 golden 後の DRY 判断まで保留 — この宣言はその時点で部品側の契約へ移管する
+        - (ECO-090 暫定統制 → **ECO-094 で移管完了**) チップ行(ヒント見出し+WrapPanel)は E-UI-WORKSPACE-043 作業タブチップ行と同一意味論 — 暫定統制(別ファイル 2 面コピペ+read-across 必須記録)は **SC-CHIPSTRIP-001(LabeledChipStrip=35-dsbom)への構造的 DRY で置換済み**(2026-07-15)。両タブは同一部品を消費し同期は構造保証・構造 probe(CpUi094)が再コピペ化への後退を検出。共通受入= CP-CHIPWRAP-088 の共通ベクトル(CpUi090=両タブへ同一適用)は部品面の受入として存続
       acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10, CP-TOOLBAR-RESPONSIVE-027]
 
     - id: E-UI-WORKSPACE-043
@@ -520,7 +520,7 @@ ebom:
         - (ECO-021/β-2) タグ編集モードを E-UI-TAGASSIGN-029 から再利用配線(現在のタグ/タグ追加=シンプル/テキスト/数値・インライン値・数値セル。since ECO-041: タグ追加検索も再利用範囲=画像タブと同一意味論 — β-2 時点の宣言転記漏れの補完・mock 作業タブにも同一検索あり)。付与/削除は TagService(TagImagesAsync/UntagImagesAsync)経由で Core 意味論不変。作業と排他(`inSelect=editMode||workMode` で選択機構共有)。ECO-014§8 排他隠し規律を作業タブへ拡張(モード中は他モード入口を隠す `ShowEditEntry`/`ShowWorkEntry`)。連番別アクション(UQ-I02b)はモック作業タブに無いため非搭載
         - (ECO-021/β-3) 整理モード(類似+マージ整理トレイ)を E-UI-SIMILARITY-035 + E-UI-MERGE-036 から再利用配線。マージ先/整理対象の割当(グリッドクリック分岐・マージ先リング/整理対象チェック)・似た画像を探す(条件=CriteriaMatcher 純粋関数で現スペース内絞り込み / 類似=FindSimilarAsync 結果を workspace に限定)・マージ=MergeService(E-MERGE-034・原子・タグ union・source=deleted・物理非破壊 INV-009)。タグ編集・作業・整理の3モード排他(ECO-014§8 排他隠し)。Core 意味論不変・新 Core/DS なし。タグ統合 OFF/取り消しは IMG-011(別 ECO)
         - (ECO-021/β-4) ⋯メニュー(削除/ゴミ箱)を E-TRASH-038 / E-UI-REPAIR-039 から再利用配線。削除モード=4つ目の排他文脈モード(⋯から入る)→「ゴミ箱へ移動」=DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009)。ゴミ箱 in-tab popup(ECO-019 再利用・複数選択/すべて選択/復元 RestoreAsync/完全削除 PermanentDeleteAsync/空・確認文言は INV-009 忠実)。**修復はコレクションスコープで作業スペースに対応しないため作業タブ ⋯ から非搭載**(設計判断)。ゴミ箱は workspace スコープ(workspace_images × images status=deleted・E-WORKSPACE-042.GetDeletedImagesAsync 読み取りクエリ追加=新状態遷移なし)。完全削除は FK CASCADE で workspace_images も消滅。**ECO-β 完了**(β-1〜β-4)
-        - (ECO-090 暫定統制) チップ行(ヒント見出し+WrapPanel)は **E-UI-AXIS-NAV-040 画像タブチップ行と同一意味論の同期実装**(別ファイル 2 面)。**一方のチップ行を変更する ECO は、他方への read-across 結果(適用 or 非該当の理由)を ECO 本文に必須記録する**(ECO-088→089 の片側修正漏れの再発防止)。共通受入= CP-CHIPWRAP-088 の共通ベクトル(CpUi090=両タブへ同一適用)。共有部品化は ECO-091/092 golden 後の DRY 判断まで保留(宣言の詳細は E-UI-AXIS-NAV-040 側と対)
+        - (ECO-090 暫定統制 → **ECO-094 で移管完了**) チップ行(ヒント見出し+WrapPanel)は E-UI-AXIS-NAV-040 画像タブチップ行と同一意味論 — 暫定統制は **SC-CHIPSTRIP-001(LabeledChipStrip=35-dsbom)への構造的 DRY で置換済み**(2026-07-15・宣言の詳細は E-UI-AXIS-NAV-040 側と対)。両タブは同一部品を消費し同期は構造保証・構造 probe(CpUi094)が後退を検出
       acceptance_refs: [CP-WORKSPACE-028, CP-L1-SMOKE, CP-NFR-026, CP-UI-G1]
       fmea_refs: [FMEA-038]
 

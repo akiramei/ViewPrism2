@@ -45,7 +45,7 @@ design_system_bom:
     lifecycle: candidate
     surface_layers:
       material: [E-DESIGN-028, K-DESIGN]
-      shared_component: [SC-CARD-001, SC-CTA-BUTTON-001, SC-TYPE-CHIP-001, SC-CONDITION-CHIP-001, SC-VALUE-CHIP-001, SC-BADGE-001, SC-ICON-BUTTON-001, SC-SECTION-HEADER-001, SC-HELP-BOX-001, SC-DRAG-HANDLE-001, SC-COLUMN-PICKER-001, SC-SIMILARITY-SESSION-002]
+      shared_component: [SC-CARD-001, SC-CTA-BUTTON-001, SC-TYPE-CHIP-001, SC-CONDITION-CHIP-001, SC-VALUE-CHIP-001, SC-BADGE-001, SC-ICON-BUTTON-001, SC-SECTION-HEADER-001, SC-HELP-BOX-001, SC-DRAG-HANDLE-001, SC-COLUMN-PICKER-001, SC-SIMILARITY-SESSION-002, SC-CHIPSTRIP-001]
       screen_surface: [E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-SHELL-021, E-UI-TAGASSIGN-029, E-UI-TAGS-026, E-UI-NODEGRAPH-025, E-UI-REPAIR-039, E-UI-SIMILARITY-035, E-UI-WORKSPACE-043]
 
   # ECO-025(表示列モデル・段階 α/β/β-2)で導入した共有部品。
@@ -82,6 +82,22 @@ design_system_bom:
     lifecycle_contract: "明示停止、整理終了、target/scope/mode/new search/window終了でcancel+generation無効化。first cancel=grid、re-search cancel=直前completed保持"
     result_contract: "ECO-067/GF-067-04: 設定と結果はmin(pHash大局score,連続detail score)のN%単一軸。結果badgeはN%だけで内部関係を併記せず、70%検索には70%以上だけを表示。exactのみ100"
     control_plan_refs: [CP-SIMSESSION-029, CP-DUPQUALITY-030, CP-UI-G1, CP-UI-G9]
+
+  # ECO-094 M4: 固定クローム チップ行(IMG-023=ECO-091 容量・到達性契約)の実体部品。
+  # ECO-090 の暫定統制(2 面コピペ+read-across 必須)を構造的 DRY で置換 — E-BOM 側の同期宣言は
+  # 本部品の契約へ移管済み(30-ebom E-UI-AXIS-NAV-040/E-UI-WORKSPACE-043 の ECO-090 注記参照)。
+  labeled_chip_strip:
+    id: SC-CHIPSTRIP-001
+    name: ラベル付きチップ行(最大2行折畳み + ほかN件 + overflow ポップオーバー + 実測供給)
+    part_kind: shared-component-sub-bom
+    lifecycle: realized
+    realized_by: "src/ViewPrism2.App/Views/LabeledChipStrip.axaml(.cs) + ViewModels/ChipStripViewModel.cs + ChipRowOverflow.cs(ホスト契約= ViewModels/IChipStripHost.cs)"
+    introduced_by: ECO-094
+    consumed_by: [E-UI-AXIS-NAV-040, E-UI-WORKSPACE-043]
+    visual_contract: "最大 2 行+2 行目末尾「ほか N 件」→ポップオーバー(検索+全項目一覧)・N=非表示数会計一致・折畳み時 active/クリア残留・幅変更再計算(VC-IMG-9/10=VC-WORK-2/3・VPUI 17dc9f3)。チップ item テンプレートは richer 版へ統一(IsUndef/IsNav=false 面で不活性=視覚不変)"
+    lifecycle_contract: "実測供給(LayoutUpdated→EvaluateChipRow)は部品内で完結。ホストは IChipStripHost(ChipStrip/ShowChips/ShowChipHint/ChipHintLabel/Loc/ClickChip)を公開するだけ。ジェスチャ起点は部品の direct ハンドラ(ECO-087 教訓)"
+    control_plan_refs: [CP-CHIPWRAP-088, CP-UI-G1]
+    dry_gate: "両 surface の契約収束(ECO-091/092/093 golden 済み)後に抽出(ECO-091 裁定 §7 の実行)。構造 probe(CpUi094)が再コピペ化への後退を恒久検出"
 
   source_cad_refs:
     # ECO-032(a) 2026-07-03: テンプレート起こし時のプレースホルダ残置を実出所で補正。
