@@ -65,3 +65,16 @@
 - **gate①(裁定): 必要** — 案 A(封じ込めのみ)/案 B(先頭 k 件+非対話ほか N 件・推奨)。
   案 B の場合は k の値(固定 3〜4 か幅実測か)も併せて。
 - gate②(golden): 是正後に実機承認(多量時の乱れ解消+少数件の視覚不変=G-6/ECO-087 承認済み視覚)。
+
+## 7. 裁定記録(2026-07-15 maintainer)
+
+**gate① 裁定=案 B 採択**(先頭 k 件+非対話「ほか N 件」)。k は推奨の単純形= **固定 3 件**で
+CAD 正典化(mock のデモ規模と一致・実装も固定数で単純)。
+
+**CAD 先行反映済み(VPUI `afc8878`)**: tag_tab.md ライブプレビュー節へ多量時仕様+**VC-TAG-11 新設**
+(先頭 3 件+非対話ほか N 件・単一行維持・右ドック説明文と重ならない・少数件〈3 件以下〉の視覚不変)。
+mock(タグ作成ダイアログ)の previewOptions を先頭 3 件+非対話ほか N 件へ改版(PREVIEW_MAX=3)。
+
+**fix の残作業**(/eco-fix eco-093): VC-TAG-11 から probe 生成(是正前赤=47 件で caption 交差)→
+TagEditorViewModel の PreviewChips を先頭 3 件+ほか N 件表示派生へ(chip.moreItems 再利用)→
+TagEditorWindow.axaml のプレビュー帯へ非対話「ほか N 件」テキスト→機械受入→R7→gate②。
