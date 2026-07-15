@@ -207,9 +207,25 @@ public sealed partial class TagEditorViewModel : ObservableObject
         BuildNumericForPreview(),
         _localization.T(TagAssignmentPreviewBuilder.NamePlaceholderKey));
 
-    /// <summary>テキスト型プレビューの候補値チップ(axaml バインド用・先頭が選択強調)。</summary>
+    /// <summary>プレビュー帯に直接表示する候補値の上限(ECO-093=案 B・CAD VC-TAG-11=k 固定 3 件)。</summary>
+    private const int PreviewMaxChips = 3;
+
+    /// <summary>
+    /// テキスト型プレビューの候補値チップ(axaml バインド用・先頭が選択強調)。
+    /// ECO-093(案 B): 先頭 3 件のみ — 多量候補値でも帯は単一行を保ち説明文と重ならない(要約は
+    /// TAG-013=T-a と同様式。全数の確認は選択肢リスト側=本ダイアログ内で常に可能)。
+    /// </summary>
     public IReadOnlyList<TagPreviewChipViewModel> PreviewChips =>
-        Preview.Chips.Select(c => new TagPreviewChipViewModel(c.Label, c.IsSelected)).ToList();
+        Preview.Chips.Take(PreviewMaxChips).Select(c => new TagPreviewChipViewModel(c.Label, c.IsSelected)).ToList();
+
+    /// <summary>プレビュー帯の非表示候補値数(ECO-093・VC-TAG-11 の N)。</summary>
+    public int PreviewMoreCount => Math.Max(0, Preview.Chips.Count - PreviewMaxChips);
+
+    public bool PreviewMoreShow => PreviewMoreCount > 0;
+
+    /// <summary>非対話「ほか N 件」ラベル(chip.moreItems= ECO-091/092 と共通キー)。</summary>
+    public string PreviewMoreLabel => _localization.T(
+        "chip.moreItems", new Dictionary<string, string> { ["count"] = PreviewMoreCount.ToString(System.Globalization.CultureInfo.InvariantCulture) });
 
     /// <summary>★モードのプレビュー(NumericStar 時)で ★ 並びを描画するための列挙。</summary>
     public IReadOnlyList<TagPreviewStarViewModel> PreviewStars
@@ -472,6 +488,9 @@ public sealed partial class TagEditorViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(Preview));
         OnPropertyChanged(nameof(PreviewChips));
+        OnPropertyChanged(nameof(PreviewMoreCount));  // ECO-093: 要約の N も候補値編集へ追随
+        OnPropertyChanged(nameof(PreviewMoreShow));
+        OnPropertyChanged(nameof(PreviewMoreLabel));
         OnPropertyChanged(nameof(PreviewStars));
         OnPropertyChanged(nameof(IsPreviewTextual));
         OnPropertyChanged(nameof(IsPreviewStar));

@@ -177,7 +177,9 @@
           <TextBlock Text="{Binding Preview.Name}" FontSize="15" FontWeight="SemiBold"
                      VerticalAlignment="Center" />
 
-          <!-- テキスト: 候補値チップ(先頭=選択強調) -->
+          <!-- テキスト: 候補値チップ(先頭=選択強調)。
+               ECO-093(案 B・CAD VC-TAG-11): 先頭 3 件+非対話「ほか N 件」の要約 —
+               多量候補値でも帯は単一行を保ち、右ドックの説明文と重ならない(TAG-013=T-a 同様式)。 -->
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                       IsVisible="{Binding IsPreviewTextual}">
             <TextBlock Text="=" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
@@ -195,6 +197,8 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <TextBlock Classes="previewMore" Text="{Binding PreviewMoreLabel}" IsVisible="{Binding PreviewMoreShow}"
+                       FontSize="12" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
           </StackPanel>
 
           <!-- 数値: ±ステッパ(両モード共通)+ ★並び or 数値ラベル -->

@@ -78,3 +78,35 @@ mock(タグ作成ダイアログ)の previewOptions を先頭 3 件+非対話ほ
 **fix の残作業**(/eco-fix eco-093): VC-TAG-11 から probe 生成(是正前赤=47 件で caption 交差)→
 TagEditorViewModel の PreviewChips を先頭 3 件+ほか N 件表示派生へ(chip.moreItems 再利用)→
 TagEditorWindow.axaml のプレビュー帯へ非対話「ほか N 件」テキスト→機械受入→R7→gate②。
+
+## 8. 実施記録(2026-07-15 /eco-fix)
+
+**プローブ先行(R5)**: CpUi093PreviewSummaryTests 2 本を CAD VC-TAG-11 から生成。是正前赤を実測 —
+47 件テスト FAIL(プレビュー帯チップ Expected 3 / **Actual 47**=全件列挙・診断どおり)。
+少数 2 件 pin は緑(G-6/ECO-087 承認済み視覚の基準)。
+
+**是正(案 B・k=3)**: TagEditorViewModel — `PreviewChips` を先頭 3 件へ(PreviewMaxChips=3=CAD VC-TAG-11)+
+`PreviewMoreCount/Show/Label`(chip.moreItems= ECO-091/092 と共通キー・Loc 経由)。候補値編集への
+追随は既存 RaisePreviewChanged へ 3 通知を追加。TagEditorWindow.axaml — プレビューチップ列の直後に
+**非対話 TextBlock**(Classes=previewMore・FaintText・fontSize 12=mock 転写)。
+diff= VM 1 箇所+XAML 1 要素+通知 3 行。既存の選択強調(先頭チップ)・数値/シンプル型プレビューは無改変。
+
+**横断規約(ECO-080)**: 新規文言なし(chip.moreItems 共通利用)・XAML 直書きなし・VM/DB 不変。
+
+**機械受入**: build 0/0・**Tests 743/743**(probe 2 本緑転)・Oracle 109+2skip(R6 不変)・validate_bom 0/0。
+
+**セルフゴールデン(R7・面全体並置=3 分類。CAD mock=タグ作成ダイアログ.dc.html は本裁定で
+先頭 3 件+ほか N 件へ改版済み=VPUI afc8878)**:
+
+| # | 差分/次元 | 分類 |
+|---|---|---|
+| 先頭 3 件+非対話「ほか N 件」(N=非表示数)・単一行維持・caption 非交差 | 転写(probe 実測=mock PREVIEW_MAX=3 と同値) | — |
+| 「ほか N 件」意匠(グレー小テキスト・カーソル/ホバーなし) | 転写(mock span cursor:default と同義) | — |
+| 少数件(3 件以下)のプレビュー・先頭チップの選択強調・数値/シンプル型プレビュー | 不変(pin 緑+既存 CpTagDlg087 全緑=743 に包含) | — |
+| mock のプレビューチップはクリックで選択値切替(対話)/実装は非対話 Border | **既存差分**(ECO-087 以前からの実装状態・本 ECO の対象外=プレビューチップの対話性は VC-TAG-11 の範囲外) | 記録済み |
+
+転写漏れ 0。
+
+## 9. 残ゲート(更新)
+
+- gate②(golden)のみ。
