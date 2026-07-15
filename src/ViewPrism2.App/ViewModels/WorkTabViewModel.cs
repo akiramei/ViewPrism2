@@ -48,6 +48,8 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
 
     private string? _currentWorkspaceId;
     private string? _renameId;
+    /// <summary>直近ロードの作業スペース一覧(ECO-095: 言語切替時の同期再射影に使う)。</summary>
+    private IReadOnlyList<WorkspaceWithCount> _wsList = [];
     private string? _wsDeleteId;   // 削除確認モーダルの対象スペース
     // ECO-069/FL-003案A: WorkTabはactive viewを持たないためv2 sortを基本3列へ限定して消費する。
     private string? _sortColKey;
@@ -131,6 +133,12 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
             // GF-079-01: VM 算出ラベル(ボタン/軸/列/件数)も言語切替へ追随させる
             OnPropertyChanged(string.Empty);
             ChipStrip.OnCultureChanged(); // 「ほか N 件」ラベルの追随(ECO-091)
+            // ECO-095(案A): デフォルト作業スペース名は表示時解決 — 行/ヘッダー/移動先を
+            // キャッシュ済みリストから同期再射影(DB 再読込なし・選択/リネーム状態は不変)
+            RebuildWorkspaceRows();
+            if (_wsList.FirstOrDefault(w => w.Workspace.Id == _currentWorkspaceId) is { } cur)
+                WsName = ResolveWorkspaceDisplayName(cur.Workspace);
+            RebuildMoveTargets(_wsList);
         };
         _searchSession.PropertyChanged += (_, _) => OnPropertyChanged(string.Empty);
     }
@@ -371,19 +379,34 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
                 ?? list.FirstOrDefault()?.Workspace.Id;
         }
 
-        Workspaces.Clear();
-        foreach (var w in list)
-        {
-            Workspaces.Add(new WorkspaceRowVM(
-                w.Workspace.Id, w.Workspace.Name, w.Workspace.IsDefault,
-                w.Workspace.IsDefault ? _localization.T("workspace.autoAddTarget") : _localization.T("workspace.savedSpace"),
-                w.NormalImageCount.ToString(), w.Workspace.Id == _currentWorkspaceId,
-                editing: w.Workspace.Id == _renameId));
-        }
+        _wsList = list;
+        RebuildWorkspaceRows();
 
         await LoadCurrentImagesAsync(list).ConfigureAwait(true);
         RebuildMoveTargets(list);
         await RefreshTrashCountAsync().ConfigureAwait(true); // ⋯ゴミ箱バッジ(現スペースの deleted 件数)
+    }
+
+    /// <summary>
+    /// 表示名の解決(ECO-095 案A): is_default=1 の行は DB 名(シード定数=UI ロケール焼き込み)を使わず
+    /// Loc(common.default)で解決する。デフォルトは改名不可+回転降格時は時刻名へ改名されるため、
+    /// DB 名と表示名の乖離はユーザー編集と衝突しない(ECO-095 §3-5)。非デフォルトは DB 名のまま。
+    /// </summary>
+    private string ResolveWorkspaceDisplayName(Workspace ws)
+        => ws.IsDefault ? _localization.T("common.default") : ws.Name;
+
+    /// <summary>サイドバー行の再構築(ReloadWorkspacesAsync と言語切替の共通経路・選択/リネーム状態は保持)。</summary>
+    private void RebuildWorkspaceRows()
+    {
+        Workspaces.Clear();
+        foreach (var w in _wsList)
+        {
+            Workspaces.Add(new WorkspaceRowVM(
+                w.Workspace.Id, ResolveWorkspaceDisplayName(w.Workspace), w.Workspace.IsDefault,
+                w.Workspace.IsDefault ? _localization.T("workspace.autoAddTarget") : _localization.T("workspace.savedSpace"),
+                w.NormalImageCount.ToString(), w.Workspace.Id == _currentWorkspaceId,
+                editing: w.Workspace.Id == _renameId));
+        }
     }
 
     private async Task LoadCurrentImagesAsync(IReadOnlyList<WorkspaceWithCount> list)
@@ -397,7 +420,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
             return;
         }
 
-        WsName = current.Workspace.Name;
+        WsName = ResolveWorkspaceDisplayName(current.Workspace);
         WsIsDefault = current.Workspace.IsDefault;
 
         _sourceImages = (await _workspaces.GetImagesAsync(_currentWorkspaceId).ConfigureAwait(true)).ToList();
@@ -646,7 +669,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
     {
         MoveTargets.Clear();
         foreach (var w in list.Where(w => w.Workspace.Id != _currentWorkspaceId))
-            MoveTargets.Add(new MoveTargetVM(w.Workspace.Id, w.Workspace.Name, w.NormalImageCount.ToString()));
+            MoveTargets.Add(new MoveTargetVM(w.Workspace.Id, ResolveWorkspaceDisplayName(w.Workspace), w.NormalImageCount.ToString()));
         OnPropertyChanged(nameof(NoMoveTargets));
     }
 

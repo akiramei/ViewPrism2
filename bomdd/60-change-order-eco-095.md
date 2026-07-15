@@ -76,3 +76,34 @@
 **gate① 裁定=案A 採択**(表示時解決)。is_default=1 の行は DB Name を使わず
 Loc(common.default)で表示する。DB スキーマ・既存データ不変・切替に即追随・既存 DB も直る。
 fix は Name 表示面の全数走査で一貫させる(/eco-fix eco-095)。
+
+## 8. 実施記録(2026-07-15 /eco-fix)
+
+**全数走査(表示面の確定)**: `Workspace.Name` の表示消費は WorkTabViewModel の 3 箇所のみ
+(grep 実測): ①サイドバー行(:378)②中央ヘッダー WsName(:400)③移動先メニュー(:649)。
+ImageTabWorkViewModel/MainWindowViewModel はサービス注入のみで名前を表示しない。
+追加の実測= **文化切替ハンドラは行 VM を再構築していなかった**(GF-079-01 の再構築対象は
+ソート列のみ)— 案A は構築時解決のため、切替→再射影の配線が症状是正に内在する
+(同じ再構築で baked Sub ラベル〈自動追加先/保存済み〉の不追随も直る=スコープ内の帰結)。
+
+**プローブ先行(R5)**: `CpI18n095DefaultWorkspaceNameTests` 新設(4 本)→ 是正前
+**赤 3/3**(en 初期化・切替追随・移動先)+ ja pin 緑=真因(DB 焼き込み名の直接表示+
+再射影なし)の実測裏取り。
+
+**是正(案A)**: WorkTabViewModel のみ(**Core/WorkspaceService は不変**=DB 名は識別子残置):
+1. `ResolveWorkspaceDisplayName(Workspace)` — is_default なら Loc(common.default)・他は DB 名。
+2. 行構築を `RebuildWorkspaceRows()` へ抽出(ReloadWorkspacesAsync と言語切替の共通経路)+
+   `_wsList` キャッシュ。3 表示面すべてに解決を適用。
+3. 文化切替ハンドラへ同期再射影(行+WsName+移動先。DB 再読込なし・選択/リネーム状態不変)。
+i18n= common.default(ja/en 既存)再利用=**キー新設なし**。
+
+**機械受入**: build 0/0・**Tests 750/750**(probe 3 本赤→緑転+既存 746 無改変緑)・
+Oracle 109+2skip(R6 不変)・validate_bom 0/0。
+
+**セルフゴールデン(R7)**: XAML 無変更・VM 表示派生のみ。ja= 視覚不変(probe pin=「デフォルト」
+表示・CAD mock は ja 正典と一致)。en= 名前が "Default" へ変化(=是正意図そのもの・バッジ
+"Default (auto-add target)" と整合)。転写漏れ 0。
+
+## 9. クローズ(gate② 待ち)
+
+golden 合格後に /eco-accept eco-095(CP への「永続データ焼き込み」次元追補は accept 時 M4)。
