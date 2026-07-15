@@ -25,7 +25,7 @@ namespace ViewPrism2.App.ViewModels;
 /// 画像タブ(golden 済み)には触れず、Core サービス・末端 VM(ImageItemVM/ChipVM)・DS を再利用して
 /// 作業タブ側でオーケストレートする(maintainer 裁定 UQ-W06=B・隔離方式)。ドメイン操作は WorkspaceService 経由。
 /// </summary>
-public sealed partial class WorkTabViewModel : ObservableObject
+public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
 {
     private readonly WorkspaceService _workspaces;
     private readonly ISyncFolderRepository _folders;

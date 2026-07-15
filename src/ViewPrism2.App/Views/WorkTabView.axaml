@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ViewPrism2.App.ViewModels"
+             xmlns:views="using:ViewPrism2.App.Views"
              xmlns:c="using:ViewPrism2.App.Controls"
              xmlns:cv="using:ViewPrism2.App.Converters"
              xmlns:media="clr-namespace:Avalonia.Media;assembly=Avalonia.Base"
@@ -790,81 +791,11 @@
         </DockPanel>
       </Border>
 
-      <!-- タグ絞り込みチップ行 -->
-      <Border DockPanel.Dock="Top" IsVisible="{Binding ShowChips}" Background="{StaticResource AppBackgroundBrush}"
-              BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="18,11">
-        <!-- ECO-089(ECO-088 の read-across 閉包): WrapPanel の折返し(mock flex-wrap)は
-             有限幅測定が前提 — 横 StackPanel は無限幅測定で折返し契機を奪う(VC-WORK-1=VC-IMG-8)。
-             ImageTabView チップ行(ECO-088)と同一の是正。
-             ECO-091(IMG-023A=A-b/B=B-a): 最大 2 行+「ほか N 件」→ポップオーバー(検索+全項目一覧)。
-             active+「クリア」は折畳み時も通常領域に残す。画像タブと同一契約(VC-WORK-2/3=VC-IMG-9/10・
-             ECO-090 同期宣言=一方を変更する ECO は他方への read-across を必須記録)。 -->
-        <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
-          <TextBlock Classes="chipHint" Text="{Binding ChipHintLabel}" IsVisible="{Binding ShowChipHint}"
-                     Margin="0,0,8,0" VerticalAlignment="Center" />
-          <ItemsControl Grid.Column="1" x:Name="ChipDisplay" ItemsSource="{Binding ChipStrip.DisplayItems}">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel LineSpacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.DataTemplates>
-              <DataTemplate DataType="vm:ChipVM">
-                <Border Classes="tagChip" Background="{Binding Background}" BorderBrush="{Binding BorderBrush}"
-                        Margin="0,0,8,0" PointerPressed="OnChipPressed">
-                  <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-                    <Ellipse Width="9" Height="9" Fill="{Binding DotBrush}" IsVisible="{Binding HasDot}" VerticalAlignment="Center" />
-                    <TextBlock Classes="chipLabel" Text="{Binding Label}" Foreground="{Binding LabelBrush}" />
-                    <Border Classes="chipCount" Background="{Binding CountBackground}" IsVisible="{Binding HasCount}">
-                      <TextBlock Text="{Binding Count}" Foreground="{Binding CountForeground}" />
-                    </Border>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-              <DataTemplate DataType="vm:ChipMoreVM">
-                <Panel Margin="0,0,8,0">
-                  <Button Classes="chipMore" Content="{Binding Label}"
-                          Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).ChipStrip.TogglePopoverCommand}" />
-                  <Rectangle Stroke="#cfd6e1" StrokeThickness="1" StrokeDashArray="3,2"
-                             RadiusX="9" RadiusY="9" IsHitTestVisible="False" />
-                </Panel>
-              </DataTemplate>
-            </ItemsControl.DataTemplates>
-          </ItemsControl>
-          <!-- overflow ポップオーバー(VC-WORK-3=VC-IMG-10 と同文) -->
-          <Popup Grid.Column="1" x:Name="ChipPopover" IsOpen="{Binding ChipStrip.PopoverOpen, Mode=TwoWay}"
-                 PlacementTarget="{Binding #ChipDisplay}" Placement="BottomEdgeAlignedRight"
-                 IsLightDismissEnabled="True">
-            <Border Classes="chipPopCard" KeyDown="OnChipPopoverKeyDown">
-              <DockPanel>
-                <Border DockPanel.Dock="Top" Classes="chipPopSearch">
-                  <TextBox x:Name="ChipSearchBox" Classes="chipPopSearchBox" Text="{Binding ChipStrip.SearchText}"
-                           Watermark="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[chip.searchPlaceholder]}" />
-                </Border>
-                <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
-                  <StackPanel>
-                    <ItemsControl ItemsSource="{Binding ChipStrip.PopoverItems}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ChipVM">
-                          <Button Classes="chipPopRow"
-                                  Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).ChipStrip.SelectFromPopoverCommand}"
-                                  CommandParameter="{Binding}">
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                              <Ellipse Width="9" Height="9" Fill="{Binding DotBrush}" IsVisible="{Binding HasDot}" VerticalAlignment="Center" />
-                              <TextBlock Text="{Binding Label}" Foreground="{Binding LabelBrush}" VerticalAlignment="Center" />
-                              <Border Classes="chipCount" Background="{Binding CountBackground}" IsVisible="{Binding HasCount}">
-                                <TextBlock Text="{Binding Count}" Foreground="{Binding CountForeground}" />
-                              </Border>
-                            </StackPanel>
-                          </Button>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock Classes="chipPopEmpty" IsVisible="{Binding ChipStrip.PopoverEmpty}"
-                               Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[chip.noMatch]}" />
-                  </StackPanel>
-                </ScrollViewer>
-              </DockPanel>
-            </Border>
-          </Popup>
-        </Grid>
-      </Border>
+      <!-- タグ絞り込みチップ行: 共有部品(ECO-094・SC-CHIPSTRIP-001)。
+           画像タブと同一契約(VC-WORK-2/3=VC-IMG-9/10)の実装は LabeledChipStrip 側 —
+           ECO-090 の read-across 統制(2 面コピペ同期)を部品共有で構造的に置換。
+           未定義値/ナビ意匠は IsUndef/IsNav=false で不活性(本タブの視覚不変) -->
+      <views:LabeledChipStrip DockPanel.Dock="Top" />
 
       <!-- 本体: 空 / グリッド / リスト -->
       <Panel>

@@ -27,7 +27,7 @@ namespace ViewPrism2.App.ViewModels;
 /// M3b(次): タグビュー軸(ViewService→NodeGraphBuilder→ConditionEvaluator 消費)。
 /// 固定オラクル S-01〜S-31・REQ-053 を退行させない(母集合=選択コレクションの status=normal)。
 /// </summary>
-public sealed partial class ImageTabViewModel : ObservableObject
+public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
 {
     private readonly ISyncFolderRepository _folders;
     private readonly IImageRepository _images;
@@ -1795,8 +1795,8 @@ public sealed partial class ImageTabViewModel : ObservableObject
         Recompute();
     }
 
-    [RelayCommand]
-    private void ClickChip(ChipVM chip)
+    [RelayCommand] // public 化=IChipStripHost(ECO-094・共有部品からの direct ハンドラ経由呼び出し)
+    public void ClickChip(ChipVM chip)
     {
         if (chip.IsNav)
         {

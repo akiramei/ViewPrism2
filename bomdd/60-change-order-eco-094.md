@@ -88,9 +88,54 @@ ImageTabView と WorkTabView の**固定クローム チップ行**(IMG-023=ECO-
 - CAD=**変更なし**(視覚不変・契約は VPUI `17dc9f3` のまま)。
 - i18n=**変更なし**(既存キー `chip.*` を部品が参照)。
 
-## 6. 残ゲート
+## 6. 残ゲート(2026-07-15 fix 後更新)
 
-- **gate①(裁定)=不要**。ECO-091 §7 で「契約一致確定後の別 ECO」として先出し済み・
-  CAD 変更なし・視覚不変。
-- **gate②(golden)=必要**。2 面とも golden approved 済みサーフェスを触るため、DRY 後に
-  **視覚・挙動の不変**を maintainer 実機で再承認(R7=CAD captures 並置・両タブ)。
+- ~~gate①(裁定)~~ = 不要(ECO-091 §7 で先出し済み)。
+- **gate②(golden)のみ**。合格基準は fix 報告の停止点に提示。
+
+## 7. 実施記録(2026-07-15 /eco-fix)
+
+**プローブ先行(R5・リファクタ適応)**: 本 ECO は欠陥是正でなく DRY(視覚不変が納品条件)のため、
+R5 の「是正前赤」は**構造 probe**(チップ行が共有部品 LabeledChipStrip で実現されていること)で構成した:
+`CpUi094LabeledChipStripTests` 新設 → 是正前 **赤 2/2**(型不在=重複実装の実測)・既存 744 本は緑
+(=是正前の視覚基準線を固定)。テンプレート統一の不活性 pin(作業タブへ未定義値バッジ/ナビ chevron が
+現れない)も同時新設(是正前後とも緑=pin)。
+
+**是正(採択構成)**: ホスト契約インターフェース方式(ColumnPickerView=SC-COLUMN-PICKER-001 の
+`#Root.((vm:型)DataContext)` 流儀を踏襲・DataContext はホスト VM を継承):
+
+1. `IChipStripHost`(新設・ViewModels): ChipStrip / ShowChips / ShowChipHint / ChipHintLabel /
+   Loc / ClickChip(ChipVM) の読み取り最小面。両ホスト VM が実装(宣言追加のみ。ImageTab の
+   ClickChip は private→public 化=[RelayCommand] は既存テスト互換で維持)。
+2. `LabeledChipStrip.axaml(.cs)`(新設・Views): チップ行 Border+ヒント+DisplayItems
+   ItemsControl+「ほか N 件」+overflow Popup+実測供給(EvaluateChipRow)・Escape 復帰・
+   direct チップ押下(ECO-087 教訓=ジェスチャ起点は direct ハンドラ)を単一実装化。
+   チップ item テンプレートは**画像タブの richer 版へ統一**(未定義値破線枠/ナビ chevron は
+   IsUndef/IsNav=false の面で不活性 — 作業タブのチップ工場は Neutral/Colored(isNav:false) のみ=実測)。
+3. ホスト 2 面: チップ行ブロックを `<views:LabeledChipStrip DockPanel.Dock="Top" />` へ置換・
+   code-behind の重複(EvaluateChipRow ほか)を撤去。**diff= ホスト 7 ファイル −302 行/+20 行**+
+   新規 3 ファイル+probe 1 ファイル。VM 意味論(ChipStripViewModel/ChipRowOverflow)は無変更
+   (doc コメントの現実同期のみ)。
+
+**横断規約適合(ECO-080)**: 共有部品の文言は全て Loc 経由(chip.searchPlaceholder/chip.noMatch。
+「ほか N 件」は従来通り ChipStripViewModel が chip.moreItems を解決)・XAML 直書きなし・i18n キー新設なし。
+
+**機械受入**: build 0 error(警告 1=既存 AVLN5001 Watermark が 2 面→部品 1 箇所へ減少)・
+**Tests 746/746**(probe 2 本赤→緑転+pin 1 本+既存 743 無改変全緑)・Oracle 109+2skip(R6 不変)・
+validate_bom 0/0。
+
+**セルフゴールデン(R7・視覚不変の差分全列挙)**: ピクセルキャプチャは headless 基盤が
+UseHeadlessDrawing(非 Skia)のため不可 — 幾何実測 probe(矩形・行数・N 会計)を代替とする。
+
+| # | 差分/次元 | 分類 |
+|---|---|---|
+| 視覚ツリーに LabeledChipStrip(UserControl)ラッパー 1 層追加 | 不変(Padding/Margin なし=layout neutral。CpUi090 パリティの矩形実測が無改変緑=幾何等価の実測) |
+| 作業タブのチップテンプレートが richer 版(Panel ラッパー+undef バッジ+nav chevron)へ統一 | 不変(IsUndef/IsNav=false で不活性。CpUi094 pin+CpUi089/090 幾何緑) |
+| 「ほか N 件」・ポップオーバー・折畳み計算・Escape 復帰 | 不変(実装の移設のみ=ロジック無変更。CpUi091 容量契約 9 本無改変緑) |
+| 未定義値チップ意匠(画像タブ) | 不変(テンプレート原文移設。CpDefExp086UiTests 無改変緑) |
+
+転写漏れ 0・候補差分 0(視覚変更なし)。
+
+## 8. クローズ(gate② 待ち)
+
+golden 合格後に /eco-accept eco-094(E-BOM SC-CHIPSTRIP-001 追補等の M4 は accept 時=ECO-025 前例)。

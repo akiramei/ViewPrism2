@@ -1457,7 +1457,7 @@ changes:
   - id: ECO-094
     title: "固定クローム チップ行の共有部品化(LabeledChipStrip 抽出・DRY) — ECO-091 裁定 §7 の実行(契約収束後)"
     type: リファクタ(DRY・視覚不変が納品条件)
-    status: staged
+    status: implemented   # 2026-07-15 是正+機械受入完了(build 0/Tests 746/746=probe赤2→緑転+既存743無改変緑/Oracle 109+2skip/validate 0-0)・R7差分全列挙=転写漏れ0・golden 待ち
     golden: "pending(2 面とも golden approved 済みサーフェス→DRY 後に視覚・挙動不変を maintainer 実機で再承認・R7=CAD captures 並置・両タブ)"
     baseline: "main c442726"
     findings: "ECO-091 裁定 §7「LabeledChipStrip 抽出は契約一致確定後の別 ECO」の実行。姉妹 ECO(091/092/093)が全て golden approved でクローズ=契約収束済み(実行の適時到来)。工程診断= 実装重複(VM 層は既に DRY・プレゼンテーション層のみ 2 面コピペ)・CAD/BOM 健全・gate① 不要。実測(c442726)= (a)VM 層は共有済み: ChipStripViewModel+ChipRowOverflow を ImageTab/WorkTab/TagPalette の 3 VM が共有(本 ECO は VM を触らない)。(b)code-behind EvaluateChipRow はバイト一致の重複: ImageTabView.axaml.cs:62 と WorkTabView.axaml.cs:41 の本体は Vm アクセサの型と doc コメント以外完全一致(diff 実測=差分 3 箇所のみ)。OnChipPopoverKeyDown も同型。(c)XAML チップ行は近似一致の重複: ImageTabView.axaml:1000-1068 と WorkTabView.axaml:805-862(DisplayItems ItemsControl+ほか N 件+overflow Popup が同構造)。差分は 2 点のみ=①チップ内テンプレート(ImageTab のみ未定義値破線枠 REQ-095/096)②バインド内 VM 型キャスト。スコープ境界(含めない=別契約・実測裏取り)= タグパレット候補値行(TagsTabView.axaml:324・ECO-092)+タグ編集プレビュー帯(TagEditorWindow.axaml・ECO-093)は ECO-092 裁定が明記する別契約(閲覧プレビュー=ポップオーバーなし・静的ほか N 件)=LabeledChipStrip へ統合しない"

@@ -10,8 +10,8 @@ namespace ViewPrism2.App.ViewModels;
 /// <summary>
 /// チップ行の容量・overflow 状態(ECO-091・IMG-023A=A-b 裁定・CAD VC-IMG-9/10=VC-WORK-2/3)。
 /// 画像タブ/作業タブの両ホスト VM が合成する(Trash/Organize サブ VM と同じ流儀)—
-/// 意味論はここに単一実装し、チップ行の XAML は両タブ 2 面のまま(E-BOM 同期宣言=ECO-090。
-/// UI 部品の共有= LabeledChipStrip 級は golden 後の DRY 判断)。
+/// 意味論はここに単一実装し、プレゼンテーション(XAML+実測供給)も共有部品
+/// LabeledChipStrip へ単一化済み(ECO-094・ホスト契約= IChipStripHost)。
 /// - 通常表示は最大 2 行(ChipRowOverflow.MaxRows)。溢れは「ほか N 件」→ポップオーバー。
 /// - N=非表示項目数。幅変更で再計算(View が ResetFold を呼ぶ)。選択・ナビ状態には触れない。
 /// - 折畳み時のみ優先配置(クリア→active→定義順)。非折畳み時は元順=1 行時の視覚不変。

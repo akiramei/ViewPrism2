@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ViewPrism2.App.ViewModels"
+             x:Class="ViewPrism2.App.Views.LabeledChipStrip"
+             x:DataType="vm:IChipStripHost"
+             x:Name="Root">
+  <!-- 固定クローム チップ行の共有部品(ECO-094・SC-CHIPSTRIP-001)。
+       画像タブ/作業タブの同一契約 2 面(IMG-023=VC-IMG-9/10=VC-WORK-2/3)を単一実装へ。
+       DataContext=ホスト VM(IChipStripHost)を継承(ColumnPickerView=SC-COLUMN-PICKER-001 と同流儀)。
+
+       ECO-088/089: WrapPanel の折返し(mock flex-wrap)は有限幅測定が前提 — 横 StackPanel は
+       子を無限幅で測定し折返し契機を奪う(47 件級でクリップ切り捨て=VC-IMG-8/VC-WORK-1)。
+       LineSpacing は多段時のみ効く行間(1 行時の視覚不変)。
+       ECO-091(IMG-023A=A-b/B=B-a): 通常表示は最大 2 行。溢れは 2 行目末尾「ほか N 件」→
+       ポップオーバー(検索+全項目一覧)。継続行はヒント列の右=吊り下げ(B-a 正式追認)。
+       折畳み計算は ChipStripViewModel(実測供給は code-behind EvaluateChipRow=ECO-027 流儀)。
+       未定義値チップの破線枠・ナビ chevron(REQ-095/096・VC-IMG-6)は IsUndef/IsNav=false の面では
+       不活性=作業タブの視覚不変(テンプレートは richer 側=画像タブ版へ統一)。 -->
+  <Border IsVisible="{Binding ShowChips}" Background="{StaticResource AppBackgroundBrush}"
+          BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="18,11">
+    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+      <TextBlock Classes="chipHint" Text="{Binding ChipHintLabel}" IsVisible="{Binding ShowChipHint}"
+                 Margin="0,0,8,0" VerticalAlignment="Center" />
+      <ItemsControl Grid.Column="1" x:Name="ChipDisplay" ItemsSource="{Binding ChipStrip.DisplayItems}">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel LineSpacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.DataTemplates>
+          <DataTemplate DataType="vm:ChipVM">
+            <!-- 未定義値チップ(REQ-095/096・CAD VC-IMG-6)は破線枠(Border は破線非対応のため Rectangle 重ね) -->
+            <Panel Margin="0,0,8,0">
+              <Border Classes="tagChip" Classes.undef="{Binding IsUndef}" Background="{Binding Background}"
+                      BorderBrush="{Binding BorderBrush}" PointerPressed="OnChipPressed">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <Ellipse Width="9" Height="9" Fill="{Binding DotBrush}" IsVisible="{Binding HasDot}" VerticalAlignment="Center" />
+                  <TextBlock Classes="chipLabel" Text="{Binding Label}" Foreground="{Binding LabelBrush}" />
+                  <Border IsVisible="{Binding IsUndef}" Background="#f8ecd8" CornerRadius="5" Padding="6,1"
+                          VerticalAlignment="Center">
+                    <TextBlock Text="{Binding UndefLabel}" FontSize="10" FontWeight="Bold" Foreground="#b5670c" />
+                  </Border>
+                  <Border Classes="chipCount" Background="{Binding CountBackground}" IsVisible="{Binding HasCount}">
+                    <TextBlock Text="{Binding Count}" Foreground="{Binding CountForeground}" />
+                  </Border>
+                  <PathIcon Classes="chipNav" Data="{StaticResource ChevronRightIcon}" IsVisible="{Binding IsNav}"
+                            Foreground="{Binding LabelBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Border>
+              <Rectangle IsVisible="{Binding IsUndef}" Stroke="#e0b36a" StrokeThickness="1"
+                         StrokeDashArray="3,2" RadiusX="9" RadiusY="9" IsHitTestVisible="False" />
+            </Panel>
+          </DataTemplate>
+          <DataTemplate DataType="vm:ChipMoreVM">
+            <Panel Margin="0,0,8,0">
+              <Button Classes="chipMore" Content="{Binding Label}"
+                      Command="{Binding #Root.((vm:IChipStripHost)DataContext).ChipStrip.TogglePopoverCommand}" />
+              <Rectangle Stroke="#cfd6e1" StrokeThickness="1" StrokeDashArray="3,2"
+                         RadiusX="9" RadiusY="9" IsHitTestVisible="False" />
+            </Panel>
+          </DataTemplate>
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+      <!-- overflow ポップオーバー(VC-IMG-10=VC-WORK-3): 検索+全項目一覧(内部スクロール許容)。Escape/light dismiss で閉じる -->
+      <Popup Grid.Column="1" x:Name="ChipPopover" IsOpen="{Binding ChipStrip.PopoverOpen, Mode=TwoWay}"
+             PlacementTarget="{Binding #ChipDisplay}" Placement="BottomEdgeAlignedRight"
+             IsLightDismissEnabled="True">
+        <Border Classes="chipPopCard" KeyDown="OnChipPopoverKeyDown">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Classes="chipPopSearch">
+              <TextBox x:Name="ChipSearchBox" Classes="chipPopSearchBox" Text="{Binding ChipStrip.SearchText}"
+                       Watermark="{Binding #Root.((vm:IChipStripHost)DataContext).Loc[chip.searchPlaceholder]}" />
+            </Border>
+            <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
+                <ItemsControl ItemsSource="{Binding ChipStrip.PopoverItems}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChipVM">
+                      <Button Classes="chipPopRow"
+                              Command="{Binding #Root.((vm:IChipStripHost)DataContext).ChipStrip.SelectFromPopoverCommand}"
+                              CommandParameter="{Binding}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <Ellipse Width="9" Height="9" Fill="{Binding DotBrush}" IsVisible="{Binding HasDot}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Label}" Foreground="{Binding LabelBrush}" VerticalAlignment="Center" />
+                          <Border Classes="chipCount" Background="{Binding CountBackground}" IsVisible="{Binding HasCount}">
+                            <TextBlock Text="{Binding Count}" Foreground="{Binding CountForeground}" />
+                          </Border>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="chipPopEmpty" IsVisible="{Binding ChipStrip.PopoverEmpty}"
+                           Text="{Binding #Root.((vm:IChipStripHost)DataContext).Loc[chip.noMatch]}" />
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+      </Popup>
+    </Grid>
+  </Border>
+</UserControl>

@@ -13,73 +13,14 @@ public partial class WorkTabView : UserControl
 {
     private readonly DoubleClickDetector _doubleClick = new();
 
-    private ItemsControl? _chipDisplay;
-    private Avalonia.Controls.Primitives.Popup? _chipPopover;
-    private TextBox? _chipSearchBox;
-    private double _lastChipPanelWidth;
-
     public WorkTabView()
     {
         InitializeComponent();
-
-        // ECO-091: チップ行の容量(最大2行+ほかN件)。画像タブと同一契約(ECO-090 同期宣言)・
-        // 実測供給は View 責務(ECO-027 と同じ流儀・計算は ChipStripViewModel/ChipRowOverflow)
-        _chipDisplay = this.FindControl<ItemsControl>("ChipDisplay");
-        _chipPopover = this.FindControl<Avalonia.Controls.Primitives.Popup>("ChipPopover");
-        _chipSearchBox = this.FindControl<TextBox>("ChipSearchBox");
-        if (_chipPopover is { } pop)
-        {
-            // 開いたら検索欄へフォーカス(VC-WORK-3 キーボード契約: 検索欄→一覧の順)
-            pop.Opened += (_, _) => _chipSearchBox?.Focus();
-        }
-        LayoutUpdated += (_, _) => EvaluateChipRow();
+        // チップ行(ECO-091 容量契約=画像タブと同一)の実測供給・overflow 操作は
+        // 共有部品 LabeledChipStrip 側(ECO-094・ECO-090 の read-across 統制を構造的に置換)。
     }
 
     private WorkTabViewModel? Vm => DataContext as WorkTabViewModel;
-
-    /// <summary>ECO-091(IMG-023A=A-b): チップ行の実描画からの折畳み評価(ImageTabView と同一契約)。</summary>
-    private void EvaluateChipRow()
-    {
-        if (Vm is not { } vm || !vm.ShowChips) return;
-        var panel = _chipDisplay?.ItemsPanelRoot;
-        if (panel is null || panel.Bounds.Width <= 0) return;
-
-        var width = panel.Bounds.Width;
-        if (Math.Abs(width - _lastChipPanelWidth) > 0.5)
-        {
-            _lastChipPanelWidth = width;
-            // 折畳み中だった場合のみ次パスへ(全表示へ戻した=矩形が古い)。未折畳みなら同一パスで計測可
-            if (vm.ChipStrip.ResetFold()) return;
-        }
-
-        var chipRects = new System.Collections.Generic.List<Avalonia.Rect>();
-        Avalonia.Rect? moreRect = null;
-        foreach (var child in panel.Children)
-        {
-            if (!child.IsVisible) continue;
-            if (child.DataContext is ChipVM) chipRects.Add(child.Bounds);
-            else if (child.DataContext is ChipMoreVM) moreRect = child.Bounds;
-        }
-        vm.ChipStrip.ReportLayout(chipRects, moreRect, width);
-    }
-
-    /// <summary>Escape でポップオーバーを閉じ「ほか N 件」へフォーカスを戻す(VC-WORK-3)。</summary>
-    private void OnChipPopoverKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape || Vm is not { } vm) return;
-        vm.ChipStrip.ClosePopoverCommand.Execute(null);
-        FocusChipMoreButton();
-        e.Handled = true;
-    }
-
-    private void FocusChipMoreButton()
-    {
-        if (_chipDisplay is null) return;
-        foreach (var btn in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(_chipDisplay))
-        {
-            if (btn is Button b && b.Classes.Contains("chipMore")) { b.Focus(); return; }
-        }
-    }
 
     private void OnWorkspacePressed(object? sender, PointerPressedEventArgs e)
     {
@@ -130,12 +71,6 @@ public partial class WorkTabView : UserControl
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern uint GetDoubleClickTime();
-
-    private void OnChipPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (sender is Control { DataContext: ChipVM chip } && Vm is { } vm)
-            vm.ClickChip(chip);
-    }
 
     private void OnAddRowPressed(object? sender, PointerPressedEventArgs e)
     {
