@@ -1443,3 +1443,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=候補値 47 件級で行数≤2(是正前=十数行で赤)・N 一致・「ほか N 件」が Interactive でない・長候補値の幅≤上限+省略表示。少数件(2〜3 件)カードの視覚不変 pin(ECO-089 同様)"
     body: 60-change-order-eco-092.md
     notes: "gate①=不要(裁定済み)。gate②=実機 golden(R7=CAD captures 並置)。関連=ECO-089(折返し回復=前提)・ECO-091(姉妹 ECO=別契約・i18n キー共通化可)・ECO-087(編集ダイアログ=全数到達の担保面)。スコープ外=操作対象化(再裁定事項)・CandidateValuePreview 級の部品抽出(将来 ECO)"
+  - id: ECO-093
+    title: "タグ編集ダイアログ プレビュー帯の候補値多量時の乱れ — 溢れ非封じ込め(横 StackPanel 全件列挙)+多量時表示の CAD 未定義"
+    type: 不具合(封じ込め欠陥)+CAD 未定義(多量時のプレビュー表示設計)の複合
+    status: staged
+    golden: pending   # gate①裁定(案A=封じ込めのみ/案B=先頭k件+非対話ほかN件・推奨)→ fix 後に gate②(多量時の乱れ解消+少数件の視覚不変)
+    baseline: "main 2f70c23"
+    findings: "ECO-092 golden 中の maintainer 実機所見(R3 分離=別サーフェス)。タグ編集ダイアログの付与プレビュー帯(ECO-007/E5=DC-TAGPREVIEW-001)で候補値 47 件級のとき、チップ末尾が右ドック説明文と重なり判読不能。工程診断= 実装欠陥(TagEditorWindow.axaml:180-198 PreviewChips を横 StackPanel(折返しなし・幅制限なし)で全件列挙=TagEditorViewModel.cs:211 件数制限なし・クリップなしで caption と重なる)+CAD 部分未定義(tag_tab.md は帯の固定性のみ定義・帯内の多量時表示は mock 未定義)。混入= ECO-007 初版から・潜伏機序= ECO-088 族(少数件は 1 行に収まる機能等価潜伏・47 件級が初可視化)。ECO-089 の WrapPanel 全数走査は「折返し意図のない横 StackPanel の溢れ封じ込め」を検査次元に含まず=谷間。TAG-013=T-a(パレット)の「要約+非対話」様式が類推可能"
+    impacted_bom: ["src=TagEditorWindow.axaml(プレビュー帯チップ列)+案 B なら TagEditorViewModel(表示派生)", "テスト=封じ込め probe(caption 非交差・是正前赤)+少数件不変 pin", "CAD=案 B 採択時に tag_tab.md ライブプレビュー節+mock へ多量時表示を追記(CAD 先行)", "CP=CP-TAGDLG-087 へ多量候補値次元", "i18n=案 B は chip.moreItems 再利用(新規なし)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=候補値 47 件でプレビュー帯チップが右ドック caption と非交差(是正前=交差で赤)・少数件(2〜3 件)の視覚不変 pin(G-6/ECO-087 承認済み視覚)"
+    body: 60-change-order-eco-093.md
+    notes: "gate①=必要(案A 封じ込めのみ/案B 先頭k件+非対話ほかN件=TAG-013 類推・推奨)。案B は CAD 反映が先(mock 未定義への設計判断)。関連=ECO-007(混入元)・ECO-092(発見元・別サーフェス)・ECO-088/089(潜伏機序の同族)・TAG-013(様式の類推元)"
