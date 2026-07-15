@@ -196,6 +196,78 @@ public sealed class CpUi091ChipCapacityTests : IDisposable
         }, CancellationToken.None);
     }
 
+    // ---- GF-091-01: 「ほか N 件」の垂直整列(mock=flex align-items:center が正典) ----
+
+    [Fact]
+    public async Task 画像タブ_ほかN件ボタンはチップと垂直中央が揃い高さも一致する()
+    {
+        await SeedImageTabAsync(PrefectureNames47, "都道府県");
+        await HeadlessApp.Session.Dispatch(async () =>
+        {
+            var (window, _) = await RenderImageTabAsync("都道府県");
+            var moreBtn = MoreButton(window);
+            Assert.True(moreBtn is not null, "「ほか N 件」ボタンが存在しない(前段の容量契約)");
+            var btnRect = GlobalRect(moreBtn!);
+            // 同じ行(2 行目)のチップと比較
+            var rowChips = ChipRects(window)
+                .Where(r => Math.Abs(r.Y + r.Height / 2 - (btnRect.Y + btnRect.Height / 2)) < r.Height)
+                .ToList();
+            Assert.NotEmpty(rowChips);
+            var chip = rowChips[^1];
+            Assert.True(Math.Abs(chip.Height - btnRect.Height) <= 1.5,
+                $"高さ不一致: チップ {chip.Height:0.0}px / ほかN件 {btnRect.Height:0.0}px(GF-091-01)");
+            var chipCenter = chip.Y + chip.Height / 2;
+            var btnCenter = btnRect.Y + btnRect.Height / 2;
+            Assert.True(Math.Abs(chipCenter - btnCenter) <= 1.5,
+                $"垂直中心ずれ: チップ {chipCenter:0.0} / ほかN件 {btnCenter:0.0}(mock=align-items:center・GF-091-01)");
+            // ボタン内ラベルも垂直中央(GF-091-01 の実体=コンテンツ上寄り)
+            var label = moreBtn!.GetVisualDescendants().OfType<TextBlock>().First();
+            var labelRect = GlobalRect(label);
+            var labelCenter = labelRect.Y + labelRect.Height / 2;
+            Assert.True(Math.Abs(labelCenter - btnCenter) <= 2,
+                $"ラベルがボタン内で上寄り: label 中心 {labelCenter:0.0} / ボタン中心 {btnCenter:0.0}(GF-091-01)");
+            // ラベルボックスが文字サイズであること(Stretch だと bounds 中心は合うがグリフは上端描画=実機の上寄り)
+            Assert.True(labelRect.Height <= 24,
+                $"ラベルボックスが縦 Stretch({labelRect.Height:0.0}px)— VerticalContentAlignment 未指定でグリフ上寄り(GF-091-01)");
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task 作業タブ_ほかN件ボタンはチップと垂直中央が揃い高さも一致する()
+    {
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var (window, _) = RenderWorkTab(PrefectureNames47.Select(p => (Label: p, Active: false)).ToList());
+            var moreBtn = MoreButton(window);
+            Assert.True(moreBtn is not null, "「ほか N 件」ボタンが存在しない(前段の容量契約)");
+            var btnRect = GlobalRect(moreBtn!);
+            var rowChips = ChipRects(window)
+                .Where(r => Math.Abs(r.Y + r.Height / 2 - (btnRect.Y + btnRect.Height / 2)) < r.Height)
+                .ToList();
+            Assert.NotEmpty(rowChips);
+            var chip = rowChips[^1];
+            Assert.True(Math.Abs(chip.Height - btnRect.Height) <= 1.5,
+                $"高さ不一致: チップ {chip.Height:0.0}px / ほかN件 {btnRect.Height:0.0}px(GF-091-01)");
+            var chipCenter = chip.Y + chip.Height / 2;
+            var btnCenter = btnRect.Y + btnRect.Height / 2;
+            Assert.True(Math.Abs(chipCenter - btnCenter) <= 1.5,
+                $"垂直中心ずれ: チップ {chipCenter:0.0} / ほかN件 {btnCenter:0.0}(mock=align-items:center・GF-091-01)");
+            // ボタン内ラベルも垂直中央(GF-091-01 の実体=コンテンツ上寄り)
+            var label = moreBtn!.GetVisualDescendants().OfType<TextBlock>().First();
+            var labelRect = GlobalRect(label);
+            var labelCenter = labelRect.Y + labelRect.Height / 2;
+            Assert.True(Math.Abs(labelCenter - btnCenter) <= 2,
+                $"ラベルがボタン内で上寄り: label 中心 {labelCenter:0.0} / ボタン中心 {btnCenter:0.0}(GF-091-01)");
+            // ラベルボックスが文字サイズであること(Stretch だと bounds 中心は合うがグリフは上端描画=実機の上寄り)
+            Assert.True(labelRect.Height <= 24,
+                $"ラベルボックスが縦 Stretch({labelRect.Height:0.0}px)— VerticalContentAlignment 未指定でグリフ上寄り(GF-091-01)");
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
     // ---- 少数件の不変 pin(折畳みなし・ボタンなし) ----
 
     [Fact]

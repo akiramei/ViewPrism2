@@ -149,3 +149,25 @@ validate_bom 0/0。CP-CHIPWRAP-088 を容量・到達性契約へ拡張済み。
 ## 8. 残ゲート(更新)
 
 - gate②(golden)のみ。合格基準は下記(停止点の提示)。スコープ外(§6)は不変。
+
+## 9. GF-091-01 是正記録(2026-07-15 — golden 所見→同日是正)
+
+**所見(maintainer 実機・golden 1〜8 は全て OK)**: 「ほか N 件」の配置が上に寄って見える(ja/en とも)。
+
+**診断**: mock の正典= flex `align-items:center`(ラベルはボタン内で垂直中央)。実装は Avalonia Button の
+**既定 VerticalContentAlignment= Stretch** のまま — ラベル TextBlock がボタン内容域いっぱい(30px)に
+引き伸ばされ、**グリフはボックス上端に描画**されるため上寄りに見える。**layout probe の盲点**:
+Stretch されたラベルの Bounds 中心はボタン中心と一致するため、「中心一致」の検査では緑のまま素通り —
+最初の追補 probe(ボタン矩形/ラベル中心)が緑でも実機の見えと矛盾した実測がこれを証明した。
+
+**プローブ先行(R5)**: 検査次元を「ラベルボックスが文字サイズであること(高さ ≤24px=非 Stretch)」へ
+拡張(両タブ)→ 是正前赤 2/2(実測 30.0px)。
+
+**是正**: `Button.chipMore` へ `VerticalContentAlignment=Center`(+Horizontal も対で)を明示。
+diff= Components.axaml 2 行。
+
+**機械受入(再)**: build 0/0・**Tests 736/736**(垂直整列 probe 2 本含む)・Oracle 109+2skip・validate 0/0。
+
+**教訓の芽(N=1)**: **Stretch されたコンテンツは「中心一致」検査を素通りする** — 垂直整列の layout probe は
+中心比較だけでなく**ボックスが内容サイズであること**(非 Stretch)を併せて検査する。グリフ描画位置は
+ボックス上端であり、中心はボックスの属性でしかない(51-cheat-log 記録・2 例目で BomDD 昇格判定)。

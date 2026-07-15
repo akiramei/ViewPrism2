@@ -631,6 +631,9 @@
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalAlignment" Value="Center" />
+    <!-- GF-091-01: 既定はコンテンツ縦 Stretch=グリフが上端描画で上寄りに見える(mock=align-items:center) -->
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.chipMore:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="#f6f8fb" />
