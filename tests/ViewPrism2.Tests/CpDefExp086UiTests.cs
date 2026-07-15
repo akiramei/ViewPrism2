@@ -143,6 +143,68 @@ public sealed class CpDefExp086UiTests : IDisposable
     }
 
     [Fact]
+    public async Task 選択中ビューの0件隠し保存が追加のビュー切替なしで反映される()
+    {
+        // ECO-096/R5: タグタブ保存後の stale 再読込経路を直接再現する。
+        // 現在 path は「都道府県」のまま保持し、同一 view の hide_empty_values だけを DB 更新する。
+        await SeedAsync();
+        await HeadlessApp.Session.Dispatch(async () =>
+        {
+            // Brush を作る VM 構築から描画まで共有 Headless UI スレッド内(ECO-083/084 の初期化規律)。
+            var vm = await BuildViewVmAsync();
+            vm.ClickChipCommand.Execute(vm.Chips.Single(c => c.Label == "都道府県"));
+            Assert.Contains(vm.Chips, c => c.Label == "青森県" && c.Count == "0");
+
+            var views = new ViewService(_db.Views, _db.Clock);
+            var hierarchy = (await views.GetHierarchyAsync(_view.Id))
+                .Select(n => new HierarchyNode
+                {
+                    Id = n.Id,
+                    ViewId = n.ViewId,
+                    TagId = n.TagId,
+                    ParentId = n.ParentId,
+                    Position = n.Position,
+                    Alias = n.Id == _prefNodeId ? "地域" : n.Alias,
+                    ConditionType = n.ConditionType,
+                    ConditionValue = n.ConditionValue,
+                    ExpansionMode = n.ExpansionMode,
+                    HideEmptyValues = n.Id == _prefNodeId || n.HideEmptyValues,
+                })
+                .ToList();
+            Assert.True((await views.SaveHierarchyAsync(_view.Id, hierarchy, null)).IsSuccess);
+
+            await vm.ReloadTagCatalogAsync(); // MainWindow の画像タブ復帰時と同じ公開経路
+
+            Assert.Equal(["北海道", "蝦夷"], vm.Chips.Select(c => c.Label));
+            Assert.Equal(["地域"], vm.Crumbs.Select(c => c.Name)); // 現在 path は新 graph の別名へ再束縛
+
+            // R7/CAD VC-IMG-6: 実描画でも保存済み別名+非0件/未定義値だけが見え、0件値は残らない。
+            var window = new Window { Content = new ImageTabView { DataContext = vm }, Width = 1366, Height = 900 };
+            window.Show();
+            RunJobs();
+            var visibleLabels = window.GetVisualDescendants().OfType<TextBlock>()
+                .Where(t => t.IsVisible)
+                .Select(t => t.Text)
+                .Where(t => t is not null)
+                .ToList();
+            Assert.Contains("地域", visibleLabels);
+            Assert.Contains("北海道", visibleLabels);
+            Assert.Contains("蝦夷", visibleLabels);
+            Assert.DoesNotContain("青森県", visibleLabels);
+            Assert.DoesNotContain("沖縄県", visibleLabels);
+            window.Close();
+
+            // read-across: 現在 path のノード自体が保存で消えた場合は、旧 GraphNode 参照を残さず root へ縮退する。
+            Assert.True((await views.SaveHierarchyAsync(_view.Id, [], null)).IsSuccess);
+            await vm.ReloadTagCatalogAsync();
+            Assert.Empty(vm.Crumbs);
+            Assert.Empty(vm.Chips);
+            Assert.True(vm.IsViewAxis);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task 未定義値チップは破線枠とバッジで通常チップと視覚区別される()
     {
         // R7/CAD VC-IMG-6(gate① 0d63066): 未定義値=琥珀・破線枠+「未定義」小バッジ。0 件チップは淡色で表示維持。

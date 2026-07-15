@@ -463,9 +463,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     /// タグ タブでのタグ/ビュー永続変更(作成・編集・削除)を画像タブへ反映する軽量再読込。
     /// InitializeAsync は重く状態復元(コレクション/表示モード)も伴うため、タブ切替毎の反映には
     /// こちらを使う。タグ台帳(_tagById)・ビュー(_allViews)・画像タグ紐付けを入れ替え、コレクション
-    /// 選択・ナビ・表示モード・画像選択は保持したまま Recompute でタグ編集パネル(AddGroups/CurrentTags)
-    /// を作り直す。これが無いと _tagById が起動時のまま固定され、新規タグがタグ編集の候補に出ない
-    /// (private ReloadTagsAsync は画像↔タグ紐付けのみで台帳を再取得しないため別物)。
+    /// 選択・ナビ・表示モード・画像選択は保持する。view 軸の選択中ビューは保存済み階層から graph も
+    /// 再構築する(ECO-096)。これが無いと _tagById が起動時のまま固定され、新規タグがタグ編集の候補に
+    /// 出ず、階層設定は旧 _viewRoot のまま残る(private ReloadTagsAsync は画像↔タグ紐付けのみで
+    /// 台帳を再取得しないため別物)。
     /// </summary>
     public async Task ReloadTagCatalogAsync()
     {
@@ -478,6 +479,26 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _allViews = (await _views.GetAllAsync().ConfigureAwait(true)).ToList();
         await RefreshImageTagsAsync().ConfigureAwait(true);
         BuildEntries();
+
+        if (_axis == "view" && _viewId is { } activeViewId)
+        {
+            var activeView = _allViews.FirstOrDefault(v =>
+                string.Equals(v.Id, activeViewId, StringComparison.Ordinal));
+            if (activeView is null)
+            {
+                // 保存中に選択中 view 自体が削除された場合は、旧 graph を残さず FS root へ安全退避。
+                _axis = "fs";
+                _viewId = null;
+                _viewRoot = null;
+                _viewPath.Clear();
+                Recompute();
+                return;
+            }
+
+            await ReloadViewGraphAsync(activeView, preserveNavigation: true).ConfigureAwait(true);
+            return;
+        }
+
         Recompute();
     }
 
@@ -1527,21 +1548,69 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     {
         var view = _allViews.FirstOrDefault(v => v.Id == viewId);
         if (view is null) { _axis = "fs"; _viewId = null; _viewRoot = null; Recompute(); return; }
-        _axis = "view"; _viewId = viewId; _viewLabel = view.Name;
-        // (ECO-084/REQ-094) ビュー毎の最終選択モードを復元。列挙外・欠落は既定「すべて」(裁定①=デバイスローカル)
-        _viewUnclassified = _settings.ViewDisplayModes.TryGetValue(viewId, out var displayMode)
-            && string.Equals(displayMode, "unclassified", StringComparison.Ordinal);
-        _viewConditions = await _views.GetConditionsAsync(viewId).ConfigureAwait(true);
-        var hierarchy = await _views.GetHierarchyAsync(viewId).ConfigureAwait(true);
+        await ReloadViewGraphAsync(view, preserveNavigation: false).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// view 軸 graph を保存済み階層から再構築する共通経路。通常の軸選択は home から開始し、
+    /// ECO-096 の stale 再読込は現在 path を新 graph の同一ノードへ再束縛する。
+    /// </summary>
+    private async Task ReloadViewGraphAsync(View view, bool preserveNavigation)
+    {
+        IReadOnlyList<GraphNode> previousPath = preserveNavigation ? _viewPath.ToList() : [];
+        _axis = "view"; _viewId = view.Id; _viewLabel = view.Name;
+        if (!preserveNavigation)
+        {
+            // (ECO-084/REQ-094) ビュー毎の最終選択モードを復元。列挙外・欠落は既定「すべて」(裁定①=デバイスローカル)
+            _viewUnclassified = _settings.ViewDisplayModes.TryGetValue(view.Id, out var displayMode)
+                && string.Equals(displayMode, "unclassified", StringComparison.Ordinal);
+        }
+
+        _viewConditions = await _views.GetConditionsAsync(view.Id).ConfigureAwait(true);
+        var hierarchy = await _views.GetHierarchyAsync(view.Id).ConfigureAwait(true);
         var valueIndex = TagValueIndex.Build(_entries.Select(e => e.ToImageWithTags()));
         var definedIndex = await BuildDefinedIndexAsync(hierarchy).ConfigureAwait(true);
         var result = _graphBuilder.BuildGraph(hierarchy, _tagById, valueIndex, definedIndex);
         _viewRoot = result.Root;
         _viewPath.Clear();
-        // ECO-063/REQ-037: 保存済み home を画像タブの初期 path へ接続。
-        // null/参照切れは空 path のまま=root fallback。独自 DFS は持たず Core の決定規則を消費する。
-        _viewPath.AddRange(_graphBuilder.ResolveHomePath(_viewRoot, view.HomeTagId));
+        if (preserveNavigation)
+        {
+            _viewPath.AddRange(RebindViewPath(_viewRoot, previousPath));
+        }
+        else
+        {
+            // ECO-063/REQ-037: 保存済み home を画像タブの初期 path へ接続。
+            // null/参照切れは空 path のまま=root fallback。独自 DFS は持たず Core の決定規則を消費する。
+            _viewPath.AddRange(_graphBuilder.ResolveHomePath(_viewRoot, view.HomeTagId));
+        }
+
         Recompute();
+    }
+
+    /// <summary>
+    /// ECO-096: 旧 graph の path を新 graph へ参照で持ち越さず、安定した論理同一性で再束縛する。
+    /// 構造変更で次段が消えた場合は到達できる最長 prefix まで戻す(root を含む安全な縮退)。
+    /// </summary>
+    private static IReadOnlyList<GraphNode> RebindViewPath(GraphNode root, IReadOnlyList<GraphNode> previousPath)
+    {
+        var rebound = new List<GraphNode>(previousPath.Count);
+        var parent = root;
+        foreach (var previous in previousPath)
+        {
+            var current = parent.Children.FirstOrDefault(candidate =>
+                string.Equals(candidate.HierarchyNodeId, previous.HierarchyNodeId, StringComparison.Ordinal) &&
+                candidate.Kind == previous.Kind &&
+                string.Equals(candidate.Value, previous.Value, StringComparison.Ordinal));
+            if (current is null)
+            {
+                break;
+            }
+
+            rebound.Add(current);
+            parent = current;
+        }
+
+        return rebound;
     }
 
     /// <summary>

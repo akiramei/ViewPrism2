@@ -1,7 +1,7 @@
 # ECO-096 — 階層定義保存後も画像タブの選択中ビューが旧グラフを保持する
 
 - type: 不具合(タブ間の永続変更反映漏れ・選択中ビューのグラフ再構築漏れ)
-- status: staged
+- status: implemented
 - baseline: main 1e5eed2
 - 起票日: 2026-07-16
 - 報告者: maintainer
@@ -93,6 +93,71 @@
 ## 6. 残ゲート
 
 - gate①(裁定): **不要**(CAD/BOM 健全・実装逸脱)。
-- 次工程: `/eco-fix eco-096` でプローブ先行の是正へ着手可能。
+- `/eco-fix eco-096`: **完了**(§7)。
 - gate②(golden): 是正後、maintainer 実機で本再現手順を再走し、画像タブへ戻った時点で
   0 件ノードが消えること、別ビュー往復が不要なこと、現在ビュー/表示モード等が維持されることを確認。
+
+## 7. 実施記録(2026-07-16 /eco-fix)
+
+### プローブ先行(R5)
+
+既存 `CP-DEFEXP-086` の `CpDefExp086UiTests` に、次の実操作を 1 本追加した。
+
+1. `hide_empty_values=false` の定義値ビューを画像タブで開き、「都道府県」へ潜る。
+2. 0 件の「青森県」が表示中であることを前提確認。
+3. DB の同一階層を `hide_empty_values=true` へ保存し、MainWindow の画像タブ復帰時と同じ
+   `ReloadTagCatalogAsync()` だけを実行する(別ビュー切替は行わない)。
+4. チップが「北海道・蝦夷」だけになることを期待する。
+
+是正前は **1/1 不合格**: 期待 `北海道, 蝦夷` に対し実際は
+`北海道, 青森県, 沖縄県, 蝦夷`。旧 `_viewRoot` を `Recompute()` しているという診断を実測裏取りした。
+
+### 是正と裁定理由
+
+`ImageTabViewModel` の view graph 構築を `ReloadViewGraphAsync` へ単一化し、次の2経路から共有した。
+
+- 通常のビュー選択: 従来どおり保存済み home path から開始。
+- ECO-096 の stale 再読込: タグ/ビュー/画像タグ再取得後、**選択中ビューの階層・条件・定義値を
+  DB から再取得して graph を新規構築**。表示モード等は保持。
+
+現在 path は旧 `GraphNode` 参照を持ち越さず、`HierarchyNodeId + NodeKind + Value` の論理同一性で
+新 graph へ再束縛する。表示名を identity に含めないため、同じ保存で別名が変わっても現在位置を保ち、
+パンくずは新しい別名へ追随する。構造変更で段が消えた場合は一致する最長 prefix まで縮退し、
+先頭ノード自体が消えれば root へ戻る。選択中ビュー自体が削除済みなら FS root へ安全退避する。
+
+これは `hide_empty_values` の判定に通知を足す対症療法ではなく、**軽量再読込が active view graph を
+更新しない真因構造を消す**案。`NodeGraphBuilder`・DB・XAML・style・i18n・CAD は不変。
+横断規約(ECO-080)は新規文言/サーフェスがないため追加適合事項なし。
+
+### read-across と回帰固定
+
+同一プローブで以下を追加固定した。
+
+- `hide_empty_values false→true`: 別ビュー往復なしで 0 件チップが消える。
+- 同時に別名 `都道府県→地域`: 現在 path を維持しつつパンくずが「地域」へ即追随。
+- 現在 path の階層ノード削除: 旧 graph 参照を残さず root へ縮退し、view 軸自体は維持。
+- headless 実描画: 保存後は「地域・北海道・蝦夷」が可視、「青森県・沖縄県」は不可視。
+
+条件・展開モード・ホーム・並べ替えも同じ保存済み hierarchy/view 再取得を通るため同一真因として
+再同期される。今回の走査で別真因・別サーフェスの所見はなく、R3 分離項目なし。
+
+### 機械受入
+
+- `dotnet build`: **0 warning / 0 error**。
+- `dotnet test tests/ViewPrism2.Tests --no-build`: **751/751 合格**(既存750+新規probe1)。
+- `dotnet test tests/ViewPrism2.Oracle --no-build`: **109 合格+既知2 skip**。既存固定行・期待値不変(R6)。
+- `python bomdd/validate_bom.py`: 0 error / 0 warning(記録・status 更新後に再確認)。
+
+### セルフゴールデン(R7)
+
+検査面は画像タブの view 軸チップ+パンくず(CAD `image_tab.md` VC-IMG-6)。
+headless 実描画を CAD 契約「0 件の値ノードは設定オン時のみ非表示」と並置した。
+
+| 差分 | 分類 | 結果 |
+|---|---|---|
+| 保存後も青森県/沖縄県(0件)が残る | 転写漏れ(旧 graph) | probe 赤→是正後は不可視 |
+| 北海道(1件)・蝦夷(未定義値1件)は残る | CAD 一致 | 可視 |
+| 同時保存した別名「地域」 | 既存の別名契約 | パンくずへ追随 |
+| XAML/style/色/余白/文言 | 視覚不変 | diff 0(変更ファイルなし・既存 ChipVM/View を同じ Recompute で描画) |
+
+**転写漏れ 0**。ダイアログ共通言語は未変更のため適用面マトリクス read-across 対象なし。
