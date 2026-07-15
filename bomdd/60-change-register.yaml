@@ -1410,3 +1410,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。新規=面A 候補値12件級でカード内チップ+編集/削除アイコンの実描画矩形がペイン可視幅内(是正前赤)・面B 47チップ折返し(CpUi088 同一アサーション)・両面の少数件 1 行不変 pin"
     body: 60-change-order-eco-089.md
     notes: "gate①=不要(CAD 健全・実装逸脱 2 面)。ECO-088 の read-across 閉包=同型全数走査済み(残存ゼロ保証は probe と grep の 2 面)。スコープ外=タグパレット多量候補値の面設計(行数上限・+N 畳み=mock 未定義・必要なら TAG-013 級で review_points へ)・チップ行の共有部品化(DRY=将来判断)。関連=ECO-088(様式の初出+是正済み画像タブ面)・ECO-009(面A混入元)・ECO-020/021(面B混入元)"
+  - id: ECO-090
+    title: "チップ行同期実装の暫定統制 — E-BOM 関係宣言+CP-CHIPWRAP-088 の両タブ共通パラメーター化(DRY 統合まで)"
+    type: 予防処置(検査器/台帳の欠陥 — 同期実装関係の台帳宣言不在+受入 fixture の面間不均一。src 無変更・tests+bomdd のみ)
+    status: staged
+    golden: n/a   # gate②不要見込み(src 無変更・視覚不変=機械受入のみ。新 probe 赤の場合のみ分離起票側に通常ゲート)
+    baseline: "main 8087ac1"
+    findings: "発端=メンバーレビュー助言(2026-07-15)。ImageTabView/WorkTabView のチップ行(ヒント見出し+WrapPanel)は同一意味論の同期実装だが、E-UI-AXIS-NAV-040/E-UI-WORKSPACE-043 の invariants・graph_edges に相互参照なし(grep 実測)=一方だけ直す構造が台帳から見えない。実害は実証済み=ECO-088 が画像タブのみ是正し ECO-089 で同型残存 2 面が同日発覚(read-across 漏れ・GF-073 様式)。検査側= CP-CHIPWRAP-088 は 3 面統合済みだが fixture が面ごとに不均一(画像タブ 47/5・パレット 8/2・作業タブ 47/3)で長ラベル・狭幅・折返し境界件数はどの面にもない(ECO-088 教訓 2 の次元一般化が未着手)。DRY 統合は IMG-023A/B・TAG-013 の CAD 裁定(ViewPrismUI docs/decisions/IMG-023-TAG-013-chip-overflow.md=VPUI 85943b6 起票済み)待ちで保留(ECO-089 §6)のため、統合までの中間措置としてコードでなく受入検査+台帳宣言を共通化する。タグパレット候補値行は同一様式だが同一意味論でない(非対話プレビュー・TAG-013 独立裁定)=同期ペアは両タブの 2 面のみ"
+    impacted_bom: ["E-BOM=E-UI-AXIS-NAV-040/E-UI-WORKSPACE-043 invariants へ同期実装宣言(双方向・一方を変更する ECO は他方への read-across 結果を必須記録・共有部品化は IMG-023A/B 裁定後まで保留)", "テスト=CpUi088/089 の両タブ probe を共通パラメーター化(1 件/5 件/折返し境界/47 件/長ラベル/狭幅=同一ベクトルを両タブへ)。パレット面 probe は現状維持=対象外", "CP=CP-CHIPWRAP-088 test_vectors を共通ベクトル表記へ更新+統制目的追記", "src=変更なし(視覚不変)・CAD=変更なし"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。既存 CpUi088/089 アサーション(right≤可視幅・行数・アイコン可視)は資産として維持し seed/ウィンドウ構築を共通化。新次元(境界/長ラベル/狭幅)probe が赤を出した場合は新欠陥の発見= R3 分離起票(本 ECO で直さない)。狭幅の具体値は ECO-027 段階収納の発火幅と干渉しない値を fix 時実測で確定"
+    body: 60-change-order-eco-090.md
+    notes: "gate①=不要(製品挙動・UI 設計の変更なし)。gate②=不要見込み(src 無変更・視覚不変=機械受入のみでクローズ可。新 probe 赤の場合のみ分離起票側に通常ゲート)。関連=ECO-088(様式初出)・ECO-089(read-across 漏れの実証+DRY 残置元)・IMG-023A/B/TAG-013(CAD 裁定待ち=本 ECO と独立並行)"
