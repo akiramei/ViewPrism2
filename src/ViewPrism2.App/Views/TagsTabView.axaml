@@ -309,23 +309,30 @@
                     <!-- テキスト: 候補値チップ。
                          ECO-089(ECO-088 同型): WrapPanel の折返し(mock flex-wrap)は有限幅測定が
                          前提 — 横 StackPanel は無限幅測定で折返し契機を奪い、多数候補値でカードが
-                         押し広がり右端要素(編集/削除アイコン)が見切れる(VC-TAG-9)。 -->
+                         押し広がり右端要素(編集/削除アイコン)が見切れる(VC-TAG-9)。
+                         ECO-092(TAG-013=T-a): 候補値=閲覧プレビュー。最大 2 行+非対話「ほか N 件」
+                         (件数のみ・展開/ポップオーバーなし)。長い値は幅上限+省略+ツールチップ。
+                         定義順維持。折畳み計算は行 VM(実測供給は code-behind EvaluateCandidateRows)。
+                         IMG-023A/B(操作面=ECO-091)とは別契約(VC-TAG-10)。 -->
                     <Grid ColumnDefinitions="Auto,*" Margin="20,0,0,0"
                           IsVisible="{Binding HasCandidateValues}">
                       <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.candidateValues]}"
                                  FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center"
                                  Margin="0,0,6,0" />
-                      <ItemsControl Grid.Column="1" ItemsSource="{Binding CandidateValues}">
+                      <ItemsControl Grid.Column="1" Classes="candidateStrip" ItemsSource="{Binding CandidateDisplay}">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="sys:String">
-                            <Border Classes="valueChip" Margin="0,0,6,4">
-                              <TextBlock Text="{Binding}" />
+                        <ItemsControl.DataTemplates>
+                          <DataTemplate DataType="sys:String">
+                            <Border Classes="valueChip" Margin="0,0,6,4" MaxWidth="130" ToolTip.Tip="{Binding}">
+                              <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" />
                             </Border>
                           </DataTemplate>
-                        </ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="vm:ChipMoreVM">
+                            <TextBlock Classes="valueMore" Text="{Binding Label}" Margin="0,0,6,4" />
+                          </DataTemplate>
+                        </ItemsControl.DataTemplates>
                       </ItemsControl>
                     </Grid>
                     <!-- 数値: 範囲ピル+刻み -->

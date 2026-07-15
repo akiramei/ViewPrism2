@@ -126,6 +126,14 @@
     <Setter Property="FontSize" Value="11.5" />
     <Setter Property="Foreground" Value="{StaticResource ValueChipFg}" />
   </Style>
+  <!-- ECO-092(TAG-013=T-a・VC-TAG-10): 候補値プレビューの非対話「ほか N 件」。
+       件数のみのテキスト=クリック/ホバー強調/カーソル等の操作可能に見える表現を付けない -->
+  <Style Selector="TextBlock.valueMore">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Padding" Value="0,2" />
+  </Style>
   <Style Selector="Border.rangePill">
     <Setter Property="Background" Value="{StaticResource RangePillBg}" />
     <Setter Property="CornerRadius" Value="6" />

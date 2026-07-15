@@ -85,3 +85,49 @@ TAG-013 の裁定により、タグパレットのカード内候補値行の多
   R7 セルフゴールデン=CAD captures 並置。
 - スコープ外: 候補値チップの操作対象化(再裁定事項)。CandidateValuePreview 級の部品抽出=
   「チップ描画など下位の不変部分」の共有判断は ECO-091 の LabeledChipStrip 判断と合わせ将来 ECO。
+
+## 7. 実施記録(2026-07-15 /eco-fix)
+
+**プローブ先行(R5)**: CpUi092CandidatePreviewTests 4 本を CAD VC-TAG-10 から生成。是正前赤を実測 —
+**3/4 不合格**(47 件カード=「ほか N 件」不在/非対話性検査=同・不在/長候補値=チップ幅 211px>上限 134px)。
+少数 2 件 pin のみ緑(既存視覚の基準)。診断どおりの赤。
+
+**是正(§4 案の採用)**:
+
+- **TagPaletteRowViewModel へ折畳み状態を追加**(`CandidateDisplay`+`ReportCandidateLayout`):
+  計算は **ChipRowOverflow を再利用**(ECO-091 と同一の純計算=最大 2 行・検証パス収束・
+  行判定許容差 6px)。表示は**定義順のまま先頭から**(T-a 契約 4=動的並べ替えなし)。
+  「ほか {n} 件」ラベルは Loc 解決済みで行 VM へ注入(K-AVALONIA 直書き禁止・culture 変更は
+  ApplyFilter 再実行で追随)。
+- **非対話の「ほか N 件」**= TextBlock(`valueMore` スタイル=FaintText・背景/枠/カーソルなし)。
+  Button にしない・ポップオーバー/展開なし(T-a 契約 2)。i18n キーは ECO-091 の
+  `chip.moreItems` を**共通利用**(§3-5 の見込みどおり・新規キーなし)。
+- **チップ幅上限**= Border MaxWidth 130(mock と同値)+TextTrimming=CharacterEllipsis+
+  ToolTip.Tip=完全文字列(全チップに付与=mock title 同様)。
+- **実測供給**= TagsTabView.EvaluateCandidateRows(LayoutUpdated・カードごとに candidateStrip を
+  走査して行 VM へ供給)。幅変更時は全表示へ戻して測り直し(ECO-091 の同一パス計測知見を適用)。
+- 疑い (a) の決着: カード毎実測のコストは全カード走査でも実害なし(パレットは非仮想 ItemsControl・
+  十数行規模)。疑い (b) の決着: MaxWidth+TextTrimming+ToolTip の標準機構で成立(独自描画不要)。
+
+**横断規約(ECO-080)**: 新規文言なし(chip.moreItems を ECO-091 と共通利用)・XAML 直書きなし・
+VM/DB 不変。既存 CpDisplayParity022(行 VM 公開契約検査)は ctor 追加引数のみ追随。
+
+**機械受入**: build 0/0・**Tests 740/740**(probe 3 本緑転+pin 1 本維持)・Oracle 109+2skip(R6 不変)・
+validate_bom 0/0。CP-CHIPWRAP-088 のパレット面を容量契約へ拡張済み。
+
+**セルフゴールデン(R7・面全体並置=3 分類。CAD mock=タグ管理.dc.html はブラウザ実測済みの参照実装:
+pref 5 表示+ほか 42 件・2 行/locmemo 2+ほか 2 件/幅上限 130+title/非対話 span)**:
+
+| # | 差分/次元 | 分類 |
+|---|---|---|
+| 最大 2 行+非対話「ほか N 件」(N 会計)・定義順維持 | 転写(probe 実測=mock と同一アルゴリズム) | — |
+| チップ幅上限 130px+省略+ツールチップ | 転写(mock max-width:130px と同値・probe 実測) | — |
+| 非対話性(TextBlock・操作可能に見える表現なし) | 転写(mock=cursor:default の span と同義) | — |
+| 少数カード(2〜3 件)・ECO-089 面 A(アイコン可視・折返し)・範囲ピル/シンプル注記 | 不変(pin+既存 probe 全緑=740 に包含) | — |
+| 折返し 2 行目=「候補値」ラベル列の右 | 裁定済み許容(ECO-089 gate② 裁定・構造不変) | 裁定済み |
+
+転写漏れ 0。
+
+## 8. 残ゲート(更新)
+
+- gate②(golden)のみ。合格基準は停止点の提示どおり。スコープ外(§6)は不変。

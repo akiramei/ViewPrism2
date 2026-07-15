@@ -265,7 +265,8 @@ public sealed class CpDisplayParity022Tests
             new Tag { Id = "t1", Name = "色", Type = TagType.Simple, Color = "#30a46c", Description = "作品の主要色" },
             typeText: "単純",
             predefinedValues: [],
-            numeric: null);
+            numeric: null,
+            moreLabel: n => $"ほか {n} 件"); // ECO-092: 候補値プレビューの折畳みラベル(本検査では未使用)
         Assert.Equal("色", row.Name);
         Assert.Equal("#30a46c", row.Color);
         Assert.True(row.HasColor);

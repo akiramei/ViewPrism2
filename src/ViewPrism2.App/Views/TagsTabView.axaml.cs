@@ -21,9 +21,34 @@ public partial class TagsTabView : UserControl
         InitializeComponent();
         AddHandler(DragDrop.DragOverEvent, OnTreeDragOver);
         AddHandler(DragDrop.DropEvent, OnTreeDrop);
+        // ECO-092(TAG-013=T-a): 候補値プレビューの容量(最大2行+非対話ほかN件)。
+        // 実測供給は View 責務(ECO-091/ECO-027 と同流儀・計算は行 VM+ChipRowOverflow)
+        LayoutUpdated += (_, _) => EvaluateCandidateRows();
     }
 
     private TagsTabViewModel? ViewModel => DataContext as TagsTabViewModel;
+
+    /// <summary>各パレットカードの候補値行の実描画矩形を行 VM へ供給する(ECO-092)。</summary>
+    private void EvaluateCandidateRows()
+    {
+        foreach (var strip in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(this).OfType<ItemsControl>())
+        {
+            if (!strip.Classes.Contains("candidateStrip")) continue;
+            if (strip.DataContext is not TagPaletteRowViewModel row) continue;
+            var panel = strip.ItemsPanelRoot;
+            if (panel is null || panel.Bounds.Width <= 0) continue;
+
+            var chipRects = new System.Collections.Generic.List<Avalonia.Rect>();
+            Avalonia.Rect? moreRect = null;
+            foreach (var child in panel.Children)
+            {
+                if (!child.IsVisible) continue;
+                if (child.DataContext is string) chipRects.Add(child.Bounds);
+                else if (child.DataContext is ChipMoreVM) moreRect = child.Bounds;
+            }
+            row.ReportCandidateLayout(chipRects, moreRect, panel.Bounds.Width);
+        }
+    }
 
     private void OnViewRowPressed(object? sender, PointerPressedEventArgs e)
     {
