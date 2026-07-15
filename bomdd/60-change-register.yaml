@@ -1464,4 +1464,15 @@ changes:
     impacted_bom: ["src=LabeledChipStrip(新設 UserControl/TemplatedControl)+ImageTabView.axaml/.cs・WorkTabView.axaml/.cs(重複ブロックを部品呼び出しへ置換)。VM 層(ChipStripViewModel/ChipRowOverflow)不変", "テスト=既存 CpUi090ChipStripParityTests 維持+DRY 後の視覚不変 probe(未定義値チップの ImageTab 保持/WorkTab 非保持・折畳み挙動 2 面一致)", "E-BOM=shared-component sub-BOM 追補(SC-CHIPSTRIP-001・SC-COLUMN-PICKER-001 前例)+E-UI-023 系 realized-by 更新", "CP=CP-CHIPWRAP-088 を部品面へ継承(検査次元不変)", "CAD=変更なし(視覚不変・契約は VPUI 17dc9f3 のまま)", "i18n=変更なし(既存 chip.* を部品が参照)"]
     oracle: "既存固定 Oracle 行は変更しない(R6)。視覚不変が納品条件。probe=DRY 前後で少数/47 件級/幅変更/未定義値チップの描画・折畳み挙動が 2 面とも不変(パリティ)"
     body: 60-change-order-eco-094.md
-    notes: "gate①=不要(ECO-091 §7 で先出し済み・CAD 変更なし・視覚不変)。gate②=必要(2 面とも golden approved 済みサーフェス→DRY 後に視覚・挙動不変を maintainer 実機で再承認・R7=CAD captures 並置・両タブ)。関連=ECO-091(起票元裁定 §7)・ECO-090(read-across 統制宣言=本 ECO が構造的 DRY で置換)・ECO-016/ECO-025(部品昇格の前例=SC-COLUMN-PICKER-001)。スコープ外=CandidateValuePreview 級のプレビュー系様式共通化(将来 ECO・ECO-092 notes)"
+    notes: "gate①=不要(ECO-091 §7 で先出し済み・CAD 変更なし・視覚不変)。gate②=必要(2 面とも golden approved 済みサーフェス→DRY 後に視覚・挙動不変を maintainer 実機で再承認・R7=CAD captures 並置・両タブ)。関連=ECO-091(起票元裁定 §7)・ECO-090(read-across 統制宣言=本 ECO が構造的 DRY で置換)・ECO-016/ECO-025(部品昇格の前例=SC-COLUMN-PICKER-001)。スコープ外=CandidateValuePreview 級のプレビュー系様式共通化(将来 ECO・ECO-092 notes)。R3 派生=ECO-095(golden 中の en 切替所見=デフォルト作業スペース名の不追随・別サーフェス)"
+  - id: ECO-095
+    title: "デフォルト作業スペース名の多言語不追随 — UI ロケール文字列の永続データ焼き込み(Core シード)"
+    type: 不具合(i18n 漏れ・第 3 の様態= Core 層シードデータへのロケール文字列焼き込み)
+    status: staged
+    golden: "pending(是正後に ja/en 切替の実機確認)"
+    baseline: "main 8e866a9"
+    findings: "ECO-094 gate② 中の maintainer 実機所見(en 切替検査)— R3 分離(別サーフェス=作業スペースサイドバー・ECO-094 のチップ行と無関係)。症状= en 切替でデフォルト作業スペース行の名前が「デフォルト」のまま(既定バッジ workspace.defaultAutoAdd は ja/en 完備で追随=名前だけ残る)。工程診断=実装欠陥と確定: WorkspaceService.cs:17 の const DefaultName=「デフォルト」が EnsureDefaultExistsAsync(:40)+デフォルト回転(:77)で DB シード名として永続化・表示は DB Name 直(WorkTabViewModel.cs:378/:400)=ロケール切替が作用しない構造。混入= f211fa9(ECO-020/021 作業タブ初期実装)・潜伏= ja 環境で機能等価・en 切替検査(ECO-094 golden 基準 6)が初可視化。検査の谷間= ECO-079 の i18n 全数走査(XAML+VM の 2 層)は Core 層シード永続データを検査次元に含まず(第 3 の様態=ECO-080 暗黙前提 3 様態への追補候補)。是正を単純化する既存制約=デフォルトは改名不可+回転降格時は時刻名へ改名=is_default 行の Name は事実上固定→表示専用化がユーザー編集と衝突しない。副所見(スコープ外・51-cheat-log)= i18n キー image.feature.defaultWorkspace が全ソース未使用=デッドキー(未使用キーを i18n lint が検出しない谷間・ECO-091 重複キー所見と同族)"
+    impacted_bom: ["src(案A)=WorkTabViewModel(サイドバー行/ヘッダーの表示解決)+Name 表示面の全数(fix 時走査で確定)。Core(WorkspaceService)不変=DB 名は識別子残置", "テスト=en 切替でデフォルト行が Default 表示になる probe(是正前赤)+ja 不変 pin", "CP=i18n 検査(ECO-080)へ永続データ焼き込み次元の追補", "i18n=common.default 再利用見込み=キー新設なし", "CAD=変更なし見込み(ja 視覚不変)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=en 切替後のデフォルト行表示が Default(是正前=デフォルトのままで赤)・ja 表示不変 pin・回転降格後の旧デフォルト(時刻名)非干渉"
+    body: 60-change-order-eco-095.md
+    notes: "gate①=必要(案A 表示時解決=推奨/案B シード名変更=劣後明記)。関連=ECO-094(発見元・別サーフェス)・ECO-079/080(i18n 3 層運用=本件は第 3 の様態)・ECO-020/021(混入元)。スコープ外=未使用 i18n キーの lint 谷間(51-cheat-log)"
