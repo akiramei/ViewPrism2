@@ -66,7 +66,13 @@
 - i18n= 既存 common.default(ja=デフォルト/en=Default)を再利用可=キー新設なしの見込み。
 - CAD= 変更なし見込み(ja 視覚不変)。
 
-## 6. 残ゲート
+## 6. 残ゲート(2026-07-15 gate① 後更新)
 
-- **gate①(裁定)**: 案A/案B の選択(推奨=案A)。
+- ~~gate①(裁定)~~ = **済**(§7)。
 - **gate②(golden)**: 是正後、ja/en 切替の実機確認。
+
+## 7. 裁定記録(2026-07-15 maintainer)
+
+**gate① 裁定=案A 採択**(表示時解決)。is_default=1 の行は DB Name を使わず
+Loc(common.default)で表示する。DB スキーマ・既存データ不変・切替に即追随・既存 DB も直る。
+fix は Name 表示面の全数走査で一貫させる(/eco-fix eco-095)。

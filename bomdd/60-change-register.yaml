@@ -1475,4 +1475,4 @@ changes:
     impacted_bom: ["src(案A)=WorkTabViewModel(サイドバー行/ヘッダーの表示解決)+Name 表示面の全数(fix 時走査で確定)。Core(WorkspaceService)不変=DB 名は識別子残置", "テスト=en 切替でデフォルト行が Default 表示になる probe(是正前赤)+ja 不変 pin", "CP=i18n 検査(ECO-080)へ永続データ焼き込み次元の追補", "i18n=common.default 再利用見込み=キー新設なし", "CAD=変更なし見込み(ja 視覚不変)"]
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=en 切替後のデフォルト行表示が Default(是正前=デフォルトのままで赤)・ja 表示不変 pin・回転降格後の旧デフォルト(時刻名)非干渉"
     body: 60-change-order-eco-095.md
-    notes: "gate①=必要(案A 表示時解決=推奨/案B シード名変更=劣後明記)。関連=ECO-094(発見元・別サーフェス)・ECO-079/080(i18n 3 層運用=本件は第 3 の様態)・ECO-020/021(混入元)。スコープ外=未使用 i18n キーの lint 谷間(51-cheat-log)"
+    notes: "gate①=済(2026-07-15 maintainer=案A 表示時解決を採択・本文§7)。gate②=実機 ja/en 切替。関連=ECO-094(発見元・別サーフェス)・ECO-079/080(i18n 3 層運用=本件は第 3 の様態)・ECO-020/021(混入元)。スコープ外=未使用 i18n キーの lint 谷間(51-cheat-log)"
