@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -243,6 +244,52 @@ public sealed class CpUiG6SaveBarTests : IDisposable
             await Task.Delay(250, TestContext.Current.CancellationToken);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(0, CountVisible(window, "savedToast"));
+
+            window.Close();
+            return true;
+        }, CancellationToken.None);
+    }
+
+    // ---- 視覚転写(GF-103-01/02): ボタン文言の縦中央+ドットのハローリング(VC-TAG-16②) ----
+
+    [Fact]
+    public async Task 保存バーのボタン文言は縦中央でドットはハローリング付き()
+    {
+        // GF-103-01: mock= flex align-items:center(高さ34内で縦中央)。Fluent の ContentPresenter は
+        // 既定 Stretch でテキストが上寄りになる(ECO-040 規約=VerticalContentAlignment 明示。GF-091-01 再発)。
+        // GF-103-02: mock= box-shadow 0 0 0 3px rgba(232,185,49,.22) — 8px ドット+3px ハローリング。
+        var (tab, tag, _) = await SetupAsync();
+
+        await HeadlessApp.Session.Dispatch(() =>
+        {
+            var window = new Window { Content = new TagsTabView { DataContext = tab }, Width = 1366, Height = 900 };
+            window.Show();
+            tab.Editor.AddNode(tag, null);
+            Dispatcher.UIThread.RunJobs();
+
+            var bar = window.GetVisualDescendants().OfType<Border>()
+                .Single(b => b.Classes.Contains("saveBar") && b.IsVisible);
+
+            foreach (var cls in new[] { "saveBarDiscard", "saveBarSave" })
+            {
+                // 上寄りの実態は「TextBlock がボタン全高へ Stretch され、グリフがその上端に描かれる」
+                // なので Bounds 中心では検出できない — グリフ実高(TextLayout)基準で測る。
+                var btn = bar.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains(cls));
+                var text = btn.GetVisualDescendants().OfType<TextBlock>().First(t => !string.IsNullOrEmpty(t.Text));
+                var textTop = text.TranslatePoint(new Point(0, 0), btn)!.Value.Y;
+                var glyphCenter = textTop + (text.TextLayout.Height / 2);
+                var btnCenter = btn.Bounds.Height / 2;
+                Assert.True(
+                    Math.Abs(glyphCenter - btnCenter) <= 1.0,
+                    $"{cls}: 文言が縦中央でない(グリフ中心 {glyphCenter:F1} / ボタン中心 {btnCenter:F1})");
+            }
+
+            var dotRing = bar.GetVisualDescendants().OfType<Border>()
+                .SingleOrDefault(b => b.Classes.Contains("saveBarDot"));
+            Assert.NotNull(dotRing);                              // リング(ハロー)ホストの存在
+            var dot = dotRing!.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>().Single();
+            Assert.InRange(dot.Bounds.Width, 7.5, 8.5);           // 本体 8px
+            Assert.InRange(dotRing.Bounds.Width, 13.5, 14.5);     // 8 + 3×2 = 14px(ハロー 3px)
 
             window.Close();
             return true;
