@@ -243,14 +243,8 @@ public sealed partial class TagsTabViewModel : ObservableObject
         Editor.TogglePlacing(row.Tag);
     }
 
-    /// <summary>D&D 経路: タグ id からノード追加(View 層の Drop ハンドラから呼ぶ)。</summary>
-    public void AddTagById(string tagId, EditNodeViewModel? target)
-    {
-        if (_tagById.TryGetValue(tagId, out var tag))
-        {
-            Editor.AddNode(tag, target);
-        }
-    }
+    // ECO-100: 旧 D&D 経路 AddTagById(行上=子/空白=ルートの暗黙ドロップ)は撤去 —
+    // ドラッグ配置は挿入表示(Editor.BeginDragPlacing→Insert* コマンド)へ一本化(mock 契約)。
 
     private void SetSelectedRow(ViewRowViewModel? row)
     {

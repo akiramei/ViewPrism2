@@ -19,12 +19,23 @@ public partial class TagsTabView : UserControl
     private static readonly DataFormat<string> TagIdFormat =
         DataFormat.CreateStringApplicationFormat("viewprism2-tag-id");
 
-    /// <summary>クリック(=配置モードのトグル)とドラッグ開始を分ける移動閾値(px)。</summary>
+    /// <summary>行移動 D&D のアプリ内データ形式(階層ノード id・ECO-100)。</summary>
+    private static readonly DataFormat<string> NodeIdFormat =
+        DataFormat.CreateStringApplicationFormat("viewprism2-node-id");
+
+    /// <summary>クリック(=配置トグル/展開/選択)とドラッグ開始を分ける移動閾値(px・裁定 a)。</summary>
     private const double DragThreshold = 4;
 
     private TagPaletteRowViewModel? _palettePressRow;
     private PointerPressedEventArgs? _palettePressArgs;
     private Point _palettePressPoint;
+
+    private EditNodeViewModel? _rowPressNode;
+    private PointerPressedEventArgs? _rowPressArgs;
+    private Point _rowPressPoint;
+
+    /// <summary>ドラッグオーバー中の受け面(dropHover 強調の対象)。</summary>
+    private Border? _dropHoverElement;
 
     public TagsTabView()
     {
@@ -95,7 +106,7 @@ public partial class TagsTabView : UserControl
         }
     }
 
-    private void OnPaletteItemMoved(object? sender, PointerEventArgs e)
+    private async void OnPaletteItemMoved(object? sender, PointerEventArgs e)
     {
         if (ViewModel is not { } vm || _palettePressRow is not { } row || _palettePressArgs is not { } press)
         {
@@ -108,13 +119,23 @@ public partial class TagsTabView : UserControl
             return;
         }
 
-        // ドラッグ確定: 従来 D&D(配置モードには入らない=mock は両経路を独立に提供)
+        // ドラッグ確定(ECO-100 スコープ2): クリック配置と同一の挿入表示で受ける(mock 契約)。
+        // ドラッグ開始で配置モードへ入り、終了で必ず解除(ドロップ成功時は既に解除済み=冪等)
         _palettePressRow = null;
         _palettePressArgs = null;
         vm.Palette.SelectedTag = row;
+        vm.Editor.BeginDragPlacing(row.Tag);
         var data = new DataTransfer();
         data.Add(DataTransferItem.Create(TagIdFormat, row.Tag.Id));
-        _ = DragDrop.DoDragDropAsync(press, data, DragDropEffects.Copy);
+        try
+        {
+            await DragDrop.DoDragDropAsync(press, data, DragDropEffects.Copy);
+        }
+        finally
+        {
+            SetDropHover(null);
+            vm.Editor.CancelPlacingCommand.Execute(null); // 有効位置外/Esc=キャンセル(裁定 c 同型)
+        }
     }
 
     private void OnPaletteItemReleased(object? sender, PointerReleasedEventArgs e)
@@ -130,51 +151,199 @@ public partial class TagsTabView : UserControl
         _palettePressArgs = null;
     }
 
+    /// <summary>ドロップ受け面の種別(ECO-100: クリック配置と同一の挿入表示のみが受ける)。</summary>
+    private enum DropTargetKind
+    {
+        None,
+        Before,
+        ChildEnd,
+        RootEnd,
+    }
+
+    /// <summary>
+    /// e.Source から受け面(挿入ポイント/「＋ 子にする」)を解決する。挿入表示以外は受けない
+    /// (旧・行上=子/空白=ルートの暗黙ドロップは ECO-100 で撤去=挿入表示方式へ一本化)。
+    /// </summary>
+    private static (DropTargetKind Kind, EditNodeViewModel? Node, Border? Element) ResolveDropTarget(object? source)
+    {
+        for (var current = source as StyledElement; current is not null; current = current.Parent)
+        {
+            if (current is not Border border || !border.IsVisible)
+            {
+                continue;
+            }
+
+            if (border.Classes.Contains("makeChild") || border.Classes.Contains("ipChildEnd"))
+            {
+                return border.DataContext is EditNodeViewModel parent
+                    ? (DropTargetKind.ChildEnd, parent, border)
+                    : (DropTargetKind.None, null, null);
+            }
+
+            if (border.Classes.Contains("ipRootEnd"))
+            {
+                return (DropTargetKind.RootEnd, null, border);
+            }
+
+            if (border.Classes.Contains("ipBefore"))
+            {
+                return border.DataContext is EditNodeViewModel node
+                    ? (DropTargetKind.Before, node, border)
+                    : (DropTargetKind.None, null, null);
+            }
+        }
+
+        return (DropTargetKind.None, null, null);
+    }
+
+    private void SetDropHover(Border? element)
+    {
+        if (ReferenceEquals(_dropHoverElement, element))
+        {
+            return;
+        }
+
+        _dropHoverElement?.Classes.Remove("dropHover");
+        _dropHoverElement = element;
+        _dropHoverElement?.Classes.Add("dropHover");
+    }
+
     private void OnTreeDragOver(object? sender, DragEventArgs e)
     {
-        e.DragEffects = ViewModel?.Editor.HasView == true && e.DataTransfer.Contains(TagIdFormat)
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
+        var payloadOk = e.DataTransfer.Contains(NodeIdFormat) || e.DataTransfer.Contains(TagIdFormat);
+        var (kind, _, element) = ResolveDropTarget(e.Source);
+        if (ViewModel?.Editor.HasView == true && payloadOk && kind != DropTargetKind.None)
+        {
+            SetDropHover(element);
+            e.DragEffects = e.DataTransfer.Contains(NodeIdFormat) ? DragDropEffects.Move : DragDropEffects.Copy;
+        }
+        else
+        {
+            SetDropHover(null);
+            e.DragEffects = DragDropEffects.None;
+        }
+
         e.Handled = true;
     }
 
-    /// <summary>ドロップ: ノード上=その子として追加 / 空白=ルートへ追加。</summary>
+    /// <summary>ドロップ: 挿入表示の面のみが受ける。行移動(NodeId)/ドラッグ配置(TagId)とも同一の意味論。</summary>
     private void OnTreeDrop(object? sender, DragEventArgs e)
     {
+        SetDropHover(null);
         if (ViewModel is not { } vm || vm.Editor.HasView != true)
         {
             return;
         }
 
-        if (e.DataTransfer.TryGetValue(TagIdFormat) is not { } tagId)
+        var (kind, node, _) = ResolveDropTarget(e.Source);
+        if (kind == DropTargetKind.None)
         {
+            return; // 有効位置外=キャンセル(裁定 c)
+        }
+
+        if (e.DataTransfer.TryGetValue(NodeIdFormat) is { } nodeId)
+        {
+            // 行移動(ECO-100)。ドラッグ中ノードと id を突合(別ウィンドウ由来等の異物は無視)
+            if (vm.Editor.DraggingNode is { } dragging && string.Equals(dragging.Id, nodeId, StringComparison.Ordinal))
+            {
+                switch (kind)
+                {
+                    case DropTargetKind.Before:
+                        vm.Editor.MoveBefore(node!);
+                        break;
+                    case DropTargetKind.ChildEnd:
+                        vm.Editor.MoveToChildEnd(node!);
+                        break;
+                    case DropTargetKind.RootEnd:
+                        vm.Editor.MoveToRootEnd();
+                        break;
+                }
+            }
+
+            e.Handled = true;
             return;
         }
 
-        var target = FindDataContext<EditNodeViewModel>(e.Source);
-        vm.AddTagById(tagId, target);
-        e.Handled = true;
+        if (e.DataTransfer.TryGetValue(TagIdFormat) is not null)
+        {
+            // ドラッグ配置(スコープ2): BeginDragPlacing 済みの PlacingTag をクリック配置と同一経路で挿入
+            switch (kind)
+            {
+                case DropTargetKind.Before:
+                    vm.Editor.InsertBeforeCommand.Execute(node!);
+                    break;
+                case DropTargetKind.ChildEnd:
+                    vm.Editor.InsertChildEndCommand.Execute(node!);
+                    break;
+                case DropTargetKind.RootEnd:
+                    vm.Editor.InsertRootEndCommand.Execute(null);
+                    break;
+            }
+
+            e.Handled = true;
+        }
     }
 
-    // ---- 階層行(ECO-099): 親行クリック=展開/折畳・葉行クリック=選択(CAD インタラクション表) ----
+    // ---- 階層行(ECO-099/100): クリック(閾値未満リリース)=展開/選択・ドラッグ=行移動(裁定 a) ----
 
     private void OnNodeRowPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (ViewModel is not { } vm ||
-            sender is not Control { DataContext: EditNodeViewModel node } control ||
-            !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        if (sender is Control { DataContext: EditNodeViewModel node } control &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        {
+            _rowPressNode = node;
+            _rowPressArgs = e;
+            _rowPressPoint = e.GetPosition(this);
+        }
+    }
+
+    private async void OnNodeRowMoved(object? sender, PointerEventArgs e)
+    {
+        if (ViewModel is not { } vm || _rowPressNode is not { } node || _rowPressArgs is not { } press)
         {
             return;
         }
 
-        if (node.HasChildren)
+        var delta = e.GetPosition(this) - _rowPressPoint;
+        if (Math.Abs(delta.X) < DragThreshold && Math.Abs(delta.Y) < DragThreshold)
         {
-            node.IsExpanded = !node.IsExpanded;
+            return;
         }
-        else
+
+        // 移動ドラッグ確定(ECO-100): クリック配置と同一の挿入表示で受ける。配置モードとは排他
+        _rowPressNode = null;
+        _rowPressArgs = null;
+        vm.Editor.BeginMove(node);
+        var data = new DataTransfer();
+        data.Add(DataTransferItem.Create(NodeIdFormat, node.Id));
+        try
         {
-            vm.Editor.SelectedNode = node;
+            await DragDrop.DoDragDropAsync(press, data, DragDropEffects.Move);
         }
+        finally
+        {
+            SetDropHover(null);
+            vm.Editor.EndMove(); // ドロップ成功時は既に解除済み(冪等)。Esc/有効位置外=キャンセル(裁定 c)
+        }
+    }
+
+    private void OnNodeRowReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (ViewModel is { } vm && _rowPressNode is { } node)
+        {
+            // クリック確定: 親行=展開/折畳・葉行=選択(CAD インタラクション表)
+            if (node.HasChildren)
+            {
+                node.IsExpanded = !node.IsExpanded;
+            }
+            else
+            {
+                vm.Editor.SelectedNode = node;
+            }
+        }
+
+        _rowPressNode = null;
+        _rowPressArgs = null;
     }
 
     // ---- 挿入ポイント/「＋ 子にする」(VC-TAG-12③④) ----

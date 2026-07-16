@@ -311,6 +311,7 @@
   "hierarchy.menu.setCondition": "条件を設定",
   "hierarchy.menu.setHome": "ホームに設定",
   "hierarchy.placeHint": "パレットで選ぶ / ドラッグで配置・並べ替え",
+  "hierarchy.movingBanner": "「{tagName}」を移動中 — 光った位置にドロップ",
   "hierarchy.placingBanner": "「{tagName}」を配置中 — 光った位置をクリック",
   "hierarchy.placingEsc": "Esc",
   "hierarchy.placingRelease": "解除",

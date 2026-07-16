@@ -160,6 +160,20 @@ public sealed partial class EditNodeViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    // ---- ECO-100: 移動ドラッグの表示状態(エディタが UpdateInsertTargetVisibility で一括更新) ----
+
+    /// <summary>移動ドラッグの元行(減光表示)。</summary>
+    [ObservableProperty]
+    private bool _isMoveSource;
+
+    /// <summary>この行の前の挿入ポイントの可視(配置/移動共通。禁止位置=非表示・裁定 b)。</summary>
+    [ObservableProperty]
+    private bool _insertBeforeTargetVisible;
+
+    /// <summary>この行を子として受ける面(＋子にする/子リスト末尾)の可視(禁止位置=非表示・裁定 b)。</summary>
+    [ObservableProperty]
+    private bool _childTargetVisible;
+
     public bool HasChildren => Children.Count > 0;
 
     /// <summary>子数バッジ(mock: 親行の右端ピル)。</summary>
@@ -202,6 +216,13 @@ public sealed partial class EditNodeViewModel : ObservableObject
     partial void OnIsHomeChanged(bool value) => OnPropertyChanged(nameof(HomeButtonTitle));
 
     partial void OnIsExpandedChanged(bool value) => OnPropertyChanged(nameof(ShowChildren));
+
+    /// <summary>親の付け替え(ECO-100 MoveNode)後、階層依存の表示(ハンドル/カレット幅等)を再評価する。</summary>
+    internal void NotifyParentChanged()
+    {
+        OnPropertyChanged(nameof(IsRootLevel));
+        OnPropertyChanged(nameof(ShowLeafSpacer));
+    }
 
     /// <summary>ロケール切替時の VM 算出文言の再評価(DF-3。エディタの CultureChanged から呼ぶ)。</summary>
     internal void RaiseLocalizedTexts()
@@ -249,6 +270,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             OnPropertyChanged(nameof(Loc));
             // ECO-099: VM 算出文言(配置中チップ・家アイコン title 等)も再評価(ECO-079 の第 2 層)
             OnPropertyChanged(nameof(PlacingBannerText));
+            OnPropertyChanged(nameof(InsertBannerText)); // ECO-100: 移動中帯
             OnPropertyChanged(nameof(NodeCountText));
             foreach (var node in Flatten())
             {
@@ -291,6 +313,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsPlacing));
         OnPropertyChanged(nameof(PlacingBannerText));
+        UpdateInsertTargetVisibility(); // ECO-100: 挿入表示は配置/移動共通の per-node 可視で駆動
     }
 
     partial void OnSelectedNodeChanged(EditNodeViewModel? oldValue, EditNodeViewModel? newValue)
@@ -325,6 +348,165 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     /// <summary>解除(Esc / ヘッダ帯の解除ボタン)。ツリーは不変。</summary>
     [RelayCommand]
     private void CancelPlacing() => PlacingTag = null;
+
+    // ---- ECO-100: 既存配置行の並べ替え・付け替え D&D(TAG-014 実装確定)。
+    //      契約=クリックもドラッグも同一の挿入表示(tag_tab.md「配置モデル統一」)。裁定(a)〜(e)= ECO-100 §4.2 ----
+
+    /// <summary>移動ドラッグ中の行(ECO-100)。null=非ドラッグ。</summary>
+    [ObservableProperty]
+    private EditNodeViewModel? _draggingNode;
+
+    /// <summary>挿入表示(挿入ポイント/＋子にする/帯/行操作の一時停止)の可視= クリック配置または移動ドラッグ中。</summary>
+    public bool ShowInsertTargets => IsPlacing || DraggingNode is not null;
+
+    /// <summary>ヘッダ帯の文言。移動中は新 copy(裁定 e・golden 裁定対象)、配置は既存 copy を包含。</summary>
+    public string InsertBannerText => DraggingNode is { } moving
+        ? _localization.T("hierarchy.movingBanner", new Dictionary<string, string>
+        {
+            ["tagName"] = moving.DisplayName,
+        })
+        : PlacingBannerText;
+
+    /// <summary>
+    /// パレットカードのドラッグ開始(ECO-100 スコープ2)。配置モードへ入れ、挿入表示をクリック配置と
+    /// 同一にする(mock「ドラッグ＆ドロップでも同じ挿入表示で配置できます」)。ドラッグ終了時の
+    /// 掃除(CancelPlacing)は開始側(View)が finally で行う。
+    /// </summary>
+    public void BeginDragPlacing(Tag tag)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        if (HasView)
+        {
+            PlacingTag = tag;
+        }
+    }
+
+    /// <summary>行の移動ドラッグ開始(裁定 a=行全体ドラッグ)。配置モードとは排他(先に解除)。</summary>
+    public void BeginMove(EditNodeViewModel node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        PlacingTag = null;
+        DraggingNode = node;
+    }
+
+    /// <summary>移動ドラッグ終了(ドロップ/Esc/有効位置外=キャンセルの共通経路・裁定 c)。表示状態を全解除。</summary>
+    public void EndMove() => DraggingNode = null;
+
+    /// <summary>
+    /// ノード移動(裁定 b/d): サブツリーごと・per-placement 状態随伴(同一 VM オブジェクトを移設)。
+    /// 自分自身/子孫への入れ子は拒否(循環防止)・同位置は no-op。いずれもツリー/ダーティ不変で false。
+    /// </summary>
+    public bool MoveNode(EditNodeViewModel node, EditNodeViewModel? newParent, int index)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (newParent is not null && IsInSubtree(node, newParent))
+        {
+            return false; // 自分自身・自分の子孫への入れ子=循環(裁定 b)
+        }
+
+        var owner = node.Parent?.Children ?? Roots;
+        var oldIndex = owner.IndexOf(node);
+        if (oldIndex < 0)
+        {
+            return false;
+        }
+
+        var targetOwner = newParent?.Children ?? Roots;
+        var targetIndex = Math.Clamp(index, 0, targetOwner.Count);
+        if (ReferenceEquals(owner, targetOwner))
+        {
+            if (targetIndex == oldIndex || targetIndex == oldIndex + 1)
+            {
+                return false; // 同位置(自分の直前/直後の挿入ポイント)= no-op(裁定 b)
+            }
+
+            owner.RemoveAt(oldIndex);
+            if (targetIndex > oldIndex)
+            {
+                targetIndex--;
+            }
+
+            owner.Insert(targetIndex, node);
+        }
+        else
+        {
+            owner.RemoveAt(oldIndex);
+            targetOwner.Insert(targetIndex, node);
+            node.Parent = newParent;
+            node.NotifyParentChanged(); // 行ハンドル/カレット幅/挿入ポイント寸法の階層依存表示を追随
+        }
+
+        if (newParent is not null)
+        {
+            newParent.IsExpanded = true; // 受け側は自動展開(クリック配置と同一)
+        }
+
+        SelectedNode = node;
+        SetDirty(true);
+        return true;
+    }
+
+    /// <summary>ドロップ経路: 行間の挿入ポイント= その行の前へ兄弟として移動。実行後ドラッグ終了。</summary>
+    public void MoveBefore(EditNodeViewModel target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        if (DraggingNode is { } node)
+        {
+            var owner = target.Parent?.Children ?? Roots;
+            var index = owner.IndexOf(target);
+            if (index >= 0)
+            {
+                MoveNode(node, target.Parent, index);
+            }
+        }
+
+        DraggingNode = null;
+    }
+
+    /// <summary>ドロップ経路: 子リスト末尾/「＋ 子にする」面= その行の子として末尾へ移動。</summary>
+    public void MoveToChildEnd(EditNodeViewModel parent)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+        if (DraggingNode is { } node)
+        {
+            MoveNode(node, parent, parent.Children.Count);
+        }
+
+        DraggingNode = null;
+    }
+
+    /// <summary>ドロップ経路: ルート末尾へ移動。</summary>
+    public void MoveToRootEnd()
+    {
+        if (DraggingNode is { } node)
+        {
+            MoveNode(node, null, Roots.Count);
+        }
+
+        DraggingNode = null;
+    }
+
+    partial void OnDraggingNodeChanged(EditNodeViewModel? value) => UpdateInsertTargetVisibility();
+
+    /// <summary>
+    /// 挿入表示の per-node 可視を一括更新(配置/移動の遷移時)。禁止位置(移動元の自身・子孫)は
+    /// 非表示=グレーでなく出さない(裁定 b・VC-TAG-12⑤の視覚言語と一貫)。自身の直前ポイントは
+    /// 可視のまま(ドロップ= no-op)。
+    /// </summary>
+    private void UpdateInsertTargetVisibility()
+    {
+        var active = IsPlacing || DraggingNode is not null;
+        foreach (var node in Flatten())
+        {
+            var inSubtree = DraggingNode is { } dragging && IsInSubtree(dragging, node);
+            node.IsMoveSource = DraggingNode is not null && ReferenceEquals(node, DraggingNode);
+            node.InsertBeforeTargetVisible = active && (!inSubtree || node.IsMoveSource);
+            node.ChildTargetVisible = active && !inSubtree;
+        }
+
+        OnPropertyChanged(nameof(ShowInsertTargets));
+        OnPropertyChanged(nameof(InsertBannerText));
+    }
 
     /// <summary>行間の挿入ポイント: その行の前へ兄弟として挿入(title「ここに挿入」)。</summary>
     [RelayCommand]
@@ -435,7 +617,8 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         _view = view;
         _tagById = tagById;
         StatusMessage = null;
-        PlacingTag = null; // ECO-099: ビュー切替・再読込で配置モードは持ち越さない
+        PlacingTag = null;   // ECO-099: ビュー切替・再読込で配置モードは持ち越さない
+        DraggingNode = null; // ECO-100: 移動ドラッグも同様
         Roots.Clear();
         SelectedNode = null;
 
@@ -512,6 +695,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(IsTreeEmpty));
         OnPropertyChanged(nameof(NodeCount));
         OnPropertyChanged(nameof(NodeCountText));
+        UpdateInsertTargetVisibility(); // ECO-100: 挿入表示中の新規行にも per-node 可視を配る
         return node;
     }
 

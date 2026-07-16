@@ -21,9 +21,10 @@
          mock は 2 階層プロトタイプ — 行ハンドル/カレット/挿入ポイント寸法は IsRootLevel で一般化。 -->
     <DataTemplate x:Key="HierarchyNodeTemplate" x:DataType="vm:EditNodeViewModel">
       <StackPanel>
-        <!-- 挿入ポイント(この行の前=兄弟挿入・VC-TAG-12③)。配置モード中のみ存在。 -->
-        <Border Classes="insertPoint" Classes.rootLv="{Binding IsRootLevel}"
-                IsVisible="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}"
+        <!-- 挿入ポイント(この行の前=兄弟挿入・VC-TAG-12③)。配置/移動ドラッグ共通(ECO-100)。
+             per-node 可視=禁止位置(移動元サブツリー内部)は出さない(裁定 b)。 -->
+        <Border Classes="insertPoint ipBefore" Classes.rootLv="{Binding IsRootLevel}"
+                IsVisible="{Binding InsertBeforeTargetVisible}"
                 ToolTip.Tip="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.insertHere]}"
                 PointerPressed="OnInsertBeforePressed">
           <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
@@ -32,13 +33,15 @@
           </Grid>
         </Border>
 
-        <!-- 行本体(mock: 親行 44px/子行 42px・行高不変=layoutInvariant) -->
+        <!-- 行本体(mock: 親行 44px/子行 42px・行高不変=layoutInvariant)。
+             ECO-100(裁定 a): 行全体ドラッグ=移動。クリック(展開/選択)は閾値未満のリリースで確定。 -->
         <Border Classes="nodeRow" Classes.child="{Binding !IsRootLevel}" Classes.selected="{Binding IsSelected}"
-                PointerPressed="OnNodeRowPressed">
+                Classes.moveSource="{Binding IsMoveSource}"
+                PointerPressed="OnNodeRowPressed" PointerMoved="OnNodeRowMoved" PointerReleased="OnNodeRowReleased">
           <DockPanel>
             <!-- 行末アクション(右端から: ⋯ → 家ゴースト)。配置モード中は一時停止=非表示(VC-TAG-12⑦/v3 MOCK 裁定) -->
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center"
-                        IsVisible="{Binding !$parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}">
+                        IsVisible="{Binding !$parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.ShowInsertTargets}">
               <!-- ホーム1クリック(VC-TAG-14): 行ホバー時のみ出現するゴーストボタン。トグル=既存 ToggleHome -->
               <Button Classes="homeGhost" ToolTip.Tip="{Binding HomeButtonTitle}"
                       Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.ToggleHomeCommand}"
@@ -84,9 +87,10 @@
                 </Button.Flyout>
               </Button>
             </StackPanel>
-            <!-- 「＋ 子にする」(VC-TAG-12④): 配置モード中のみ。破線=Rectangle 重ね(Border 非対応) -->
+            <!-- 「＋ 子にする」(VC-TAG-12④): 配置/移動ドラッグ共通(ECO-100)。子として受ける面。
+                 破線=Rectangle 重ね(Border 非対応)。禁止位置(移動元の自身・子孫)は出さない(裁定 b)。 -->
             <Border DockPanel.Dock="Right" Classes="makeChild" Cursor="Hand" Margin="8,0,2,0"
-                    IsVisible="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}"
+                    IsVisible="{Binding ChildTargetVisible}"
                     PointerPressed="OnMakeChildPressed">
               <Panel>
                 <Rectangle Classes="makeChildDash" />
@@ -163,9 +167,9 @@
                 </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
             </ItemsControl>
-            <!-- 子リスト末尾の挿入ポイント(VC-TAG-12③「各子リスト末尾」) -->
-            <Border Classes="insertPoint"
-                    IsVisible="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}"
+            <!-- 子リスト末尾の挿入ポイント(VC-TAG-12③「各子リスト末尾」・配置/移動共通=ECO-100) -->
+            <Border Classes="insertPoint ipChildEnd"
+                    IsVisible="{Binding ChildTargetVisible}"
                     ToolTip.Tip="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.insertAtEnd]}"
                     PointerPressed="OnInsertChildEndPressed">
               <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
@@ -210,6 +214,20 @@
     </Style>
     <Style Selector="Border.nodeRow.selected:pointerover">
       <Setter Property="Background" Value="#eaf1fe" />
+    </Style>
+    <!-- ECO-100(裁定 e): 移動ドラッグの元行は減光(既存 D&D 言語の範囲。独自ゴーストは作らない) -->
+    <Style Selector="Border.nodeRow.moveSource">
+      <Setter Property="Opacity" Value="0.55" />
+    </Style>
+    <!-- ECO-100: ドラッグオーバー中の受け面強調= :pointerover と同色(新しい視覚言語を発明しない) -->
+    <Style Selector="Border.insertPoint.dropHover">
+      <Setter Property="Background" Value="#f3f8ff" />
+    </Style>
+    <Style Selector="Border.makeChild.dropHover">
+      <Setter Property="Background" Value="#eaf1fe" />
+    </Style>
+    <Style Selector="Border.makeChild.dropHover Rectangle.makeChildDash">
+      <Setter Property="Stroke" Value="#2f6bed" />
     </Style>
     <Style Selector="PathIcon.rowHandle">
       <Setter Property="Foreground" Value="#cbd1da" />
@@ -535,13 +553,14 @@
                 <DockPanel>
                   <!-- ヘッダ帯(VC-TAG-12②): 通常ヒント ⇔ 「{タグ名}」を配置中+Esc 解除 -->
                   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Classes="placeHint" IsVisible="{Binding !Editor.IsPlacing}"
+                    <TextBlock Classes="placeHint" IsVisible="{Binding !Editor.ShowInsertTargets}"
                                Text="{Binding Loc[hierarchy.placeHint]}" />
-                    <Border Classes="placingBand" IsVisible="{Binding Editor.IsPlacing}">
-                      <TextBlock Text="{Binding Editor.PlacingBannerText}" MaxWidth="420"
+                    <!-- ECO-100(裁定 e): 帯は配置中と同型。移動中は InsertBannerText が移動 copy を返す -->
+                    <Border Classes="placingBand" IsVisible="{Binding Editor.ShowInsertTargets}">
+                      <TextBlock Text="{Binding Editor.InsertBannerText}" MaxWidth="420"
                                  TextTrimming="CharacterEllipsis" />
                     </Border>
-                    <Button Classes="escRelease" IsVisible="{Binding Editor.IsPlacing}"
+                    <Button Classes="escRelease" IsVisible="{Binding Editor.ShowInsertTargets}"
                             Command="{Binding Editor.CancelPlacingCommand}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <TextBlock Text="{Binding Loc[hierarchy.placingEsc]}" FontSize="11.5" FontWeight="SemiBold"
@@ -580,8 +599,8 @@
                       </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                   </ItemsControl>
-                  <!-- ルート末尾の挿入ポイント(VC-TAG-12③「ルート末尾」) -->
-                  <Border Classes="insertPoint rootLv" IsVisible="{Binding Editor.IsPlacing}"
+                  <!-- ルート末尾の挿入ポイント(VC-TAG-12③「ルート末尾」・配置/移動共通=ECO-100) -->
+                  <Border Classes="insertPoint rootLv ipRootEnd" IsVisible="{Binding Editor.ShowInsertTargets}"
                           ToolTip.Tip="{Binding Loc[hierarchy.insertAtEnd]}"
                           PointerPressed="OnInsertRootEndPressed">
                     <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">

@@ -311,6 +311,7 @@
   "hierarchy.menu.setCondition": "Set condition",
   "hierarchy.menu.setHome": "Set as home",
   "hierarchy.placeHint": "Pick in the palette / drag to place & reorder",
+  "hierarchy.movingBanner": "Moving \"{tagName}\" — drop on a highlighted spot",
   "hierarchy.placingBanner": "Placing \"{tagName}\" — click a highlighted spot",
   "hierarchy.placingEsc": "Esc",
   "hierarchy.placingRelease": "cancel",

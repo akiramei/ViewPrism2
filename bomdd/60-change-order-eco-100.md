@@ -1,4 +1,4 @@
-# Change Order — ECO-100(staged): タグタブ刷新 第二便 — 並べ替え・付け替え D&D+ドラッグ配置の挿入表示統合(TAG-014 実装確定)
+# Change Order — ECO-100(implemented): タグタブ刷新 第二便 — 並べ替え・付け替え D&D+ドラッグ配置の挿入表示統合(TAG-014 実装確定)
 
 - 起票: 2026-07-16(maintainer 実装依頼・第二便)
 - 種別: 機能拡張(CAD 未確定 TAG-014 の実装確定。契約方向は正典化済み=「クリックもドラッグも同一の挿入表示」)
@@ -121,3 +121,74 @@ read-across は CAD 反映済み(ViewPrismUI `a3dec76`)。
   - 一時停止契約との整合: ドラッグ中も「⋯」・家アイコン非表示。
   - layoutInvariant 不変・既存テスト全緑。
   - (e) の新 copy「移動中」帯の裁定。
+
+## 7. `/eco-fix` 実施記録(2026-07-16)
+
+### 7.1 プローブ先行(R5)
+
+新規 `CpUiG6DndMoveTests`(7 本)を契約(同一挿入表示+裁定(a)〜(e))から生成し、VM へ API スタブ
+(空実装)を置いて実行 → **6/7 不合格**(移動意味論・付け替え/状態随伴・移動ドラッグの状態機械・
+配置との排他・ドロップ経路・headless 実描画が赤=新契約の不在を実測)。残 1 本は「拒否はツリー不変」の
+消極ガード(スタブでも通る pin)。既存 767 本は全緑を起点固定。
+
+**プローブ期待値の是正 1 件(記録)**: headless probe の「移動元自身の＋子にする」を可視(3 個)と
+書いていたが、裁定(b)=自分自身への入れ子禁止により実装は正しく非表示(2 個)。診断でなく
+プローブ側の期待値誤りとして修正(実装が裁定に適合していることの傍証)。
+
+### 7.2 是正内容(最小構成)
+
+- **VM**: `HierarchyEditorViewModel` へ DraggingNode(移動ドラッグ状態)+`MoveNode`(循環拒否・
+  同位置 no-op・サブツリー/状態随伴=同一 VM オブジェクト移設・受け側自動展開・移動後選択)+
+  ドロップ経路 `MoveBefore/MoveToChildEnd/MoveToRootEnd`(実行後ドラッグ終了)+`BeginMove`
+  (配置モードと排他)/`EndMove`+`BeginDragPlacing`(パレットドラッグ=配置モードへ合流)。
+  挿入表示は per-node 可視(`InsertBeforeTargetVisible`/`ChildTargetVisible`=禁止位置を非表示・
+  裁定 b)+`ShowInsertTargets`(配置∨移動)+`InsertBannerText`(移動中/配置中を包含・裁定 e)へ一般化。
+- **View**: 挿入ポイント/「＋ 子にする」の可視バインドを per-node へ切替(視覚はクリック配置と同一=
+  発明なし)。行に PointerMoved/Released を追加しクリック(閾値未満リリース=展開/選択)と
+  移動ドラッグ(閾値 4px)を判別(裁定 a・第一便パレット様式の再利用)。DragOver/Drop は
+  `ResolveDropTarget`(ipBefore/ipChildEnd/ipRootEnd/makeChild クラス解決)で挿入表示面のみ受け、
+  dropHover 強調(= :pointerover と同色)。**旧・暗黙ドロップ(行上=子/空白=ルート)と
+  `AddTagById` を撤去**=挿入表示方式へ一本化(mock 契約)。Esc=DoDragDropAsync native キャンセル+
+  finally で状態全解除(裁定 c)。元行は減光 0.55(裁定 e・独自ゴースト不採用)。
+- **i18n**: `hierarchy.movingBanner` ja「「{tagName}」を移動中 — 光った位置にドロップ」/
+  en "Moving \"{tagName}\" — drop on a highlighted spot"(新 copy=golden 裁定対象・裁定 e)。
+
+### 7.3 機械受入
+
+build 0 error / **Tests 774/774**(プローブ 7 本緑転+既存 767 不変=CpUiG6PlacementTests 含む
+退化なし)/ Oracle 109+2skip(R6 不変)/ validate_bom 0/0。M4 同期= E-UI-NODEGRAPH-025(D&D 契約)・
+M-UI-013(D&D 意味論)・CP-UI-G6(TAG-014 検査次元)。
+
+### 7.4 セルフゴールデン(R7・撮影ハーネス再利用)
+
+headless+Skia でドラッグ中状態を実描画し、P2-placing.png(クリック配置)と並置:
+
+| # | 差分/次元 | 分類 |
+|---|---|---|
+| 移動ドラッグ中の挿入表示(行間/子末尾/ルート末尾/＋子にする)= クリック配置と**同一要素・同一様式** | 転写(同一クラスの同一要素を共用=構造的に同一) | — |
+| 禁止位置の非表示(親移動時=自サブツリー内部の全受け面が消える・自身の直前は可視) | 裁定 b どおり(実描画で確認) | 裁定済み |
+| ヘッダ帯「「{名}」を移動中 — 光った位置にドロップ」(ja/en とも収まり良好) | **新 copy(mock に無い)= golden 裁定対象**(裁定 e) | 要確認 |
+| ドラッグ元行の減光(0.55) | 裁定 e の範囲(既存 D&D 言語・新視覚言語の発明なし) | 要確認 |
+| ドロップオーバー強調= :pointerover と同色 | 既存視覚の再利用(発明なし) | 記録済み |
+
+転写漏れ 0。「要確認」2 件(移動中 copy・元行減光)は golden で裁定を仰ぐ。
+新しい視覚言語の発明が必要になる場面は無かった(mock 改版への差し戻し事項なし)。
+
+## 8. CAD への read-across 依頼メモ(TAG-014 クローズ材料・成果物 3)
+
+ViewPrismUI `docs/screens/tag_tab.md` / `docs/review_points.md` への反映材料(golden 合格後に確定):
+
+1. **TAG-014= クローズ可**。確定裁定:
+   - (a) ドラッグ起点=行全体+移動閾値 4px(⠿は子行の視覚シグナルとして表示継続・親行への追加なし)。
+   - (b) 自分自身/子孫への入れ子=禁止(循環)。禁止位置は挿入表示を**出さない**(非表示)。
+     自身の直前ポイントは可視でドロップ= no-op。
+   - (c) Esc・有効位置外ドロップ=キャンセル(ツリー不変・終了後に表示が一切残らない)。
+   - (d) サブツリーごと移動・per-placement 状態(別名/条件/展開モード/HOME)随伴。
+   - (e) ヘッダ帯=配置中と同型。パレットドラッグ配置=既存「配置中」copy 再利用。行移動=新 copy
+     「「{tagName}」を移動中 — 光った位置にドロップ」(en: Moving "{tagName}" — drop on a
+     highlighted spot)。元行=減光。独自ゴースト/新ドロップインジケータなし。
+2. **実装確定(prose 沈黙面)**: ドラッグ配置はドラッグ開始で配置モードへ入り終了で解除(クリック配置とは
+   独立のセッション)・移動ドラッグと配置モードは排他・旧暗黙ドロップ(行上=子/空白=ルート)は撤去。
+3. **capture 追加候補**: ドラッグ状態の実機スクリーンショット(移動中帯+挿入表示+元行減光+禁止位置
+   非表示の 2 面=子行移動/親サブツリー移動)を golden 時に採取し `captures/tag_tab/` へ
+   (P2-moving/P2-moving-subtree 案)。
