@@ -78,8 +78,26 @@ public partial class App : Application
             _provider.GetRequiredService<WindowService>().Owner = window;
 
             RestoreWindowState(window, _settings);
-            window.Closing += (_, _) =>
+            var closeConfirmed = false;
+            window.Closing += async (_, e) =>
             {
+                // ECO-103/TAG-016(iii): 未保存の階層編集を黙って失わない — デスクトップ慣例の
+                // OS 確認ダイアログ(既存 ConfirmDialog 様式の 2 択: 破棄して終了/戻る)。
+                // バー様式は適用しない(裁定)。承認後は再 Close で通常の終了経路へ合流する
+                if (!closeConfirmed && _mainViewModel.TagsTab.Editor.IsDirty)
+                {
+                    e.Cancel = true;
+                    if (await _provider!.GetRequiredService<WindowService>().ConfirmAsync(
+                        localization.T("hierarchy.closeConfirm.title"),
+                        localization.T("hierarchy.closeConfirm.message")))
+                    {
+                        closeConfirmed = true;
+                        window.Close();
+                    }
+
+                    return;
+                }
+
                 SaveWindowState(window);
                 _mainViewModel.CancelLoading();
             };

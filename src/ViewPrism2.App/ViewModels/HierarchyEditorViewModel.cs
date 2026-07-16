@@ -294,6 +294,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             // ECO-099: VM 算出文言(配置中チップ・家アイコン title 等)も再評価(ECO-079 の第 2 層)
             OnPropertyChanged(nameof(PlacingBannerText));
             OnPropertyChanged(nameof(InsertBannerText)); // ECO-100: 移動中帯
+            OnPropertyChanged(nameof(SaveBarMessage));   // ECO-103: 保存バー文言
             OnPropertyChanged(nameof(NodeCountText));
             foreach (var node in Flatten())
             {
@@ -371,6 +372,116 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     /// <summary>解除(Esc / ヘッダ帯の解除ボタン)。ツリーは不変。</summary>
     [RelayCommand]
     private void CancelPlacing() => PlacingTag = null;
+
+    // ---- ECO-103: 保存モデル(mock v4)。CAD= tag_tab.md「保存モデルと保存バー」+VC-TAG-16 ----
+
+    private CancellationTokenSource? _attentionCts;
+    private CancellationTokenSource? _toastCts;
+
+    /// <summary>遷移ガード attention の自動復帰時間(mock=700ms)。検査用に短縮可能。</summary>
+    public TimeSpan GuardAttentionRevertDelay { get; set; } = TimeSpan.FromMilliseconds(700);
+
+    /// <summary>保存トーストの表示時間(mock=1.8s)。検査用に短縮可能。</summary>
+    public TimeSpan SavedToastDuration { get; set; } = TimeSpan.FromSeconds(1.8);
+
+    /// <summary>遷移ガード attention 中(バー shake+琥珀+ガード文言。700ms 相当で自動復帰)。</summary>
+    [ObservableProperty]
+    private bool _isGuardAttention;
+
+    /// <summary>保存トースト「✓ 変更を保存しました」の表示中(1.8s 相当で自動消滅)。</summary>
+    [ObservableProperty]
+    private bool _isSavedToastVisible;
+
+    /// <summary>
+    /// 保存失敗の理由(TAG-016 裁定(iv))。null=失敗なし。attention 様式でバーに提示し、
+    /// 遷移ガードの 700ms と違い**自動復帰しない**(次の保存/破棄/再読込まで維持)。
+    /// </summary>
+    [ObservableProperty]
+    private string? _saveError;
+
+    /// <summary>保存バーの attention 様式(遷移ガード or 保存失敗・VC-TAG-16③)。</summary>
+    public bool IsSaveBarAttention => IsGuardAttention || SaveError is not null;
+
+    /// <summary>保存バーのメッセージ。優先度= 失敗理由 > ガード文言 > 通常文言。</summary>
+    public string SaveBarMessage => SaveError
+        ?? _localization.T(IsGuardAttention ? "hierarchy.saveBar.guard" : "hierarchy.saveBar.unsaved");
+
+    partial void OnIsGuardAttentionChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsSaveBarAttention));
+        OnPropertyChanged(nameof(SaveBarMessage));
+    }
+
+    partial void OnSaveErrorChanged(string? value)
+    {
+        OnPropertyChanged(nameof(IsSaveBarAttention));
+        OnPropertyChanged(nameof(SaveBarMessage));
+    }
+
+    /// <summary>
+    /// 遷移ガード(VC-TAG-16⑥/TAG-016): dirty なら遷移を拒否して attention を発火する。true=通過可。
+    /// 消費= 別ビュー選択・他タブ遷移・ビュー操作(新規/編集/削除=裁定(i))。
+    /// attention は class 再付与で shake を再生させるため一度 false へ倒してから立てる。
+    /// </summary>
+    public bool GuardNavigation()
+    {
+        if (!IsDirty)
+        {
+            return true;
+        }
+
+        _attentionCts?.Cancel();
+        _attentionCts = new CancellationTokenSource();
+        IsGuardAttention = false;
+        IsGuardAttention = true;
+        _ = RevertAttentionAsync(_attentionCts.Token);
+        return false;
+    }
+
+    private async Task RevertAttentionAsync(CancellationToken ct)
+    {
+        try
+        {
+            // await は呼び出し元の SynchronizationContext(アプリ=UI スレッド)で再開する
+            await Task.Delay(GuardAttentionRevertDelay, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        IsGuardAttention = false;
+    }
+
+    private void ShowSavedToast()
+    {
+        _toastCts?.Cancel();
+        _toastCts = new CancellationTokenSource();
+        IsSavedToastVisible = true;
+        _ = HideToastAsync(_toastCts.Token);
+    }
+
+    private async Task HideToastAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(SavedToastDuration, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        IsSavedToastVisible = false;
+    }
+
+    /// <summary>保存バー系の一時状態を全解除(再読込・破棄・ビュー切替時)。</summary>
+    private void ResetSaveBarState()
+    {
+        _attentionCts?.Cancel();
+        IsGuardAttention = false;
+        SaveError = null;
+    }
 
     // ---- ECO-100: 既存配置行の並べ替え・付け替え D&D(TAG-014 実装確定)。
     //      契約=クリックもドラッグも同一の挿入表示(tag_tab.md「配置モデル統一」)。裁定(a)〜(e)= ECO-100 §4.2 ----
@@ -612,8 +723,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasView;
 
-    [ObservableProperty]
-    private string? _statusMessage;
+    // ECO-103: 旧 StatusMessage(ヘッダ常設テキスト)は撤去 — 成功=保存トースト/失敗=SaveError(バー attention)へ移行。
 
     public string ViewName => _view?.Name ?? string.Empty;
 
@@ -644,9 +754,9 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(tagById);
         _view = view;
         _tagById = tagById;
-        StatusMessage = null;
         PlacingTag = null;   // ECO-099: ビュー切替・再読込で配置モードは持ち越さない
         DraggingNode = null; // ECO-100: 移動ドラッグも同様
+        ResetSaveBarState(); // ECO-103: attention/失敗理由も持ち越さない
         Roots.Clear();
         SelectedNode = null;
 
@@ -901,17 +1011,23 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         var result = await _views.SaveHierarchyAsync(_view.Id, nodes, home);
         if (!result.IsSuccess)
         {
-            StatusMessage = ErrorMessages.Resolve(_localization, result.Error);
+            // ECO-103/TAG-016(iv): 失敗理由はバーの attention 様式で提示(次の操作まで維持)
+            SaveError = ErrorMessages.Resolve(_localization, result.Error);
             return;
         }
 
-        StatusMessage = _localization.T("success.saved");
+        ResetSaveBarState(); // 保存成功= attention/失敗理由とも解除(700ms タイマ残留を持ち越さない)
         _view = await _views.GetAsync(_view.Id) ?? _view;
         SetDirty(false);
+        ShowSavedToast(); // ECO-103(v4): 緑トースト「✓ 変更を保存しました」(旧 StatusMessage を置換)
         Saved?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>キャンセル: 確認後にメモリ内編集を破棄して DB 状態へ戻す(仕様 §2.6)。</summary>
+    /// <summary>
+    /// 破棄(ECO-103/v4): **確認なし**で保存時点の状態へ復元(mock discard)。旧・確認ダイアログ方式
+    /// (modals.confirmDiscard)は撤去。配置モードのクリアは LoadAsync が担う(⋯メニューは light dismiss=
+    /// 開いたままバーは押せないため実質自明)。
+    /// </summary>
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private async Task CancelAsync()
     {
@@ -920,25 +1036,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             return;
         }
 
-        if (!await _windows.ConfirmAsync(
-            _localization.T("modals.confirmDiscard.title"), _localization.T("modals.confirmDiscard.message")))
-        {
-            return;
-        }
-
         await LoadAsync(_view, _tagById);
-    }
-
-    /// <summary>ダーティなら破棄確認(ビュー切替・タブ操作時)。true=続行可。</summary>
-    public async Task<bool> ConfirmDiscardIfDirtyAsync()
-    {
-        if (!IsDirty)
-        {
-            return true;
-        }
-
-        return await _windows.ConfirmAsync(
-            _localization.T("modals.confirmDiscard.title"), _localization.T("modals.confirmDiscard.message"));
     }
 
     private void SetDirty(bool value)

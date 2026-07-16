@@ -15,6 +15,13 @@
        シェル v1.2(仕様 §2.6): 上部タブナビゲーション「タグ」「画像」+右端「設定」 -->
 
   <Window.Styles>
+    <!-- ECO-103(NAV-dirty): タグタブの未保存琥珀ドット= 7px #e8b931+3px 20%α リング(mock v4) -->
+    <Style Selector="Border.unsavedDot">
+      <Setter Property="Background" Value="#33e8b931" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
     <Style Selector="TextBlock.sectionHeader">
       <Setter Property="FontSize" Value="12" />
       <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
@@ -178,6 +185,11 @@
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <PathIcon Data="{StaticResource TagIcon}" />
                 <TextBlock Text="{Binding Loc[navigation.tags]}" VerticalAlignment="Center" />
+                <!-- ECO-103(VC-TAG-16①/NAV-dirty): 未保存の琥珀ドット(7px+20%α リング) -->
+                <Border Classes="unsavedDot" IsVisible="{Binding TagsTab.Editor.IsDirty}"
+                        ToolTip.Tip="{Binding Loc[hierarchy.saveBar.unsaved]}">
+                  <Ellipse Width="7" Height="7" Fill="#e8b931" />
+                </Border>
               </StackPanel>
             </Button>
             <Button Classes="tab" Classes.selected="{Binding IsImagesTabSelected}"

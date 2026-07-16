@@ -221,6 +221,7 @@ mbom:
         startup: "ECO-064/REQ-088: App window.Opened→MainWindow.InitializeAsyncはImageTabのcatalog loadingを同期公開してTask.Yieldで初回shell描画を許可。DB query/materializeはTask.Run明示境界。window.ClosingはCaptureSettings後ImageTab.CancelLoadingでgeneration/cancellationを無効化"
         viewmodels: "画像タブの選択(Ctrl トグル・SHIFT 範囲・選択順)・空状態・表示軸ナビ・ノード評価呼び出し・文脈モード(タグ編集/整理/作業/削除)は ImageTabViewModel が自己完結で所有し unit 検査可能(OC 系を UI から呼ぶだけにする)。シェル(MainWindowViewModel)はタブ切替と stale 反映(TagsTab.DataChanged→ImageTab.ReloadTagCatalogAsync)のみ"
         tags_tab_placement: "(ECO-099・mock v3 2026-07-16 追随)配置モデル統一= HierarchyEditorViewModel が placing 状態(PlacingTag)と挿入コマンド(InsertBefore/InsertChildEnd/InsertRootEnd/PlaceAsChild=挿入→解除→配置ノード選択)を所有し unit 検査可能。パレット連携(TogglePlacing・配置中カード同期)は TagsTabViewModel、クリック/ドラッグの判別(移動閾値 4px)・Esc(tunnel)・挿入ポイント/⋯メニューのポインタ配線は TagsTabView code-behind(K-MVVM)。行操作=「⋯」メニュー(Flyout・項目実行で VM コマンド+Popup クローズ)へ集約、状態チップ= HOME 淡青/条件琥珀(幅上限 150+ツールチップ=TAG-015③)。ホーム1クリック=行ホバー家ゴースト(トグル)+メニュー経路(設定のみ)。配置中は行操作ボタン非表示。ツリー描画= TreeView から再帰 DataTemplate の ItemsControl へ置換(挿入ポイント/子ブロック左ガイド線を mock DOM と同型で描く)。旧・選択ベース配置ボタン(GF-04 機構)は撤去。(ECO-100)D&D= HierarchyEditorViewModel が DraggingNode/MoveNode(循環拒否・同位置 no-op・状態随伴)/Move* ドロップ経路/BeginDragPlacing を所有し unit 検査可能。挿入表示は per-node 可視(InsertBeforeTargetVisible/ChildTargetVisible=禁止位置を非表示)+ShowInsertTargets(配置∨移動)で駆動。View 層は行/カードのクリック・ドラッグ判別(閾値 4px)と挿入表示面への DragOver/Drop 解決(ResolveDropTarget)のみ・旧 AddTagById 暗黙ドロップ撤去"
+        save_model: "(ECO-103・mock v4/VC-TAG-16)保存モデル= HierarchyEditorViewModel が GuardNavigation(dirty=拒否+attention 発火・700ms 自動復帰=GuardAttentionRevertDelay 検査用可変)/IsSaveBarAttention・SaveBarMessage(優先度=失敗理由>ガード文言>通常文言)/SaveError(TAG-016(iv)=自動復帰なし)/IsSavedToastVisible(1.8s=SavedToastDuration 検査用可変)を所有し unit 検査可能。破棄(CancelCommand)=確認なし復元。ガード消費= TagsTabViewModel(別ビュー選択+ビュー操作 3 種=TAG-016(i))・MainWindowViewModel(他タブ 2 種)・App.Closing(TAG-016(iii)=ConfirmDialog 2 択)。View 層= 保存バー/トースト/ヘッダチップ(TagsTabView ペイン内フロート)+ナビ琥珀ドット(MainWindow)。旧ヘッダ保存/キャンセル+StatusMessage+ConfirmDiscardIfDirtyAsync+modals.confirmDiscard.* は撤去"
         candidate_preview: "(ECO-092/REQ-098)パレットカード候補値プレビューの容量= TagPaletteRowViewModel の折畳み状態(ChipRowOverflow 再利用・定義順維持・Loc 注入ラベル)+非対話 valueMore TextBlock+チップ幅上限 130/省略/ツールチップ。実測供給= TagsTabView.EvaluateCandidateRows(LayoutUpdated)。幅リセットはヒステリシス 24px(GF-092-02=ScrollViewer バー出没との発振防止)。IMG-023A/B(chip_strip=M-UI-016/029)とは別契約"
         design: "K-DESIGN トークンのみ使用。文言は LocalizationService 経由のみ(ImageTabViewModel の日本語ラベルは surface 内定数=モック CAD 準拠)"
         column_picker: "(ECO-025 β-2/DRY・SC-COLUMN-PICKER-001)表示列の列ピッカーは共通 VM ColumnPickerViewModel(ViewColumnModel[進化モデル=名前固定 VE-001/最大5 VE-002/タグ母集合限定/kind/display_columns 直列化]を消費・選択済み列/追加元/追加・削除・並べ替え/件数・上限バッジ/ラベル解決・編集ごとに Changed 発火)。**2 surface が同一 VM を消費しビューだけ golden 承認レイアウトを保つ**: (α)ViewEditDialog=モーダル・追加元 2 カラム(BasicSources チップ無し/TagSources チップ有り)・保存で反映(ViewEditDialogViewModel が Columns を合成)。(β-2)ファイル一覧「表示列」ポップオーバー(ColumnPickerView・モーダル型クローム/フッター無し=ライブ編集)・追加元は単一マージ(AvailableColumns・基本にも「基本」チップ)。ImageTabViewModel が view 軸+ビュー選択時のみ「表示列」ボタンを出し(CanEditColumns)、Changed→ViewService.UpdateAsync で display_columns を書き戻す(VE-003)→Recompute で列/ソート再構築(除去列がソート中なら解除)。CAD file_list.md L68 の docked フッターはモックに無く=ライブ編集のためフッター無し(CAD 是正済)"
@@ -580,6 +581,22 @@ mbom:
         fixtures: "tests/fixtures/ に画像フィクスチャ(各形式の最小画像・壊れたファイル)と DB フィクスチャビルダー"
         l2: "スキーマ同値(新規 DB vs マイグレーション適用 DB)・サムネイル出力メタデータ検査を含む"
         fail_closed: "(ECO-081・gate②裁定 2026-07-13)時間上限はハーネス自身が宣言: HangDump 拡張=5分間の無活動(テストイベント無し)上限であり総実行時間上限ではない。発火時=ミニダンプ(TestResults/*_hang.{dmp,log}=残存スレッド+ハング中テスト名)を採取し非ゼロ終了。csproj の TestingPlatformCommandLineArguments 既定(-p: で上書き可・Oracle 側も同型)。呼び出し側ごとの独自タイムアウトは使用しない。ただし HangDump 自体の不作動に備え CI/AI 実行基盤には HangDump より十分に長い共通のプロセスツリー上限を最終安全弁として設ける。exe 直接実行=診断用経路(正本の機械受入経路とはみなさない)。実測済み前提=MTP --timeout は協調キャンセルのため真のハング(無限待ちスレッド)を切れない。**(ECO-083・2段fix)Headless セッションの隔離レベルと fail-fast**: ①真因除去=HeadlessApp のセッションは **AvaloniaTestIsolationLevel.PerAssembly を明示**(単一 Application/Dispatcher を全テスト再利用)。StartNew(Type) の既定=PerTest は Dispatch ごとに Avalonia プラットフォーム再初期化(SetupUnsafe→Compositor/RenderLoop 再構築)を走らせ、間欠スレッドアフィニティ違反(The calling thread cannot access this object)が保護外(DispatchCore try 前)で発火→ディスパッチループ静黙死→全 Headless テストが全緑のまま無限待ちになる実測実績(2/15 発火→PerAssembly 化で 12 run 0)。**既定値に戻してはならない** ②多層防御=HeadlessApp が _dispatchTask をリフレクション監視し fault 時に原因例外全文つき Environment.FailFast(HangDump 5分の前段=即時化+真犯人顕在化。実発火の捕獲が真因確定の決め手になった実績)。フィールド不在(Avalonia 更新)時は実行時スキップ+CpHarnessEco083Tests が前提を機械 pin(ECO-080 の 3 層)。実測=残留ジョブ例外の一時注入で是正前=無限待ち/監視後=3秒で FailFast+原因例外表示"
+
+    # ---- ECO-103: R7 セルフゴールデン撮影ハーネスの正式資産化(scratch 卒業) ----
+    - id: M-CAPTURE-HARNESS-052
+      ebom_refs: []
+      artifact:
+        path: tools/ViewPrism2.CaptureHarness
+        type: dotnet-console(headless+Skia capture)
+      verifies: [M-UI-013]
+      interface_contract:
+        command: "dotnet run --project tools/ViewPrism2.CaptureHarness -- <出力ディレクトリ>(省略時=実行ディレクトリ/captures)"
+        provenance: "来歴= ECO-099 R7 で開発(scratch)→ ECO-099(配置モデル統一)/ECO-100(D&D)/ECO-103(保存モデル)のセルフゴールデンに実運用 → ECO-103 で track。様式= ECO-100 教訓3「headless+Skia self-golden」(BomDD 昇格候補=playbook §8.3 の実施手段拡充)"
+        rendering: "実 App スタイル(App.axaml)+UseSkia+UseHeadless(UseHeadlessDrawing=false)で CaptureRenderedFrame→PNG。テストホスト(M-HARNESS-015=UseHeadlessDrawing=true)では画素が取れないため独立プロセス。ホバー=MouseMove・Flyout=ShowAt・Popup は overlay 合成で本体フレームに写る"
+        determinism: "シード= mock(タグ管理.dc.html tagDefs/views)の転記・Date/乱数なし・一時 DB は出力ディレクトリ配下に生成。検査用タイマ可変(GuardAttentionRevertDelay/SavedToastDuration)で dirty/attention/toast/NAV の状態を静止撮影"
+        public_safety: "(ECO-057)ユーザー絶対パスをリテラルで持たない(出力先=引数 or AppContext.BaseDirectory)。出力 PNG はリポ外(scratch/artifacts 経由)へ置き worktree に残さない"
+      acceptance_refs: []
+      fmea_refs: []
 
     # ---- ECO-058/GF-058-01: 通常profileへ接続しない10,000件golden実行経路 ----
     - id: M-GOLDEN-HARNESS-039

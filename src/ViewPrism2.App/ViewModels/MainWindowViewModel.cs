@@ -126,10 +126,27 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ShowTagsTab() => SelectedTabIndex = 0;
 
     [RelayCommand]
-    private void ShowImagesTab() => SelectedTabIndex = 1;
+    private void ShowImagesTab()
+    {
+        // ECO-103(VC-TAG-16⑥): タグタブの未保存編集を黙って失わない — dirty 中は遷移ブロック+attention
+        if (SelectedTabIndex == 0 && !TagsTab.Editor.GuardNavigation())
+        {
+            return;
+        }
+
+        SelectedTabIndex = 1;
+    }
 
     [RelayCommand]
-    private void ShowWorkTab() => SelectedTabIndex = 2;
+    private void ShowWorkTab()
+    {
+        if (SelectedTabIndex == 0 && !TagsTab.Editor.GuardNavigation())
+        {
+            return;
+        }
+
+        SelectedTabIndex = 2;
+    }
 
     [RelayCommand]
     private async Task OpenSettings()

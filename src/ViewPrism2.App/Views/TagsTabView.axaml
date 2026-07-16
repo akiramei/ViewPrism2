@@ -451,6 +451,143 @@
       <Setter Property="Background" Value="#f1f3f7" />
     </Style>
 
+    <!-- ============ ECO-103: 保存モデル(mock v4・VC-TAG-16) ============ -->
+    <Style Selector="Border.unsavedChip">
+      <Setter Property="Background" Value="#fbf3df" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="9,3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.unsavedChip TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#9a7b1a" />
+    </Style>
+
+    <Style Selector="Border.saveBar">
+      <Setter Property="Background" Value="#1d2430" />
+      <Setter Property="CornerRadius" Value="13" />
+      <Setter Property="Padding" Value="16,9" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="#14ffffff" />
+      <Setter Property="BoxShadow" Value="0 16 40 -12 #66141c2c" />
+      <Setter Property="RenderTransform">
+        <Setter.Value>
+          <TranslateTransform />
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- vpRise 近似(下から 12px・0.3s): 出現時にスタイルアニメで再生 -->
+    <Style Selector="Border.saveBar">
+      <Style.Animations>
+        <Animation Duration="0:0:0.3" FillMode="Forward">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="TranslateTransform.Y" Value="12" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="TranslateTransform.Y" Value="0" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <!-- attention(VC-TAG-16③): 琥珀ボーダー+vpShake 近似(±9px・0.5s) -->
+    <Style Selector="Border.saveBar.attention">
+      <Setter Property="BorderBrush" Value="#b3e8b931" />
+      <Style.Animations>
+        <Animation Duration="0:0:0.5" FillMode="Forward">
+          <KeyFrame Cue="0%"><Setter Property="TranslateTransform.X" Value="0" /></KeyFrame>
+          <KeyFrame Cue="15%"><Setter Property="TranslateTransform.X" Value="-9" /></KeyFrame>
+          <KeyFrame Cue="35%"><Setter Property="TranslateTransform.X" Value="9" /></KeyFrame>
+          <KeyFrame Cue="55%"><Setter Property="TranslateTransform.X" Value="-9" /></KeyFrame>
+          <KeyFrame Cue="75%"><Setter Property="TranslateTransform.X" Value="9" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="TranslateTransform.X" Value="0" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="TextBlock.saveBarMsg">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="#dfe4ec" />
+    </Style>
+    <Style Selector="Border.saveBar.attention TextBlock.saveBarMsg">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#f5d979" />
+    </Style>
+    <Style Selector="Button.saveBarDiscard">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="13,0" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#c6cede" />
+    </Style>
+    <Style Selector="Button.saveBarDiscard /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.saveBarDiscard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#17ffffff" />
+    </Style>
+    <Style Selector="Button.saveBarDiscard:pointerover">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.saveBarSave">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="16,0" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <!-- Fluent Button は背景を ContentPresenter が描く — グラデはそちらへ(GF-056-02 系の罠回避) -->
+    <Style Selector="Button.saveBarSave /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background">
+        <Setter.Value>
+          <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#4a82f0" Offset="0" />
+            <GradientStop Color="#2f6bed" Offset="1" />
+          </LinearGradientBrush>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style Selector="Button.saveBarSave:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background">
+        <Setter.Value>
+          <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#3f76eb" Offset="0" />
+            <GradientStop Color="#255ed6" Offset="1" />
+          </LinearGradientBrush>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style Selector="Button.saveBarSave TextBlock">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <Style Selector="Border.savedToast">
+      <Setter Property="Background" Value="#0f8a5e" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="Padding" Value="16,9" />
+      <Setter Property="BoxShadow" Value="0 14 30 -10 #800f8a5e" />
+    </Style>
+    <Style Selector="Border.savedToast">
+      <Style.Animations>
+        <Animation Duration="0:0:0.25" FillMode="Forward">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Border.savedToast TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+
     <!-- パレット: 配置中カード(VC-TAG-12①: 強調枠+「配置中」チップ=白字・アクセント地) -->
     <Style Selector="Border.card.placing">
       <Setter Property="BorderBrush" Value="#cfe0fc" />
@@ -529,22 +666,23 @@
 
     <!-- 中央: 階層構造エディタ(ECO-099: 配置モデル統一。上部見出し/保存は固定・本文スクロール=layoutInvariant) -->
     <DockPanel Grid.Column="2">
+      <!-- ECO-103(mock v4): ヘッダの保存/キャンセルボタンは撤去=フローティング保存バーへ置換。
+           未保存はヘッダ「未保存の変更」チップ(琥珀)で常時掲示(VC-TAG-16①)。 -->
       <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
-        <DockPanel Margin="14,8">
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-            <Button Content="{Binding Loc[common.save]}" Command="{Binding Editor.SaveCommand}" MinWidth="80" />
-            <Button Content="{Binding Loc[common.cancel]}" Command="{Binding Editor.CancelCommand}" MinWidth="80" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="{Binding Loc[view.hierarchyStructure]}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Editor.ViewName}" Foreground="{StaticResource TextMutedBrush}"
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding Editor.StatusMessage}" Foreground="{StaticResource DangerBrush}"
-                       FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="14,8" MinHeight="32">
+          <TextBlock Text="{Binding Loc[view.hierarchyStructure]}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding Editor.ViewName}" Foreground="{StaticResource TextMutedBrush}"
+                     VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          <Border Classes="unsavedChip" IsVisible="{Binding Editor.IsDirty}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <Ellipse Width="6" Height="6" Fill="#e8b931" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding Loc[hierarchy.unsavedChip]}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
       </Border>
-      <!-- 本文(mock: ツリーカード+ガイダンスカードが一体でスクロール) -->
+      <!-- 本文(mock: ツリーカード+ガイダンスカードが一体でスクロール)+保存バー/トーストのフロート層 -->
+      <Panel>
       <ScrollViewer>
         <StackPanel Margin="14,12,14,14" Spacing="14">
           <!-- コンテナカード(主役) -->
@@ -629,6 +767,36 @@
           </Border>
         </StackPanel>
       </ScrollViewer>
+      <!-- フローティング保存バー(VC-TAG-16②③: dirty 時のみ・ペイン下部中央・ダーク地。
+           attention= 琥珀ボーダー+ガード文言/保存失敗理由(TAG-016 iv)+vpShake 相当)。 -->
+      <Border Classes="saveBar" Classes.attention="{Binding Editor.IsSaveBarAttention}"
+              IsVisible="{Binding Editor.IsDirty}"
+              HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Ellipse Width="8" Height="8" Fill="#e8b931" VerticalAlignment="Center" />
+          <TextBlock Classes="saveBarMsg" Text="{Binding Editor.SaveBarMessage}" VerticalAlignment="Center"
+                     MaxWidth="440" TextTrimming="CharacterEllipsis" />
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="saveBarDiscard" Content="{Binding Loc[hierarchy.saveBar.discard]}"
+                    Command="{Binding Editor.CancelCommand}" />
+            <Button Classes="saveBarSave" Command="{Binding Editor.SaveCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14" Foreground="White" />
+                <TextBlock Text="{Binding Loc[hierarchy.saveBar.save]}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <!-- 保存トースト(VC-TAG-16④: 緑・1.8s 自動消滅=VM タイマ) -->
+      <Border Classes="savedToast" IsVisible="{Binding Editor.IsSavedToastVisible}"
+              HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,20">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14" Foreground="White" />
+          <TextBlock Text="{Binding Loc[hierarchy.savedToast]}" VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
+      </Panel>
     </DockPanel>
 
     <Border Grid.Column="3" Background="{StaticResource BorderLineBrush}" />

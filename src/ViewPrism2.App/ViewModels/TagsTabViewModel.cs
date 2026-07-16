@@ -171,7 +171,8 @@ public sealed partial class TagsTabViewModel : ObservableObject
             return;
         }
 
-        if (!await Editor.ConfirmDiscardIfDirtyAsync())
+        // ECO-103(VC-TAG-16⑥): dirty 中の別ビュー選択はブロック+attention(旧・破棄確認ダイアログを撤去)
+        if (!Editor.GuardNavigation())
         {
             return;
         }
@@ -183,6 +184,12 @@ public sealed partial class TagsTabViewModel : ObservableObject
     [RelayCommand]
     private async Task NewViewAsync()
     {
+        // ECO-103/TAG-016(i): dirty 中のビュー操作は同ガード様式でブロック
+        if (!Editor.GuardNavigation())
+        {
+            return;
+        }
+
         if (await _windows.ShowViewEditDialogAsync(null))
         {
             await ReloadViewsAsync();
@@ -193,6 +200,12 @@ public sealed partial class TagsTabViewModel : ObservableObject
     [RelayCommand]
     private async Task EditViewAsync(ViewRowViewModel row)
     {
+        // ECO-103/TAG-016(i): dirty 中のビュー操作(リネーム等)はブロック
+        if (!Editor.GuardNavigation())
+        {
+            return;
+        }
+
         if (!await _windows.ShowViewEditDialogAsync(row.View))
         {
             return;
@@ -213,6 +226,12 @@ public sealed partial class TagsTabViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteViewAsync(ViewRowViewModel row)
     {
+        // ECO-103/TAG-016(i): dirty 中の削除は未保存編集の消失経路 — 確認より前にブロック
+        if (!Editor.GuardNavigation())
+        {
+            return;
+        }
+
         var message = _localization.T("common.confirmDelete", new Dictionary<string, string>
         {
             ["name"] = row.View.Name,

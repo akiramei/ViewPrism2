@@ -219,8 +219,9 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
     }
 
     [Fact]
-    public async Task キャンセルは確認後にメモリ内編集を破棄してDB状態へ戻す()
+    public async Task 破棄は確認なしでメモリ内編集を破棄してDB状態へ戻す()
     {
+        // ECO-103(mock v4): 旧・確認ダイアログ方式(modals.confirmDiscard)は撤去 — 破棄=即復元
         var (view, tagA, tagB, editor, tagById) = await SetupAsync();
 
         // 既存 1 ノードを保存しておく
@@ -228,7 +229,7 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
         await ((IAsyncRelayCommand)editor.SaveCommand).ExecuteAsync(null);
         Assert.Single(editor.Roots);
 
-        // 編集(追加+別名)してキャンセル(確認=破棄する)
+        // 編集(追加+別名)して破棄
         var extra = editor.AddNode(tagB, null)!;
         editor.BeginAliasEditCommand.Execute(extra);
         extra.AliasEditText = "x";
@@ -236,27 +237,13 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
         Assert.True(editor.IsDirty);
         Assert.Equal(2, editor.Roots.Count);
 
-        _windows.ConfirmResult = true;
         await ((IAsyncRelayCommand)editor.CancelCommand).ExecuteAsync(null);
 
+        Assert.Equal(0, _windows.ConfirmCount); // 確認ダイアログを出さない(v4 契約)
         Assert.False(editor.IsDirty);
         Assert.Single(editor.Roots); // DB 状態(保存済み 1 ノード)へ復帰
         Assert.Single(await _views.GetHierarchyAsync(view.Id));
         _ = tagById;
-    }
-
-    [Fact]
-    public async Task キャンセル確認でいいえなら編集は保持される()
-    {
-        var (_, tagA, _, editor, _) = await SetupAsync();
-        editor.AddNode(tagA, null);
-
-        _windows.ConfirmResult = false;
-        await ((IAsyncRelayCommand)editor.CancelCommand).ExecuteAsync(null);
-
-        Assert.True(editor.IsDirty); // 破棄しない
-        Assert.Single(editor.Roots);
-        Assert.True(_windows.ConfirmCount > 0);
     }
 
     [Fact]
@@ -314,17 +301,17 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
     }
 
     [Fact]
-    public async Task ダーティ中の切替確認はConfirmDiscardIfDirtyAsyncで行う()
+    public async Task ダーティ中の遷移はGuardNavigationが拒否する()
     {
+        // ECO-103(mock v4): 旧 ConfirmDiscardIfDirtyAsync(確認ダイアログ)は撤去 — ガード=ブロック+attention
         var (_, tagA, _, editor, _) = await SetupAsync();
-        Assert.True(await editor.ConfirmDiscardIfDirtyAsync()); // クリーン → 確認なしで続行
+        Assert.True(editor.GuardNavigation()); // クリーン → 通過
         Assert.Equal(0, _windows.ConfirmCount);
 
         editor.AddNode(tagA, null);
-        _windows.ConfirmResult = false;
-        Assert.False(await editor.ConfirmDiscardIfDirtyAsync());
-        _windows.ConfirmResult = true;
-        Assert.True(await editor.ConfirmDiscardIfDirtyAsync());
+        Assert.False(editor.GuardNavigation()); // dirty → 拒否(ダイアログなし)
+        Assert.Equal(0, _windows.ConfirmCount);
+        Assert.True(editor.IsGuardAttention);
     }
 
     [Fact]

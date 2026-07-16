@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ECO-103: R7 セルフゴールデン撮影ハーネスの正式資産化。
+       来歴= ECO-099 R7 で開発(scratch)→ ECO-099/100/103 の CAD captures 並置に実運用 →
+       本 ECO で track(ECO-100 教訓3「headless+Skia self-golden 様式」= BomDD 昇格候補の実装体)。
+       公開安全(ECO-057)= ユーザー絶対パス等のリテラル禁止(出力先は引数または実行ディレクトリ)。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ViewPrism2.App\ViewPrism2.App.csproj" />
+    <ProjectReference Include="..\..\src\ViewPrism2.Infrastructure\ViewPrism2.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ViewPrism2.Core\ViewPrism2.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.0.4" />
+  </ItemGroup>
+</Project>

@@ -159,3 +159,88 @@
   - TAG-016 裁定(i)〜(iv)の実測成立。
   - 既存 pin 19 本+全テスト緑・layoutInvariant 不変。
   - en copy・(iii)の 2 択様式・アニメ近似差分の裁定。
+
+## 7. `/eco-fix` 実施記録(2026-07-17)
+
+### 7.1 プローブ先行(R5)
+
+新規 `CpUiG6SaveBarTests`(8 本)を VC-TAG-16+TAG-016 裁定から生成し、VM へ API スタブ(no-op)を
+置いて実行 → **8/8 不合格**(ガード 4 経路〔別ビュー/タブ/ビュー操作/attention 復帰〕・破棄無確認・
+トースト・保存失敗 attention・headless 3 表示が全て赤=新契約の不在を実測)。既存 782 本は全緑を起点固定。
+
+**既存テストの契約更新 3 本(記録・v4 で旧契約が superseded)**: CpUiG6HierarchyEditorTests の
+「キャンセルは確認後に…」→「破棄は確認なしで…」(ConfirmCount 0 を pin)/「キャンセル確認でいいえなら
+編集は保持される」→ **削除**(確認ダイアログ自体が撤去=検証対象消滅)/「ダーティ中の切替確認は
+ConfirmDiscardIfDirtyAsyncで行う」→「ダーティ中の遷移はGuardNavigationが拒否する」。
+固定 Oracle は不変(R6)。
+
+### 7.2 是正内容
+
+- **VM(HierarchyEditorViewModel)**: GuardNavigation(dirty=拒否+attention・700ms 自動復帰=
+  検査用可変)+IsSaveBarAttention/SaveBarMessage(優先度=失敗理由>ガード>通常)+SaveError
+  (TAG-016(iv)=自動復帰なし・保存/破棄/再読込で解除)+IsSavedToastVisible(1.8s=検査用可変)。
+  SaveAsync= 成功でトースト+attention 解除/失敗で SaveError。CancelAsync= **確認なし復元**
+  (旧 modals.confirmDiscard 撤去)。ConfirmDiscardIfDirtyAsync/StatusMessage は撤去。
+- **ガード消費**: TagsTabViewModel= 別ビュー選択+New/Edit/DeleteView(TAG-016(i)。Delete の
+  未保存編集消失経路を閉鎖)。MainWindowViewModel= ShowImagesTab/ShowWorkTab(タグタブ dirty 中は
+  遷移拒否)。App.Closing= TAG-016(iii)= dirty 中は ConfirmDialog 2 択(破棄して終了/戻る)・
+  承認後に再 Close で通常終了経路へ合流。
+- **View**: ヘッダの保存/キャンセルボタン+StatusMessage 撤去 → 「未保存の変更」チップ(琥珀)。
+  中央ペインを Panel 化し保存バー+トーストを下部中央フロート(layoutInvariant 不変)。
+  vpRise 近似= Style.Animations(Opacity+TranslateTransform.Y 12→0・0.3s)/vpShake 近似=
+  attention クラス付与時の keyframes(X ±9px・0.5s・再付与で再生)。保存ボタンのグラデは Fluent
+  ContentPresenter へ(GF-056-02 系の罠回避)。MainWindow= ナビ琥珀ドット(7px+20%α リング+title)。
+- **i18n 棚卸し**: 新キー 9(saveBar 4・savedToast・unsavedChip・closeConfirm 2 ほか)を ja=mock
+  原文転写+en 両輪で追加。**撤去= modals.confirmDiscard.*(4 キー×2 言語・全消費者撤去済み)**。
+  success.saved= FolderManagement が消費のため**残置**(エディタ参照のみ撤去)・common.save/cancel=
+  グローバル(他ダイアログ消費)のため残置。
+- **撮影ハーネスの正式資産化**: scratch(ECO-099 R7 開発)→ `tools/ViewPrism2.CaptureHarness/` へ
+  移設・**sln へ追加**(ビルド退化防止)・来歴ヘッダ+M-BOM unit **M-CAPTURE-HARNESS-052** として登録
+  (BomDD 昇格候補=「headless+Skia self-golden 様式」の位置づけを unit の provenance に記録)。
+  公開安全= 絶対パスなし(出力先=引数)。v4 の 4 状態撮影を追加。
+  **注記: 依頼文の `.src009-capture-harness/`(実機プロファイル方式)は作業ツリーに現存せず**
+  (§3.3)— 資産化は依頼の目的節(ECO-100 教訓 3)が指す headless+Skia ハーネスで充足。
+
+### 7.3 機械受入
+
+build 0 error(sln にハーネス込み)/ **Tests 789/789**(プローブ 8 本緑転+契約更新 3 本・
+既存 pin 19 本含む全緑)/ Oracle 109+2skip(R6 不変)/ validate_bom 0/0。
+M4= E-UI-NODEGRAPH-025(保存モデル invariant)+E-UI-SHELL-021(ナビドット/タブガード/終了確認)+
+M-UI-013(save_model)+M-CAPTURE-HARNESS-052 新設+CP-UI-G6(VC-TAG-16 次元)。
+
+### 7.4 セルフゴールデン(R7・資産化ハーネスで撮影)
+
+dirty/attention/toast/NAV の 4 状態を実描画し原器 4 面と並置(+クリーン基準=impl-full で ⑤ を確認):
+
+| # | 差分/次元 | 分類 |
+|---|---|---|
+| 保存バー(ダーク地/琥珀ドット/文言/破棄ゴースト/保存グラデ✓)・ヘッダチップ・ナビドット+リング・attention(琥珀ボーダー+ガード文言)・トースト(緑✓)・クリーン時の完全消滅 | 転写(4 面並置+headless probe 実測) | — |
+| vpRise/vpShake= Avalonia Style.Animations による**近似**(rise= Opacity+Y 平行移動 0.3s/shake= X ±9px 0.5s。cubic 曲線等の厳密一致は未検証=静止 capture では差分なし) | **要確認**(依頼が近似可と明記・golden で動きを裁定) | 要確認 |
+| en copy 9 キー(saveBar.unsaved/guard/discard/save・savedToast・unsavedChip・closeConfirm ほか) | **要確認**(golden 裁定対象=依頼指示) | 要確認 |
+| (iii) 終了確認= 既存 ConfirmDialog の 2 択(3 択の新ダイアログ面は発明になるため不採用) | **要確認**(TAG-016(iii)裁定の様式確認) | 要確認 |
+| mock ヘッダ右の飾りアイコン・グローバル検索(NAV-dirty 原器に写る)= as-built 非搭載 | 既存 as-built(ECO-099 §7.4 系の分類済み差分) | 裁定済み |
+
+転写漏れ 0(「要確認」は golden 裁定へ)。**(iv)の新視覚面は不要**= attention 様式の文言差し替えで
+成立(モック改版への差し戻し事項なし)。
+
+### 7.5 §3.4 の決着
+
+- 破棄時の「開いた⋯メニューのクリア」= Flyout は light dismiss(メニューを開いたまま保存バーは
+  押せない=クリックで先にメニューが閉じる)ため**実質自明**を実測確認。
+- 保存失敗の提示= バー attention 様式の文言差し替えで成立(新視覚面不要)。
+
+## 8. CAD への read-across 依頼メモ(TAG-016 クローズ材料・成果物 4)
+
+1. **TAG-016= クローズ可**。確定裁定:
+   - (i) 新規ビュー作成・ビュー行操作(リネーム/削除)= dirty 中は同ガード様式(shake+琥珀)でブロック。
+   - (ii) 設定遷移(モーダル)・パレット検索(タブ内)= 非破壊導線として通過可。
+   - (iii) アプリ終了= 既存 ConfirmDialog 様式の 2 択(「未保存の変更があります。破棄して終了しますか？」
+     = 破棄して終了/戻る)。3 択(保存込み)は新ダイアログ面の発明になるため不採用(戻る→保存バーから保存)。
+   - (iv) 保存失敗= バーを attention 様式で維持+メッセージ位置に失敗理由(自動復帰なし・次の
+     保存/破棄/再読込まで)。**新視覚面不要**=モック改版への差し戻しなし。
+2. **en copy 全文**(golden 裁定対象): saveBar.unsaved="You have unsaved changes" / saveBar.guard=
+   "Save or discard your changes before moving on" / saveBar.discard="Discard" / saveBar.save="Save" /
+   savedToast="Changes saved" / unsavedChip="Unsaved changes" / closeConfirm.title="Unsaved changes" /
+   closeConfirm.message="You have unsaved changes. Discard them and exit?"
+3. アニメ近似(vpRise/vpShake= Style.Animations)の golden 裁定結果を反映。
+4. 新状態の実機スクリーンショットが必要なら golden 時に採取し `artifacts/` 経由で納品可(SRC-009 方式)。
