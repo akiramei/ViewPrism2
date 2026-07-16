@@ -1515,7 +1515,7 @@ changes:
   - id: ECO-099
     title: "タグタブ刷新 第一便 — 配置モデル統一(クリック配置)+行操作「⋯」メニュー+ホーム1クリック+状態チップ(タグ管理 mock v3 2026-07-16 追随)"
     type: "機能拡張(CAD 改版追随。mock v3+tag_tab.md 正典化済み契約への実装追随・第一便)"
-    status: staged
+    status: implemented   # 2026-07-16 是正+機械受入完了・golden 待ち。probe=CpUiG6PlacementTests 12本(スタブで10/12赤→緑転)。build 0/0・Tests 767/767・Oracle 109+2skip・validate 0/0。R7=headless+Skia 実描画を CAD captures と並置(転写漏れ0・要確認2件=ガイダンス強調の平文/ドットリング近似は golden 裁定へ)。M4=E-UI-NODEGRAPH-025/E-UI-TAGS-026/M-UI-013/CP-UI-G6 同期済み
     golden: "pending(gate②=maintainer 実機。VC-TAG-12/13/14+VC-TAG-9/10+layoutInvariant を captures/tag_tab/ 並置で検収)"
     baseline: "main a9a048e"
     findings: "maintainer 実装依頼 2026-07-16。CAD は同日 mock v3(SHA-256 cd8e451b…)+tag_tab.md で改版・正典化済み(VC-TAG-12/13/14 新設・captures 9面)=CAD 健全。工程診断=実装が旧契約準拠で乖離(不具合でなく追随・混入特定不要): ①クリック配置モード(挿入ポイント/＋子にする/ヘッダ帯/Esc)未実装=現行は選択ベース配置ボタン2個(TagsTabView.axaml:122)+挿入表示なしD&D(axaml.cs:80) ②行操作は常時表示アイコン4種(axaml:169)=DD03 旧設計(CAD で superseded)・⋯メニュー未実装 ③ホーム意味論(排他+現ホーム解除=ToggleHome:355)は既に一致・ホバー出現/title のみ乖離 ④homePill/condChip/紫バッジ既存=VC-TAG-13 色意匠の突合要 ⑤配置中の行操作一時停止=配置モード自体なし ⑥候補値プレビュー TAG-013=T-a は ECO-092 実装済み(mock v3 が同裁定取込=視覚同一)→本便は VC-TAG-9/10 検収のみ。TAG-015①③④は依頼文の既定方向を裁定として確定(本文§4.2): ①名前を変更=インライン従来契約踏襲(REQ-034) ③条件チップ長文=幅上限+省略+ツールチップ(TAG-013/IMG-023A 同族) ④配置から削除=確認なし即時(タグ定義残存+バッチ編集=二重に低破壊)。第二便分離=TAG-014(行 D&D。行ハンドル⠿は表示のみ可)。既存契約維持=layoutInvariant/ECO-086/TAG-008/ECO-087・093/バッチ保存モデル"

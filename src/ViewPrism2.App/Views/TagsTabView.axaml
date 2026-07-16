@@ -4,34 +4,182 @@
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              x:Class="ViewPrism2.App.Views.TagsTabView"
              x:DataType="vm:TagsTabViewModel">
-  <!-- タグタブ(3 ペイン、仕様 §2.6 v1.2 / G-6):
-       左=ビュー管理 / 中央=階層構造エディタ(バッチ保存) / 右=タグパレット -->
+  <!-- タグタブ(3 ペイン、仕様 §2.6 / G-6 / ECO-099):
+       左=ビュー管理 / 中央=階層構造エディタ(バッチ保存・配置モデル統一) / 右=タグパレット。
+       CAD= ViewPrismUI docs/screens/tag_tab.md(2026-07-16 mock v3)+captures/tag_tab/。
+       配置=クリック配置(placing)+挿入ポイント+「＋ 子にする」。行操作=「⋯」メニューへ集約、
+       状態は HOME/条件チップ(VC-TAG-12/13/14)。 -->
 
   <UserControl.Resources>
     <!-- GF-03(REQ-060(c)): ホームタグのアイコンは家形シルエット(★は不可)。
          PathIcon+StreamGeometry 直書き(フォントアイコン依存禁止 — K-DESIGN v2.0)。 -->
     <StreamGeometry x:Key="HomeIconGeometry">M12 3 L3 10 L5 10 L5 20 L10 20 L10 14 L14 14 L14 20 L19 20 L19 10 L21 10 Z</StreamGeometry>
+    <!-- ECO-099: 行ハンドル(⠿・mock 子行の grab ドット 6 個。第一便は表示のみ=TAG-014) -->
+    <StreamGeometry x:Key="GripDotsGeometry">M7.4,6a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0 M13.4,6a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0 M7.4,12a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0 M13.4,12a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0 M7.4,18a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0 M13.4,18a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0</StreamGeometry>
+
+    <!-- ECO-099: 階層行の再帰テンプレート(mock DOM と同型= 行+子ブロック〔左ガイド線〕の入れ子)。
+         mock は 2 階層プロトタイプ — 行ハンドル/カレット/挿入ポイント寸法は IsRootLevel で一般化。 -->
+    <DataTemplate x:Key="HierarchyNodeTemplate" x:DataType="vm:EditNodeViewModel">
+      <StackPanel>
+        <!-- 挿入ポイント(この行の前=兄弟挿入・VC-TAG-12③)。配置モード中のみ存在。 -->
+        <Border Classes="insertPoint" Classes.rootLv="{Binding IsRootLevel}"
+                IsVisible="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}"
+                ToolTip.Tip="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.insertHere]}"
+                PointerPressed="OnInsertBeforePressed">
+          <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+            <Ellipse Classes="insertDot" />
+            <Border Grid.Column="1" Classes="insertLine" />
+          </Grid>
+        </Border>
+
+        <!-- 行本体(mock: 親行 44px/子行 42px・行高不変=layoutInvariant) -->
+        <Border Classes="nodeRow" Classes.child="{Binding !IsRootLevel}" Classes.selected="{Binding IsSelected}"
+                PointerPressed="OnNodeRowPressed">
+          <DockPanel>
+            <!-- 行末アクション(右端から: ⋯ → 家ゴースト)。配置モード中は一時停止=非表示(VC-TAG-12⑦/v3 MOCK 裁定) -->
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center"
+                        IsVisible="{Binding !$parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}">
+              <!-- ホーム1クリック(VC-TAG-14): 行ホバー時のみ出現するゴーストボタン。トグル=既存 ToggleHome -->
+              <Button Classes="homeGhost" ToolTip.Tip="{Binding HomeButtonTitle}"
+                      Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.ToggleHomeCommand}"
+                      CommandParameter="{Binding}">
+                <PathIcon Data="{StaticResource HomeIconGeometry}" Width="15" Height="15" />
+              </Button>
+              <!-- 行操作の集約(VC-TAG-13): ⋯メニュー。背景クリックで閉じる=Flyout light dismiss -->
+              <Button Classes="rowMenuBtn">
+                <PathIcon Data="{StaticResource MoreIcon}" Width="15" Height="15" />
+                <Button.Flyout>
+                  <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="rowMenu">
+                    <Border Classes="rowMenuPanel">
+                      <StackPanel Spacing="1">
+                        <Button Classes="rowMenuItem" Click="OnMenuSetHomeClick">
+                          <StackPanel Orientation="Horizontal" Spacing="9">
+                            <PathIcon Data="{StaticResource HomeIconGeometry}" />
+                            <TextBlock Text="{Binding MenuSetHomeText}" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="rowMenuItem" Click="OnMenuRenameClick">
+                          <StackPanel Orientation="Horizontal" Spacing="9">
+                            <PathIcon Data="{StaticResource PencilIcon}" />
+                            <TextBlock Text="{Binding MenuRenameText}" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="rowMenuItem" Click="OnMenuSetConditionClick"
+                                IsEnabled="{Binding CanHaveCondition}">
+                          <StackPanel Orientation="Horizontal" Spacing="9">
+                            <PathIcon Data="{StaticResource FunnelIcon}" />
+                            <TextBlock Text="{Binding MenuSetConditionText}" />
+                          </StackPanel>
+                        </Button>
+                        <Border Classes="rowMenuSep" />
+                        <Button Classes="rowMenuItem danger" Click="OnMenuDeleteClick">
+                          <StackPanel Orientation="Horizontal" Spacing="9">
+                            <PathIcon Data="{StaticResource TrashIcon}" />
+                            <TextBlock Text="{Binding MenuRemoveText}" />
+                          </StackPanel>
+                        </Button>
+                      </StackPanel>
+                    </Border>
+                  </Flyout>
+                </Button.Flyout>
+              </Button>
+            </StackPanel>
+            <!-- 「＋ 子にする」(VC-TAG-12④): 配置モード中のみ。破線=Rectangle 重ね(Border 非対応) -->
+            <Border DockPanel.Dock="Right" Classes="makeChild" Cursor="Hand" Margin="8,0,2,0"
+                    IsVisible="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}"
+                    PointerPressed="OnMakeChildPressed">
+              <Panel>
+                <Rectangle Classes="makeChildDash" />
+                <TextBlock Classes="makeChildText" Margin="9,3"
+                           Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.makeChild]}" />
+              </Panel>
+            </Border>
+            <!-- 子数バッジ(mock childCount) -->
+            <Border DockPanel.Dock="Right" Classes="childCountPill" IsVisible="{Binding HasChildren}" Margin="6,0,0,0">
+              <TextBlock Text="{Binding ChildCount}" />
+            </Border>
+            <!-- 数値タグの定義域メタ(mock node.meta="1–5 ★") -->
+            <Border DockPanel.Dock="Right" Classes="numMetaPill" IsVisible="{Binding HasNumericMeta}" Margin="6,0,0,0">
+              <TextBlock Text="{Binding NumericMeta}" />
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+              <!-- 子行=行ハンドル(表示のみ・D&D 挙動は第二便 TAG-014) -->
+              <PathIcon Classes="rowHandle" Data="{StaticResource GripDotsGeometry}" Width="14" Height="14"
+                        IsVisible="{Binding !IsRootLevel}" />
+              <!-- 子ありの行=展開カレット(クリックで開閉) -->
+              <PathIcon Classes="caret" Classes.expanded="{Binding IsExpanded}"
+                        Data="{StaticResource ChevronRightIcon}" Width="15" Height="15"
+                        IsVisible="{Binding HasChildren}" />
+              <!-- ルートの葉行=カレット幅スペーサー(mock isLeaf) -->
+              <Border Width="16" IsVisible="{Binding ShowLeafSpacer}" />
+              <!-- 色ドット+淡色リング(mock dotStyle) -->
+              <Border Classes="dotRing" Background="{Binding RingColor}" IsVisible="{Binding HasColor}">
+                <Ellipse Width="11" Height="11" Fill="{Binding Color}" />
+              </Border>
+              <Ellipse Width="11" Height="11" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
+                       IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
+              <TextBlock Classes="nodeName" Text="{Binding DisplayName}"
+                         IsVisible="{Binding !IsEditingAlias}" VerticalAlignment="Center"
+                         FontSize="14" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+              <!-- 別名インライン編集(TAG-015①裁定=従来契約踏襲: Enter 確定/Esc 取消/空→タグ名) -->
+              <TextBox Text="{Binding AliasEditText}" IsVisible="{Binding IsEditingAlias}"
+                       MinWidth="120" FontSize="13" Padding="6,3"
+                       KeyDown="OnAliasKeyDown" LostFocus="OnAliasLostFocus" />
+              <Border Classes="typeChip" Classes.simple="{Binding IsSimple}" Classes.text="{Binding IsTextual}"
+                      Classes.number="{Binding IsNumeric}" IsVisible="{Binding HasType}">
+                <TextBlock Text="{Binding TypeText}" />
+              </Border>
+              <!-- HOME チップ(VC-TAG-13④: 淡青・常時表示・非対話) -->
+              <Border Classes="homePill" IsVisible="{Binding IsHome}">
+                <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.homePill]}" />
+              </Border>
+              <!-- 展開モードバッジ(REQ-096/ECO-086・非既定のみ=CAD VC-TAG-3・条件バッジの左) -->
+              <Border IsVisible="{Binding HasExpansionBadge}" Background="#f2edfc" CornerRadius="6"
+                      Padding="7,2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding ExpansionBadgeText}" FontSize="11" Foreground="#7c53d6"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+              </Border>
+              <!-- 条件チップ(VC-TAG-13⑤: 琥珀へ統一・非対話。TAG-015③裁定=幅上限+省略+ツールチップ) -->
+              <Border Classes="condChip" IsVisible="{Binding HasCondition}"
+                      ToolTip.Tip="{Binding ConditionSummary}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <PathIcon Data="{StaticResource FunnelIcon}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding ConditionSummary}" VerticalAlignment="Center"
+                             MaxWidth="150" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- 子ブロック(mock: margin-left 18+pad 10+左ガイド線)。展開中のみ -->
+        <Border Classes="childrenBlock" IsVisible="{Binding ShowChildren}">
+          <StackPanel Spacing="2">
+            <ItemsControl ItemsSource="{Binding Children}" ItemTemplate="{StaticResource HierarchyNodeTemplate}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Spacing="2" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <!-- 子リスト末尾の挿入ポイント(VC-TAG-12③「各子リスト末尾」) -->
+            <Border Classes="insertPoint"
+                    IsVisible="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.IsPlacing}"
+                    ToolTip.Tip="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.insertAtEnd]}"
+                    PointerPressed="OnInsertChildEndPressed">
+              <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+                <Ellipse Classes="insertDot" />
+                <Border Grid.Column="1" Classes="insertLine" />
+              </Grid>
+            </Border>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </DataTemplate>
   </UserControl.Resources>
 
   <UserControl.Styles>
-    <Style Selector="TreeView#HierarchyTree TreeViewItem" x:DataType="vm:EditNodeViewModel">
-      <!-- 展開/折畳(仕様 §2.6 のノード操作)を VM の状態と同期 -->
-      <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-    </Style>
-    <Style Selector="Button.mini.homeOn PathIcon">
-      <!-- ホーム設定中のトグルアイコンはアクセント色で強調(GF-03) -->
-      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-    </Style>
-    <Style Selector="Button.mini.homeOff PathIcon">
-      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-    </Style>
-    <Style Selector="TextBlock.nodeName.home">
-      <!-- ホームタグ設定中ノードの強調表示(G-6) -->
-      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <!-- ECO-009: パレットの選択強調・型チップは Styles/Components.axaml の card / typeChip へ移行。 -->
-
     <!-- ECO-007/E1: ビュー行のタグ数バッジ(配置タグ数=階層ノード数)。控えめなピル。 -->
     <Style Selector="Border.tagCountBadge">
       <Setter Property="Background" Value="{StaticResource BorderLineBrush}" />
@@ -42,6 +190,263 @@
     </Style>
     <Style Selector="Border.tagCountBadge TextBlock">
       <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ============ ECO-099: 階層行(mock 行テンプレート) ============ -->
+    <Style Selector="Border.nodeRow">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.nodeRow.child">
+      <Setter Property="Height" Value="42" />
+    </Style>
+    <Style Selector="Border.nodeRow:pointerover">
+      <Setter Property="Background" Value="#f4f6fa" />
+    </Style>
+    <Style Selector="Border.nodeRow.selected">
+      <Setter Property="Background" Value="#eaf1fe" />
+    </Style>
+    <Style Selector="Border.nodeRow.selected:pointerover">
+      <Setter Property="Background" Value="#eaf1fe" />
+    </Style>
+    <Style Selector="PathIcon.rowHandle">
+      <Setter Property="Foreground" Value="#cbd1da" />
+    </Style>
+    <Style Selector="PathIcon.caret">
+      <Setter Property="Foreground" Value="#98a0ad" />
+      <Setter Property="RenderTransform" Value="rotate(0deg)" />
+    </Style>
+    <Style Selector="PathIcon.caret.expanded">
+      <Setter Property="RenderTransform" Value="rotate(90deg)" />
+    </Style>
+    <Style Selector="Border.dotRing">
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.childrenBlock">
+      <Setter Property="Margin" Value="18,0,0,4" />
+      <Setter Property="Padding" Value="10,0,0,0" />
+      <Setter Property="BorderThickness" Value="1.5,0,0,0" />
+      <Setter Property="BorderBrush" Value="#eef0f4" />
+    </Style>
+    <Style Selector="Border.childCountPill">
+      <Setter Property="Background" Value="#f1f3f7" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.childCountPill TextBlock">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="#98a0ad" />
+    </Style>
+    <Style Selector="Border.numMetaPill">
+      <Setter Property="Background" Value="#fbf3df" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.numMetaPill TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#9a7b1a" />
+    </Style>
+
+    <!-- 挿入ポイント(VC-TAG-12③: 小円=白地 #7ea4f2 輪郭+ライン #c7d8fb・ホバー #f3f8ff) -->
+    <Style Selector="Border.insertPoint">
+      <Setter Property="Height" Value="12" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.insertPoint.rootLv">
+      <Setter Property="Height" Value="14" />
+    </Style>
+    <Style Selector="Border.insertPoint:pointerover">
+      <Setter Property="Background" Value="#f3f8ff" />
+    </Style>
+    <Style Selector="Ellipse.insertDot">
+      <Setter Property="Width" Value="7" />
+      <Setter Property="Height" Value="7" />
+      <Setter Property="Fill" Value="White" />
+      <Setter Property="Stroke" Value="#7ea4f2" />
+      <Setter Property="StrokeThickness" Value="2" />
+    </Style>
+    <Style Selector="Border.insertLine">
+      <Setter Property="Height" Value="2" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Background" Value="#c7d8fb" />
+      <Setter Property="Margin" Value="6,0,0,0" />
+    </Style>
+
+    <!-- 「＋ 子にする」(VC-TAG-12④: 破線 #9dbcf7・文字 #2f6bed・ホバー #eaf1fe) -->
+    <Style Selector="Border.makeChild">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.makeChild:pointerover">
+      <Setter Property="Background" Value="#eaf1fe" />
+    </Style>
+    <Style Selector="Rectangle.makeChildDash">
+      <Setter Property="Stroke" Value="#9dbcf7" />
+      <Setter Property="StrokeThickness" Value="1.5" />
+      <Setter Property="StrokeDashArray" Value="3,2" />
+      <Setter Property="RadiusX" Value="7" />
+      <Setter Property="RadiusY" Value="7" />
+      <Setter Property="Fill" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.makeChild:pointerover Rectangle.makeChildDash">
+      <Setter Property="Stroke" Value="#2f6bed" />
+    </Style>
+    <Style Selector="TextBlock.makeChildText">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#2f6bed" />
+    </Style>
+
+    <!-- 行末アクション(VC-TAG-13①/14①: ⋯=淡色、家ゴースト=行ホバー時のみ出現) -->
+    <Style Selector="Button.rowMenuBtn, Button.homeGhost">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.rowMenuBtn PathIcon">
+      <Setter Property="Foreground" Value="#c3c9d3" />
+    </Style>
+    <Style Selector="Button.rowMenuBtn /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.rowMenuBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#eef1f5" />
+    </Style>
+    <Style Selector="Button.rowMenuBtn:pointerover PathIcon">
+      <Setter Property="Foreground" Value="#5b6473" />
+    </Style>
+    <Style Selector="Button.homeGhost">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="Border.nodeRow:pointerover Button.homeGhost">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="Button.homeGhost PathIcon">
+      <Setter Property="Foreground" Value="#aab1bd" />
+    </Style>
+    <Style Selector="Button.homeGhost /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.homeGhost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#eaf1fe" />
+    </Style>
+    <Style Selector="Button.homeGhost:pointerover PathIcon">
+      <Setter Property="Foreground" Value="#2459cf" />
+    </Style>
+
+    <!-- ⋯メニュー(VC-TAG-13②③: 幅178/角丸11/影・削除のみ警告色・カード外へ重なる=Popup) -->
+    <Style Selector="FlyoutPresenter.rowMenu">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+    </Style>
+    <Style Selector="Border.rowMenuPanel">
+      <Setter Property="Width" Value="178" />
+      <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="#e2e6ec" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="Padding" Value="5" />
+      <Setter Property="BoxShadow" Value="0 14 34 -12 #47142040" />
+    </Style>
+    <Style Selector="Button.rowMenuItem">
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.rowMenuItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.rowMenuItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#f4f6fa" />
+    </Style>
+    <Style Selector="Button.rowMenuItem PathIcon">
+      <Setter Property="Width" Value="15" />
+      <Setter Property="Height" Value="15" />
+      <Setter Property="Foreground" Value="#98a0ad" />
+    </Style>
+    <Style Selector="Button.rowMenuItem.danger">
+      <Setter Property="Foreground" Value="#c4282d" />
+    </Style>
+    <Style Selector="Button.rowMenuItem.danger PathIcon">
+      <Setter Property="Foreground" Value="#c4282d" />
+    </Style>
+    <Style Selector="Button.rowMenuItem.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#fbeaea" />
+    </Style>
+    <Style Selector="Border.rowMenuSep">
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Background" Value="#eef0f4" />
+      <Setter Property="Margin" Value="6,4" />
+    </Style>
+
+    <!-- ヘッダ帯(VC-TAG-12②: 通常ヒント ⇔ 配置中チップ+Esc 解除) -->
+    <Style Selector="TextBlock.placeHint">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#aab1bd" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.placingBand">
+      <Setter Property="Background" Value="#eaf1fe" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.placingBand TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#2459cf" />
+    </Style>
+    <Style Selector="Button.escRelease">
+      <Setter Property="Padding" Value="9,4" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="#dfe3ea" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.escRelease:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#f1f3f7" />
+    </Style>
+
+    <!-- パレット: 配置中カード(VC-TAG-12①: 強調枠+「配置中」チップ=白字・アクセント地) -->
+    <Style Selector="Border.card.placing">
+      <Setter Property="BorderBrush" Value="#cfe0fc" />
+      <Setter Property="Background" Value="#f6faff" />
+    </Style>
+    <Style Selector="Border.placingChip">
+      <Setter Property="Background" Value="#2f6bed" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Padding" Value="7,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.placingChip TextBlock">
+      <Setter Property="FontSize" Value="10.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="White" />
     </Style>
   </UserControl.Styles>
 
@@ -103,7 +508,7 @@
 
     <Border Grid.Column="1" Background="{StaticResource BorderLineBrush}" />
 
-    <!-- 中央: 階層構造エディタ(ECO-009 ③: コンテナカード・型チップ・条件チップ・アイコンボタン) -->
+    <!-- 中央: 階層構造エディタ(ECO-099: 配置モデル統一。上部見出し/保存は固定・本文スクロール=layoutInvariant) -->
     <DockPanel Grid.Column="2">
       <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderLineBrush}" BorderThickness="0,0,0,1">
         <DockPanel Margin="14,8">
@@ -115,122 +520,100 @@
             <TextBlock Text="{Binding Loc[view.hierarchyStructure]}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
             <TextBlock Text="{Binding Editor.ViewName}" Foreground="{StaticResource TextMutedBrush}"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Editor.StatusMessage}" Foreground="{StaticResource DangerBrush}"
+                       FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
           </StackPanel>
         </DockPanel>
       </Border>
-      <!-- 配置ボタン(主=CTA/従=既定) -->
-      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="14,12,14,8">
-        <Button Classes="cta" Content="{Binding AddRootButtonText}" Command="{Binding AddRootNodeCommand}" />
-        <Button Content="{Binding AddChildButtonText}" Command="{Binding AddChildNodeCommand}" />
-        <TextBlock Text="{Binding Editor.StatusMessage}" Foreground="{StaticResource DangerBrush}"
-                   FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-      </StackPanel>
-      <!-- ヘルプ箱(下端) -->
-      <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource CardBorderBrush}"
-              BorderThickness="1" CornerRadius="11" Padding="14,11" Margin="14,8,14,14">
-        <StackPanel Spacing="5">
-          <TextBlock Text="{Binding Loc[hierarchy.helpNest]}" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Loc[hierarchy.helpViewUsage]}" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" TextWrapping="Wrap" />
-        </StackPanel>
-      </Border>
-      <!-- コンテナカード(主役) -->
-      <Border Classes="containerCard" Margin="14,0,14,0">
-        <DockPanel>
-          <Border Classes="cardHeader" DockPanel.Dock="Top">
+      <!-- 本文(mock: ツリーカード+ガイダンスカードが一体でスクロール) -->
+      <ScrollViewer>
+        <StackPanel Margin="14,12,14,14" Spacing="14">
+          <!-- コンテナカード(主役) -->
+          <Border Classes="containerCard">
+            <StackPanel>
+              <Border Classes="cardHeader">
+                <DockPanel>
+                  <!-- ヘッダ帯(VC-TAG-12②): 通常ヒント ⇔ 「{タグ名}」を配置中+Esc 解除 -->
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Classes="placeHint" IsVisible="{Binding !Editor.IsPlacing}"
+                               Text="{Binding Loc[hierarchy.placeHint]}" />
+                    <Border Classes="placingBand" IsVisible="{Binding Editor.IsPlacing}">
+                      <TextBlock Text="{Binding Editor.PlacingBannerText}" MaxWidth="420"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Border>
+                    <Button Classes="escRelease" IsVisible="{Binding Editor.IsPlacing}"
+                            Command="{Binding Editor.CancelPlacingCommand}">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="{Binding Loc[hierarchy.placingEsc]}" FontSize="11.5" FontWeight="SemiBold"
+                                   Foreground="#5b6473" />
+                        <TextBlock Text="{Binding Loc[hierarchy.placingRelease]}" FontSize="11.5"
+                                   Foreground="#98a0ad" />
+                      </StackPanel>
+                    </Button>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16"
+                              Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[hierarchy.viewStructure]}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Border Classes="accentPill" IsVisible="{Binding Editor.HasView}">
+                      <TextBlock Text="{Binding Editor.NodeCountText}" />
+                    </Border>
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+              <Panel x:Name="TreeHost" Background="Transparent" DragDrop.AllowDrop="True" MinHeight="180">
+                <!-- 空状態(仕様 §2.6): ビュー未選択 / 階層ノード 0 件 -->
+                <TextBlock Text="{Binding Loc[view.selectViewPlease]}" IsVisible="{Binding !Editor.HasView}"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <StackPanel IsVisible="{Binding Editor.IsTreeEmpty}" Spacing="4"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Loc[view.noTagsAdded]}" Foreground="{StaticResource TextMutedBrush}" TextAlignment="Center" />
+                  <TextBlock Text="{Binding Loc[hierarchy.dropToAdd]}" Foreground="{StaticResource TextMutedBrush}"
+                             FontSize="12" TextAlignment="Center" />
+                </StackPanel>
+                <StackPanel Margin="8">
+                  <ItemsControl ItemsSource="{Binding Editor.Roots}" ItemTemplate="{StaticResource HierarchyNodeTemplate}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Spacing="2" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                  </ItemsControl>
+                  <!-- ルート末尾の挿入ポイント(VC-TAG-12③「ルート末尾」) -->
+                  <Border Classes="insertPoint rootLv" IsVisible="{Binding Editor.IsPlacing}"
+                          ToolTip.Tip="{Binding Loc[hierarchy.insertAtEnd]}"
+                          PointerPressed="OnInsertRootEndPressed">
+                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+                      <Ellipse Classes="insertDot" />
+                      <Border Grid.Column="1" Classes="insertLine" />
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </Panel>
+            </StackPanel>
+          </Border>
+          <!-- ガイダンスカード(mock v3 文言。ツリーカードと一体でスクロール) -->
+          <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                  BorderThickness="1" CornerRadius="11" Padding="14,12">
             <DockPanel>
-              <TextBlock DockPanel.Dock="Right" Text="{Binding Loc[hierarchy.dragHint]}"
-                         Foreground="{StaticResource FaintTextBrush}" FontSize="12" VerticalAlignment="Center" />
-              <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16"
-                          Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding Loc[hierarchy.viewStructure]}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <Border Classes="accentPill" IsVisible="{Binding Editor.HasView}">
-                  <TextBlock Text="{Binding Editor.NodeCountText}" />
-                </Border>
+              <PathIcon DockPanel.Dock="Left" Data="{StaticResource InfoIcon}" Width="15" Height="15"
+                        Foreground="#aab1bd" VerticalAlignment="Top" Margin="0,2,9,0" />
+              <StackPanel Spacing="5">
+                <TextBlock Text="{Binding Loc[hierarchy.guidePlace]}" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Loc[hierarchy.guideMenu]}" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Loc[hierarchy.guideHome]}" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Loc[hierarchy.helpViewUsage]}" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" TextWrapping="Wrap" />
               </StackPanel>
             </DockPanel>
           </Border>
-          <Panel x:Name="TreeHost" Background="Transparent" DragDrop.AllowDrop="True">
-            <!-- 空状態(仕様 §2.6): ビュー未選択 / 階層ノード 0 件 -->
-            <TextBlock Text="{Binding Loc[view.selectViewPlease]}" IsVisible="{Binding !Editor.HasView}"
-                       Foreground="{StaticResource TextMutedBrush}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <StackPanel IsVisible="{Binding Editor.IsTreeEmpty}" Spacing="4"
-                        HorizontalAlignment="Center" VerticalAlignment="Center">
-              <TextBlock Text="{Binding Loc[view.noTagsAdded]}" Foreground="{StaticResource TextMutedBrush}" TextAlignment="Center" />
-              <TextBlock Text="{Binding Loc[hierarchy.dropToAdd]}" Foreground="{StaticResource TextMutedBrush}"
-                         FontSize="12" TextAlignment="Center" />
-            </StackPanel>
-            <TreeView x:Name="HierarchyTree" ItemsSource="{Binding Editor.Roots}"
-                      SelectionChanged="OnHierarchySelectionChanged" Background="Transparent" Padding="6">
-              <TreeView.ItemTemplate>
-                <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:EditNodeViewModel">
-                  <DockPanel MinHeight="40">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                      <Button Classes="iconBtn"
-                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.BeginAliasEditCommand}"
-                              CommandParameter="{Binding}">
-                        <PathIcon Data="{StaticResource PencilIcon}" />
-                      </Button>
-                      <!-- GF-03: ホームトグル=家アイコン(設定中=アクセント) -->
-                      <Button Classes="iconBtn" Classes.homeOn="{Binding IsHome}"
-                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.ToggleHomeCommand}"
-                              CommandParameter="{Binding}">
-                        <PathIcon Data="{StaticResource HomeIconGeometry}" />
-                      </Button>
-                      <Button Classes="iconBtn" IsVisible="{Binding CanHaveCondition}"
-                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.EditConditionCommand}"
-                              CommandParameter="{Binding}">
-                        <PathIcon Data="{StaticResource FunnelIcon}" />
-                      </Button>
-                      <Button Classes="iconBtn danger"
-                              Command="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Editor.DeleteNodeCommand}"
-                              CommandParameter="{Binding}">
-                        <PathIcon Data="{StaticResource TrashIcon}" />
-                      </Button>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                      <Ellipse Width="10" Height="10" Fill="{Binding Color, FallbackValue=Transparent}"
-                               IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
-                      <TextBlock Classes="nodeName" Classes.home="{Binding IsHome}" Text="{Binding DisplayName}"
-                                 IsVisible="{Binding !IsEditingAlias}" VerticalAlignment="Center"
-                                 FontSize="14" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                      <TextBox Text="{Binding AliasEditText}" IsVisible="{Binding IsEditingAlias}"
-                               MinWidth="120" FontSize="13" Padding="6,3"
-                               KeyDown="OnAliasKeyDown" LostFocus="OnAliasLostFocus" />
-                      <Border Classes="typeChip" Classes.simple="{Binding IsSimple}" Classes.text="{Binding IsTextual}"
-                              Classes.number="{Binding IsNumeric}" IsVisible="{Binding HasType}">
-                        <TextBlock Text="{Binding TypeText}" />
-                      </Border>
-                      <Border Classes="homePill" IsVisible="{Binding IsHome}">
-                        <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[hierarchy.homePill]}" />
-                      </Border>
-                      <!-- 展開モードバッジ(REQ-096/ECO-086・非既定のみ表示=CAD VC-TAG-3・紫) -->
-                      <Border IsVisible="{Binding HasExpansionBadge}" Background="#f2edfc" CornerRadius="6"
-                              Padding="7,2" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding ExpansionBadgeText}" FontSize="11" Foreground="#7c53d6"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                      </Border>
-                      <Border Classes="condChip" Classes.amber="{Binding IsConditionAmber}" Classes.mono="{Binding IsConditionMono}"
-                              IsVisible="{Binding HasCondition}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                          <PathIcon Data="{StaticResource FunnelIcon}" VerticalAlignment="Center" />
-                          <TextBlock Text="{Binding ConditionSummary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                      </Border>
-                    </StackPanel>
-                  </DockPanel>
-                </TreeDataTemplate>
-              </TreeView.ItemTemplate>
-            </TreeView>
-          </Panel>
-        </DockPanel>
-      </Border>
+        </StackPanel>
+      </ScrollViewer>
     </DockPanel>
 
     <Border Grid.Column="3" Background="{StaticResource BorderLineBrush}" />
 
-    <!-- 右: タグパレット(ECO-009: モック CAD 準拠の再実装。Card/型チップ/候補値・範囲/CTA/アイコンボタン/件数・凡例) -->
+    <!-- 右: タグパレット(ECO-009: モック CAD 準拠。ECO-099: クリック=配置モード・配置中カード強調) -->
     <DockPanel Grid.Column="4" Background="{StaticResource PanelBrush}">
       <!-- ヘッダ: タイトル+件数バッジ -->
       <DockPanel DockPanel.Dock="Top" Margin="16,14,16,8">
@@ -277,9 +660,13 @@
           <ItemsControl ItemsSource="{Binding Palette.Tags}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TagPaletteRowViewModel">
-                <Border Classes="card" Classes.selected="{Binding IsSelected}" PointerPressed="OnPaletteItemPressed">
+                <!-- ECO-099: クリック=配置モードのトグル/ドラッグ=従来 D&D(閾値で判別)。
+                     カード強調は配置中のみ(mock cardStyle は placing 起点)。 -->
+                <Border Classes="card" Classes.placing="{Binding IsPlacing}"
+                        PointerPressed="OnPaletteItemPressed" PointerMoved="OnPaletteItemMoved"
+                        PointerReleased="OnPaletteItemReleased">
                   <StackPanel Spacing="9">
-                    <!-- 行1: 色ドット+名前+型チップ+アクション -->
+                    <!-- 行1: 色ドット+名前+型チップ+配置中チップ+アクション -->
                     <DockPanel>
                       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
                         <Button Classes="iconBtn"
@@ -293,9 +680,14 @@
                           <PathIcon Data="{StaticResource TrashIcon}" />
                         </Button>
                       </StackPanel>
+                      <!-- 「配置中」チップ(VC-TAG-12①: 白字・アクセント地) -->
+                      <Border DockPanel.Dock="Right" Classes="placingChip" IsVisible="{Binding IsPlacing}" Margin="6,0,4,0">
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:TagsTabViewModel)DataContext).Loc[tag.palette.placing]}" />
+                      </Border>
                       <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                        <Ellipse Width="11" Height="11" Fill="{Binding Color, FallbackValue=Transparent}"
-                                 IsVisible="{Binding HasColor}" VerticalAlignment="Center" />
+                        <Border Classes="dotRing" Background="{Binding RingColor}" IsVisible="{Binding HasColor}">
+                          <Ellipse Width="11" Height="11" Fill="{Binding Color}" />
+                        </Border>
                         <Ellipse Width="11" Height="11" Stroke="{StaticResource BorderLineBrush}" StrokeThickness="2"
                                  IsVisible="{Binding !HasColor}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"

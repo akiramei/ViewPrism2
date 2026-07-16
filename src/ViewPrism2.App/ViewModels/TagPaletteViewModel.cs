@@ -47,6 +47,9 @@ public sealed partial class TagPaletteRowViewModel : ObservableObject
     /// <summary>color=NULL のタグは境界線色のリング表示(K-DESIGN)。</summary>
     public bool HasColor => Tag.Color is not null;
 
+    /// <summary>色ドットの淡色リング(ECO-099・mock dotStyle boxShadow 16% α)。#RRGGBB → #29RRGGBB。</summary>
+    public string? RingColor => Tag.Color is ['#', .. { Length: 6 }] c ? "#29" + c[1..] : null;
+
     public bool IsSimple => Tag.Type == TagType.Simple;
 
     public bool IsTextual => Tag.Type == TagType.Textual;
@@ -143,8 +146,15 @@ public sealed partial class TagPaletteRowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
-    /// <summary>範囲ラベル: "{min}–{max}"(+単位)。min/max・単位とも無ければ null。INV-007 不変表現。</summary>
-    private static string? BuildRangeText(NumericTagSettings? n)
+    /// <summary>配置モード中のカード強調(ECO-099・VC-TAG-12①)。</summary>
+    [ObservableProperty]
+    private bool _isPlacing;
+
+    /// <summary>
+    /// 範囲ラベル: "{min}–{max}"(+単位)。min/max・単位とも無ければ null。INV-007 不変表現。
+    /// ECO-099: 階層行の数値メタ(mock node.meta)と共用するため internal(表現を二重定義しない)。
+    /// </summary>
+    internal static string? BuildRangeText(NumericTagSettings? n)
     {
         if (n is null)
         {
@@ -211,6 +221,10 @@ public sealed partial class TagPaletteViewModel : ObservableObject
 
     [ObservableProperty]
     private TagPaletteRowViewModel? _selectedTag;
+
+    /// <summary>配置モード中のタグ id(ECO-099)。エディタ所有の状態をホストが同期し、カード強調に使う。</summary>
+    [ObservableProperty]
+    private string? _placingTagId;
 
     [ObservableProperty]
     private string? _statusMessage;
@@ -302,6 +316,17 @@ public sealed partial class TagPaletteViewModel : ObservableObject
         }
     }
 
+    partial void OnPlacingTagIdChanged(string? value) => SyncPlacing();
+
+    /// <summary>配置中カードの強調フラグを同期する(検索での行再生成後も維持=ApplyFilter 末尾からも呼ぶ)。</summary>
+    private void SyncPlacing()
+    {
+        foreach (var row in Tags)
+        {
+            row.IsPlacing = string.Equals(row.Tag.Id, PlacingTagId, StringComparison.Ordinal);
+        }
+    }
+
     private void ApplyFilter()
     {
         var selectedId = SelectedTag?.Tag.Id;
@@ -331,6 +356,7 @@ public sealed partial class TagPaletteViewModel : ObservableObject
         SelectedTag = selectedId is null
             ? null
             : Tags.FirstOrDefault(t => string.Equals(t.Tag.Id, selectedId, StringComparison.Ordinal));
+        SyncPlacing();
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(ItemCount));
         OnPropertyChanged(nameof(TotalCount));

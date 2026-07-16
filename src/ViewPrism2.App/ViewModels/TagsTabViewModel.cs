@@ -60,6 +60,7 @@ public sealed partial class TagsTabViewModel : ObservableObject
     private readonly LocalizationService _localization;
     private readonly IWindowService _windows;
     private Dictionary<string, Tag> _tagById = new(StringComparer.Ordinal);
+    private Dictionary<string, string> _numericMetaByTagId = new(StringComparer.Ordinal);
     private bool _loaded;
 
     public TagsTabViewModel(
@@ -81,12 +82,15 @@ public sealed partial class TagsTabViewModel : ObservableObject
         // ECO-046(U-a): DB ガード(ECO-045)が関知できない未保存編集中の配置を削除から保護
         Palette.IsTagInUnsavedEdit = tagId => Editor.IsDirty && Editor.ContainsTag(tagId);
         Palette.TagsChanged += async (_, _) => await OnTagsChangedAsync();
-        Palette.PropertyChanged += (_, e) =>
+        // ECO-099: 数値タグの定義域メタ("1–5 ★")を行へ供給(ReloadTagDictionaryAsync で構築)
+        Editor.NumericMetaResolver = tagId =>
+            _numericMetaByTagId.TryGetValue(tagId, out var meta) ? meta : null;
+        // ECO-099: 配置モード(エディタ所有)をパレットの配置中カード強調へ同期(VC-TAG-12①)
+        Editor.PropertyChanged += (_, e) =>
         {
-            // GF-04: パレット選択の変化で追加ボタンの文言・活性を更新する
-            if (e.PropertyName == nameof(TagPaletteViewModel.SelectedTag))
+            if (e.PropertyName == nameof(HierarchyEditorViewModel.PlacingTag))
             {
-                RaiseAddButtonChanged();
+                Palette.PlacingTagId = Editor.PlacingTag?.Id;
             }
         };
         localization.CultureChanged += (_, _) =>
@@ -94,7 +98,6 @@ public sealed partial class TagsTabViewModel : ObservableObject
             // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
-            RaiseAddButtonChanged();
         };
     }
 
@@ -230,53 +233,14 @@ public sealed partial class TagsTabViewModel : ObservableObject
         DataChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>パレットでタグが選択されているか(GF-04: 追加ボタンの活性条件)。</summary>
-    public bool CanAddNode => Palette.SelectedTag is not null;
-
     /// <summary>
-    /// ルート追加ボタンの文言(ECO-007/E3・GF-04 撤回)。汎用ラベル『タグを配置』(ルート)を表示し、
-    /// 対象タグ名は出さない。未選択時は非活性(CanAddNode=false)+選択を促す文言。i18n キー経由。
+    /// パレットカードのクリック=配置モードのトグル(ECO-099・配置モデル統一)。
+    /// 旧・選択ベース配置ボタン(GF-04/ECO-007 E3)はこの経路に置換され撤去(CAD mock v3 で superseded)。
     /// </summary>
-    public string AddRootButtonText => Palette.SelectedTag is not null
-        ? _localization.T("hierarchy.placeTagRoot")
-        : _localization.T("hierarchy.selectTagToAdd");
-
-    /// <summary>
-    /// 子追加ボタンの文言(ECO-007/E3・GF-04 撤回)。汎用ラベル『タグを配置』(子)を表示し、
-    /// 対象タグ名は出さない。未選択時は選択を促す文言。
-    /// </summary>
-    public string AddChildButtonText => Palette.SelectedTag is not null
-        ? _localization.T("hierarchy.placeTagChild")
-        : _localization.T("hierarchy.selectTagToAdd");
-
-    /// <summary>パレット選択タグをルートへ追加(ボタン経路、仕様 §2.6)。未選択時は非活性(GF-04)。</summary>
-    [RelayCommand(CanExecute = nameof(CanAddNode))]
-    private void AddRootNode()
+    public void TogglePlacing(TagPaletteRowViewModel row)
     {
-        if (Palette.SelectedTag is { } row)
-        {
-            Editor.AddNode(row.Tag, null);
-        }
-    }
-
-    /// <summary>パレット選択タグを選択ノードの子として追加(ボタン経路)。未選択時は非活性(GF-04)。</summary>
-    [RelayCommand(CanExecute = nameof(CanAddNode))]
-    private void AddChildNode()
-    {
-        if (Palette.SelectedTag is { } row)
-        {
-            Editor.AddNode(row.Tag, Editor.SelectedNode);
-        }
-    }
-
-    /// <summary>GF-04: 追加ボタンの文言・活性を再評価する。</summary>
-    private void RaiseAddButtonChanged()
-    {
-        OnPropertyChanged(nameof(CanAddNode));
-        OnPropertyChanged(nameof(AddRootButtonText));
-        OnPropertyChanged(nameof(AddChildButtonText));
-        AddRootNodeCommand.NotifyCanExecuteChanged();
-        AddChildNodeCommand.NotifyCanExecuteChanged();
+        ArgumentNullException.ThrowIfNull(row);
+        Editor.TogglePlacing(row.Tag);
     }
 
     /// <summary>D&D 経路: タグ id からノード追加(View 層の Drop ハンドラから呼ぶ)。</summary>
@@ -302,6 +266,12 @@ public sealed partial class TagsTabViewModel : ObservableObject
     {
         await ReloadTagDictionaryAsync();
 
+        // ECO-099: 配置中タグが削除されたら配置モードを解除する(参照切れ配置の防止)
+        if (Editor.PlacingTag is { } placing && !_tagById.ContainsKey(placing.Id))
+        {
+            Editor.CancelPlacingCommand.Execute(null);
+        }
+
         // タグ削除は DB 側で階層ノードを CASCADE 削除する(REQ-028)ため、エディタを最新状態へ
         if (!Editor.IsDirty && SelectedViewRow is { } row)
         {
@@ -316,5 +286,18 @@ public sealed partial class TagsTabViewModel : ObservableObject
     {
         var all = await _tags.GetAllAsync();
         _tagById = all.ToDictionary(t => t.Id, StringComparer.Ordinal);
+
+        // ECO-099: 数値タグの定義域メタ(mock node.meta="1–5 ★")。行生成時に NumericMetaResolver が引く
+        var meta = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var tag in all.Where(t => t.Type == TagType.Numeric))
+        {
+            var settings = await _tags.GetNumericSettingsAsync(tag.Id);
+            if (TagPaletteRowViewModel.BuildRangeText(settings) is { } text)
+            {
+                meta[tag.Id] = text;
+            }
+        }
+
+        _numericMetaByTagId = meta;
     }
 }

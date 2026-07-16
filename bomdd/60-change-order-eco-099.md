@@ -1,4 +1,4 @@
-# Change Order — ECO-099(staged): タグタブ刷新 第一便 — 配置モデル統一(クリック配置)+行操作「⋯」メニュー+ホーム1クリック+状態チップ
+# Change Order — ECO-099(implemented): タグタブ刷新 第一便 — 配置モデル統一(クリック配置)+行操作「⋯」メニュー+ホーム1クリック+状態チップ
 
 - 起票: 2026-07-16(maintainer 実装依頼)
 - 種別: 機能拡張(CAD 改版追随 — タグ管理 mock v3〔2026-07-16〕+ `tag_tab.md` 正典化済み契約への実装追随)
@@ -100,6 +100,64 @@
 - **i18n**: ja/en 新キー(§4.1-6)。
 - **CAD**: 本リポからは変更しない。TAG-015①③④の確定裁定を read-across 依頼メモとして納品(ViewPrismUI 側で tag_tab.md/review_points.md へ反映)。
 
+## 7. `/eco-fix` 実施記録(2026-07-16)
+
+### 7.1 プローブ先行(R5)
+
+新規 `CpUiG6PlacementTests`(12 本)を CAD 契約(VC-TAG-12/13/14+TAG-015 裁定)から生成し、
+VM へ **API スタブ(空実装)** を置いた状態で実行 → **10/12 不合格**(配置モード・挿入・排他ホーム・
+title 文言・headless 実描画の状態切替/条件チップ幅上限が全て赤=新契約の不在を実測)。
+残 2 本は「非配置時に挿入コマンドが何もしない」等の消極ガード(スタブでも通る pin)。
+既存 755 本は全緑=旧契約の回帰なしを起点固定。
+
+### 7.2 是正内容(最小構成)
+
+- **VM**: `HierarchyEditorViewModel` が placing 状態+挿入コマンド(InsertBefore/InsertChildEnd/
+  InsertRootEnd/PlaceAsChild=挿入→解除→配置ノード選択・`AddNode` と挿入コアを共通化)+
+  `SetHomeFromMenu`(設定のみ=mock setHomeClose)を所有。`EditNodeViewModel` へ行テンプレート用の
+  表示要素(HasChildren/ChildCount/ShowChildren/IsRootLevel/NumericMeta/RingColor/HomeButtonTitle/
+  メニュー文言=Popup 内 DataContext 供給)を追加。`TagsTabViewModel` は配置↔パレット同期+数値メタ
+  解決子の配線(旧 GF-04 追加ボタン機構は撤去)。`TagPaletteViewModel/Row` へ PlacingTagId/IsPlacing。
+- **View**: 中央ペインを TreeView から**再帰 DataTemplate の ItemsControl**(mock DOM と同型=
+  行+子ブロック左ガイド線)へ置換。挿入ポイント(小円+ライン・root 14px/子 12px)・破線「＋ 子にする」
+  (Rectangle StrokeDashArray=既存流儀)・ヘッダ帯(ヒント⇔配置中チップ+Esc 解除)・「⋯」Flyout
+  (幅 178/角丸 11/影・削除warning色・light dismiss)・行ホバー家ゴースト(:pointerover 駆動)・
+  HOME チップ淡青/条件チップ琥珀統一(幅上限 150+ツールチップ)。code-behind はポインタ/Esc(tunnel)→
+  VM 呼び出しと Popup クローズのみ(K-MVVM)。パレットカードはクリック(配置トグル)/ドラッグ(従来 D&D)を
+  **移動閾値 4px** で判別 — 既存 D&D 導線は退化なしで維持。
+- **i18n(3 層運用=ECO-079/080)**: 新キー 17(ヘッダ帯/挿入 title/＋子にする/メニュー 4 項/家 title 2/
+  ガイダンス 3/配置中チップ等)を ja=mock 原文転写+en を両輪追加。無効化された旧キー 5
+  (placeTagRoot/placeTagChild/selectTagToAdd/dragHint/helpNest)は削除。dropToAdd は撤去済みボタンへの
+  言及を除去(mock 沈黙面の最小是正・実装判断として記録)。VM 算出文言は CultureChanged で再評価。
+- **§3.3 の決着**: シンプルタグ行の「条件を設定」= mock は全行同一項目(押下は閉じるのみ=未実装)→
+  実装は**項目表示+非活性**(ECO-086 契約=シンプルに設定面なし。発明せず既存契約へ接続)。
+  行ハンドル(⠿)= mock どおり子行のみ表示(D&D 挙動なし=TAG-014)。「＋ 子にする」は**子行にも表示**
+  (CAD prose VC-TAG-12④「各行末」の一般化 — mock は 2 階層プロトタイプで子行に出せないだけ)。
+
+### 7.3 機械受入
+
+build 0 error / **Tests 767/767**(プローブ 12 本緑転+既存 755 不変)/ Oracle 109+2skip(R6=既存固定行
+変更なし)/ validate_bom 0/0。M4 同期= E-UI-NODEGRAPH-025・E-UI-TAGS-026(invariants 追補+GF-04 系
+2 件の supersede 改訂)・M-UI-013 interface_contract(tags_tab_placement)・CP-UI-G6(VC-TAG-12/13/14 次元)。
+
+### 7.4 セルフゴールデン(R7・CAD captures 並置)
+
+headless+Skia の撮影ハーネス(scratch)で実装を実描画し、`captures/tag_tab/` と並置
+(full/P2/P2-placing/P2-menu/P2-home/P3/P3-fold の各状態+en 2 面)。差分の全列挙と分類:
+
+| # | 差分 | 分類 |
+|---|---|---|
+| 配置モード一式(挿入ポイント/＋子にする/帯/配置中チップ/一時停止)・⋯メニュー構成/警告色/カード外重なり・HOME/条件チップ・家ゴースト・折畳み(4 表示+ほか 43=47 検算一致)・行高/子ブロックガイド線 | 転写(並置目視+probe 実測) | — |
+| アイコンが塗りシルエット系(mock=線画。家/鉛筆/じょうご/ゴミ箱/⋯) | 裁定済み許容(GF-03=家形シルエット指定+K-DESIGN 既存アイコン言語・歴代 golden 承認) | 裁定済み |
+| 「＋ 子にする」を子行にも表示(mock capture は root 行のみ) | CAD prose 適合(VC-TAG-12④「各行末」。mock=2 階層プロトタイプの制約) | 記録済み |
+| パレット並び順= name 昇順(mock はデモ配列順) | 既存契約(REQ-029)維持 | 裁定済み |
+| パレット幅 300(mock 340)→折畳みチップ数が 1 個差(4+43 vs 5+42・N 会計は同一) | as-built 寸法維持(ペイン幅は本便スコープ外) | 記録済み |
+| ペインヘッダの保存/キャンセル+ビュー行の鉛筆/ゴミ箱(mock は無し/飾りアイコン) | as-built(バッチ保存モデル・歴代 golden 承認) | 裁定済み |
+| ガイダンスカードの文中強調(太字)なし=平文(copy は逐語一致) | **提案許容差分**(i18n 文字列に markup を持ち込まない。golden で裁定を仰ぐ) | 要確認 |
+| 色ドットのリング= 16%α 塗り近似(mock= boxShadow リング) | 近似転写(視覚差軽微・golden で確認) | 記録済み |
+
+転写漏れ 0(上記のとおり全差分が分類済み。「要確認」2 件は golden 時の maintainer 裁定へ)。
+
 ## 6. 残ゲート
 
 - gate①(裁定): **不要**(§2。TAG-015①③④は §4.2 で確定済み=依頼文の既定方向採択)。
@@ -110,3 +168,23 @@
   - VC-TAG-9/10: 候補値折畳み(2 行上限・非対話ほか N 件・N の検算・長値省略)
   - layoutInvariant: ページ全体スクロールなし・ペイン単位の単一スクロール・ヘッダ固定
   - R7: 実機スクリーンショットを `captures/tag_tab/` 各面(P2/P2-placing/P2-menu/P2-home/P3/P3-placing/P3-fold)と並置し ECO へ記録
+
+## 8. CAD への read-across 依頼メモ(ViewPrismUI 側反映用・成果物 3)
+
+確定裁定・実装確定事項の一覧(ViewPrismUI `docs/screens/tag_tab.md` / `docs/review_points.md` への
+反映材料。反映は ViewPrismUI 側の作業=本リポからは変更しない):
+
+1. **TAG-015①(名前を変更の様式)= 確定**: インライン編集の従来契約を踏襲(Enter 確定・Esc 取消・
+   空なら元タグ名へ復帰=REQ-034)。⋯メニュー「名前を変更」→ インライン編集開始。
+2. **TAG-015③(条件チップの長文)= 確定**: チップ幅上限 150px+省略表示+全文ツールチップ
+   (TAG-013/IMG-023A 同族様式。mock v3 の `max-width:150px`+`title` と同値=review_points の
+   「幅上限なし」記述は v3 で解消済みの旨も反映を推奨)。
+3. **TAG-015④(配置から削除の確認)= 確定**: 確認なし即時。根拠=タグ定義は残存し再配置で復元容易+
+   中央エディタはバッチ編集(保存前はキャンセルで全戻し可能)の二重低破壊。
+4. **実装確定(prose 沈黙面の記録依頼)**:
+   - シンプルタグ行の⋯メニュー「条件を設定」は**表示+非活性**(ECO-086 契約=シンプルに設定面なし)。
+   - 「＋ 子にする」は**子行を含む各行末**に表示(VC-TAG-12④の一般化。mock は 2 階層プロトタイプ)。
+   - ビュー未選択時は配置モードに入らない(挿入先が存在しないため)。
+   - ⋯メニュー「ホームに設定」=設定のみ(mock setHomeClose どおり・トグルは家ゴースト側)。
+5. **golden 裁定待ち(裁定後に反映)**: ガイダンスカードの文中強調(実装=平文・copy 逐語一致)/
+   色ドットリングの 16%α 塗り近似。

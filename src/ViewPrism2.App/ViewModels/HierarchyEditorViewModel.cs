@@ -22,6 +22,14 @@ public sealed partial class EditNodeViewModel : ObservableObject
         TagId = tagId;
         Tag = tag;
         _localization = localization;
+        // ECO-099: 行テンプレートの子数バッジ/子ブロック表示は Children の増減へ追随する
+        Children.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasChildren));
+            OnPropertyChanged(nameof(ChildCount));
+            OnPropertyChanged(nameof(ShowChildren));
+            OnPropertyChanged(nameof(ShowLeafSpacer));
+        };
     }
 
     /// <summary>階層ノード id(既存ノードは DB の id、新規ノードは採番済み)。</summary>
@@ -93,11 +101,7 @@ public sealed partial class EditNodeViewModel : ObservableObject
             _ => "tag.type.numeric",
         });
 
-    /// <summary>条件チップ配色: 数値(等値/範囲)=amber。</summary>
-    public bool IsConditionAmber => ConditionType is HierarchyConditionType.Equals or HierarchyConditionType.Range;
-
-    /// <summary>条件チップ配色: パターン(regex)=mono 青。Values=緑(既定)。</summary>
-    public bool IsConditionMono => ConditionType is HierarchyConditionType.Pattern;
+    // ECO-099(VC-TAG-13⑤): 条件チップは琥珀単一へ集約 — 旧 3 配色プロパティ(IsConditionAmber/Mono)は撤去。
 
     /// <summary>
     /// 条件サマリの整形表示(GF-05・REQ-060(e)、仕様 §2.6)。i18n テンプレートで人間可読化し、
@@ -114,8 +118,6 @@ public sealed partial class EditNodeViewModel : ObservableObject
         ConditionValue = type is null ? null : valueJson;
         OnPropertyChanged(nameof(HasCondition));
         OnPropertyChanged(nameof(ConditionSummary));
-        OnPropertyChanged(nameof(IsConditionAmber));
-        OnPropertyChanged(nameof(IsConditionMono));
     }
 
     /// <summary>展開モードの設定(REQ-096)。行バッジ(非既定のみ表示=CAD VC-TAG-3)を再評価する。</summary>
@@ -151,6 +153,68 @@ public sealed partial class EditNodeViewModel : ObservableObject
     }
 
     partial void OnAliasChanged(string? value) => OnPropertyChanged(nameof(DisplayName));
+
+    // ---- ECO-099: 配置モデル統一+行操作「⋯」メニュー(mock v3 行テンプレートの表示要素) ----
+
+    /// <summary>行の選択強調(配置実行後の配置ノード選択=VC-TAG-12。エディタが単一選択を維持)。</summary>
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public bool HasChildren => Children.Count > 0;
+
+    /// <summary>子数バッジ(mock: 親行の右端ピル)。</summary>
+    public int ChildCount => Children.Count;
+
+    /// <summary>子ブロック(インデント+左ガイド線)の表示= 子あり かつ 展開中。</summary>
+    public bool ShowChildren => HasChildren && IsExpanded;
+
+    /// <summary>ルート階層の行か(挿入ポイント寸法・行ハンドル有無の切替=mock 2 階層構造の一般化)。</summary>
+    public bool IsRootLevel => Parent is null;
+
+    /// <summary>ルート階層の葉行はカレット幅ぶんのスペーサーを置く(mock isLeaf)。</summary>
+    public bool ShowLeafSpacer => IsRootLevel && !HasChildren;
+
+    /// <summary>数値タグの定義域メタ(例 "1–5 ★"・mock node.meta)。エディタが生成時に解決して与える。</summary>
+    public string? NumericMeta { get; set; }
+
+    public bool HasNumericMeta => NumericMeta is not null;
+
+    /// <summary>色ドットの淡色リング(mock dotStyle boxShadow 16% α)。#RRGGBB → #29RRGGBB。</summary>
+    public string? RingColor => Tag?.Color is ['#', .. { Length: 6 }] c ? "#29" + c[1..] : null;
+
+    /// <summary>行ホバー家アイコンの title(VC-TAG-14④: 現ホーム行=解除/他行=設定〔移動〕)。</summary>
+    public string HomeButtonTitle => _localization is null
+        ? string.Empty
+        : _localization.T(IsHome ? "hierarchy.homeUnsetTitle" : "hierarchy.homeSetTitle");
+
+    // 「⋯」メニュー項目文言(VC-TAG-13②)。Flyout(Popup)内は $parent[UserControl] 到達が保証されない
+    // ため、DataContext(=本 VM)経由で Loc 解決済み文言を供給する(ChipVM.UndefLabel と同流儀)。
+    public string MenuSetHomeText => T("hierarchy.menu.setHome");
+
+    public string MenuRenameText => T("hierarchy.menu.rename");
+
+    public string MenuSetConditionText => T("hierarchy.menu.setCondition");
+
+    public string MenuRemoveText => T("hierarchy.menu.removePlacement");
+
+    private string T(string key) => _localization?.T(key) ?? string.Empty;
+
+    partial void OnIsHomeChanged(bool value) => OnPropertyChanged(nameof(HomeButtonTitle));
+
+    partial void OnIsExpandedChanged(bool value) => OnPropertyChanged(nameof(ShowChildren));
+
+    /// <summary>ロケール切替時の VM 算出文言の再評価(DF-3。エディタの CultureChanged から呼ぶ)。</summary>
+    internal void RaiseLocalizedTexts()
+    {
+        OnPropertyChanged(nameof(HomeButtonTitle));
+        OnPropertyChanged(nameof(TypeText));
+        OnPropertyChanged(nameof(ExpansionBadgeText));
+        OnPropertyChanged(nameof(ConditionSummary));
+        OnPropertyChanged(nameof(MenuSetHomeText));
+        OnPropertyChanged(nameof(MenuRenameText));
+        OnPropertyChanged(nameof(MenuSetConditionText));
+        OnPropertyChanged(nameof(MenuRemoveText));
+    }
 }
 
 /// <summary>
@@ -183,6 +247,13 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            // ECO-099: VM 算出文言(配置中チップ・家アイコン title 等)も再評価(ECO-079 の第 2 層)
+            OnPropertyChanged(nameof(PlacingBannerText));
+            OnPropertyChanged(nameof(NodeCountText));
+            foreach (var node in Flatten())
+            {
+                node.RaiseLocalizedTexts();
+            }
         };
     }
 
@@ -196,6 +267,136 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     /// <summary>未保存変更あり(保存/キャンセルの活性条件、G-6)。</summary>
     [ObservableProperty]
     private bool _isDirty;
+
+    // ---- ECO-099: 配置モデル統一(クリック配置)。CAD= tag_tab.md「配置モデル統一」+VC-TAG-12 ----
+
+    /// <summary>配置モード中のタグ(VC-TAG-12)。null=非配置。配置モード自体は編集ではない(ダーティ不変)。</summary>
+    [ObservableProperty]
+    private Tag? _placingTag;
+
+    public bool IsPlacing => PlacingTag is not null;
+
+    /// <summary>ヘッダ帯の配置中チップ文言(VC-TAG-12②)。</summary>
+    public string PlacingBannerText => PlacingTag is null
+        ? string.Empty
+        : _localization.T("hierarchy.placingBanner", new Dictionary<string, string>
+        {
+            ["tagName"] = PlacingTag.Name,
+        });
+
+    /// <summary>数値タグの定義域メタ("1–5 ★" 級)の解決子。ホスト(TagsTabViewModel)が配線する。</summary>
+    public Func<string, string?>? NumericMetaResolver { get; set; }
+
+    partial void OnPlacingTagChanged(Tag? value)
+    {
+        OnPropertyChanged(nameof(IsPlacing));
+        OnPropertyChanged(nameof(PlacingBannerText));
+    }
+
+    partial void OnSelectedNodeChanged(EditNodeViewModel? oldValue, EditNodeViewModel? newValue)
+    {
+        // 行テンプレートの選択強調は per-node フラグで描く(単一選択の同期)
+        if (oldValue is not null)
+        {
+            oldValue.IsSelected = false;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.IsSelected = true;
+        }
+    }
+
+    /// <summary>
+    /// 配置モードのトグル(パレットカードのクリック)。同タグ再クリック=解除、別タグ=切替(mock select)。
+    /// ビュー未選択時は挿入先が存在しないため入らない(ECO-099 実装判断)。
+    /// </summary>
+    public void TogglePlacing(Tag tag)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        if (!HasView)
+        {
+            return;
+        }
+
+        PlacingTag = string.Equals(PlacingTag?.Id, tag.Id, StringComparison.Ordinal) ? null : tag;
+    }
+
+    /// <summary>解除(Esc / ヘッダ帯の解除ボタン)。ツリーは不変。</summary>
+    [RelayCommand]
+    private void CancelPlacing() => PlacingTag = null;
+
+    /// <summary>行間の挿入ポイント: その行の前へ兄弟として挿入(title「ここに挿入」)。</summary>
+    [RelayCommand]
+    private void InsertBefore(EditNodeViewModel target)
+    {
+        if (PlacingTag is not { } tag)
+        {
+            return;
+        }
+
+        var owner = target.Parent?.Children ?? Roots;
+        var index = owner.IndexOf(target);
+        if (index < 0)
+        {
+            return;
+        }
+
+        CommitPlacement(tag, target.Parent, index);
+    }
+
+    /// <summary>子リスト末尾の挿入ポイント(title「末尾に挿入」)。</summary>
+    [RelayCommand]
+    private void InsertChildEnd(EditNodeViewModel parent)
+    {
+        if (PlacingTag is { } tag)
+        {
+            CommitPlacement(tag, parent, parent.Children.Count);
+        }
+    }
+
+    /// <summary>ルート末尾の挿入ポイント(title「末尾に挿入」)。</summary>
+    [RelayCommand]
+    private void InsertRootEnd()
+    {
+        if (PlacingTag is { } tag)
+        {
+            CommitPlacement(tag, null, Roots.Count);
+        }
+    }
+
+    /// <summary>行末「＋ 子にする」: その行の子として末尾挿入(親は自動展開)。</summary>
+    [RelayCommand]
+    private void PlaceAsChild(EditNodeViewModel parent)
+    {
+        if (PlacingTag is { } tag)
+        {
+            CommitPlacement(tag, parent, parent.Children.Count);
+        }
+    }
+
+    /// <summary>配置実行: 挿入 → 配置モード解除+配置ノードを選択(CAD「配置モデル統一」)。</summary>
+    private void CommitPlacement(Tag tag, EditNodeViewModel? parent, int index)
+    {
+        InsertNodeCore(tag, parent, index);
+        PlacingTag = null;
+    }
+
+    /// <summary>
+    /// 「⋯」メニューの「ホームに設定」(VC-TAG-14⑥)。mock setHomeClose と同じく設定のみ
+    /// (現ホーム行でも解除しない)。解除トグルは行ホバー家アイコン(ToggleHome)の役割。
+    /// </summary>
+    [RelayCommand]
+    private void SetHomeFromMenu(EditNodeViewModel node)
+    {
+        foreach (var other in Flatten())
+        {
+            other.IsHome = false;
+        }
+
+        node.IsHome = true;
+        SetDirty(true);
+    }
 
     /// <summary>ビュー選択済み(未選択は「ビューを選択してください」、仕様 §2.6 空状態)。</summary>
     [ObservableProperty]
@@ -234,6 +435,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         _view = view;
         _tagById = tagById;
         StatusMessage = null;
+        PlacingTag = null; // ECO-099: ビュー切替・再読込で配置モードは持ち越さない
         Roots.Clear();
         SelectedNode = null;
 
@@ -248,6 +450,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
                 {
                     Alias = node.Alias,
                     IsHome = string.Equals(view.HomeTagId, node.Id, StringComparison.Ordinal),
+                    NumericMeta = tag?.Type == TagType.Numeric ? NumericMetaResolver?.Invoke(tag.Id) : null,
                 };
                 vm.SetCondition(node.ConditionType, node.ConditionValue);
                 vm.SetExpansion(node.ExpansionMode, node.HideEmptyValues); // REQ-096
@@ -277,7 +480,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(NodeCountText));
     }
 
-    /// <summary>ノード追加(タグパレットから D&D またはボタン)。同一親の末尾に追加。</summary>
+    /// <summary>ノード追加(タグパレットから D&D)。同一親の末尾に追加。</summary>
     public EditNodeViewModel? AddNode(Tag tag, EditNodeViewModel? parent)
     {
         ArgumentNullException.ThrowIfNull(tag);
@@ -286,14 +489,21 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             return null;
         }
 
-        var node = new EditNodeViewModel(IdGenerator.NewId(), tag.Id, tag, _localization) { Parent = parent };
-        if (parent is null)
+        return InsertNodeCore(tag, parent, (parent?.Children ?? Roots).Count);
+    }
+
+    /// <summary>挿入コア(ECO-099): 指定親の指定位置へ挿入し、親を展開・選択・ダーティ化する。</summary>
+    private EditNodeViewModel InsertNodeCore(Tag tag, EditNodeViewModel? parent, int index)
+    {
+        var node = new EditNodeViewModel(IdGenerator.NewId(), tag.Id, tag, _localization)
         {
-            Roots.Add(node);
-        }
-        else
+            Parent = parent,
+            NumericMeta = tag.Type == TagType.Numeric ? NumericMetaResolver?.Invoke(tag.Id) : null,
+        };
+        var owner = parent?.Children ?? Roots;
+        owner.Insert(Math.Clamp(index, 0, owner.Count), node);
+        if (parent is not null)
         {
-            parent.Children.Add(node);
             parent.IsExpanded = true;
         }
 

@@ -245,54 +245,37 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
   </Style>
-  <!-- HOME ピル(amber) -->
+  <!-- HOME ピル(ECO-099/VC-TAG-13④: 淡青 #eaf1fe・文字 #2459cf・大文字 HOME・非対話) -->
   <Style Selector="Border.homePill">
-    <Setter Property="Background" Value="{StaticResource RangePillBg}" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="#eaf1fe" />
+    <Setter Property="CornerRadius" Value="5" />
     <Setter Property="Padding" Value="7,2" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.homePill TextBlock">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="10.5" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
+    <Setter Property="Foreground" Value="#2459cf" />
+    <Setter Property="LetterSpacing" Value="0.4" />
   </Style>
 
-  <!-- ============ 条件チップ(配置タグ条件。既定=緑/amber=数値/mono=regex) ============ -->
+  <!-- ============ 条件チップ(ECO-099/VC-TAG-13⑤: 琥珀へ統一・じょうご+要約・非対話) ============
+       旧 3 配色(緑/amber/mono・ECO-009)は mock v2 で琥珀単一へ集約(状態チップ=種類でなく状態の表示)。 -->
   <Style Selector="Border.condChip">
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="5" />
     <Setter Property="Padding" Value="7,2" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Background" Value="{StaticResource ChipNumBg}" />
-  </Style>
-  <Style Selector="Border.condChip.amber">
-    <Setter Property="Background" Value="{StaticResource RangePillBg}" />
-  </Style>
-  <Style Selector="Border.condChip.mono">
-    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+    <Setter Property="Background" Value="#fbf3df" />
   </Style>
   <Style Selector="Border.condChip TextBlock">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="10.5" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{StaticResource ChipNumFg}" />
-  </Style>
-  <Style Selector="Border.condChip.amber TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
-  </Style>
-  <Style Selector="Border.condChip.mono TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
-    <Setter Property="FontFamily" Value="Consolas, monospace" />
+    <Setter Property="Foreground" Value="#9a7b1a" />
   </Style>
   <Style Selector="Border.condChip PathIcon">
-    <Setter Property="Width" Value="12" />
-    <Setter Property="Height" Value="12" />
-    <Setter Property="Foreground" Value="{StaticResource ChipNumFg}" />
-  </Style>
-  <Style Selector="Border.condChip.amber PathIcon">
-    <Setter Property="Foreground" Value="{StaticResource RangePillFg}" />
-  </Style>
-  <Style Selector="Border.condChip.mono PathIcon">
-    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+    <Setter Property="Width" Value="11" />
+    <Setter Property="Height" Value="11" />
+    <Setter Property="Foreground" Value="#9a7b1a" />
   </Style>
 
   <!-- ============ TreeView 行 選択/ホバー(ECO-009 ③ golden) ============ -->
