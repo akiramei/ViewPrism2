@@ -1534,3 +1534,25 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=新契約不在で赤→緑転。R7=ECO-099 の headless+Skia 撮影ハーネス再利用でドラッグ中状態を P2-placing.png と並置(同一検証)"
     body: 60-change-order-eco-100.md
     notes: "gate①=不要(TAG-014 詳細は依頼文既定方向を本 ECO 裁定で確定=本文§4.2・ECO-099/TAG-015 と同型手続き)。gate②=必要。関連=ECO-099(第一便・挿入表示/判別様式/撮影ハーネスの敷設元)・TAG-014(確定対象)・ECO-087(D&D 起点=direct ハンドラの教訓)。fix 時確認=挿入ポイント要素単位の DragOver 受けとドラッグ中強調が P2-placing と同一に見えるか・DoDragDropAsync Esc 後のクリーンアップ・元行減光が既存 D&D 言語で足りるか(新視覚言語が要るなら実装固定せず mock 改版へ差し戻し)"
+  - id: ECO-101
+    title: "タグタブ操作系の入力堅牢性 — ポインター押下状態の残留(キャプチャ喪失系)・右クリック配置・無変更ホーム設定の dirty 化"
+    type: "不具合(入力イベント処理の堅牢性欠落 3 件。ECO-099/100 混入・golden 手順の谷間で潜伏)"
+    status: staged
+    golden: "pending(gate②=maintainer 実機。右/中クリックで階層不変・現ホーム行への再設定で保存非活性・クリック配置/D&D/クリック操作の回帰なし=視覚不変)"
+    baseline: "main f598b3e"
+    findings: "maintainer ソースレビュー所見 3 件(2026-07-17・未 push 12 コミット)を 2026-07-17 コード実測で全件確認。①[P2]押下状態の残留= パレット(TagsTabView.axaml.cs:98)/行(:292)とも Pointer.Capture 明示なし・PointerCaptureLost 未処理・Moved(:109/:307)がボタン実測未確認。暗黙キャプチャで通常の領域外リリースは Released が届くが、キャプチャ喪失系(ウィンドウ非活性化/Capture 奪取/タッチキャンセル)で状態残留→ボタン無しホバーで失効 press 引数の DoDragDropAsync 発火(誤ドラッグ=ツリー変更到達可)。②[P2]右クリック配置= 挿入ポイント3種+makeChild(:351-385)がボタン種別未確認で即実行(同ファイルの行/カード/ビュー行は確認済み=この4つだけ欠落)。③[P3]SetHomeFromMenu(HierarchyEditorViewModel.cs:572)が変更有無を見ず SetDirty(true)=現ホーム行への再設定で無変更 dirty(破棄確認・modified_at 更新が発生)。工程診断= CAD/BOM 沈黙(mock に右クリック/キャプチャ喪失の次元なし)・実装欠陥と確定・gate①不要。混入= ①パレット/②/③=e8bb277(ECO-099)・①行面=7ef1a00(ECO-100)。マスキング= golden 手順は左クリック正常系+Esc のみ・機械 probe は VM コマンド直接実行で入力イベント層を未検査"
+    impacted_bom: ["src=TagsTabView.axaml.cs(Moved 2 箇所のボタン実測ガード+非押下時の状態自己回復+PointerCaptureLost 配線+挿入系 4 ハンドラの左ボタンガード)+HierarchyEditorViewModel(SetHomeFromMenu の no-op ガード)。XAML/style/i18n/CAD/DB 不変見込み(視覚不変)", "tests=probe(右ボタン MouseDown でツリー不変=是正前赤・現ホーム行 SetHomeFromMenu で IsDirty 不変=是正前赤・非押下 Move の非発火=headless 合成で試行、決定論化不能なら GF-092-02 前例で記録+挙動 pin)", "CP=CP-UI-G6 へ入力堅牢性次元(右クリック非破壊・非押下移動の非発火・無変更操作の dirty 不変)を潜伏実績つき追補", "E/M-BOM=変更なし見込み(契約不変・実装品質の是正)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤→緑転(§4-4)"
+    body: 60-change-order-eco-101.md
+    notes: "gate①=不要(CAD/BOM 沈黙の実装欠陥・ガード追加のみ)。gate②=必要(操作系=実機)。関連=ECO-099/100(混入元)・GF-092-02(headless 非再現欠陥の probe 様式前例)・ECO-087(ジェスチャ起点の教訓)。同時レビューの別所見(dirty 中のタグ編集反映漏れ)は R3 分離= ECO-102"
+  - id: ECO-102
+    title: "未保存編集中のタグ定義変更が中央ペインへ反映されない — dirty ガードによる行 Tag 参照の失効(保存後も持続)"
+    type: "不具合(タグ定義変更の反映漏れ。既存構造=2026-06-11 初期製造の潜伏 1 か月超+ECO-099/100 の同族増分)"
+    status: staged
+    golden: "pending(gate②=maintainer 実機。dirty 編集中のタグ改名/色変更が中央ペインへ即追随・編集ツリー不変・保存正常・非 dirty 従来挙動の回帰なし)"
+    baseline: "main f598b3e"
+    findings: "maintainer ソースレビュー所見(2026-07-17)を同日コード実測で確認。症状[P2]= dirty エディタ中のパレットでのタグ編集(改名/色/数値範囲)が中央ペインの既存ノードへ反映されない: OnTagsChangedAsync(TagsTabViewModel.cs:259)は辞書とパレットのみ更新し :270 の !Editor.IsDirty ガードで再ロードをスキップ→ EditNodeViewModel.Tag 参照(get のみ=生成時固定)と NumericMeta が失効。SaveAsync も再ロードしないため失効はビュー切替まで持続。同族増分(ECO-099)= PlacingTag も旧オブジェクト(配置中の改名で帯が旧名・配置される新規ノードも旧参照)。工程診断= CAD 沈黙(mock 静的)・実装欠陥と確定: dirty ガードが構造の保護(正当)と表示の鮮度(保護不要)を区別せず一括スキップ。混入= ガード自体 c103967(2026-06-11 Phase5 初期 UI 製造・潜伏 1 か月超)・NumericMeta/PlacingTag=e8bb277/7ef1a00。マスキング= dirty 中にタグ編集へ行く往復が golden 手順に無い・非 dirty 時は全再ロードで正しい・ECO-046(U-a)は dirty 中の削除だけ掃射し編集面は谷間のまま"
+    impacted_bom: ["src(案A=既定・構造保護と表示鮮度の分離)=HierarchyEditorViewModel(Tag 再束縛 API+EditNode の Tag 差し替え可能化と表示プロパティ再通知)+TagsTabViewModel.OnTagsChangedAsync(dirty 分岐で再束縛=構造/別名/条件/HOME/dirty 不変)+PlacingTag の同 id 差し替え。XAML/style/i18n/CAD/DB 不変見込み", "tests=probe(dirty 中の改名/色/数値範囲→該当ノード表示が即追随=是正前赤・ツリー/dirty 不変 pin・保存回帰・PlacingTag 帯追随)", "CP=CP-UI-G6 へ dirty 中のタグ定義変更反映次元(ECO-046 削除面と対の編集面)を潜伏実績つき追補", "E-BOM=E-UI-NODEGRAPH-025 へ構造保護と表示鮮度の分離 invariant 追補"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤→緑転(§4)"
+    body: 60-change-order-eco-102.md
+    notes: "gate①=不要(案A=最新定義表示は REQ-021 系契約の自明解釈・maintainer レビューが欠陥指摘済み。案 B=保存時のみ再ロードは対症で不採用方向 — 異論あれば着手前に裁定可)。gate②=必要。関連=ECO-046(同じ dirty 谷間の削除面=本件は編集面)・ECO-099/100(同族増分の混入元)・c103967(主構造の混入元)。同時レビューの入力堅牢性 3 件は R3 分離= ECO-101"
