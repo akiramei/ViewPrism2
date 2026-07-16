@@ -113,6 +113,15 @@ public partial class TagsTabView : UserControl
             return;
         }
 
+        // ECO-101: ボタン非押下の移動ではドラッグを開始しない — キャプチャ喪失系(ウィンドウ非活性化・
+        // Capture 奪取・タッチキャンセル)で PointerReleased が届かず残留した押下状態の自己回復
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _palettePressRow = null;
+            _palettePressArgs = null;
+            return;
+        }
+
         var delta = e.GetPosition(this) - _palettePressPoint;
         if (Math.Abs(delta.X) < DragThreshold && Math.Abs(delta.Y) < DragThreshold)
         {
@@ -147,6 +156,13 @@ public partial class TagsTabView : UserControl
             vm.TogglePlacing(row);
         }
 
+        _palettePressRow = null;
+        _palettePressArgs = null;
+    }
+
+    /// <summary>ECO-101: キャプチャ喪失時は押下状態を残さない(以後の移動で誤ドラッグさせない)。</summary>
+    private void OnPaletteItemCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
         _palettePressRow = null;
         _palettePressArgs = null;
     }
@@ -304,6 +320,14 @@ public partial class TagsTabView : UserControl
             return;
         }
 
+        // ECO-101: ボタン非押下の移動ではドラッグを開始しない(押下状態残留の自己回復・パレット面と同型)
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _rowPressNode = null;
+            _rowPressArgs = null;
+            return;
+        }
+
         var delta = e.GetPosition(this) - _rowPressPoint;
         if (Math.Abs(delta.X) < DragThreshold && Math.Abs(delta.Y) < DragThreshold)
         {
@@ -346,11 +370,19 @@ public partial class TagsTabView : UserControl
         _rowPressArgs = null;
     }
 
-    // ---- 挿入ポイント/「＋ 子にする」(VC-TAG-12③④) ----
+    /// <summary>ECO-101: キャプチャ喪失時は押下状態を残さない(パレット面と同型)。</summary>
+    private void OnNodeRowCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _rowPressNode = null;
+        _rowPressArgs = null;
+    }
+
+    // ---- 挿入ポイント/「＋ 子にする」(VC-TAG-12③④)。ECO-101: 実行は左ボタンのみ ----
 
     private void OnInsertBeforePressed(object? sender, PointerPressedEventArgs e)
     {
-        if (ViewModel is { } vm && sender is Control { DataContext: EditNodeViewModel node })
+        if (ViewModel is { } vm && sender is Control { DataContext: EditNodeViewModel node } control &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
         {
             vm.Editor.InsertBeforeCommand.Execute(node);
             e.Handled = true;
@@ -359,7 +391,8 @@ public partial class TagsTabView : UserControl
 
     private void OnInsertChildEndPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (ViewModel is { } vm && sender is Control { DataContext: EditNodeViewModel node })
+        if (ViewModel is { } vm && sender is Control { DataContext: EditNodeViewModel node } control &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
         {
             vm.Editor.InsertChildEndCommand.Execute(node);
             e.Handled = true;
@@ -368,7 +401,8 @@ public partial class TagsTabView : UserControl
 
     private void OnInsertRootEndPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (ViewModel is { } vm)
+        if (ViewModel is { } vm && sender is Control control &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
         {
             vm.Editor.InsertRootEndCommand.Execute(null);
             e.Handled = true;
@@ -377,7 +411,8 @@ public partial class TagsTabView : UserControl
 
     private void OnMakeChildPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (ViewModel is { } vm && sender is Control { DataContext: EditNodeViewModel node })
+        if (ViewModel is { } vm && sender is Control { DataContext: EditNodeViewModel node } control &&
+            e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
         {
             vm.Editor.PlaceAsChildCommand.Execute(node);
             e.Handled = true;

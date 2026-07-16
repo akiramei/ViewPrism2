@@ -37,7 +37,8 @@
              ECO-100(裁定 a): 行全体ドラッグ=移動。クリック(展開/選択)は閾値未満のリリースで確定。 -->
         <Border Classes="nodeRow" Classes.child="{Binding !IsRootLevel}" Classes.selected="{Binding IsSelected}"
                 Classes.moveSource="{Binding IsMoveSource}"
-                PointerPressed="OnNodeRowPressed" PointerMoved="OnNodeRowMoved" PointerReleased="OnNodeRowReleased">
+                PointerPressed="OnNodeRowPressed" PointerMoved="OnNodeRowMoved" PointerReleased="OnNodeRowReleased"
+                PointerCaptureLost="OnNodeRowCaptureLost">
           <DockPanel>
             <!-- 行末アクション(右端から: ⋯ → 家ゴースト)。配置モード中は一時停止=非表示(VC-TAG-12⑦/v3 MOCK 裁定) -->
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center"
@@ -683,7 +684,7 @@
                      カード強調は配置中のみ(mock cardStyle は placing 起点)。 -->
                 <Border Classes="card" Classes.placing="{Binding IsPlacing}"
                         PointerPressed="OnPaletteItemPressed" PointerMoved="OnPaletteItemMoved"
-                        PointerReleased="OnPaletteItemReleased">
+                        PointerReleased="OnPaletteItemReleased" PointerCaptureLost="OnPaletteItemCaptureLost">
                   <StackPanel Spacing="9">
                     <!-- 行1: 色ドット+名前+型チップ+配置中チップ+アクション -->
                     <DockPanel>

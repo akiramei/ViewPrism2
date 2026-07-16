@@ -571,6 +571,11 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     [RelayCommand]
     private void SetHomeFromMenu(EditNodeViewModel node)
     {
+        if (node.IsHome)
+        {
+            return; // ECO-101: 現ホーム行への再設定=実変更なし(ダーティ化・modified_at 更新をさせない)
+        }
+
         foreach (var other in Flatten())
         {
             other.IsHome = false;

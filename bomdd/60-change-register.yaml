@@ -1537,7 +1537,7 @@ changes:
   - id: ECO-101
     title: "タグタブ操作系の入力堅牢性 — ポインター押下状態の残留(キャプチャ喪失系)・右クリック配置・無変更ホーム設定の dirty 化"
     type: "不具合(入力イベント処理の堅牢性欠落 3 件。ECO-099/100 混入・golden 手順の谷間で潜伏)"
-    status: staged
+    status: implemented   # 2026-07-17 是正+機械受入完了・golden 待ち。probe=CpUiG6InputRobustnessTests 4本(是正前4/4赤=①は既存配置モード破壊の持続観測・②はheadless右クリック実入力・③はVM決定論。是正前はprobe同士がポインタ状態共有+in-flight DoDragDropAsyncで干渉し2回の実行に分かれて赤)。是正=Moved 2箇所のボタン実測ガード+PointerCaptureLost配線+挿入系4ハンドラ左ボタンガード+SetHomeFromMenu no-op。build 0/0・Tests 778/778・Oracle 109+2skip・validate 0/0。R7=対象外(視覚差分なし=ECO-098前例)。M4=CP-UI-G6へ入力堅牢性次元+headless Down/Up対の注意
     golden: "pending(gate②=maintainer 実機。右/中クリックで階層不変・現ホーム行への再設定で保存非活性・クリック配置/D&D/クリック操作の回帰なし=視覚不変)"
     baseline: "main f598b3e"
     findings: "maintainer ソースレビュー所見 3 件(2026-07-17・未 push 12 コミット)を 2026-07-17 コード実測で全件確認。①[P2]押下状態の残留= パレット(TagsTabView.axaml.cs:98)/行(:292)とも Pointer.Capture 明示なし・PointerCaptureLost 未処理・Moved(:109/:307)がボタン実測未確認。暗黙キャプチャで通常の領域外リリースは Released が届くが、キャプチャ喪失系(ウィンドウ非活性化/Capture 奪取/タッチキャンセル)で状態残留→ボタン無しホバーで失効 press 引数の DoDragDropAsync 発火(誤ドラッグ=ツリー変更到達可)。②[P2]右クリック配置= 挿入ポイント3種+makeChild(:351-385)がボタン種別未確認で即実行(同ファイルの行/カード/ビュー行は確認済み=この4つだけ欠落)。③[P3]SetHomeFromMenu(HierarchyEditorViewModel.cs:572)が変更有無を見ず SetDirty(true)=現ホーム行への再設定で無変更 dirty(破棄確認・modified_at 更新が発生)。工程診断= CAD/BOM 沈黙(mock に右クリック/キャプチャ喪失の次元なし)・実装欠陥と確定・gate①不要。混入= ①パレット/②/③=e8bb277(ECO-099)・①行面=7ef1a00(ECO-100)。マスキング= golden 手順は左クリック正常系+Esc のみ・機械 probe は VM コマンド直接実行で入力イベント層を未検査"
