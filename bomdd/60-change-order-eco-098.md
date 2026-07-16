@@ -1,4 +1,4 @@
-# Change Order — ECO-098(起票・staged): 画像タブゴミ箱がdeleted以外を全件materializeする
+# Change Order — ECO-098(是正済み・implemented): 画像タブゴミ箱がdeleted以外を全件materializeする
 
 > ECO-097 gate②の実機確認中にmaintainerが知覚した、削除→ゴミ箱表示→復元の引っ掛かりを
 > 2026-07-16の指示 `/eco-file 画像タブのゴミ箱がdeleted以外を全件materializeし、表示6枚でも
@@ -104,7 +104,47 @@
 ## 6. 残ゲート
 
 1. **gate①不要**: CAD/BOMの結果契約は健全で、案Aは実装の取得境界是正。製品判断なし。
-2. `/eco-fix eco-098`: repository spyの先行probe→案A最小是正→機械受入→R7(視覚不変確認)。
-3. gate②: maintainer実機で、normal 6+missing 26万級のコレクションについて、ゴミ箱open、復元、
+2. **`/eco-fix eco-098`完了**: 先行probe→案A最小是正→機械受入4点合格。UI視覚差分なしのためR7並置対象外。
+3. **gate②(golden待ち)**: maintainer実機で、normal 6+missing 26万級のコレクションについて、ゴミ箱open、復元、
    完全削除後の再表示が引っ掛からず、対象/件数/順序/物理非破壊が従来どおりであることを確認。
 4. `/eco-accept eco-098`でクローズ。
+
+## 7. `/eco-fix`実施記録(2026-07-16)
+
+### 7.1 プローブ先行(R5)
+
+- `CpUiG1TrashPopupTests`へrepository spyを追加し、同一collectionに`normal=1 / missing=256 /
+  deleted=2`、別collectionに`deleted=1`を配置した。
+- 是正前にECO-098 probeだけを実行し、ゴミ箱open後の`GetByFolderAsync`呼出が
+  **期待0回 / 実際1回**で1/1不合格。結果が正しいままhidden statusを全件取得する真因を実測裏取りした。
+- 是正後は、削除モードの「ゴミ箱へ移動」→ゴミ箱openを連続実行しても`GetByFolderAsync=0回`、
+  `GetDeletedByFolderAsync=1回`。別collection/normal/missingは混入せず、対象collectionのdeletedだけが
+  file_name順で返ることを1/1合格へ緑転した。
+- 削除ボタン単体は全status APIを通らないことを決定論的に確認した。goldenで単体の引っ掛かりが残る場合は、
+  本件のhidden missing materializeとは別真因としてR3分離する。
+
+### 7.2 裁定と是正
+
+- **案Aを採用**。現存consumerに必要な用途だけを表す`IImageRepository.GetDeletedByFolderAsync`を追加し、
+  `ImageRepository`で`sync_folder_id + status='deleted'`をSQL predicateへ押し込んだ。
+- 並び順はDB側の`ORDER BY file_name COLLATE NOCASE, id`で安定化。既存
+  `idx_images_folder_status(sync_folder_id,status)`を利用し、schema/migrationは変更しない。
+- `ImageTabTrashViewModel.LoadTrashItemsAsync`は専用APIだけを消費し、全件取得後のLINQ filter/sortを撤去。
+  open/restore/purge/emptyは同じload関数へ収束しているため一括して是正される。
+- 製品・テスト・BOM差分は機械受入前で9ファイル、`+100/-12`。XAML/style/i18n/CAD/REQ/Core状態遷移/
+  WorkTab/固定Oracle行は不変。横断規約(K-AVALONIA)に関わる新規文言・surface変更なし。
+
+### 7.3 BOM/CP同期とread-across
+
+- E-UI-REPAIR-039へDB境界のdeleted限定、M-DB-007へ専用read model、M-UI-TRASH-032へ
+  全status API退行禁止、CP-UI-G1へhidden status規模の潜伏実績とexact呼出probeを追記した。
+- 既存の復元/完全削除/空操作テストは同じ`LoadTrashItemsAsync`を通して全緑。作業タブの
+  `WorkspaceRepository.GetDeletedImagesAsync`は既にworkspace+deleted限定で変更不要。
+- R7: 視覚・レイアウト・XAML・文言を変更していないためCAD captures並置の対象外。
+
+### 7.4 機械受入
+
+- `dotnet build`: **0 warning / 0 error**。
+- `dotnet test tests/ViewPrism2.Tests`: **755/755合格**(ECO-098 probeを含む)。
+- `dotnet test tests/ViewPrism2.Oracle`: **109合格 / 2 skip / 0不合格**。既存固定Oracle行は変更なし(R6)。
+- `python bomdd/validate_bom.py`: **0 error / 0 warning**。

@@ -30,6 +30,9 @@ public interface IImageRepository
     /// <summary>ECO-064/IMG-019: 選択 collection の status=normal 画像だけを読む。</summary>
     Task<IReadOnlyList<ImageRecord>> GetNormalByFolderAsync(string syncFolderId, CancellationToken ct = default);
 
+    /// <summary>ECO-098: 選択 collection の status=deleted 画像だけをファイル名順で読む。</summary>
+    Task<IReadOnlyList<ImageRecord>> GetDeletedByFolderAsync(string syncFolderId, CancellationToken ct = default);
+
     /// <summary>ECO-064: collection行/ゴミ箱badge等の集約用。画像行をmaterializeしない。</summary>
     Task<int> CountByFolderAndStatusAsync(
         string syncFolderId, ImageStatus status, CancellationToken ct = default);

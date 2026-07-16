@@ -146,6 +146,20 @@ public sealed class ImageRepository : IImageRepository
         }, ct);
     }
 
+    public Task<IReadOnlyList<ImageRecord>> GetDeletedByFolderAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        // ECO-098: hidden status の規模に比例させず、ゴミ箱対象だけを DB 境界で限定する。
+        return _db.RunAsync<IReadOnlyList<ImageRecord>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<Row>(
+                $"{SelectColumns} WHERE sync_folder_id = @SyncFolderId AND status = 'deleted' " +
+                "ORDER BY file_name COLLATE NOCASE, id",
+                new { SyncFolderId = syncFolderId }).ConfigureAwait(false);
+            return rows.Select(r => ToEntity(r)!).ToList();
+        }, ct);
+    }
+
     public Task<int> CountByFolderAndStatusAsync(
         string syncFolderId, ImageStatus status, CancellationToken ct = default)
     {

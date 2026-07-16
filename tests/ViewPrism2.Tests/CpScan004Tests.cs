@@ -763,6 +763,9 @@ public sealed class CpScan004Tests : IDisposable
         public Task<IReadOnlyList<ImageRecord>> GetNormalByFolderAsync(string syncFolderId, CancellationToken ct = default)
             => _inner.GetNormalByFolderAsync(syncFolderId, ct);
 
+        public Task<IReadOnlyList<ImageRecord>> GetDeletedByFolderAsync(string syncFolderId, CancellationToken ct = default)
+            => _inner.GetDeletedByFolderAsync(syncFolderId, ct);
+
         public Task<int> CountByFolderAndStatusAsync(string syncFolderId, ImageStatus status, CancellationToken ct = default)
             => _inner.CountByFolderAndStatusAsync(syncFolderId, status, ct);
 

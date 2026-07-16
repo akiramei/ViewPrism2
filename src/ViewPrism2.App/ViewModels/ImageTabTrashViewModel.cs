@@ -107,9 +107,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         _trashSel.Clear();
         var collectionId = _getCollectionId();
         if (collectionId is null) return;
-        var all = await _images.GetByFolderAsync(collectionId).ConfigureAwait(true);
-        foreach (var r in all.Where(r => r.Status == ImageStatus.Deleted)
-                             .OrderBy(r => r.FileName, StringComparer.OrdinalIgnoreCase))
+        var deleted = await _images.GetDeletedByFolderAsync(collectionId).ConfigureAwait(true);
+        foreach (var r in deleted)
         {
             var abs = _resolveAbsolutePath(r.RelativePath);
             TrashPopupItems.Add(new TrashPopupItemVM(r.Id, r.FileName, abs, _fmtSize(r.FileSize)));

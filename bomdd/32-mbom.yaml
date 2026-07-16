@@ -121,7 +121,7 @@ mbom:
       interface_contract:
         open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
         schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE"
-        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない"
+        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない。ECO-098 image trash read model=GetDeletedByFolderAsync(collection+deleted predicate・file_name安定順)でhidden normal/missingをmaterializeしない"
         scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。通常の単行repository APIは非スキャンconsumer向けに維持"
         cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
       invariants:
@@ -616,8 +616,8 @@ mbom:
         path: src/ViewPrism2.App/ViewModels/ImageTabTrashViewModel.cs
         path_note: "接続面= 関数注入 6(getCollectionId/reloadImagesAsync/recompute/fmtSize/closeMoreMenu/resolveAbsolutePath — 子はホスト型を参照しない)。ホスト側の後方互換委譲はテスト結合の経過措置(51 E36S1-003)"
         type: avalonia-app
-      acceptance_refs: [CP-L1-SMOKE]
-      acceptance_note: "popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/022)で被覆 — 挙動不変 ECO につき UI 専用 CP は新設しない"
+      acceptance_refs: [CP-L1-SMOKE, CP-UI-G1]
+      acceptance_note: "popup 挙動の受入= golden(視覚)+Core 遷移 CP(CP-TRASH-020/001/021/022)で被覆。ECO-098以降、一覧loadはIImageRepository.GetDeletedByFolderAsyncのみを消費し、全status GetByFolderAsyncへ退行しない(CpUiG1TrashPopupTestsでpin)"
 
     # ---- ECO-036 第2段(2026-07-04): 作業対象ストア+受け渡しの切り出し(order §10) ----
     - id: M-UI-WORK-033        # M-UI-016 からの部分 split 第2号。蓄積ストア(Set 意味論)+作業スペース受け渡し(ECO-020)

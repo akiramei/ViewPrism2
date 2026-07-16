@@ -1,8 +1,11 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using CommunityToolkit.Mvvm.Input;
 using ViewPrism2.App.Services;
 using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Common;
 using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
 using ViewPrism2.Core.Services.Repair;
 using ViewPrism2.Core.Services.Similarity;
@@ -58,10 +61,38 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
         public bool Exists(string absoluteImagePath) => exists;
     }
 
+    private class RepositorySpy<T> : DispatchProxy where T : class
+    {
+        public T Inner { get; set; } = null!;
+        public ConcurrentQueue<string> Calls { get; } = new();
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            Assert.NotNull(targetMethod);
+            Calls.Enqueue(targetMethod.Name);
+            return targetMethod.Invoke(Inner, args);
+        }
+
+        public int Count(string methodName) => Calls.Count(name => name == methodName);
+    }
+
+    private static T Spy<T>(T inner, out RepositorySpy<T> spy) where T : class
+    {
+        var proxy = DispatchProxy.Create<T, RepositorySpy<T>>();
+        spy = (RepositorySpy<T>)(object)proxy;
+        spy.Inner = inner;
+        return proxy;
+    }
+
     private StubWindowService _win = null!;
 
     /// <summary>normal/deleted を混在で投入(deleted は引数 deletedNames で指定)。probe で復元の存在分岐を制御。</summary>
-    private async Task<ImageTabViewModel> NewAsync(string[] normalNames, string[] deletedNames, IFilePresenceProbe? probe = null)
+    private async Task<ImageTabViewModel> NewAsync(
+        string[] normalNames,
+        string[] deletedNames,
+        IFilePresenceProbe? probe = null,
+        IImageRepository? images = null,
+        string[]? missingNames = null)
     {
         _col = new SyncFolder { Id = IdGenerator.NewId(), Name = "C", Path = @"C:\col" };
         await _db.Folders.AddAsync(_col);
@@ -74,15 +105,17 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
         });
         foreach (var n in normalNames) await Add(n, ImageStatus.Normal);
         foreach (var n in deletedNames) await Add(n, ImageStatus.Deleted);
+        foreach (var n in missingNames ?? []) await Add(n, ImageStatus.Missing);
 
         _win = new StubWindowService();
+        images ??= _db.Images;
         var vm = new ImageTabViewModel(
-            _db.Folders, _db.Images, _db.Tags, new ImageSorter(),
+            _db.Folders, images, _db.Tags, new ImageSorter(),
             new ViewService(_db.Views, _db.Clock), new NodeGraphBuilder(),
             new PathConditionConverter(), new ConditionEvaluator(),
-            new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
-            new MergeService(_db.Images, _db.Tags, _db.Merges),
-            new TrashService(_db.Images, _db.Folders, probe ?? new FilePresenceProbe()),
+            new SimilaritySearchService(_db.Folders, images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
+            new MergeService(images, _db.Tags, _db.Merges),
+            new TrashService(images, _db.Folders, probe ?? new FilePresenceProbe()),
             _win, new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
         await vm.InitializeAsync(_col.Id);
         return vm;
@@ -101,6 +134,40 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
         Assert.Equal(["x.jpg", "y.jpg"], vm.TrashPopupItems.Select(i => i.Name)); // 名前昇順
         Assert.False(vm.HasTrashSel);
         Assert.Equal("画像を選択して操作", vm.TrashSelCountLabel);
+    }
+
+    [Fact]
+    public async Task ECO098_ゴミ箱はhidden_status全件APIを使わずdeletedだけを取得する()
+    {
+        var images = Spy<IImageRepository>(_db.Images, out var spy);
+        var missing = Enumerable.Range(0, 256).Select(i => $"missing-{i:D3}.jpg").ToArray();
+        var vm = await NewAsync(
+            ["normal.jpg"], ["z-deleted.jpg", "a-deleted.jpg"],
+            images: images, missingNames: missing);
+
+        var other = new SyncFolder { Id = IdGenerator.NewId(), Name = "Other", Path = @"C:\other" };
+        await _db.Folders.AddAsync(other);
+        await _db.Images.AddAsync(new ImageRecord
+        {
+            Id = "foreign-deleted.jpg", SyncFolderId = other.Id,
+            RelativePath = "foreign-deleted.jpg", FileName = "foreign-deleted.jpg",
+            FileSize = 10, Hash = new string('0', 64), Status = ImageStatus.Deleted,
+            CreatedDate = "2026-06-11T00:00:00.000Z", ModifiedDate = "2026-06-11T00:00:00.000Z",
+        });
+
+        Assert.Equal(0, spy.Count(nameof(IImageRepository.GetByFolderAsync)));
+        vm.EnterDeleteCommand.Execute(null);
+        vm.HandleItemClick(vm.Items.Single(i => i.Id == "normal.jpg"), ctrl: false, shift: false);
+        await vm.DeleteToTrashCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, spy.Count(nameof(IImageRepository.GetByFolderAsync)));
+        await vm.OpenTrashCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, spy.Count(nameof(IImageRepository.GetByFolderAsync)));
+        Assert.Equal(1, spy.Count(nameof(IImageRepository.GetDeletedByFolderAsync)));
+        Assert.Equal(
+            ["a-deleted.jpg", "normal.jpg", "z-deleted.jpg"],
+            vm.TrashPopupItems.Select(i => i.Name));
     }
 
     [Fact]

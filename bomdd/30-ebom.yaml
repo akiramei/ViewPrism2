@@ -739,6 +739,7 @@ ebom:
         - (ECO-005) 修復 UI は **一括自動修復「すべて自動修復(M件)」+ 単一自動修復(行内)+ 除外(missing→deleted)** の動線を持つ(原典 RepairModal 準拠)。relink/除外は core API(E-RELINK-007.CommitRelinkAsync / E-TRASH-038.ExcludeAsync)経由のみ・一括/単一の判定反復は描画から独立して unit 検査可能にする
         - (ECO-019) トラッシュ UI を**画像タブ内ポップアップ(中央オーバーレイ)**へ作り直す(別ウィンドウモーダルを置換)。**複数選択 + すべて選択 + 復元 + 完全削除 + ゴミ箱を空(一括完全削除)**を備える。状態遷移は E-TRASH-038(RestoreAsync/PermanentDeleteAsync)のみ経由(新規 Core なし)。選択・一覧・空状態のロジックは描画から独立して unit 検査可能にする(CP-UI-G1)
         - (ECO-019) 完全削除・ゴミ箱を空は**実行前確認**+**INV-009 非破壊明示**「画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。」を必須とする。**モックの『元のファイルも削除され』(物理削除文言)は INV-009 と矛盾するため不採用**(woven 安全制約 > CAD 文言)。物理ファイルは S-26 L3 物理差分で不変を担保
+        - (ECO-098) 画像タブのゴミ箱一覧は選択中collection+status=deletedをDB境界で限定し、全status行をmaterializeしてからUIで捨てない。normal 6件に対しhidden missing 262,045件を持つ実profileで全件取得が約1.1秒停止を生んだ潜伏実績をCP-UI-G1で封止する
       acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-DISPLAY-PARITY-022, CP-REPAIR-AUTOALL-023, CP-UI-G1]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)

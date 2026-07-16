@@ -137,6 +137,7 @@ public sealed class CpUiEco060ProgressiveScanTests : IDisposable
         public Task<IReadOnlyList<ImageRecord>> GetAllNormalAsync() => _inner.GetAllNormalAsync();
         public Task<IReadOnlyDictionary<string, int>> GetNormalCountsByFolderAsync(CancellationToken ct = default) => _inner.GetNormalCountsByFolderAsync(ct);
         public Task<IReadOnlyList<ImageRecord>> GetNormalByFolderAsync(string syncFolderId, CancellationToken ct = default) => _inner.GetNormalByFolderAsync(syncFolderId, ct);
+        public Task<IReadOnlyList<ImageRecord>> GetDeletedByFolderAsync(string syncFolderId, CancellationToken ct = default) => _inner.GetDeletedByFolderAsync(syncFolderId, ct);
         public Task<int> CountByFolderAndStatusAsync(string syncFolderId, ImageStatus status, CancellationToken ct = default) => _inner.CountByFolderAndStatusAsync(syncFolderId, status, ct);
         public Task UpdateFileMetaAsync(string id, string hash, long fileSize, string modifiedDate) => _inner.UpdateFileMetaAsync(id, hash, fileSize, modifiedDate);
         public Task UpdateStatusAsync(string id, ImageStatus status) => _inner.UpdateStatusAsync(id, status);
