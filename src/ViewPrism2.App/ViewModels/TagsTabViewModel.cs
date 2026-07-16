@@ -272,6 +272,12 @@ public sealed partial class TagsTabViewModel : ObservableObject
             var view = await _views.GetAsync(row.View.Id);
             await Editor.LoadAsync(view, _tagById);
         }
+        else
+        {
+            // ECO-102(案A): dirty 中は構造(未保存ツリー)を守りつつ、表示(Tag 参照・数値メタ・
+            // 配置中タグ)だけを最新定義へ再束縛する — 構造の保護と表示の鮮度の分離
+            Editor.RebindTags(_tagById);
+        }
 
         DataChanged?.Invoke(this, EventArgs.Empty);
     }

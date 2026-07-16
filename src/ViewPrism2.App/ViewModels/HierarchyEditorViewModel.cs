@@ -38,7 +38,30 @@ public sealed partial class EditNodeViewModel : ObservableObject
     public string TagId { get; }
 
     /// <summary>参照先タグ(参照切れは null — INV-008: 表示は TagId、削除可能)。</summary>
-    public Tag? Tag { get; }
+    public Tag? Tag { get; private set; }
+
+    /// <summary>
+    /// タグ定義の再束縛(ECO-102 案A)。dirty 中のタグ編集でも表示(名前/色/型/数値メタ)を最新定義へ
+    /// 追随させる — 構造(親子・別名・条件・展開・HOME)は触らない(構造の保護と表示の鮮度の分離)。
+    /// </summary>
+    internal void RebindTag(Tag? tag, string? numericMeta)
+    {
+        Tag = tag;
+        NumericMeta = numericMeta;
+        OnPropertyChanged(nameof(Tag));
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(Color));
+        OnPropertyChanged(nameof(HasColor));
+        OnPropertyChanged(nameof(RingColor));
+        OnPropertyChanged(nameof(HasType));
+        OnPropertyChanged(nameof(IsSimple));
+        OnPropertyChanged(nameof(IsTextual));
+        OnPropertyChanged(nameof(IsNumeric));
+        OnPropertyChanged(nameof(TypeText));
+        OnPropertyChanged(nameof(CanHaveCondition));
+        OnPropertyChanged(nameof(NumericMeta));
+        OnPropertyChanged(nameof(HasNumericMeta));
+    }
 
     public EditNodeViewModel? Parent { get; set; }
 
@@ -809,6 +832,28 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             new Dictionary<string, TextualTagSettings>(StringComparer.Ordinal),
             new Dictionary<string, NumericTagSettings>(StringComparer.Ordinal) { [tag.Id] = numeric })
             .GetDefinedValues(tag.Id) is not null;
+    }
+
+    /// <summary>
+    /// タグ定義変更の再束縛(ECO-102 案A)。dirty 中でもツリー構造・別名・条件・展開・HOME・ダーティ状態は
+    /// 不変のまま、各行の Tag 参照/数値メタと配置中タグ(PlacingTag)だけを最新辞書へ差し替える。
+    /// dirty ガード(c103967)が構造の保護と一緒に表示の鮮度まで犠牲にしていた谷間の是正。
+    /// </summary>
+    public void RebindTags(IReadOnlyDictionary<string, Tag> tagById)
+    {
+        ArgumentNullException.ThrowIfNull(tagById);
+        _tagById = tagById;
+        foreach (var node in Flatten())
+        {
+            tagById.TryGetValue(node.TagId, out var tag);
+            node.RebindTag(tag, tag?.Type == TagType.Numeric ? NumericMetaResolver?.Invoke(tag.Id) : null);
+        }
+
+        if (PlacingTag is { } placing)
+        {
+            // 配置中タグも最新定義へ(消えていたら配置解除=既存ガードと同じ帰結)
+            PlacingTag = tagById.TryGetValue(placing.Id, out var fresh) ? fresh : null;
+        }
     }
 
     /// <summary>展開モードの直接設定(メモリ内、unit 検査用エントリポイント・REQ-096)。</summary>

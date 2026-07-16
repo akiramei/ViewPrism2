@@ -1,4 +1,4 @@
-# Change Order — ECO-102(staged): 未保存編集中のタグ定義変更が中央ペインへ反映されない — dirty ガードによる行 Tag 参照の失効
+# Change Order — ECO-102(implemented): 未保存編集中のタグ定義変更が中央ペインへ反映されない — dirty ガードによる行 Tag 参照の失効
 
 - 起票: 2026-07-17(maintainer ソースレビュー所見・未 push 12 コミットのレビュー)
 - 種別: 不具合(タグ定義変更の反映漏れ。既存構造〔2026-06-11 初期製造〕+ECO-099/100 の同族増分)
@@ -71,3 +71,35 @@
 - gate②(golden): **必要**。基準案: dirty 編集中にパレットで配置済みタグを改名/色変更 → 中央ペインの
   該当行が即追随・編集ツリー(構造/別名/条件/HOME/dirty)は不変・保存で正常永続・非 dirty 時の
   従来挙動回帰なし。
+
+## 7. `/eco-fix` 実施記録(2026-07-17)
+
+### 7.1 プローブ先行(R5)
+
+新規 `CpUiG6DirtyRebindTests`(4 本)— 既存公開 API(TagService 更新+パレット編集完了経路
+Palette.EditCommand→TagsChanged)だけで組めたためスタブ不要の純粋な赤: 是正前 **3/4 不合格**
+(dirty 中の改名/色=旧表示・数値範囲=旧メタ・配置中改名=帯が旧名)。残 1 本= 非 dirty の
+従来経路 pin(全再ロード=もともと正・回帰検知用)。
+
+### 7.2 是正内容(案 A=構造の保護と表示の鮮度の分離)
+
+- `EditNodeViewModel.RebindTag(tag, numericMeta)`: Tag 参照と数値メタを差し替え、派生表示
+  (DisplayName/色/リング/型/条件可否/メタ)を一括再通知。構造プロパティ(Children/Alias/条件/
+  展開/IsHome)には触らない。
+- `HierarchyEditorViewModel.RebindTags(tagById)`: 全行を最新辞書へ再束縛+`PlacingTag` も同 id の
+  最新オブジェクトへ差し替え(消えていたら配置解除=ECO-099 既存ガードと同じ帰結)。
+- `TagsTabViewModel.OnTagsChangedAsync`: 非 dirty= 従来どおり全再ロード(不変)/ dirty(else)=
+  `RebindTags` を呼ぶ。SaveAsync は変更不要(dirty 中に鮮度が保たれるため保存後の失効自体が消滅)。
+- **横断規約(ECO-080)**: 新文言なし・XAML/style/i18n/DB 不変。
+
+### 7.3 機械受入
+
+build 0 error / **Tests 782/782**(プローブ 3 本緑転+pin 1 本・既存 778 不変)/ Oracle 109+2skip
+(R6 不変)/ validate_bom 0/0。**R7= 対象外**(XAML/style 不変・表示が最新定義になるだけ=
+ECO-096/098 前例)。M4= E-UI-NODEGRAPH-025 へ「構造の保護と表示の鮮度の分離」invariant+
+CP-UI-G6 へ dirty 中タグ編集反映の次元(潜伏実績つき)。
+
+## 8. 残ゲート(更新)
+
+- gate②(golden)のみ。合格基準は §6 のとおり(dirty 編集中の改名/色変更が中央ペインへ即追随・
+  編集ツリー不変・保存正常・非 dirty 従来挙動の回帰なし)。

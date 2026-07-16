@@ -1548,7 +1548,7 @@ changes:
   - id: ECO-102
     title: "未保存編集中のタグ定義変更が中央ペインへ反映されない — dirty ガードによる行 Tag 参照の失効(保存後も持続)"
     type: "不具合(タグ定義変更の反映漏れ。既存構造=2026-06-11 初期製造の潜伏 1 か月超+ECO-099/100 の同族増分)"
-    status: staged
+    status: implemented   # 2026-07-17 是正+機械受入完了・golden 待ち。案A採択(maintainer承認)。probe=CpUiG6DirtyRebindTests 4本(既存公開API経由=スタブ不要の純粋赤・是正前3/4赤+非dirty pin 1)。是正=EditNode.RebindTag+Editor.RebindTags(構造/別名/条件/HOME/dirty不変でTag参照・数値メタ・PlacingTagのみ最新へ)+OnTagsChangedAsync dirty分岐。build 0/0・Tests 782/782・Oracle 109+2skip・validate 0/0。R7=対象外(XAML/style不変=ECO-096/098前例)。M4=E-UI-NODEGRAPH-025 invariant+CP-UI-G6 次元
     golden: "pending(gate②=maintainer 実機。dirty 編集中のタグ改名/色変更が中央ペインへ即追随・編集ツリー不変・保存正常・非 dirty 従来挙動の回帰なし)"
     baseline: "main f598b3e"
     findings: "maintainer ソースレビュー所見(2026-07-17)を同日コード実測で確認。症状[P2]= dirty エディタ中のパレットでのタグ編集(改名/色/数値範囲)が中央ペインの既存ノードへ反映されない: OnTagsChangedAsync(TagsTabViewModel.cs:259)は辞書とパレットのみ更新し :270 の !Editor.IsDirty ガードで再ロードをスキップ→ EditNodeViewModel.Tag 参照(get のみ=生成時固定)と NumericMeta が失効。SaveAsync も再ロードしないため失効はビュー切替まで持続。同族増分(ECO-099)= PlacingTag も旧オブジェクト(配置中の改名で帯が旧名・配置される新規ノードも旧参照)。工程診断= CAD 沈黙(mock 静的)・実装欠陥と確定: dirty ガードが構造の保護(正当)と表示の鮮度(保護不要)を区別せず一括スキップ。混入= ガード自体 c103967(2026-06-11 Phase5 初期 UI 製造・潜伏 1 か月超)・NumericMeta/PlacingTag=e8bb277/7ef1a00。マスキング= dirty 中にタグ編集へ行く往復が golden 手順に無い・非 dirty 時は全再ロードで正しい・ECO-046(U-a)は dirty 中の削除だけ掃射し編集面は谷間のまま"
