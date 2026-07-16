@@ -1556,3 +1556,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤→緑転(§4)"
     body: 60-change-order-eco-102.md
     notes: "gate①=不要(案A=最新定義表示は REQ-021 系契約の自明解釈・maintainer レビューが欠陥指摘済み。案 B=保存時のみ再ロードは対症で不採用方向 — 異論あれば着手前に裁定可)。gate②=必要。関連=ECO-046(同じ dirty 谷間の削除面=本件は編集面)・ECO-099/100(同族増分の混入元)・c103967(主構造の混入元)。同時レビューの入力堅牢性 3 件は R3 分離= ECO-101"
+  - id: ECO-103
+    title: "タグタブ刷新 第三便 — 保存モデルの実装追随(mock v4=フローティング保存バー・未保存3表示・遷移ガード・保存トースト)+TAG-016 裁定+撮影ハーネスの正式資産化"
+    type: "機能拡張(CAD 改版追随=mock v4 正典化済み・ECO-099 許容差分「ヘッダ保存/キャンセル」の除外に伴う追随必須)+検査基盤の資産化"
+    status: staged
+    golden: "pending(gate②=maintainer 実機。VC-TAG-16①〜⑥を captures 4面〔P2-dirty/P2-dirty-attention/P2-saved-toast/NAV-dirty〕並置・旧ヘッダボタン完全撤去・TAG-016(i)〜(iv)実測・pin19本+全緑・layoutInvariant・en copy/(iii)2択/アニメ近似の裁定)"
+    baseline: "main c055173"
+    findings: "maintainer 実装依頼 2026-07-17(第三便)。CAD= mock v4(SHA 一致実測済み)+tag_tab.md「保存モデルと保存バー」+VC-TAG-16 正典化済み(VPUI 1bea503)=CAD 健全・実装が v3 as-built のまま乖離=追随・gate①不要(TAG-016(i)〜(iv)は依頼既定方向を §4.2 裁定で確定)。乖離実測= ①ヘッダ保存/キャンセル常設+StatusMessage(置換対象) ②CancelAsync=確認ダイアログ(v4 破棄=無確認) ③未保存3表示なし ④SelectViewAsync=ConfirmDiscardIfDirtyAsync ダイアログ(v4=ブロック+shake) ⑤タブ遷移=ガードなし(MainWindowViewModel:140) ⑥保存成功=StatusMessage(v4=緑トースト1.8s) ⑦New/Edit/DeleteView=ガードなし=**Delete は選択中 dirty ビューを削除可能(未保存編集の消失経路が現存)** ⑧window.Closing=dirty確認なし。TAG-016 裁定= (i)ビュー作成/リネーム/削除も同ガードでブロック (ii)設定=モーダル・検索=タブ内=非破壊で通過可 (iii)終了=既存 ConfirmDialog 様式の2択「破棄して終了/戻る」(3択は新面の発明=不採用・golden裁定対象) (iv)保存失敗=バー attention 維持+メッセージ位置に失敗理由(新視覚面不要見込み・不成立ならモック改版差し戻し)。**撮影ハーネス: 依頼文の .src009-capture-harness は作業ツリーに現存しない(実測・消失経緯不明)— 資産化対象は依頼の目的節が指す ECO-100 教訓3 の headless+Skia ハーネス(ECO-099 R7 開発・scratch)と解釈し tools/ 配下へ正式化。SRC-009(実機プロファイル方式)の track が別途必要なら素材再供給を要請**"
+    impacted_bom: ["src=TagsTabView(ヘッダボタン撤去・バー/トースト/チップ・アニメ近似)+HierarchyEditorViewModel(attention/GuardNavigation/トースト状態・破棄無確認化)+TagsTabViewModel(ビュー操作ガード)+MainWindowViewModel/MainWindow.axaml(タブ遷移ガード・ナビ琥珀ドット)+App.axaml.cs(Closing dirty 確認)", "tools=ViewPrism2.CaptureHarness 新設(sln 追加・来歴付与=ECO-099 R7 開発/099・100 実績/BomDD 昇格候補・公開安全=絶対パスなし)", "tests=probe(3表示の出現/クリーン消滅・ガード3経路+attention 700ms 復帰・破棄無確認+placing クリア・トースト 1.8s・(iv)失敗時 attention 維持)先行(R5)", "E-BOM=E-UI-NODEGRAPH-025(保存モデル)+E-UI-SHELL-021(ナビドット/タブガード)", "M-BOM=M-UI-013 追記+撮影ハーネス unit 新設", "CP=CP-UI-G6 へ VC-TAG-16 次元", "i18n=新キー(バー2文言/破棄/保存/トースト/チップ/ナビtitle/終了確認)ja+en(en=golden裁定対象)・旧キー棚卸し", "CAD=変更しない。TAG-016 クローズ材料+golden 裁定結果を read-across 納品(新状態スクリーンショットは artifacts/ 経由可)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=新契約不在で赤→緑転。R7=資産化ハーネスで dirty/attention/toast/NAV の4状態を撮影し原器4面と並置(アニメ近似差分は分類して golden 裁定へ)"
+    body: 60-change-order-eco-103.md
+    notes: "gate①=不要(TAG-016 は ECO-099/100 で確立した実装時裁定の確定手続き)。gate②=必要。関連=ECO-099(許容差分の除外元・撮影ハーネス開発元)・ECO-100(教訓3=資産化対象)・ECO-046/102(dirty 谷間の系譜=本便でビュー削除の消失経路も閉じる)・TAG-016(確定対象)。fix 時確認=vpRise/vpShake の Avalonia 近似・破棄時⋯メニュークリアの実質自明性・(iv)の新視覚面不要の実証・common.cancel/success.saved の消費者棚卸し"
