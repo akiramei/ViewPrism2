@@ -1,4 +1,4 @@
-# Change Order — ECO-097(起票・staged): フィルタ変更後も非表示画像の選択が残り操作対象になる
+# Change Order — ECO-097(是正・implemented): フィルタ変更後も非表示画像の選択が残り操作対象になる
 
 > BL-002 の分離起票。2026-06-29 の外部レビュー所見を、2026-07-16 の maintainer 指示
 > `/eco-file BL-002 フィルタ変更時に非表示画像の選択が残る` で正式な工程診断へ移した。
@@ -72,6 +72,15 @@
 | B: 全クリア | フィルタ値の適用/解除ごとに選択を全消去する。 | ImageTab は小 diff だが、WorkTab も統一するなら2面変更+両面 golden。統一しない場合は面間差を CAD に明記。 | 最も単純で安全だが、可視のままの選択も失い連続作業性が低い。 |
 | C: 維持を正式化 | 選択は表示フィルタと独立し、非表示画像も操作対象に残す。 | src 変更なし、CAD/BOM/CP の doc-only 改訂。現挙動を golden で追認。必要なら非表示選択数/確認 UI は別の新設計。 | 操作対象が画面から確認できない安全上の弱点を残し、WorkTab とも不一致。非推奨。 |
 
+### 4.1 gate①裁定(2026-07-16)
+
+- maintainer が **案A: 可視集合との交差**を採択した。
+- CAD 正典は ViewPrismUI `90d5540` (`docs/decisions/IMG-025-filter-selection-lifetime.md`、
+  `docs/screens/image_tab.md`、`docs/screens/work_tab.md`)へ記録済み。
+- 契約は `selection := selection ∩ visibleImages`。絞り込み解除は残存選択を保持するが、除外済み選択を
+  復活させない。画像タブのタグ編集・作業・削除と作業タブで同じ意味論とする。
+- XAML・文言・配置・スタイルは変更しないため、CAD mock/capture 更新は不要との裁定。
+
 ## 5. 影響 BOM(裁定後に同期)
 
 - CAD: `ViewPrismUI/docs/screens/image_tab.md` の選択/タグチップ/文脈モードへ選択寿命を追加。
@@ -86,8 +95,41 @@
 
 ## 6. 残ゲート
 
-1. **gate①(現在地)**: maintainer が ViewPrismUI で案 A/B/C を裁定し、選択寿命を CAD 正典へ記録する。
-2. 裁定後に `/eco-fix eco-097`: プローブ先行→BOM同期→最小実装→機械受入→R7 セルフゴールデン。
-3. gate②: maintainer 実機で、タグ編集・作業・削除それぞれについて「非表示画像が意図せず
+1. **gate②(現在地)**: maintainer 実機で、タグ編集・作業・削除それぞれについて「非表示画像が意図せず
    操作されない/裁定どおり扱われる」ことと、フィルタ解除時の選択挙動を確認する。
-4. `/eco-accept eco-097` で register applied、CP 観点、本文クローズ節を同期する。
+2. golden 合格後に `/eco-accept eco-097` で register applied、CP 観点、本文クローズ節を同期する。
+
+## 7. `/eco-fix` 実施記録(2026-07-16)
+
+### 7.1 プローブ先行と真因の実測
+
+- `CpUiG1ImageTabSelectionTests` にタグ編集・作業・削除の3モード共通ベクタを追加した。
+- fixture はタグTを持つAと持たないBを選択し、Tへ絞り込み→解除する。是正前は3/3で
+  `Assert.False(B.IsSelected)` が `Actual: True` となり、非表示Bが共有 `_selected` に残る診断を裏取りした。
+- 同じ実行の既存751件は合格し、真因以外の既存破損ではないことも確認した。
+
+### 7.2 BOM同期と最小是正
+
+- REQ-041、`20-spec.md` §2.6、E-UI-BROWSE-022、E-UI-MODE-041、M-UI-IMAGETAB-035、
+  CP-UI-G1へIMG-025案Aの選択寿命を同期した。
+- `ImageTabViewModel.ClickChip` は `_tagFilter` 更新直後に `ResolveFs().Files` のID集合を作り、
+  `_selected.RemoveAll(id => !visibleIds.Contains(id))` で交差へ縮退してから `Recompute()` する。
+  タグ編集・作業・削除の各操作は従来どおり同じ `_selected` を消費するため、操作別の分岐や複製を増やさない。
+- 横断規約確認: XAML/文言/Localization/DB/schema/styleは無変更。K-AVALONIAのi18n・XAML規律に
+  新しい適用点はなく、固定Oracle行も変更していない(R6)。
+
+### 7.3 機械受入
+
+- 是正後の対象クラス: 10/10合格(新規Theory 3ケースを含む)。
+- `dotnet build`: 0 warning / 0 error。
+- `dotnet test tests/ViewPrism2.Tests`: 754/754合格。
+- `dotnet test tests/ViewPrism2.Oracle`: 109合格 / 2 skip / 0不合格。
+- `python bomdd/validate_bom.py`: 0 error / 0 warning。
+
+### 7.4 R7セルフゴールデン
+
+- 対象面: 画像タブのタグ編集・作業・削除モード。CAD正典=ViewPrismUI `90d5540` のIMG-025案A。
+- 裁定済み差分: T適用中はAだけが表示・選択され、解除後はAを選択維持しBは未選択で再表示する。
+  新規Theory 3ケースが実描画へ渡るItems/IsSelectedと共有選択件数を固定した。
+- 静的視覚差分: なし。XAML/style/文言/layoutのdiffは0で、CAD裁定どおりmock/capture更新不要。
+- 転写漏れ: 0。3モードを同一ベクタでread-acrossし、WorkTab既存の交差契約も変更していない。

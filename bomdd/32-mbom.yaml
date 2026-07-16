@@ -253,6 +253,7 @@ mbom:
         sort: "(ECO-070/REQ-081/FL-003案A)ImageTabViewModelのFS adapterはResolveFs後にfolder/filesを分離維持。TryGetPreservedScanOrderを両群で共有し、通常時SortFolders=名前+現在方向、SortFiles=選択列+方向、BuildItemsFromMatched=folder全件→file全件。folder列値/集約なし。scan中/明示sortなし完了時は両群の取込順を保持"
         startup: "ECO-064/REQ-088: InitializeAsync=Task.Yield→catalog(全folder+normal GROUP BY count)→保存済み選択content(当該normal+image_tags+tag定義/view定義+deleted count)。IsCatalogLoading/IsContentLoading+error/retryを別公開し、未ready時Recomputeはcollection行だけ公開。collection切替はcontent generation+CTSで旧結果を破棄。XAMLは左/中央の領域内loading/errorを空状態と排他表示"
         chip_strip: "(ECO-091/REQ-097)チップ行の容量・overflow= ChipStripViewModel(サブ VM 合成・意味論単一実装=WorkTabViewModel と共有)+ChipRowOverflow(純計算・行判定許容差 6px)。折畳み状態/「ほか N 件」/ポップオーバー(検索+全項目+選択委譲)。実測供給は ImageTabView.EvaluateChipRow(LayoutUpdated・幅変更で ResetFold=未折畳みは同一パス計測)。UI 部品(LabeledChipStrip 級)の共有は golden 後の DRY 判断=XAML は 2 面のまま"
+        selection_lifetime: "(ECO-097/REQ-041/IMG-025案A)ImageTabViewModel.ClickChipのFSタグfilter変更時に、_selectedをResolveFs後の可視image id集合との交差へ縮退してからRecomputeする。filter解除は残存選択を保持し除外済みidを復活させない。タグ編集/作業/削除は同じ_selectedを消費する"
       invariants:
         - 適用は TagService の原子バッチ API のみ経由(個別ループ禁止)
         - 子 VM はホスト型を参照しない(関数注入)。通知は消費者(XAML/tests=ホスト公開契約)に対し旧実装と同一回数・同一位置(51 通知トポロジー 3 則)

@@ -1875,6 +1875,13 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         }
         if (chip.IsNeutral) _tagFilter = null;
         else _tagFilter = _tagFilter == chip.Id ? null : chip.Id;
+
+        // ECO-097/IMG-025案A: filter変更後の操作対象は新しい可視画像だけに縮退する。
+        // 解除時も既に落とした選択を復活させず、残った選択だけを維持する。
+        var visibleIds = new HashSet<string>(
+            ResolveFs().Files.Select(entry => entry.Record.Id),
+            StringComparer.Ordinal);
+        _selected.RemoveAll(id => !visibleIds.Contains(id));
         Recompute();
     }
 

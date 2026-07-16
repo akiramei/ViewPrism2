@@ -1491,11 +1491,12 @@ changes:
   - id: ECO-097
     title: "フィルタ変更後も非表示画像の選択が残り操作対象になる — BL-002 選択寿命の安全裁定"
     type: "既存挙動/仕様未定義(CAD・BOMの選択寿命沈黙。タグ編集/作業/削除の非表示対象操作リスク)"
-    status: staged
+    status: implemented
     golden: pending
     baseline: "main ada10ab"
     findings: "BL-002を2026-07-16 maintainer指示で正式起票。画像タブFS軸のタグ絞り込みはImageTabViewModel.ClickChipが_tagFilter更新→Recomputeのみで_selectedを更新せず、一覧から消えた画像もApplyTag/RemoveTag/ApplySequential/AddToWork/DeleteToTrashの対象に残る。物理削除なし(INV-009維持)だが見えない画像のメタデータ変更・作業追加・ソフト削除となる。混入=6f7b4f9(画像タブM3a初版・2026-06-18)。CAD image_tab.mdは複数選択+FSタグ絞り込み+選択許可3モードを定義するが、フィルタ変更時の選択を維持/可視集合と交差/全クリアのどれにするか未定義。REQ-041/E-UI-BROWSE-022/E-UI-MODE-041/M-UI-IMAGETAB-035/CP-UI-G1も同じ沈黙。実装逸脱とは裁定前に断定しない。安全先例=WorkTabViewModelはf211fa9(ECO-020/021)から可視集合との交差を実装しCpUiG1WorkTabTestsで固定。IMG-006はフィルタ条件数、IMG-023Aはoverflow幅再計算の状態保持で本件と独立。"
     impacted_bom: ["CAD=ViewPrismUI image_tab.md(選択/FSタグチップ/文脈モードの選択寿命。面差を残す案はwork_tab.mdも明記)", "REQ/spec=REQ-041または画像タブ選択契約+20-spec §2.6", "E-BOM=E-UI-BROWSE-022+E-UI-MODE-041", "M-BOM=M-UI-IMAGETAB-035", "CP=CP-UI-G1", "src/tests(案A予測)=ImageTabViewModel.cs+CpUiG1ImageTabSelectionTests.cs。WorkTab既存安全ベクタ維持", "DB/i18n/XAML/style/固定Oracle=変更なし見込み(R6)"]
     oracle: "既存固定Oracle行は変更しない(R6)。プローブ先行=A/B選択→タグT絞り込みでB非表示→選択集合/タグ操作/作業追加/ゴミ箱対象が裁定どおりになること。フィルタ解除で落とした選択を復活させない(案A)または選択全消去(案B)をpin"
     body: 60-change-order-eco-097.md
-    notes: "gate①=必要。案A=可視集合との交差(推奨・WorkTab安全先例と一致)/案B=全クリア/案C=現状維持を正式化(非推奨)。ViewPrismUIで裁定・CAD記録後に/eco-fix eco-097。gate②=画像タブのタグ編集/作業/削除3面+フィルタ解除を実機golden。BL-002は本ECOへ昇格済み"
+    verification: "2026-07-16 /eco-fix完了: gate①=案Aをmaintainer採択・CAD ViewPrismUI 90d5540。先行probe=CpUiG1ImageTabSelectionTestsのタグ編集/作業/削除3ケースが是正前3/3不合格(Bがfilter解除後も選択)・既存751件合格で真因裏取り。是正=ClickChipでfilter更新直後に_selectedをResolveFs可視ID集合との交差へ縮退し、解除で除外済み選択を復活させない。REQ/spec/E-BOM/M-BOM/CP-UI-G1同期。build 0/0・Tests 754/754・Oracle 109+2skip(R6不変)・validate 0/0。R7=IMG-025案Aの3モードread-across、XAML/style/i18n/layout差分なし、転写漏れ0"
+    notes: "是正+機械受入完了・golden待ち。gate①=案A(可視集合との交差)採択済み。gate②=画像タブのタグ編集/作業/削除3面+フィルタ解除を実機golden。合格後に/eco-accept eco-097。BL-002は本ECOへ昇格済み"

@@ -94,6 +94,53 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
     private static string[] ItemOrder(ImageTabViewModel vm)
         => vm.Items.Select(i => $"{(i.IsFolder ? "F" : "I")}:{i.Name}").ToArray();
 
+    /// <summary>ECO-097先行probe: FSタグfilter後の選択は可視画像との交差へ縮退し、解除で復活しない。</summary>
+    [Theory]
+    [InlineData("edit")]
+    [InlineData("work")]
+    [InlineData("delete")]
+    public async Task FSタグ絞り込みは各選択モードの非表示選択を落とし解除しても復活させない(string mode)
+    {
+        var (vm, _) = await NewWithImagesAsync("a.jpg", "b.jpg");
+        var visibleId = Item(vm, "a.jpg").Id;
+        await _db.Tags.AddAsync(new Tag
+        {
+            Id = "t-visible",
+            Name = "表示対象",
+            Type = TagType.Simple,
+            Color = "#2f6bed",
+        });
+        await _db.Tags.UpsertImageTagAsync(new ImageTag { ImageId = visibleId, TagId = "t-visible" });
+        await vm.ReloadTagCatalogAsync();
+
+        switch (mode)
+        {
+            case "edit":
+                vm.ToggleEditCommand.Execute(null);
+                break;
+            case "work":
+                vm.ToggleWorkCommand.Execute(null);
+                break;
+            case "delete":
+                vm.EnterDeleteCommand.Execute(null);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(mode));
+        }
+
+        vm.HandleItemClick(Item(vm, "a.jpg"), ctrl: false, shift: false);
+        vm.HandleItemClick(Item(vm, "b.jpg"), ctrl: true, shift: false);
+
+        vm.ClickChip(vm.Chips.Single(c => c.Id == "t-visible"));
+        Assert.Equal(["a.jpg"], FileNames(vm));
+        Assert.True(Item(vm, "a.jpg").IsSelected);
+        Assert.Equal(1, vm.WorkSelCount); // 3モードが共有して消費する _selected の公開件数
+
+        vm.ClickChip(vm.Chips.Single(c => c.IsNeutral));
+        Assert.True(Item(vm, "a.jpg").IsSelected);
+        Assert.False(Item(vm, "b.jpg").IsSelected);
+    }
+
     /// <summary>ECO-070先行probe: FS軸はfolder群→image群を保ち、両群へ現在方向を個別適用する。</summary>
     [Fact]
     public async Task FS表示はフォルダ先頭を保ちフォルダと画像を群別ソートする()
