@@ -1503,12 +1503,12 @@ changes:
   - id: ECO-098
     title: "画像タブゴミ箱がdeleted以外を全件materializeする — 表示6枚でも26万missingで約1.1秒停止"
     type: "不具合(性能・DB→VM取得境界のpredicate pushdown漏れ。コレクション境界は維持、status境界逸脱)"
-    status: implemented
-    golden: pending
+    status: applied   # 2026-07-16 maintainer実機golden承認・/eco-acceptでクローズ
+    golden: "approved(2026-07-16 maintainer 実機: normal 6+hidden missing 262,045級で削除/open/復元/完全削除後の再表示に引っ掛かりなし、deleted対象/件数/file_name順・画像ファイル物理非破壊・視覚不変を確認)"
     baseline: "main 3acd6b0"
     findings: "ECO-097 gate②中のmaintainer実機所見。normal 6枚表示のcollectionで削除→ゴミ箱確認→復元に知覚可能な引っ掛かり。実DB mode=ro実測で当該collectionはnormal=6/missing=262,045/deleted=0/total=262,051。ImageTabTrashViewModel.LoadTrashItemsAsyncがGetByFolderAsync(collectionId)で全statusをDapper materialize後、VM LINQでDeletedへfilter+file_name sort。現行全列query 5回=1,085.4〜1,237.7ms/median 1,133.8ms、status=deleted限定はwarm 1ms未満、normal 6件reloadも1ms未満。別collection IDは読んでおらず、同一collectionのhidden status全件取得が真因。CAD=image_tabの選択collection trash契約/IMG-019健全、BOM=20-specの『選択中collection内deleted一覧と件数のみ』健全、実装逸脱。混入=2c589d8(ECO-019)、fdcf5d9(ECO-036/1)が移送、39b0b17(ECO-064)はnormal/count限定を導入したがdeleted一覧read-across漏れ。小fixtureは結果同値の過剰取得をマスキング。DatabaseManager単一接続gateは遅延波及要因だが一次真因ではない"
     impacted_bom: ["Core=IImageRepository deleted限定一覧API(案A)", "Infrastructure=ImageRepository collection+deleted predicate+file_name安定順(既存idx_images_folder_status・schema不変)", "Surface=ImageTabTrashViewModel.LoadTrashItemsAsyncの全status取得/後段filter撤去", "tests=repository spyでGetByFolderAsync非呼出を是正前赤+normal少数/missing大量/deleted少数の返却境界・open/restore/purge/empty read-across", "E/M/CP=E-UI-REPAIR-039/M-UI-TRASH-032/CP-UI-G1へhidden status規模の潜伏実績", "CAD/REQ/Core遷移/WorkTab/i18n/XAML/style/DB schema/固定Oracle=不変見込み(R6)"]
     oracle: "既存固定Oracle行は変更しない(R6)。先行probe=ゴミ箱open/復元後にGetByFolderAsync(全status)が呼ばれないことをrepository spyでexact検査(是正前赤)。同一collectionのnormal少数+missing大量+deleted少数で返却/描画はdeletedのみ・file_name安定順・件数一致。壁時計は補助探索値"
     verification: "2026-07-16 /eco-fix完了: CpUiG1TrashPopupTestsへnormal1+missing256+deleted2/別collection deleted1のrepository spy probeを先行追加。是正前1/1不合格(GetByFolderAsync期待0/実際1)で真因裏取り→案A=GetDeletedByFolderAsync(collection+deleted predicate・file_name NOCASE+id安定順)をCore/Infrastructureへ追加し、ImageTabTrashViewModelの全件取得+後段filter/sortを撤去。削除実行→openで全status API 0回/専用API1回、他status/他collection非混入を緑転。build 0/0・Tests 755/755・Oracle 109+2skip(R6不変)・validate 0/0。E/M/CP同期、XAML/style/i18n/CAD/REQ/schema/Core遷移/WorkTab不変、視覚差分なしでR7対象外"
     body: 60-change-order-eco-098.md
-    notes: "是正+機械受入完了・golden待ち。gate①不要、案A(predicate pushdown)実装済み。gate②=normal 6+missing 26万級で削除/open/restore/purge後の再表示応答+対象/件数/順序/物理非破壊。削除ボタン単体は全status API非呼出をprobe済みで、なお遅延が残れば別真因としてR3分離"
+    notes: "2026-07-16クローズ。gate①不要(CAD/BOM健全・実装逸脱)、gate②=maintainer実機承認済み。再発防止=CP-UI-G1へhidden status規模+全status API非呼出+専用query exact呼出を潜伏実績付きで刻印。read-across=open/restore/purge/empty共通load、削除単体も全status非呼出をpin。M4=E-UI-REPAIR-039/M-DB-007/M-UI-TRASH-032/CP同期済み、spec/35-dsbom不要。将来削除単体だけの遅延が再現すればR3分離"

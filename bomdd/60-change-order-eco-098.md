@@ -1,4 +1,4 @@
-# Change Order — ECO-098(是正済み・implemented): 画像タブゴミ箱がdeleted以外を全件materializeする
+# Change Order — ECO-098(applied・クローズ): 画像タブゴミ箱がdeleted以外を全件materializeする
 
 > ECO-097 gate②の実機確認中にmaintainerが知覚した、削除→ゴミ箱表示→復元の引っ掛かりを
 > 2026-07-16の指示 `/eco-file 画像タブのゴミ箱がdeleted以外を全件materializeし、表示6枚でも
@@ -101,13 +101,12 @@
   predicate pushdown潜伏実績を追加。REQ/CAD意味論は変更不要。
 - WorkTab、DB schema、i18n、XAML/style、固定Oracle行は変更しない(R6)。
 
-## 6. 残ゲート
+## 6. ゲート完了
 
 1. **gate①不要**: CAD/BOMの結果契約は健全で、案Aは実装の取得境界是正。製品判断なし。
 2. **`/eco-fix eco-098`完了**: 先行probe→案A最小是正→機械受入4点合格。UI視覚差分なしのためR7並置対象外。
-3. **gate②(golden待ち)**: maintainer実機で、normal 6+missing 26万級のコレクションについて、ゴミ箱open、復元、
-   完全削除後の再表示が引っ掛からず、対象/件数/順序/物理非破壊が従来どおりであることを確認。
-4. `/eco-accept eco-098`でクローズ。
+3. **gate②完了**: 2026-07-16、maintainerが`/eco-accept eco-098`で実機golden合格を明示。
+4. 残ゲートなし。
 
 ## 7. `/eco-fix`実施記録(2026-07-16)
 
@@ -148,3 +147,39 @@
 - `dotnet test tests/ViewPrism2.Tests`: **755/755合格**(ECO-098 probeを含む)。
 - `dotnet test tests/ViewPrism2.Oracle`: **109合格 / 2 skip / 0不合格**。既存固定Oracle行は変更なし(R6)。
 - `python bomdd/validate_bom.py`: **0 error / 0 warning**。
+
+## 8. クローズ記録(2026-07-16)
+
+### 8.1 実機golden
+
+- approver: maintainer。
+- normal 6件+hidden missing 262,045件級のコレクションで、画像のゴミ箱移動、ゴミ箱open、復元、
+  完全削除後の再表示が引っ掛からず、deleted対象・件数・file_name順が正しいことを承認。
+- 復元/完全削除を通じて画像ファイルの物理非破壊が維持され、表示・文言・レイアウトに意図しない変更が
+  ないことを承認。golden所見なし。
+
+### 8.2 再発防止
+
+- CP-UI-G1へ、画像タブの削除実行とゴミ箱open/操作後reloadが全status`GetByFolderAsync`へ退行せず、
+  `collection + deleted`専用queryだけを消費する観点を潜伏実績つきで刻印した。
+- 機械側は`CpUiG1TrashPopupTests`で、同一collectionのnormal少数+missing多数+deleted少数と
+  別collection deletedを同時配置し、全status API 0回・専用API exact 1回・対象非混入・安定順をpinする。
+- E-UI-REPAIR-039、M-DB-007、M-UI-TRASH-032にも同じ取得境界を同期済み。
+
+### 8.3 教訓とread-across
+
+一覧結果が正しいことだけでは、取得境界の正しさは証明できない。表示対象外statusを後段で捨てる実装は、
+小fixtureでは機能等価に見えても、hidden行の規模が大きい実profileで初めて停止として顕在化する。
+DB→VM境界を持つ一覧では、結果集合に加えて**不要行をmaterializeしないことをrepository呼出/API単位でpin**し、
+openだけでなくrestore/purge/emptyなど同じ再読込関数の全発火点をread-acrossする必要がある。本件は
+ECO-064のnormal一覧/count限定がdeleted一覧へ水平展開されなかった例であり、件数表示と実DB総行数の
+乖離を性能fixtureの独立次元としてCPへ残す。
+
+### 8.4 M4同期・残課題
+
+- VM/Repository内部の取得境界是正で、CAD/REQ/挙動仕様/視覚契約は不変。E/M/CPのas-built取得契約は
+  fix時に同期済みで、`20-spec.md`および`35-dsbom`の追加更新は不要。
+- DB schema、Core状態遷移、WorkTab、i18n、XAML/style、固定Oracle行は不変。
+- 削除ボタン単体は全status API非呼出を機械確認済み。将来そこだけに遅延が再現する場合は別真因としてR3分離する。
+- 教訓は一般化可能だが、既存BomDDのR5プローブ先行・read-across・CP潜伏実績の規律で扱えるため、
+  方法論リポへの即時昇格は不要。将来、性能CPに「返却結果だけでなく取得量境界」を必須化する際の候補とする。
