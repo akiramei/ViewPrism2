@@ -91,8 +91,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private bool _catalogLoaded;
     private bool _isCatalogLoading;
     private bool _isContentLoading;
-    private string? _catalogError;
-    private string? _contentError;
+    // ECO-108: エラー/通知は i18n キーで保持し表示時に解決(解決済み文字列の保持は言語非追随)
+    private string? _catalogErrorKey;
+    private string? _contentErrorKey;
     private long _catalogLoadGeneration;
     private long _contentLoadGeneration;
     private CancellationTokenSource? _catalogLoadCts;
@@ -102,7 +103,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private readonly HashSet<string> _scanningCollections = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _scanOrderByCollection = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _completedScanOrderByCollection = new(StringComparer.Ordinal);
-    private string? _scanNotice;
+    private string? _scanNoticeKey;
 
     // ---- 整理モード(ECO-014: 類似+マージ統合「整理トレイ」)----
     // タグ編集モードと排他の文脈モード。マージ先(残す1枚)と整理対象(統合し削除対象)を選び、
@@ -178,6 +179,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             // GF-079-01: VM 算出ラベル(ボタン/軸/列/件数)も言語切替へ追随させる
             OnPropertyChanged(string.Empty);
             ChipStrip.OnCultureChanged(); // 「ほか N 件」ラベルの追随(ECO-091)
+            // ECO-108: 焼き込みラベル(列見出し/ソート候補/件数/チップヒント/タグ面ノート)は
+            // 再通知では再解決されない — WorkTab の Rebuild 対(GF-079-01)と対称化して再計算する
+            Recompute();
         };
         _scans = scanCoordinator;
         if (_scans is not null)
@@ -272,7 +276,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _layout = string.Equals(_settings.DisplayMode, "list", StringComparison.Ordinal) ? "list" : "grid";
         // Opened event の同じ dispatcher turn でDB処理へ入らず、shellの初回描画を先に許可する。
         _isCatalogLoading = true;
-        _catalogError = null;
+        _catalogErrorKey = null;
         OnPropertyChanged(string.Empty);
         await Task.Yield();
         await LoadCatalogAsync(preferredCollectionId ?? _settings.LastCollectionId).ConfigureAwait(true);
@@ -292,8 +296,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _catalogLoaded = false;
         _loaded = false;
         _isCatalogLoading = true;
-        _catalogError = null;
-        _contentError = null;
+        _catalogErrorKey = null;
+        _contentErrorKey = null;
         _collectionId = null;
         ClearContentData();
         _tagById = new Dictionary<string, Tag>(StringComparer.Ordinal);
@@ -351,7 +355,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         {
             if (_loadingStopped || generation != _catalogLoadGeneration) return;
             _isCatalogLoading = false;
-            _catalogError = _localization.T("view.collectionLoadFailed");
+            _catalogErrorKey = "view.collectionLoadFailed";
             _catalogLoaded = false;
             OnPropertyChanged(string.Empty);
         }
@@ -367,7 +371,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
 
         _loaded = false;
         _isContentLoading = true;
-        _contentError = null;
+        _contentErrorKey = null;
         ClearContentData();
         Recompute();
 
@@ -415,7 +419,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             if (_loadingStopped || generation != _contentLoadGeneration ||
                 !string.Equals(_collectionId, collectionId, StringComparison.Ordinal)) return;
             _isContentLoading = false;
-            _contentError = _localization.T("view.imagesLoadFailed");
+            _contentErrorKey = "view.imagesLoadFailed";
             _loaded = false;
             OnPropertyChanged(string.Empty);
         }
@@ -442,7 +446,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (clearState)
         {
             _isContentLoading = false;
-            _contentError = null;
+            _contentErrorKey = null;
         }
     }
 
@@ -695,7 +699,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         {
             bool active = string.Equals(_sortColKey, d.Key, StringComparison.Ordinal);
             SortColumns.Add(new SortOptionVM(
-                d.Key, d.Label, ListColumnBuilder.KindChipLabel(d.Kind), d.Color, active, active ? arrow : 0));
+                d.Key, d.Label, _localization.T(ListColumnBuilder.KindChipKey(d.Kind)), d.Color, active, active ? arrow : 0));
         }
 
         if (_sortColKey is { } key)
@@ -804,10 +808,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     public bool IsCollectionSelected => _collectionId is not null;
     public bool IsCatalogLoading => _isCatalogLoading;
     public bool IsContentLoading => _isContentLoading;
-    public bool HasCatalogError => _catalogError is not null;
-    public bool HasContentError => _contentError is not null;
-    public string CatalogErrorMessage => _catalogError ?? "";
-    public string ContentErrorMessage => _contentError ?? "";
+    public bool HasCatalogError => _catalogErrorKey is not null;
+    public bool HasContentError => _contentErrorKey is not null;
+    public string CatalogErrorMessage => _catalogErrorKey is { } ck ? _localization.T(ck) : "";
+    public string ContentErrorMessage => _contentErrorKey is { } ek ? _localization.T(ek) : "";
     public bool ShowCatalogLoading => _isCatalogLoading && !HasCatalogError;
     public bool ShowContentLoading => _catalogLoaded && _collectionId is not null && _isContentLoading && !HasContentError;
     /// <summary>未選択時に中央へ「コレクションを選択」プロンプトを出す(REQ-053)。</summary>
@@ -822,8 +826,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     /// <summary>ECO-060: 選択中collectionのbackground scan状態。</summary>
     public bool IsSelectedCollectionScanning =>
         _collectionId is not null && _scanningCollections.Contains(_collectionId);
-    public string? ScanNotice => _scanNotice;
-    public bool HasScanNotice => !string.IsNullOrEmpty(_scanNotice);
+    public string? ScanNotice => _scanNoticeKey is { } sk ? _localization.T(sk) : null;
+    public bool HasScanNotice => _scanNoticeKey is not null;
 
     public bool IsViewAxis => _axis == "view";
     public bool IsFsActive => _axis == "fs";
@@ -1487,7 +1491,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (_collectionId == id && (_loaded || _isContentLoading)) return;
         Organize.InvalidateSearchContext();
         _collectionId = id;
-        _scanNotice = null;
+        _scanNoticeKey = null;
         _settings.LastCollectionId = id; // CR-5 書き戻し(永続化は SettingsStore / CaptureSettings)
         _fsPath.Clear(); _tagFilter = null; _selected.Clear(); _expandTag = null;
         await LoadContentAsync(id).ConfigureAwait(true);
@@ -2181,7 +2185,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void SetSearchMethod(string method)
     {
         Organize.SetSearchMethod(method);
-        if (!Organize.IsSimilarMethod) _scanNotice = null;
+        if (!Organize.IsSimilarMethod) _scanNoticeKey = null;
         // GF-056-02: Recompute()(Items 全再構築)はグリッドをちらつかせる。検索方式はグリッド内容と
         // 無関係のため、転送殻の全通知のみで足りる(51ad8ee 以来の過剰再構築の是正)
         OnPropertyChanged(string.Empty);
@@ -2195,11 +2199,11 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (!_organizeMode || _collectionId is null) return;
         if (SimilarSearchBlocked)
         {
-            _scanNotice = _localization.T("view.availableAfterScan");
+            _scanNoticeKey = "view.availableAfterScan";
             OnPropertyChanged(string.Empty);
             return;
         }
-        _scanNotice = null;
+        _scanNoticeKey = null;
         await Organize.RunSearchAsync().ConfigureAwait(true);
         // 末尾通知は子の _recompute(注入)が旧版と同位置・同回数で発行済み — 殻では重複させない(G-E36S3)
     }
@@ -2333,7 +2337,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                     _scanningCollections.Add(update.FolderId);
                     _completedScanOrderByCollection.Remove(update.FolderId);
                     EnsureScanOrder(update.FolderId);
-                    _scanNotice = null;
+                    _scanNoticeKey = null;
                     if (_loaded) Recompute();
                     break;
 
@@ -2374,7 +2378,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                     {
                         _completedScanOrderByCollection.Remove(update.FolderId);
                     }
-                    _scanNotice = null;
+                    _scanNoticeKey = null;
                     await ReloadImagesAsync().ConfigureAwait(true);
                     if (_loaded) Recompute();
                     break;

@@ -128,8 +128,10 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
             // GF-079-01: 基本3列見出し(名前/サイズ/更新日)は baked ラベルのため再構築+再射影が必要
+            // ECO-108: BuildSortModels 単独→ Recompute へ拡大(件数/チップヒント/タグ面ノートの
+            // 焼き込みラベルも再解決。BuildSortModels は Recompute が内包)
             RebuildBasicSortColumns();
-            BuildSortModels();
+            Recompute();
             // GF-079-01: VM 算出ラベル(ボタン/軸/列/件数)も言語切替へ追随させる
             OnPropertyChanged(string.Empty);
             ChipStrip.OnCultureChanged(); // 「ほか N 件」ラベルの追随(ECO-091)
@@ -168,7 +170,15 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
 
     // ---- 作業スペース削除 確認モーダル(タブ内中央オーバーレイ) ----
     [ObservableProperty] private bool _wsDeleteOpen;
-    [ObservableProperty] private string _wsDeleteMessage = string.Empty;
+
+    // ECO-108: 権威値=件数で保持し文言は表示時解決(解決済み文字列の保持は言語切替に追随しない)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WsDeleteMessage))]
+    private int _wsDeleteCount;
+
+    public string WsDeleteMessage => WsDeleteCount > 0
+        ? _localization.T("workspace.deleteConfirmWithCount", new Dictionary<string, string> { ["count"] = WsDeleteCount.ToString(CultureInfo.InvariantCulture) })
+        : _localization.T("workspace.deleteConfirmEmpty");
 
     // ---- ワークスペースヘッダ ----
     [ObservableProperty] private string _wsName = string.Empty;
@@ -741,10 +751,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         var row = Workspaces.FirstOrDefault(w => w.Id == id);
         if (row is null || row.IsDefault) return;
         _wsDeleteId = id;
-        var n = int.TryParse(row.CountText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var c) ? c : 0;
-        WsDeleteMessage = n > 0
-            ? _localization.T("workspace.deleteConfirmWithCount", new Dictionary<string, string> { ["count"] = n.ToString() })
-            : _localization.T("workspace.deleteConfirmEmpty");
+        WsDeleteCount = int.TryParse(row.CountText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var c) ? c : 0;
         WsDeleteOpen = true;
     }
 
@@ -856,7 +863,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
             var active = string.Equals(_sortColKey, column.Key, StringComparison.Ordinal);
             ListColumns.Add(new ListColumnHeaderVM(i, column.Key, column.Label, active, active ? arrow : 0));
             SortColumns.Add(new SortOptionVM(column.Key, column.Label,
-                ListColumnBuilder.KindChipLabel(column.Kind), null, active, active ? arrow : 0));
+                _localization.T(ListColumnBuilder.KindChipKey(column.Kind)), null, active, active ? arrow : 0));
         }
 
         ColumnSortLabel = _sortColKey is { } key

@@ -181,25 +181,24 @@ public sealed class CpI18n010AssetLintTests
         // ---- (b) 開くたび再構築される射影(表示状態を跨いで保持しない) ----
         ["ColumnPickerViewModel.cs:Key"] = "列ピッカー行の射影(開くたび Rebuild・object initializer 検出)",
 
-        // ---- (c) deferred= ECO-108 分離起票(メインタブ/設定面の常駐値・culture 切替で再解決機会なし) ----
-        ["ImageTabViewModel.cs:_catalogError"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:_contentError"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:ColumnSortLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:ChipHintLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:CountLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:CurrentNote"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:NoCurrentLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:row.NumCurrent"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabViewModel.cs:_scanNotice"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["ImageTabOrganizeViewModel.cs:_undoNote"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["WorkTabViewModel.cs:CountLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["WorkTabViewModel.cs:ChipHintLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["WorkTabViewModel.cs:CurrentNote"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["WorkTabViewModel.cs:NoCurrentLabel"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["WorkTabViewModel.cs:row.NumCurrent"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["WorkTabViewModel.cs:WsDeleteMessage"] = "ECO-108 で精査(タブ内確認ポップアップ=境界例)",
-        ["WorkTabViewModel.cs:_undoNote"] = "ECO-108 で精査・是正(常駐疑い)",
-        ["SettingsViewModel.cs:SnapshotSummary"] = "ECO-108 で精査・是正(設定画面内=言語切替と同居)",
+        // ---- (c) 精査済み(ECO-108 で悉皆処置): CultureChanged の再計算経路が再解決を担保 ----
+        //      (キー保持化した _catalogError/_contentError/_scanNotice/WsDeleteMessage はサイト自体が消滅)
+        ["ImageTabViewModel.cs:ColumnSortLabel"] = "精査済み(ECO-108): CultureChanged→Recompute で再解決",
+        ["ImageTabViewModel.cs:ChipHintLabel"] = "精査済み(ECO-108): CultureChanged→Recompute で再解決",
+        ["ImageTabViewModel.cs:CountLabel"] = "精査済み(ECO-108): CultureChanged→Recompute で再解決",
+        ["ImageTabViewModel.cs:CurrentNote"] = "精査済み(ECO-108): CultureChanged→Recompute(BuildContextPanels 内包)で再解決",
+        ["ImageTabViewModel.cs:NoCurrentLabel"] = "精査済み(ECO-108): CultureChanged→Recompute(BuildContextPanels 内包)で再解決",
+        ["ImageTabViewModel.cs:row.NumCurrent"] = "精査済み(ECO-108): CultureChanged→Recompute(BuildAddGroups 内包)で再解決",
+        ["WorkTabViewModel.cs:CountLabel"] = "精査済み(ECO-108): CultureChanged→Recompute で再解決",
+        ["WorkTabViewModel.cs:ChipHintLabel"] = "精査済み(ECO-108): CultureChanged→Recompute で再解決",
+        ["WorkTabViewModel.cs:CurrentNote"] = "精査済み(ECO-108): CultureChanged→Recompute(BuildContextPanels 内包)で再解決",
+        ["WorkTabViewModel.cs:NoCurrentLabel"] = "精査済み(ECO-108): CultureChanged→Recompute(BuildContextPanels 内包)で再解決",
+        ["WorkTabViewModel.cs:row.NumCurrent"] = "精査済み(ECO-108): CultureChanged→Recompute(BuildAddGroups 内包)で再解決",
+        ["SettingsViewModel.cs:SnapshotSummary"] = "精査済み(ECO-108): CultureChanged→RefreshSnapshotSummary 再実行=追随を実測",
+
+        // ---- (d) 既知限界(ECO-108 精査・根拠つき残置) ----
+        ["WorkTabViewModel.cs:_undoNote"] = "精査済み(ECO-108): Core result.Message 依存の一時ノート(Core 文言の i18n 化は別スコープ・次操作でクリア)",
+        ["ImageTabOrganizeViewModel.cs:_undoNote"] = "精査済み(ECO-108): 同上(WorkTab._undoNote と同型)",
     };
 
     [Fact]

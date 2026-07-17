@@ -143,13 +143,17 @@ public static class ListColumnBuilder
     public static string ColumnTemplate(IReadOnlyList<ListColumnDef> columns) =>
         string.Join(",", columns.Select(c => c.Width));
 
-    /// <summary>kind→種別チップ表示(基本/数値/テキスト/シンプル・並び替えメニュー候補・追加元カード用)。</summary>
-    public static string KindChipLabel(ListCellKind kind) => kind switch
+    /// <summary>
+    /// kind→種別チップの i18n キー(基本/数値/テキスト/シンプル・並び替えメニュー候補用)。
+    /// ECO-108: 直書き日本語を返していたため言語非追随だった(VM 直書き= XAML lint の死角)。
+    /// 表示文言は呼び出し側が現在ロケールで解決する(REQ-050/051)。
+    /// </summary>
+    public static string KindChipKey(ListCellKind kind) => kind switch
     {
-        ListCellKind.Num => "数値",
-        ListCellKind.Text => "テキスト",
-        ListCellKind.Simple => "シンプル",
-        _ => "基本",
+        ListCellKind.Num => "tag.type.numeric",
+        ListCellKind.Text => "tag.type.textual",
+        ListCellKind.Simple => "tag.type.simple",
+        _ => "view.columnChipBasic",
     };
 
     /// <summary>画像 1 件の各列セルを組む(型別セル描画データ)。</summary>

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using ViewPrism2.App.Services;
+using ViewPrism2.Core.Common;
 using ViewPrism2.App.ViewModels;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Services;
@@ -251,6 +252,41 @@ public sealed class CpI18n010TabVmLabelTests : IDisposable
         Assert.Equal("整理", vm.OrganizeButtonLabel);
         Assert.Contains(vm.ListColumns, c => c.Label == "名前");
         Assert.Contains(vm.ListColumns, c => c.Label == "更新日");
+    }
+
+    [Fact]
+    public async Task 画像タブの列見出しとソート候補と件数が言語切替で英語化する()
+    {
+        // ECO-108(maintainer 実機所見 2026-07-17): WorkTab は GF-079-01 の Rebuild 対で追随するが
+        // ImageTab に同等がなく、列見出し/ソート候補/種別チップ/件数が焼き込み言語のまま残る(対称化 probe)。
+        // 種別チップは ListColumnBuilder.KindChipLabel の VM 直書き日本語(XAML lint の死角)も対象。
+        var loc = RealLoc();
+        var col = new SyncFolder { Id = IdGenerator.NewId(), Name = "C108", Path = @"C:\col-108" };
+        await _db.Folders.AddAsync(col);
+        await _db.Images.AddAsync(new ImageRecord
+        {
+            Id = IdGenerator.NewId(), SyncFolderId = col.Id, RelativePath = "a.jpg", FileName = "a.jpg",
+            FileSize = 1, Hash = "Ha108", Status = ImageStatus.Normal,
+            CreatedDate = "2026-07-17T00:00:00.000Z", ModifiedDate = "2026-07-17T00:00:00.000Z",
+        });
+
+        var vm = TestImageTab.NewVm(_db, loc);
+        await vm.InitializeAsync(col.Id); // FS 軸=既定 3 列
+
+        Assert.Contains(vm.ListColumns, c => c.Label == "名前");
+        Assert.Contains(vm.SortColumns, o => o.KindChip == "基本");
+        Assert.Equal("1 項目", vm.CountLabel);
+
+        loc.SetLocale("en");
+        Assert.Contains(vm.ListColumns, c => c.Label == "Name");
+        Assert.Contains(vm.ListColumns, c => c.Label == "Modified Date");
+        Assert.DoesNotContain(vm.ListColumns, c => c.Label == "名前");
+        Assert.Contains(vm.SortColumns, o => o.KindChip == "Basic");
+        Assert.Equal("1 items", vm.CountLabel);
+
+        loc.SetLocale("ja"); // 往復も追随
+        Assert.Contains(vm.ListColumns, c => c.Label == "名前");
+        Assert.Contains(vm.SortColumns, o => o.KindChip == "基本");
     }
 
     private sealed class NullWindowService : IWindowService
