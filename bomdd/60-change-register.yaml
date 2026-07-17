@@ -1567,3 +1567,25 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=新契約不在で赤→緑転。R7=資産化ハーネスで dirty/attention/toast/NAV の4状態を撮影し原器4面と並置(アニメ近似差分は分類して golden 裁定へ)"
     body: 60-change-order-eco-103.md
     notes: "gate①=不要(TAG-016 は ECO-099/100 で確立した実装時裁定の確定手続き)。gate②=必要。関連=ECO-099(許容差分の除外元・撮影ハーネス開発元)・ECO-100(教訓3=資産化対象)・ECO-046/102(dirty 谷間の系譜=本便でビュー削除の消失経路も閉じる)・TAG-016(確定対象)。fix 時確認=vpRise/vpShake の Avalonia 近似・破棄時⋯メニュークリアの実質自明性・(iv)の新視覚面不要の実証・common.cancel/success.saved の消費者棚卸し"
+  - id: ECO-104
+    title: "保存バー表示状態の残欠陥 — トーストの dirty/ビュー切替への残留+保存失敗文言の言語非追随(ECO-103 レビュー所見 P2×2)"
+    type: "不具合是正(ECO-103 混入・実装層)"
+    status: staged   # 2026-07-17 起票。機械受入全緑=既存プローブの未検査ケース(保存↔再編集/ビュー切替の交差・失敗表示中のロケール切替)
+    golden: "pending(gate②=軽量: 保存→即編集でトースト消滅・保存→1.8s内の別ビュー選択でトースト持ち越しなし・失敗表示中の言語切替で文言追随)"
+    baseline: "main ad51f92"
+    findings: "maintainer レビュー所見(2026-07-17・P2×2)。①保存トーストの解除経路がタイマのみ= ResetSaveBarState(:479)が _toastCts/IsSavedToastVisible に触れず・SetDirty(true) 全経路も非解除 → 1.8s内再編集で成功トースト×未保存バー同時掲示・保存直後のビュー切替で新ビューへトースト残留。②SaveError に ErrorMessages.Resolve 済み文字列を保存(:1015)= CultureChanged は SaveBarMessage を再通知(:297)するが保存値が旧言語のまま=ECO-095 教訓「値の権威主体と再導出可能性」のVM一時状態版アンチパターン。両件とも混入=7370b7d(ECO-103 fix)・潜伏0日(同日レビュー検出)。CAD=①は mock プロトタイプ簡略の沈黙(状態衛生=アプリスコープ関心・ECO-080)②は i18n 横断規約の領分=モック改版不要"
+    impacted_bom: ["src=HierarchyEditorViewModel のみ(ResetSaveBarState にトースト解除・SetDirty(true) 遷移で解除・SaveError→SaveErrorCode 保持+SaveBarMessage getter で表示時解決)", "tests=CpUiG6SaveBarTests へプローブ3本(トースト×dirty交差・トースト×LoadAsync・失敗文言×ロケール切替)先行(R5)", "CP=CP-UI-G6 へ検査ケース刻印(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=未検査ケースで赤→緑転"
+    body: 60-change-order-eco-104.md
+    notes: "gate①=不要(実装層確定)。gate②=必要(軽量)。関連=ECO-103(混入元)・ECO-095(i18n 表示時解決=立地第3様態の同族)・ECO-079/080(横断規約)"
+  - id: ECO-105
+    title: "撮影ハーネスの再実行不能 — 同一出力先で 2 回目が DuplicateTagName→NRE(ECO-103 レビュー所見 P2)"
+    type: "検査器(工具)の不具合是正(M-CAPTURE-HARNESS-052・製品コード非対象)"
+    status: staged   # 2026-07-17 起票。機械受入にハーネス実行は含まれず+R7 運用は毎回新規出力先=未検査ケース
+    golden: "n/a(製品 UI 非対象・ECO-090 前例。機械証拠=同一出力先 2 回連続実行の実測ログ)"
+    baseline: "main ad51f92"
+    findings: "maintainer レビュー所見(2026-07-17・P2・実測済み=初回成功/2回目 Program.cs:87 NRE)。db-work/vp2.db を初期化なしで再オープンし、シードヘルパ T()(:70-71)が CreateAsync の .Value! で DuplicateTagName 失敗を素通り→NRE。fail-fast(非ゼロ終了・既存 PNG 非破壊)のため誤結果を黙って出す欠陥ではない=P2 妥当。混入=7370b7d(資産化時に scratch 版構造を検収せず)"
+    impacted_bom: ["tools=CaptureHarness/Program.cs のみ(案A=起動時に db-work/ を削除して毎回新規 DB=シードが正本・前回 DB の再利用に価値なし)", "M-BOM=M-CAPTURE-HARNESS-052 受入観点へ再実行冪等を追記", "src/tests=変更なし"]
+    oracle: "固定 Oracle 不変(R6)。検証=同一出力先 2 回連続実行が両回 exit 0+PNG 6 面(実施記録へログ)"
+    body: 60-change-order-eco-105.md
+    notes: "gate①=不要。gate②=n/a。関連=ECO-103(資産化元・混入元)・ECO-090(golden n/a 前例)"
