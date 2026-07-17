@@ -66,3 +66,33 @@
 - gate②(golden): **必要(軽量・実機到達可能)**: タグをビュー階層へ配置(未保存のまま)→
   パレットで当該タグの削除を試行 → 赤字の拒否メッセージ表示 → 設定で言語 ja↔en 切替 →
   **メッセージが切替先言語へ即追随**する。
+
+## 7. `/eco-fix` 実施記録(2026-07-17)
+
+### 7.1 プローブ先行(R5)
+
+CpUiG6HierarchyEditorTests へ「削除拒否メッセージはロケール切替へ追随する」を追加
+(実アセット ja/en・dirty 配置タグの削除拒否 → SetLocale("en") → ja↔en 往復)。
+是正前= **赤**(en 切替後も ja 文言のまま=症状の実測固定)。既存 792 本は緑を起点固定。
+
+### 7.2 是正内容(§4 案A を採択 — ECO-104 1.2 と同型・真因構造の除去)
+
+- `StatusMessage`(Resolve 済み文字列の ObservableProperty)→ `StatusMessageKey`(i18n キー=権威値)へ
+  置換。ErrorCode 由来は `ErrorMessages.KeyOf` でキー化(:304)、直接キーはそのまま(:290)。
+- 公開名 `StatusMessage` は**表示時に現在ロケールで解決する算出プロパティ**として維持
+  (XAML バインド・既存テストとも不変)。OnStatusMessageKeyChanged+CultureChanged で再通知。
+- 横断規約適合(ECO-080): 文言は Loc 経由の表示時解決に一本化。
+
+### 7.3 機械受入
+
+build 0 error / **Tests 793/793**(プローブ緑転・既存 792 不変)/ Oracle 109+2skip(R6 不変)/
+validate_bom 0/0。
+
+### 7.4 セルフゴールデン(R7)= 対象外
+
+VM のみの是正(XAML 不変・メッセージの視覚様式不変=解決タイミングのみ変更)。ECO-038/104 前例。
+検証はプローブ(7.1)が担う。
+
+### 7.5 M4 要否
+
+E-BOM/M-BOM 宣言変更なし。CP-UI-G6 への検査ケース刻印は accept 時。

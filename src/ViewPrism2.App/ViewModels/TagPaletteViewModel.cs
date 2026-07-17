@@ -208,6 +208,7 @@ public sealed partial class TagPaletteViewModel : ObservableObject
             // DF-3: Loc 差し替えで全文言バインディングを再評価させる(K-AVALONIA の罠対策)
             Loc = new LocalizationProxy(localization);
             OnPropertyChanged(nameof(Loc));
+            OnPropertyChanged(nameof(StatusMessage)); // ECO-106: 常駐メッセージ(表示時解決)
             ApplyFilter();
         };
     }
@@ -226,8 +227,18 @@ public sealed partial class TagPaletteViewModel : ObservableObject
     [ObservableProperty]
     private string? _placingTagId;
 
+    /// <summary>
+    /// 常駐メッセージの i18n キー(ECO-106: 権威値はキーで保持 — Resolve 済み文字列の保持は
+    /// ロケール切替に追随できない。ECO-104 1.2 の保存バーと同型)。null=メッセージなし。
+    /// </summary>
     [ObservableProperty]
-    private string? _statusMessage;
+    private string? _statusMessageKey;
+
+    /// <summary>常駐メッセージ(表示時に現在ロケールで解決)。null=なし。</summary>
+    public string? StatusMessage =>
+        StatusMessageKey is { } key ? _localization.T(key) : null;
+
+    partial void OnStatusMessageKeyChanged(string? value) => OnPropertyChanged(nameof(StatusMessage));
 
     public bool IsEmpty => Tags.Count == 0;
 
@@ -287,7 +298,7 @@ public sealed partial class TagPaletteViewModel : ObservableObject
         // ECO-046(U-a 裁定): 未保存の階層編集に載っているタグは確認ダイアログの前に拒否(TAG-008 の外延)
         if (IsTagInUnsavedEdit?.Invoke(row.Tag.Id) == true)
         {
-            StatusMessage = _localization.T("error.tagInUnsavedEdit");
+            StatusMessageKey = "error.tagInUnsavedEdit";
             return;
         }
 
@@ -301,7 +312,7 @@ public sealed partial class TagPaletteViewModel : ObservableObject
         }
 
         var result = await _tagService.DeleteAsync(row.Tag.Id);
-        StatusMessage = result.IsSuccess ? null : ErrorMessages.Resolve(_localization, result.Error);
+        StatusMessageKey = result.IsSuccess ? null : ErrorMessages.KeyOf(result.Error);
         await LoadAsync();
         TagsChanged?.Invoke(this, EventArgs.Empty);
     }

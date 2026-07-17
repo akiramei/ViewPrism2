@@ -1592,7 +1592,7 @@ changes:
   - id: ECO-106
     title: "タグパレットの常駐メッセージが言語切替へ追随しない(ECO-104 golden 中の実機所見)"
     type: "不具合是正(ECO-046 混入・実装層)"
-    status: staged   # 2026-07-17 起票。ECO-104 §1.2(解決済み文字列の保持)と同一アンチパターンの別サーフェス
+    status: implemented   # 2026-07-17 是正+機械受入完了・golden 待ち。probe(ja↔en 往復)是正前赤→緑転。StatusMessage→StatusMessageKey(権威値)+表示時解決の算出プロパティ(公開名維持=ECO-104 1.2 と同型)。build 0/0・Tests 793/793・Oracle 109+2skip・validate 0/0。R7=対象外(VMのみ・視覚不変)
     golden: "pending(gate②=軽量・実機到達可能: dirty 配置タグの削除拒否メッセージ表示中に ja↔en 切替で即追随)"
     baseline: "main 9d0299e"
     findings: "maintainer 実機所見(2026-07-17・ECO-104 golden 基準③実施中に発見・スクリーンショットあり)。TagPaletteViewModel:290= error.tagInUnsavedEdit を解決済み文字列で StatusMessage へ保持(:304 の ErrorMessages.Resolve も同型)→ 常駐メッセージが言語切替に追随しない。混入=9a0f3c6(ECO-046・2026-07-05)=潜伏12日。マスキング=i18n lint は静的キー消費のみ検査(解決タイミングの死角)+golden は単一ロケール実施。全数調査=同イディオム約15VM・50箇所超だが脆弱クラスは常駐メッセージ(実機観測済みは本件パレット面のみ・悉皆判定は lint 候補へ送付=R3)"

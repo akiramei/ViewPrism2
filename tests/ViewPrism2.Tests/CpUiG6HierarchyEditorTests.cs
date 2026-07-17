@@ -68,6 +68,37 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
     }
 
     [Fact]
+    public async Task 削除拒否メッセージはロケール切替へ追随する()
+    {
+        // ECO-106: StatusMessage が Resolve 済み文字列だと言語切替に追随しない(ECO-104 1.2 の同族・
+        // maintainer 実機所見 2026-07-17)。実アセット ja/en で往復を検査する(表示時解決)。
+        var loc = TestLoc.Ja();
+        var tag = (await _tagService.CreateAsync("placed-unsaved-i18n", TagType.Simple)).Value!;
+        var view = (await _views.CreateAsync("V6")).Value!;
+
+        var tab = new TagsTabViewModel(_views, _tagService, _db.Tags, loc, _windows);
+        await tab.Editor.LoadAsync(view, new Dictionary<string, Tag>(StringComparer.Ordinal) { [tag.Id] = tag });
+        tab.Editor.AddNode(tag, null);
+        await tab.Palette.LoadAsync();
+        var row = Assert.Single(tab.Palette.Tags, r => r.Tag.Id == tag.Id);
+        await tab.Palette.DeleteCommand.ExecuteAsync(row);
+
+        Assert.Equal(
+            "編集中のビュー階層に配置されているタグは削除できません。配置を外すか、編集をキャンセルしてください",
+            tab.Palette.StatusMessage);
+
+        loc.SetLocale("en");
+        Assert.Equal(
+            "This tag is placed in the view hierarchy being edited and cannot be deleted. Remove the placement or cancel the edit first",
+            tab.Palette.StatusMessage);
+
+        loc.SetLocale("ja");                                   // 往復も追随
+        Assert.Equal(
+            "編集中のビュー階層に配置されているタグは削除できません。配置を外すか、編集をキャンセルしてください",
+            tab.Palette.StatusMessage);
+    }
+
+    [Fact]
     public async Task 保存済みで編集がダーティでない配置タグの削除はDBガードに委ねる()
     {
         // U-a の判定は「dirty な編集ツリー」限定 — 保存済み配置は ECO-045 の DB ガード(TagInUse)が拒否する
