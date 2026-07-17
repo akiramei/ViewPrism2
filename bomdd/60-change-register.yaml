@@ -1570,8 +1570,8 @@ changes:
   - id: ECO-104
     title: "保存バー表示状態の残欠陥 — トーストの dirty/ビュー切替への残留+保存失敗文言の言語非追随(ECO-103 レビュー所見 P2×2)"
     type: "不具合是正(ECO-103 混入・実装層)"
-    status: implemented   # 2026-07-17 是正+機械受入完了・golden 待ち。probe 2本(3検査点)是正前赤→緑転。①ResetSaveBarState/SetDirty(true) 遷移でトースト解除 ②SaveError→SaveErrorCode(権威値)+表示時解決(公開名 SaveError は算出プロパティで維持)。build 0/0・Tests 792/792・Oracle 109+2skip・validate 0/0。R7=対象外(VMのみ・視覚不変=ECO-038 前例)
-    golden: "pending(gate②=軽量: ①保存→即編集でトースト消滅 ②保存→1.8s内の別ビュー選択でトースト持ち越しなし ③dirty中の言語切替でバー文言即追随。※当初③〔保存失敗の作為〕は ECO-046 ガードにより実機到達不能=ECO-045 教訓の再犯として §6 に振替記録・SaveError 追随は機械プローブが恒久ガード。当初③の試行が ECO-106 発見の契機)"
+    status: applied   # 2026-07-17 golden 合格(maintainer 実機・改訂版基準3点)→クローズ。probe 2本(3検査点)是正前赤→緑転。①ResetSaveBarState/SetDirty(true) 遷移でトースト解除 ②SaveError→SaveErrorCode(権威値)+表示時解決(公開名 SaveError は算出プロパティで維持)。build 0/0・Tests 792/792・Oracle 109+2skip・validate 0/0。R7=対象外(VMのみ・視覚不変=ECO-038 前例)。再発防止= CP-UI-G6 に交差ケース+golden基準到達可能性の教訓刻印。派生= ECO-106(当初基準③の試行が発見契機)
+    golden: "approved(2026-07-17 maintainer 実機: 改訂版基準3点合格= ①保存→即編集でトースト消滅 ②トースト表示中のビュー切替で持ち越しなし ③dirty中の言語切替でバー文言即追随。※当初③〔保存失敗の作為〕は ECO-046 ガードにより実機到達不能=ECO-045 教訓の再犯として §6 に振替記録・SaveError 追随は機械プローブが恒久ガード。当初③の試行が ECO-106 発見の契機)"
     baseline: "main ad51f92"
     findings: "maintainer レビュー所見(2026-07-17・P2×2)。①保存トーストの解除経路がタイマのみ= ResetSaveBarState(:479)が _toastCts/IsSavedToastVisible に触れず・SetDirty(true) 全経路も非解除 → 1.8s内再編集で成功トースト×未保存バー同時掲示・保存直後のビュー切替で新ビューへトースト残留。②SaveError に ErrorMessages.Resolve 済み文字列を保存(:1015)= CultureChanged は SaveBarMessage を再通知(:297)するが保存値が旧言語のまま=ECO-095 教訓「値の権威主体と再導出可能性」のVM一時状態版アンチパターン。両件とも混入=7370b7d(ECO-103 fix)・潜伏0日(同日レビュー検出)。CAD=①は mock プロトタイプ簡略の沈黙(状態衛生=アプリスコープ関心・ECO-080)②は i18n 横断規約の領分=モック改版不要"
     impacted_bom: ["src=HierarchyEditorViewModel のみ(ResetSaveBarState にトースト解除・SetDirty(true) 遷移で解除・SaveError→SaveErrorCode 保持+SaveBarMessage getter で表示時解決)", "tests=CpUiG6SaveBarTests へプローブ3本(トースト×dirty交差・トースト×LoadAsync・失敗文言×ロケール切替)先行(R5)", "CP=CP-UI-G6 へ検査ケース刻印(accept 時)"]
