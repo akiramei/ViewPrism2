@@ -88,3 +88,54 @@
 - gate②(golden): **軽量**: 棚卸し削除後の実機スモーク(主要面= 画像/作業/タグタブ・設定・
   ビューア・バックアップ設定を ja/en で一巡し、**生キー文字列がどこにも表示されない**こと)。
   lint 3 次元の恒久ガード自体は機械(golden 対象外)。
+
+## 7. `/eco-fix` 実施記録(2026-07-17)
+
+### 7.1 プローブ先行(R5)
+
+新規 `CpI18n010AssetLintTests`(5 本)を追加し是正前を実測:
+
+- ①重複: 実資産= 緑(現在 0=起票時実測どおり)。検出能力は**合成重複フィクスチャ**の検出固定で実証
+  (ECO-078 教訓=陽性対照で空振り防止)。
+- ②未使用: **赤 640 件**(registry 適用後。粗 652 との差= viewer.tagControl.action.* 12 キーが
+  動的構築と判明)。
+- ③解決タイミング: **赤 34 サイト**(空 allowlist での全数列挙)。検出器は ECO-104/106 の是正前
+  イディオム(合成再現)で検出・var 一時使用と「=>」表示時解決の非検出を固定。
+
+**起票時記載の訂正**: §1「疑い筆頭 4 プレフィックスはコード側に前方一致文字列も不在」のうち
+`tagControl.action.` は**誤り** — ViewerViewModel:480-482 が `$"viewer.tagControl.action.{key}.name"`
+で動的構築しており使用中(起票時 grep の head_limit=12 で src 行が切れて JSON 行しか見えなかった)。
+registry 全数調査(T()/Loc[] 非リテラル引数の走査)で確定した registry は本プレフィックス 1 件のみ。
+
+### 7.2 是正内容
+
+- **①**: 生テキスト走査 lint(ja/en 重複 0 pin)+検出器ユニット。
+- **②棚卸し**: 死キー **640 件を ja/en 両資産から削除(1234→594)**。事前に tests/Oracle の参照を
+  スキャン= Oracle 参照 0(R6 安全)・Tests 参照 11 のうち実資産に依存するのは CpI18n010AssetTests の
+  Run-3 pin 5 キーのみ(原典撤去 ECO-024 系で消費者喪失=pin から除去・キー数下限 700→550 へ改訂。
+  同テストは Tests 管轄で固定 Oracle ではない)。他 6 キーはテスト自前辞書のため資産削除の影響なし。
+  削除は行単位(整形・順序保存)+JSON 再パース検証+ja/en キー集合一致は既存 lint が担保。
+- **③**: 文単位検出器+**34 サイトの根拠つき層別 allowlist** — (a) モーダル/ダイアログ 15(設定=
+  言語切替 UI と同時に開けない・再開で再解決)(b) 開くたび再構築の射影 1(ColumnPicker)
+  (c) **deferred 18= ECO-108 分離起票**(メインタブ〔ImageTab 9+WorkTab 7+Organize 1〕+設定面
+  〔SettingsViewModel.SnapshotSummary=言語切替と同居する設定画面内〕の常駐値。ImageTab の
+  CultureChanged は OnPropertyChanged(string.Empty) のみで保持値を再解決しない実測)。
+  allowlist は死亡エントリも fail(fail-closed 双方向)。
+- 横断規約適合(ECO-080): 資産削除はロジック変更なし。REQ-050 フォールバック=誤削除の安全網。
+
+### 7.3 機械受入
+
+build 0 error / **Tests 798/798**(lint 5 本込み全緑・②③赤→緑転)/ Oracle 109+2skip(R6 不変)/
+validate_bom 0/0。M4= CP-I18N-010 へ⑥(3 次元 lint)宣言+M-I18N-011 assets 契約へ資産衛生 3 次元。
+
+### 7.4 セルフゴールデン(R7)= 対象外(gate② は軽量スモークとして残置)
+
+コード面は tests/資産のみ(製品ロジック・XAML 不変)。削除キーは src 消費ゼロを lint が機械保証
+するため視覚不変の見込みだが、**誤削除の最終安全網として gate②(ja/en 主要面スモーク)は §6 どおり
+実施**(生キー文字列の出現有無は capture 並置より実機巡回が適する)。
+
+### 7.5 スコープ外所見(R3)
+
+- **ECO-108 分離起票**(§7.2 の deferred 18 サイト=常駐値の言語追随)。
+- CpUiG6SaveBarTests の間欠不合格(TestContext 競合・1/2 run)= 51-cheat-log 記帳
+  (タイミング系 flaky ファミリ 3 例目)。

@@ -191,7 +191,7 @@ mbom:
       interface_contract:
         resolve: "string T(string key, IReadOnlyDictionary<string,string>? args = null)  // OC-8。要求ロケール→ja→キー文字列"
         switch: "SetLocale(string locale) → CultureChanged イベント発火(UI が一斉再バインド)"
-        assets: "K-I18N の規約・対象ネームスペースに従い原典から変換。V1 画面の新規キーは ja 正・en 併記"
+        assets: "K-I18N の規約・対象ネームスペースに従い原典から変換。V1 画面の新規キーは ja 正・en 併記。(ECO-107)資産衛生 3 次元= 重複キー 0・未使用キー 0(src 完全一致 or 動的構築 registry)・解決済み文字列の VM 状態保持は層別 allowlist に限る(CpI18n010AssetLintTests が機械ゲート。2026-07-17 棚卸し= 原典変換の未配線残骸 640 キー削除・1234→594)"
       acceptance_refs: [CP-I18N-010, CP-UI-G5]
       fmea_refs: []
 

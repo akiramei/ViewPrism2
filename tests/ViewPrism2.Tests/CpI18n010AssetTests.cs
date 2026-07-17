@@ -22,7 +22,8 @@ public sealed class CpI18n010AssetTests
 
         Assert.True(resources.ContainsKey("ja"));
         Assert.True(resources.ContainsKey("en"));
-        Assert.True(resources["ja"].Count > 700); // 原典変換 706 キー+V1 新規キー
+        // ECO-107: 原典変換キーの未配線残骸 640 件を棚卸し削除(1234→594)。下限は現有規模の番兵。
+        Assert.True(resources["ja"].Count > 550);
         Assert.Equal(
             resources["ja"].Keys.Order(StringComparer.Ordinal),
             resources["en"].Keys.Order(StringComparer.Ordinal));
@@ -32,12 +33,12 @@ public sealed class CpI18n010AssetTests
     public void V1新規キーが両言語に存在し解決できる()
     {
         var resources = LoadAssets();
+        // ECO-107: Run-3 pin のうち 5 キー(detail.selectImagePrompt/detail.resolution/view.allImages/
+        // nodeGraph.empty/toolbar.columns)は原典撤去(ECO-024 系)で消費者を失い棚卸し削除= pin から除去
         string[] newKeys =
         [
             "folder.management", "folder.scanSummary", "folder.deleteConfirm",
             "relink.confirmMessage", "relink.commit",
-            "detail.selectImagePrompt", "detail.resolution",
-            "view.allImages", "nodeGraph.empty", "toolbar.columns",
             "error.duplicateFolderPath", "error.scanInProgress",
         ];
         foreach (var key in newKeys)
