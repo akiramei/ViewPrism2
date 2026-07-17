@@ -1622,3 +1622,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ=サイト別に表示状態×SetLocale 往復で赤→緑転"
     body: 60-change-order-eco-108.md
     notes: "gate①=不要。gate②=軽量。関連=ECO-107(列挙元・allowlist(c)層の解消でクローズ条件が連動)・ECO-104/106(設計2型の確立元)・ECO-095(表示時解決)・GF-079-01(OnPropertyChanged(string.Empty) の限界=再通知は再解決ではない)"
+  - id: ECO-109
+    title: "ファイル一覧 並び替え UI の視覚追随(mock 精緻化改版 2026-07-17 への転写)"
+    type: "CAD mock 改版追随(視覚転写のみ・ECO-076 前例と同型。動作モデル FL-003 不変)"
+    status: staged
+    golden: "pending(基準= VC-FL-1 ①〜⑥・VC-FL-2 ①〜⑤の SORT-menu.png/TB-grid.png 並置突合+VC-FL-3/4 突合結果+未ソート状態+リスト⇄アイコン切替の既存契約再確認。Avalonia 制約近似は R7 分類→golden 裁定)"
+    baseline: "main f5ad5dc"
+    findings: "maintainer 指摘(実機×mock の並び替えドロップダウン比較)→ CAD 精緻化改版納品(2026-07-17: file_list.md 視覚詳細節+VC-FL-1〜4 新設・mock SHA-256 ff98c15a…一致確認済み・captures 5 面)。工程診断= CAD 健全(権威改版)・BOM 軽微追随(acceptance へ VC-FL 参照追記)・実装=旧 mock 水準の転写のまま(逸脱でなく改版追随)。起票時実測の乖離 10 件(a〜j)= メニュー幅248/角丸12・基本情報の列グリフ灰ボックス不在・色ドット10px・種別チップ一律灰(kind 別配色なし)・アクティブ行太字なし・候補行固定38px でない・セグメント白地(mock=青地)・hover 実値未照合・バッジ太字なし・開時トリガー枠濃色なし。適合確認済み= チップは isSorted のみ条件でリスト/アイコン共通・チップ文言/バッジ「なし」・候補並び順=表示列順(mock 一致=オーダー裁定候補①解消)。波及= 並び替えメニューは WorkTabView.axaml:610- の同型複製実装(共通部品でない)→同時追随"
+    impacted_bom: ["src=ImageTabView.axaml(並び替え Popup+右クラスタ)+WorkTabView.axaml(同型面)+SortOptionVM(kind 配色露出要時)+Components.axaml(専用クラス追加時・共有クラス改変は原則回避)", "tests=headless 視覚プローブ+既存ソート系維持+R7 captures 並置(撮影ハーネス再利用)", "BOM=E-UI-BROWSE-022 acceptance へ VC-FL-1〜4 参照・M-UI-WORK-033 sort 注記(M4)", "CP=CP-UI-G6 系へ観点刻印(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。ソート動作契約(FL-001〜004・ECO-069/070 type-primary)と既存テスト全緑を維持"
+    body: 60-change-order-eco-109.md
+    notes: "gate①=不要(CAD は maintainer 改版納品済み・候補並び順は実装一致で裁定不要)。gate②=必要(golden)。既知再発点= 装飾3レイヤー転写(ECO-103 教訓3・GF-103 グリフ実高)+固定高縦Padding0 は VerticalContentAlignment 明示(ECO-040・N=3)+CP-UI-G6 歴代許容差分は再議論しない。関連=ECO-025(β 元実装)・ECO-069/070(WorkTab read-across)・ECO-076(CAD 改版追随の前例)・ECO-103(撮影ハーネス+R7)"
