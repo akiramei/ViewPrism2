@@ -17,6 +17,24 @@
 | ImageTabOrganizeViewModel | `_undoNote` |
 | SettingsViewModel | `SnapshotSummary`(**設定画面内=言語切替 UI と同居**・最有力) |
 
+### 1.1 実機顕在化(2026-07-17・ECO-107 golden スモーク中の maintainer 所見・スクリーンショットあり)
+
+en 切替後、**画像タブ**のファイル一覧列見出し(名前/サイズ/更新日)・ソートポップオーバーの候補行
++「基本」チップが**日本語のまま**。同じ列モデルを使う**作業タブは英語に追随**・列ピッカー
+(Display columns)も英語=面間の非対称が実機で確認された。
+
+- 機構(コード確定): 両タブとも `BasicColLabel`(common.name/size/modifiedDate)を**構築時に
+  焼き込む**。WorkTab は CultureChanged で `RebuildBasicSortColumns()+BuildSortModels()`
+  (GF-079-01 是正)を持ち追随するが、**ImageTab には同等の再構築がない**(ハンドラは
+  OnPropertyChanged(string.Empty)+ChipStrip のみ)。是正= WorkTab との**対称化**が本命。
+- ECO-107 の退行ではない(証拠: 表示は生キーでなく正しい ja 訳・ja/en 同数削除でキー集合一致
+  lint 緑・製品コード無変更)。
+- **本サイト(列見出し/ソートモデルの焼き込み)は §1 の 18 サイトに含まれない** — lint③ の既知の
+  限界(「=>」式メソッド `BasicColLabel` 経由の間接解決+コンストラクタ/初期化子への格納は代入
+  検出に映らない)による。**本 ECO のスコープは「18 サイト+ImageTab 列/ソートモデルの再構築
+  対称化」**とし、fix 時に間接解決サイトの追加走査(BasicColLabel/LabelFor 様式の呼び出し元
+  棚卸し)で取り残しを掃射する。
+
 ## 2. 工程診断 — 実装層(横断規約= REQ-051 言語即時反映への逸脱疑い)。gate① 不要
 
 - **確定実測(ECO-107 §7.2)**: ImageTabViewModel の CultureChanged ハンドラは
