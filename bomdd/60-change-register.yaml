@@ -1581,7 +1581,7 @@ changes:
   - id: ECO-105
     title: "撮影ハーネスの再実行不能 — 同一出力先で 2 回目が DuplicateTagName→NRE(ECO-103 レビュー所見 P2)"
     type: "検査器(工具)の不具合是正(M-CAPTURE-HARNESS-052・製品コード非対象)"
-    status: staged   # 2026-07-17 起票。機械受入にハーネス実行は含まれず+R7 運用は毎回新規出力先=未検査ケース
+    status: implemented   # 2026-07-17 是正+機械証拠完了・golden n/a=accept 可。案A(起動時 db-work/ 削除=毎回新規 DB)+M-CAPTURE-HARNESS-052 determinism へ再実行冪等追記。実測=是正前 RUN2 exit1(:87 NRE)再現→是正後 失敗DB残存からの再実行+連続再実行とも exit 0+PNG 6面。build 0/0・Tests 793/793・Oracle 109+2skip・validate 0/0(製品コード無変更)
     golden: "n/a(製品 UI 非対象・ECO-090 前例。機械証拠=同一出力先 2 回連続実行の実測ログ)"
     baseline: "main ad51f92"
     findings: "maintainer レビュー所見(2026-07-17・P2・実測済み=初回成功/2回目 Program.cs:87 NRE)。db-work/vp2.db を初期化なしで再オープンし、シードヘルパ T()(:70-71)が CreateAsync の .Value! で DuplicateTagName 失敗を素通り→NRE。fail-fast(非ゼロ終了・既存 PNG 非破壊)のため誤結果を黙って出す欠陥ではない=P2 妥当。混入=7370b7d(資産化時に scratch 版構造を検収せず)"

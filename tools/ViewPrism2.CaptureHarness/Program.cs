@@ -58,7 +58,14 @@ internal static class Program
 
     private static async Task RunAsync(string outDir)
     {
+        // ECO-105: 前回 run の DB を引き継がず毎回新規に作る(シードが正本=決定論)。
+        // 既存 DB の再オープンは同一出力先の再実行で DuplicateTagName→NRE になっていた。
         var dbDir = Path.Combine(outDir, "db-work");
+        if (Directory.Exists(dbDir))
+        {
+            Directory.Delete(dbDir, recursive: true);
+        }
+
         Directory.CreateDirectory(dbDir);
         using var manager = DatabaseManager.Open(Path.Combine(dbDir, "vp2.db"), new SystemClock());
         var tagRepo = new TagRepository(manager);

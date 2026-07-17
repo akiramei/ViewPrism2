@@ -593,7 +593,7 @@ mbom:
         command: "dotnet run --project tools/ViewPrism2.CaptureHarness -- <出力ディレクトリ>(省略時=実行ディレクトリ/captures)"
         provenance: "来歴= ECO-099 R7 で開発(scratch)→ ECO-099(配置モデル統一)/ECO-100(D&D)/ECO-103(保存モデル)のセルフゴールデンに実運用 → ECO-103 で track。様式= ECO-100 教訓3「headless+Skia self-golden」(BomDD 昇格候補=playbook §8.3 の実施手段拡充)"
         rendering: "実 App スタイル(App.axaml)+UseSkia+UseHeadless(UseHeadlessDrawing=false)で CaptureRenderedFrame→PNG。テストホスト(M-HARNESS-015=UseHeadlessDrawing=true)では画素が取れないため独立プロセス。ホバー=MouseMove・Flyout=ShowAt・Popup は overlay 合成で本体フレームに写る"
-        determinism: "シード= mock(タグ管理.dc.html tagDefs/views)の転記・Date/乱数なし・一時 DB は出力ディレクトリ配下に生成。検査用タイマ可変(GuardAttentionRevertDelay/SavedToastDuration)で dirty/attention/toast/NAV の状態を静止撮影"
+        determinism: "シード= mock(タグ管理.dc.html tagDefs/views)の転記・Date/乱数なし・一時 DB は出力ディレクトリ配下に生成。検査用タイマ可変(GuardAttentionRevertDelay/SavedToastDuration)で dirty/attention/toast/NAV の状態を静止撮影。(ECO-105)同一出力先での再実行冪等= 起動時に db-work/ を削除して毎回新規 DB(シードが正本・前回 DB の再利用に価値なし。既存 DB 再オープンは DuplicateTagName→NRE の実測実績=検証は 2 回連続実行が両回 exit 0+PNG 6 面)"
         public_safety: "(ECO-057)ユーザー絶対パスをリテラルで持たない(出力先=引数 or AppContext.BaseDirectory)。出力 PNG はリポ外(scratch/artifacts 経由)へ置き worktree に残さない"
       acceptance_refs: []
       fmea_refs: []
