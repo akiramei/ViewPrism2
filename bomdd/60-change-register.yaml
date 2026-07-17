@@ -1589,3 +1589,14 @@ changes:
     oracle: "固定 Oracle 不変(R6)。検証=同一出力先 2 回連続実行が両回 exit 0+PNG 6 面(実施記録へログ)"
     body: 60-change-order-eco-105.md
     notes: "gate①=不要。gate②=n/a。関連=ECO-103(資産化元・混入元)・ECO-090(golden n/a 前例)"
+  - id: ECO-106
+    title: "タグパレットの常駐メッセージが言語切替へ追随しない(ECO-104 golden 中の実機所見)"
+    type: "不具合是正(ECO-046 混入・実装層)"
+    status: staged   # 2026-07-17 起票。ECO-104 §1.2(解決済み文字列の保持)と同一アンチパターンの別サーフェス
+    golden: "pending(gate②=軽量・実機到達可能: dirty 配置タグの削除拒否メッセージ表示中に ja↔en 切替で即追随)"
+    baseline: "main 9d0299e"
+    findings: "maintainer 実機所見(2026-07-17・ECO-104 golden 基準③実施中に発見・スクリーンショットあり)。TagPaletteViewModel:290= error.tagInUnsavedEdit を解決済み文字列で StatusMessage へ保持(:304 の ErrorMessages.Resolve も同型)→ 常駐メッセージが言語切替に追随しない。混入=9a0f3c6(ECO-046・2026-07-05)=潜伏12日。マスキング=i18n lint は静的キー消費のみ検査(解決タイミングの死角)+golden は単一ロケール実施。全数調査=同イディオム約15VM・50箇所超だが脆弱クラスは常駐メッセージ(実機観測済みは本件パレット面のみ・悉皆判定は lint 候補へ送付=R3)"
+    impacted_bom: ["src=TagPaletteViewModel のみ(StatusMessage を StatusMessageKey 権威値+表示時解決の算出プロパティへ=ECO-104 1.2 と同型・公開名維持)", "tests=プローブ1本(削除拒否メッセージ×ja↔en 往復)先行(R5)", "CP=CP-UI-G6 へ検査ケース刻印(accept 時)", "lint候補=解決結果の ObservableProperty 代入検出を i18n lint 拡充へ合流(記録のみ)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=未検査ケースで赤→緑転"
+    body: 60-change-order-eco-106.md
+    notes: "gate①=不要。gate②=必要(軽量)。関連=ECO-046(混入元)・ECO-104(同族の保存バー面=先行是正)・ECO-095(表示時解決)・ECO-079/080(i18n 3層運用・lint の解決タイミング死角)"
