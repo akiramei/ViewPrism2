@@ -250,6 +250,60 @@ public sealed class CpUiG6SaveBarTests : IDisposable
         }, CancellationToken.None);
     }
 
+    // ---- ECO-104: トーストは状態遷移でも解除される(1.1)+失敗文言のロケール追随(1.2) ----
+
+    [Fact]
+    public async Task 保存後の再編集とビュー切替でトーストは即時消える()
+    {
+        // ECO-104(1.1): 解除経路がタイマのみだと、1.8s 内の再編集で成功トースト×未保存バーの
+        // 矛盾掲示・クリーン直後のビュー切替で新ビューへトーストが残留する。
+        // タイマは凍結し、状態遷移側の解除責務だけを検査する。
+        var (tab, tag, _) = await SetupAsync();
+        tab.Editor.SavedToastDuration = TimeSpan.FromHours(1);
+
+        tab.Editor.AddNode(tag, null);
+        await ((IAsyncRelayCommand)tab.Editor.SaveCommand).ExecuteAsync(null);
+        Assert.True(tab.Editor.IsSavedToastVisible);
+
+        tab.Editor.AddNode(tag, null);                 // 1.8s 内の再編集(dirty 遷移)
+        Assert.False(tab.Editor.IsSavedToastVisible);  // 「保存しました」と「未保存」を同時掲示しない
+
+        await ((IAsyncRelayCommand)tab.Editor.SaveCommand).ExecuteAsync(null);
+        Assert.True(tab.Editor.IsSavedToastVisible);
+
+        var second = (await _views.CreateAsync("W")).Value!;
+        await tab.ReloadViewsAsync();
+        var rowW = tab.Views.Single(r => r.View.Id == second.Id);
+        await ((IAsyncRelayCommand)tab.SelectViewCommand).ExecuteAsync(rowW); // クリーン=遷移可
+        Assert.Equal(second.Id, tab.Editor.View?.Id);
+        Assert.False(tab.Editor.IsSavedToastVisible);  // 前ビューの成功トーストを持ち越さない
+    }
+
+    [Fact]
+    public async Task 保存失敗文言はロケール切替へ追随する()
+    {
+        // ECO-104(1.2): SaveError が Resolve 済み文字列だと CultureChanged 再通知でも旧言語のまま
+        // (ECO-095「値の権威主体と再導出可能性」の VM 一時状態版)。
+        var loc = TestLoc.Ja();
+        var tab = new TagsTabViewModel(_views, _tagService, _db.Tags, loc, _windows);
+        await _views.CreateAsync("VL");
+        var tag = (await _tagService.CreateAsync("タグL", TagType.Simple)).Value!;
+        await tab.EnsureLoadedAsync();
+        await ((IAsyncRelayCommand)tab.SelectViewCommand).ExecuteAsync(tab.Views.Single());
+
+        tab.Editor.AddNode(tag, null);
+        await _db.Tags.DeleteAsync(tag.Id);            // 参照切れ(REQ-083 で保存拒否= error.notFound)
+        await ((IAsyncRelayCommand)tab.Editor.SaveCommand).ExecuteAsync(null);
+        Assert.True(tab.Editor.IsSaveBarAttention);
+        Assert.Equal("対象が見つかりません", tab.Editor.SaveBarMessage);
+
+        loc.SetLocale("en");
+        Assert.Equal("Target not found", tab.Editor.SaveBarMessage); // 表示時解決(現在ロケール)
+
+        loc.SetLocale("ja");                           // 往復も追随
+        Assert.Equal("対象が見つかりません", tab.Editor.SaveBarMessage);
+    }
+
     // ---- 視覚転写(GF-103-01/02): ボタン文言の縦中央+ドットのハローリング(VC-TAG-16②) ----
 
     [Fact]

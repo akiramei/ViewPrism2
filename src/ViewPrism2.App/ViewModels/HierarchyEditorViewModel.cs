@@ -295,6 +295,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
             OnPropertyChanged(nameof(PlacingBannerText));
             OnPropertyChanged(nameof(InsertBannerText)); // ECO-100: 移動中帯
             OnPropertyChanged(nameof(SaveBarMessage));   // ECO-103: 保存バー文言
+            OnPropertyChanged(nameof(SaveError));        // ECO-104: 失敗文言(表示時解決)
             OnPropertyChanged(nameof(NodeCountText));
             foreach (var node in Flatten())
             {
@@ -393,14 +394,20 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
     private bool _isSavedToastVisible;
 
     /// <summary>
-    /// 保存失敗の理由(TAG-016 裁定(iv))。null=失敗なし。attention 様式でバーに提示し、
+    /// 保存失敗の理由コード(TAG-016 裁定(iv))。null=失敗なし。attention 様式でバーに提示し、
     /// 遷移ガードの 700ms と違い**自動復帰しない**(次の保存/破棄/再読込まで維持)。
+    /// ECO-104: 権威値はコードで保持 — Resolve 済み文字列の保持はロケール切替に追随できない
+    /// (ECO-095「値の権威主体と再導出可能性」)。
     /// </summary>
     [ObservableProperty]
-    private string? _saveError;
+    private ErrorCode? _saveErrorCode;
+
+    /// <summary>保存失敗の表示文言(表示時に現在ロケールで解決)。null=失敗なし。</summary>
+    public string? SaveError =>
+        SaveErrorCode is { } code ? ErrorMessages.Resolve(_localization, code) : null;
 
     /// <summary>保存バーの attention 様式(遷移ガード or 保存失敗・VC-TAG-16③)。</summary>
-    public bool IsSaveBarAttention => IsGuardAttention || SaveError is not null;
+    public bool IsSaveBarAttention => IsGuardAttention || SaveErrorCode is not null;
 
     /// <summary>保存バーのメッセージ。優先度= 失敗理由 > ガード文言 > 通常文言。</summary>
     public string SaveBarMessage => SaveError
@@ -412,8 +419,9 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(SaveBarMessage));
     }
 
-    partial void OnSaveErrorChanged(string? value)
+    partial void OnSaveErrorCodeChanged(ErrorCode? value)
     {
+        OnPropertyChanged(nameof(SaveError));
         OnPropertyChanged(nameof(IsSaveBarAttention));
         OnPropertyChanged(nameof(SaveBarMessage));
     }
@@ -475,12 +483,15 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         IsSavedToastVisible = false;
     }
 
-    /// <summary>保存バー系の一時状態を全解除(再読込・破棄・ビュー切替時)。</summary>
+    /// <summary>保存バー/トースト系の一時状態を全解除(再読込・破棄・ビュー切替時)。</summary>
     private void ResetSaveBarState()
     {
         _attentionCts?.Cancel();
         IsGuardAttention = false;
-        SaveError = null;
+        SaveErrorCode = null;
+        // ECO-104: トーストも解除 — 前ビューの成功確認を新ビューへ持ち越さない
+        _toastCts?.Cancel();
+        IsSavedToastVisible = false;
     }
 
     // ---- ECO-100: 既存配置行の並べ替え・付け替え D&D(TAG-014 実装確定)。
@@ -1012,7 +1023,7 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
         if (!result.IsSuccess)
         {
             // ECO-103/TAG-016(iv): 失敗理由はバーの attention 様式で提示(次の操作まで維持)
-            SaveError = ErrorMessages.Resolve(_localization, result.Error);
+            SaveErrorCode = result.Error;
             return;
         }
 
@@ -1041,6 +1052,14 @@ public sealed partial class HierarchyEditorViewModel : ObservableObject
 
     private void SetDirty(bool value)
     {
+        if (value)
+        {
+            // ECO-104: トーストはクリーン状態の一時確認 — dirty 遷移で即時解除
+            //(「保存しました」と「未保存の変更があります」を同時掲示しない)
+            _toastCts?.Cancel();
+            IsSavedToastVisible = false;
+        }
+
         IsDirty = value;
         SaveCommand.NotifyCanExecuteChanged();
         CancelCommand.NotifyCanExecuteChanged();

@@ -1570,7 +1570,7 @@ changes:
   - id: ECO-104
     title: "保存バー表示状態の残欠陥 — トーストの dirty/ビュー切替への残留+保存失敗文言の言語非追随(ECO-103 レビュー所見 P2×2)"
     type: "不具合是正(ECO-103 混入・実装層)"
-    status: staged   # 2026-07-17 起票。機械受入全緑=既存プローブの未検査ケース(保存↔再編集/ビュー切替の交差・失敗表示中のロケール切替)
+    status: implemented   # 2026-07-17 是正+機械受入完了・golden 待ち。probe 2本(3検査点)是正前赤→緑転。①ResetSaveBarState/SetDirty(true) 遷移でトースト解除 ②SaveError→SaveErrorCode(権威値)+表示時解決(公開名 SaveError は算出プロパティで維持)。build 0/0・Tests 792/792・Oracle 109+2skip・validate 0/0。R7=対象外(VMのみ・視覚不変=ECO-038 前例)
     golden: "pending(gate②=軽量: 保存→即編集でトースト消滅・保存→1.8s内の別ビュー選択でトースト持ち越しなし・失敗表示中の言語切替で文言追随)"
     baseline: "main ad51f92"
     findings: "maintainer レビュー所見(2026-07-17・P2×2)。①保存トーストの解除経路がタイマのみ= ResetSaveBarState(:479)が _toastCts/IsSavedToastVisible に触れず・SetDirty(true) 全経路も非解除 → 1.8s内再編集で成功トースト×未保存バー同時掲示・保存直後のビュー切替で新ビューへトースト残留。②SaveError に ErrorMessages.Resolve 済み文字列を保存(:1015)= CultureChanged は SaveBarMessage を再通知(:297)するが保存値が旧言語のまま=ECO-095 教訓「値の権威主体と再導出可能性」のVM一時状態版アンチパターン。両件とも混入=7370b7d(ECO-103 fix)・潜伏0日(同日レビュー検出)。CAD=①は mock プロトタイプ簡略の沈黙(状態衛生=アプリスコープ関心・ECO-080)②は i18n 横断規約の領分=モック改版不要"

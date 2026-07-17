@@ -79,3 +79,44 @@
 - gate②(golden): **必要(軽量)**: 実機で ①保存→即編集でトーストが消えバーのみになる
   ②保存→1.8s 内に別ビュー選択でトーストが新ビューに残らない ③保存失敗表示中に設定で言語切替
   → バー文言が追随する。
+
+## 7. `/eco-fix` 実施記録(2026-07-17)
+
+### 7.1 プローブ先行(R5)
+
+CpUiG6SaveBarTests へ 2 本(3 検査点)追加し、是正前赤を実測:
+
+- 「保存後の再編集とビュー切替でトーストは即時消える」(タイマ凍結=SavedToastDuration 1h で
+  状態遷移側の解除責務だけを検査)→ **赤**(再編集後も IsSavedToastVisible=true)。
+- 「保存失敗文言はロケール切替へ追随する」(参照切れ= error.notFound・ja↔en 往復)→ **赤**
+  (SetLocale("en") 後も ja 文言のまま)。
+
+既存 790 本は緑を起点固定。
+
+### 7.2 是正内容(§4 案A+ErrorCode 保持を採択 — 真因構造の除去)
+
+- **1.1**: `ResetSaveBarState()` へトースト解除(`_toastCts?.Cancel()`+`IsSavedToastVisible=false`)を
+  追加(再読込・破棄・ビュー切替で持ち越さない)+`SetDirty(true)` 遷移で同解除
+  (「保存しました」×「未保存」の矛盾掲示を状態遷移で構造的に排除)。SaveAsync 成功経路は
+  Reset→ShowSavedToast の既存順のため影響なし。
+- **1.2**: `SaveError`(Resolve 済み文字列の保持)→ `SaveErrorCode`(ErrorCode?=権威値)へ置換し、
+  `SaveError` は**表示時に現在ロケールで解決する算出プロパティ**へ(ECO-095「値の権威主体と
+  再導出可能性」準拠)。`IsSaveBarAttention` は code 有無判定へ。CultureChanged で SaveError も再通知。
+  公開名 `SaveError`(string?)は維持=既存テスト・意味論とも不変。
+- 横断規約適合(ECO-080): 文言は Loc/ErrorMessages 経由の表示時解決に一本化(直書きなし)。
+
+### 7.3 機械受入
+
+build 0 error / **Tests 792/792**(プローブ 2 本緑転・既存 790 不変)/ Oracle 109+2skip(R6 不変)/
+validate_bom 0/0。
+
+### 7.4 セルフゴールデン(R7)= 対象外
+
+VM のみの是正(XAML 不変・トースト/バーの視覚様式は不変=状態遷移のタイミングのみ変更)。
+静止 capture に差分が出ない種別のため R7 並置は非適用(ECO-038 前例= VM 内部欠陥)。
+検証は headless プローブ(7.1)が担う。
+
+### 7.5 M4 要否
+
+E-BOM/M-BOM 宣言変更なし(E-UI-NODEGRAPH-025 の保存モデル invariant の範囲内)。CP-UI-G6 への
+検査ケース刻印は accept 時(クローズ 3 点セット)。
