@@ -1643,4 +1643,4 @@ changes:
     impacted_bom: ["CAD=../ViewPrismUI docs/screens/image_tab.md layoutInvariant 行87 精緻化(裁定文面・CAD 先行)", "src=ImageTabView.axaml.cs のみ見込み(モード遷移フック+先頭可視アイテムのアンカー補正。XAML/VM/Core 無変更見込み)", "tests=headless probe(開閉前後で先頭可視アイテム不変・是正前赤=R5)", "BOM=E-UI-BROWSE-022 acceptance へアンカー契約(M4)", "CP=CP-UI-G1 系へ観点刻印(accept 時)"]
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=未検査ケース(開閉×アンカー)で赤→緑転"
     body: 60-change-order-eco-110.md
-    notes: "gate①=必要(案A=先頭可視アンカー推奨/案B=+選択優先(開始時は選択不可で増分薄)/案C=現状追認は非推奨+適用範囲 a=右ペイン開閉のみ推奨/b=左ペイン折畳み・リサイズへ一般化)。gate②=必要(実機シナリオ。R7 captures は動作契約のため対象外=probe 主体)。関連=ECO-017(閲覧=選択不可)・ECO-026(ItemsRepeater 仮想化グリッド)・ECO-027(右ペイン開閉×ツールバー収納=行85 の隣接不変条件)"
+    notes: "gate①=裁定済み(2026-07-18 maintainer: 案A=先頭可視アイテムアンカー+適用範囲 a=右ペイン開閉のみ。mock 実挙動を Chrome で確認=overflow-anchor 既定の自然充足を実測→疑いを確定へ昇格。CAD 改稿=ViewPrismUI 81deead・image_tab.md layoutInvariant 行87 精緻化)。gate②=必要(実機シナリオ。R7 captures は動作契約のため対象外=probe 主体)。関連=ECO-017(閲覧=選択不可)・ECO-026(ItemsRepeater 仮想化グリッド)・ECO-027(右ペイン開閉×ツールバー収納=行85 の隣接不変条件)"
