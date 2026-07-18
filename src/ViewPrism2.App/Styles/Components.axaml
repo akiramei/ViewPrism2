@@ -1580,6 +1580,9 @@
     <Setter Property="Height" Value="38" />
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <!-- GF-109-01: menuRow の Left を上書きし内容を全幅化。Dock=Right の方向矢印を
+         行末固定にする(mock margin-left:auto。Left のままだと内容の自然幅に縮み矢印がチップ直後に来る) -->
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
   </Style>
   <Style Selector="Button.sortOpt:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#F6F8FB" />

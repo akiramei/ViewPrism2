@@ -174,6 +174,21 @@ p=チップ radius14/黒文字→radius9/青太字/全体クリック)。
 **WorkTab(原器 captures なし)**: 同型 XAML 転写+probe C(幅 252・列グリフ・基本チップ・セグメント
 配色)機械検査で確認。副文言は view.sortFromBasicInfo(基本 3 列限定の意味論=既存)。
 
+### 6.5 GF-109-01: 方向矢印の行末配置(golden 所見・2026-07-18)
+
+- **所見**(maintainer 実機×mock 並置): アクティブ候補行の方向矢印が実機では種別チップ直後・
+  mock では行末(右端)。意図した差ではなく**転写漏れ**。
+- **R7 素通りの理由**(検査の谷間): probe と並置は矢印の「存在」と「回転」を見たが「行末配置」を
+  見ていなかった。原因= menuRow の `HorizontalContentAlignment=Left` で DockPanel が内容の自然幅に
+  縮み、`Dock=Right` が「内容の右端」に退化(mock は `margin-left:auto` で行全幅)。
+- **プローブ**: 実レイアウトで矢印右端と行右端の距離を実測(TranslatePoint)。是正前実測=
+  行幅 236 − 矢印右端 126 = 右余白 **110px**(期待 10 前後)で赤。
+- **是正**: sortOpt へ `HorizontalContentAlignment=Stretch`(Components 共通スタイル 1 箇所=両面同時)。
+  是正後 Tests 802/802・Oracle 109+2skip・validate 0/0・再撮影で行末固定を確認。
+- **教訓(accept 時 CP 刻印候補)**: 装飾 3 レイヤー(ECO-103)の「整列」は存在検査で代用できない —
+  端寄せ・中央寄せは**距離の実測**で検査する(Bounds/TranslatePoint)。Left 系コンテンツ整列の中の
+  Dock=Right は自然幅縮退で沈黙する。
+
 ## §7 残ゲート(fix 後)
 
 - gate①(CAD 裁定): **不要**(CAD 改版は maintainer 納品済み・裁定候補①=候補並び順は実装一致で解消)。

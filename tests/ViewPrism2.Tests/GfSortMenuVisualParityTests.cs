@@ -141,6 +141,14 @@ public sealed class GfSortMenuVisualParityTests : IDisposable
                 var arrow = basicRow.GetLogicalDescendants().OfType<PathIcon>().FirstOrDefault(p => p.IsVisible);
                 Assert.True(arrow is not null, "VC-FL-1④: アクティブ行の方向矢印が無い");
 
+                // GF-109-01(maintainer 実機所見 2026-07-18): 矢印は行末(右端)固定=mock margin-left:auto。
+                // 実レイアウトで矢印右端と行右端の距離を実測(存在検査は Left 寄せ縮退を素通りした)
+                var arrowRight = arrow!.TranslatePoint(new Point(arrow.Bounds.Width, 0), basicRow);
+                Assert.True(arrowRight is not null, "GF-109-01: 矢印の座標変換に失敗");
+                var gap = basicRow.Bounds.Width - arrowRight!.Value.X;
+                Assert.True(gap is >= 0 and <= 16,
+                    $"GF-109-01: 方向矢印が行末に無い(行幅 {basicRow.Bounds.Width} − 矢印右端 {arrowRight.Value.X} = 右余白 {gap}。期待=右 Padding 10 前後)");
+
                 // VC-FL-1⑤: 昇順/降順セグメント=アクティブ青地 #EAF1FE・非アクティブ灰地 #F4F6FA(既定=昇順)
                 var asc = menu.GetLogicalDescendants().OfType<Button>()
                     .First(b => b.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "昇順"));
