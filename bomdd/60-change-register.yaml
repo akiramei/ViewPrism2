@@ -1644,3 +1644,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=未検査ケース(開閉×アンカー)で赤→緑転"
     body: 60-change-order-eco-110.md
     notes: "gate①=裁定済み(2026-07-18 maintainer: 案A=先頭可視アイテムアンカー+適用範囲 a=右ペイン開閉のみ。mock 実挙動を Chrome で確認=overflow-anchor 既定の自然充足を実測→疑いを確定へ昇格。CAD 改稿=ViewPrismUI 81deead・image_tab.md layoutInvariant 行87 精緻化)。gate②=必要(実機シナリオ。R7 captures は動作契約のため対象外=probe 主体)。関連=ECO-017(閲覧=選択不可)・ECO-026(ItemsRepeater 仮想化グリッド)・ECO-027(右ペイン開閉×ツールバー収納=行85 の隣接不変条件)"
+  - id: ECO-111
+    title: "廃止予定 API TextBox.Watermark の使用(AVLN5001 ビルド警告・PlaceholderText へ追随)"
+    type: "実装規約是正(廃止 API リネーム追随・視覚/動作不変)"
+    status: staged
+    golden: "n/a 見込み(視覚・動作不変の API リネーム。検収=機械証拠: 是正前ビルドログ AVLN5001 1件→是正後 0件。ECO-090/105 前例)"
+    baseline: "main ea7c83b"
+    findings: "maintainer 指摘(2026-07-18)。Avalonia 12 で TextBox.Watermark が Obsolete(後継 PlaceholderText=機能等価リネーム)。使用は src 全体で LabeledChipStrip.axaml:68 の 1 箇所のみ(起票時 grep 全数調査)。混入= bf96bf0(ECO-091)で導入→ 8e866a9(ECO-094 共有部品化)で移設。滞留要因=機械受入基準が 0 error で警告を数えない。テスト側 CpI18n010TabBindingTests の検査属性リストは Watermark/PlaceholderText 両収載=変更不要。Watermark 参照スタイルセレクタなし(grep 0件)"
+    impacted_bom: ["src=LabeledChipStrip.axaml 1 行(Watermark→PlaceholderText。SC-CHIPSTRIP-001 宣言不変)", "tests/BOM/CP=変更なし見込み"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。検収=是正前後ビルドログの AVLN5001 件数(1→0)+機械受入 4 点全緑"
+    body: 60-change-order-eco-111.md
+    notes: "gate①=不要(実装層確定)。gate②=n/a 見込み(機械証拠検収)。関連=ECO-091(混入元)・ECO-094(移設)・ECO-105(golden n/a 前例)・K-AVALONIA(実装規約層)"
