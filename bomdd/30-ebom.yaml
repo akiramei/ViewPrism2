@@ -449,6 +449,7 @@ ebom:
         - (ECO-026/#2) 表示形式(grid/list)切替は `_layout` と表示切替のみ=同一データの `Items` を作り直さない(SetGrid/SetList で全件 ImageItemVM+BuildCells を再構築しない)
         - (ECO-026/#4) タグ列セルの値取得は画像ごとの tagId→値 辞書で O(1)(行×列×タグ数の線形探索を排除)。セル表示内容は不変
         - (ECO-026/#5) 表示列ライブ編集は列定義+各行セル(BuildCells)の再構築で足り、フォルダ/チップ/母集合の全 Recompute を回さない(除去列がソート中の解除は維持)
+        - (ECO-110/CAD image_tab.md layoutInvariant「右ペインの開閉が中央を壊さない」精緻化 2026-07-18) グリッド表示は文脈モード(タグ編集/整理)の右ペイン開閉で中央幅が変わっても、開閉直前の**先頭完全可視アイテムをビューポート先頭付近へ維持**する(保存対象=可視コンテンツ・ピクセルオフセット保持は非充足。先頭表示中は無補正)。実装=View 局所の 3 段構造(レイアウト確定ごとの常時追跡→ShowRightPane エッジで採用→一度きり復元。Recompute が Items 再構築後に一括通知するため通知時点実測は不成立)。適用範囲=右ペイン開閉のみ(左ペイン折畳み/リサイズへの一般化は拡張裁定=ECO-110 サブ裁定 a)。検査= CpUiG1GridScrollAnchorTests
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022, CP-COLPICKER-025, CP-NFR-026]
       fmea_refs: [FMEA-013]
 

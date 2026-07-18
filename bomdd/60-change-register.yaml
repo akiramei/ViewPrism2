@@ -1636,8 +1636,8 @@ changes:
   - id: ECO-110
     title: "右ペイン開閉時のグリッド作業対象喪失 — スクロールアンカー契約の未定義(gate① 裁定要)"
     type: "不具合是正候補(UX・CAD layoutInvariant の保存対象曖昧)"
-    status: implemented   # 2026-07-18 是正+機械受入完了・golden 待ち。案A=View 3段構造(常時追跡→エッジ採用→一度きり復元)。probe 4本(開edit/開organize/閉=赤→緑転・先頭ガード)。fix 中確定= Recompute が Items 再構築後に一括通知→通知時点実測は不成立・アンカー同定は Name。因果検証=エッジ採用の一時無効化で赤へ戻る実測。build 0/0・Tests 806/806・Oracle 109+2skip・validate 0/0。R7=対象外(視覚不変・動作契約)
-    golden: "pending(gate① 裁定後の fix 完了時に基準提示。実機シナリオ=グリッドで対象画像を視認→モード開始/終了で対象が可視のまま。R7 captures は動作契約のため対象外=headless probe 主体)"
+    status: applied   # 2026-07-18 golden 合格(maintainer 実機・基準5点)→クローズ。案A=View 3段構造(常時追跡→エッジ採用→一度きり復元)。probe 4本(開edit/開organize/閉=赤→緑転・先頭ガード)。fix 中確定= Recompute が Items 再構築後に一括通知→通知時点実測は不成立・アンカー同定は Name。因果検証=エッジ採用の一時無効化で赤へ戻る実測。build 0/0・Tests 806/806・Oracle 109+2skip・validate 0/0。R7=対象外(視覚不変・動作契約)。再発防止= CP-UI-G1 刻印+E-UI-BROWSE-022 acceptance へアンカー契約(M4)
+    golden: "approved(2026-07-18 maintainer 実機・§7.4 基準5点: ①タグ編集開始で先頭画像維持 ②整理開始でも維持 ③モード終了(逆方向再流動)でも維持 ④先頭表示中の開閉は無補正 ⑤リスト表示/グリッド既存操作の退行なし)"
     baseline: "main 288ef9f"
     findings: "maintainer UX 所見(2026-07-18)。グリッド表示で文脈モード(タグ編集/整理)開始→右ペイン(Dock Right 幅344・ImageTabView.axaml:110/:314)で中央幅が縮み UniformGridLayout が再流動→ピクセルオフセットは保持されるが同オフセットの指す内容が変わり、視認していた画像がスクロールアウト=作業対象喪失。終了時も逆方向で同型。リスト表示は行全幅+行高固定で症状なし。工程診断= CAD 曖昧が根: image_tab.md layoutInvariant 行87「右ペインの開閉が中央を壊さない…スクロール位置…が破綻しない」の保存対象が (a)オフセット か (b)可視コンテンツ か未規定 — 現実装は (a) 充足/(b) 破り。BOM= E-UI-BROWSE-022 acceptance に開閉×スクロール保全の観点なし。実装= アンカー処理皆無(Offset/BringIntoView 0 ヒット実測)。疑い(未検証)= mock は CSS overflow-anchor 既定でブラウザが先頭可視要素を自動維持=CAD は暗黙に (b) 意図の可能性。事実= 閲覧時は選択不可(ECO-017)のためモード開始時の手掛かりは視認位置のみ"
     impacted_bom: ["CAD=../ViewPrismUI docs/screens/image_tab.md layoutInvariant 行87 精緻化(裁定文面・CAD 先行)", "src=ImageTabView.axaml.cs のみ見込み(モード遷移フック+先頭可視アイテムのアンカー補正。XAML/VM/Core 無変更見込み)", "tests=headless probe(開閉前後で先頭可視アイテム不変・是正前赤=R5)", "BOM=E-UI-BROWSE-022 acceptance へアンカー契約(M4)", "CP=CP-UI-G1 系へ観点刻印(accept 時)"]
