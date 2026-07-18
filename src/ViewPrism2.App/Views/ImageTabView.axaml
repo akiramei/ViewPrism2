@@ -1046,8 +1046,8 @@
              ItemsRepeater/UniformGridLayout は別 NuGet Avalonia.Controls.ItemsRepeater(12.0.0)。
              MinItemHeight=206 はソート項目タイル込みの最大セル高でクリップ回避(無ソート時は下方に僅かな余白)。
              選択はコード側 PointerPressed(OnItemPressed)維持=セル DataTemplate は不変・視覚は maintainer 実機 golden 再確認)。 -->
-        <ScrollViewer IsVisible="{Binding ShowBrowseGrid}">
-          <ItemsRepeater ItemsSource="{Binding Items}" Margin="11">
+        <ScrollViewer x:Name="BrowseGridScroll" IsVisible="{Binding ShowBrowseGrid}">
+          <ItemsRepeater x:Name="BrowseGridRepeater" ItemsSource="{Binding Items}" Margin="11">
             <ItemsRepeater.Layout>
               <UniformGridLayout MinItemWidth="164" MinItemHeight="206" MinColumnSpacing="0" MinRowSpacing="0" />
             </ItemsRepeater.Layout>

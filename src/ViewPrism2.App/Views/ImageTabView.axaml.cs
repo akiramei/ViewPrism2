@@ -1,4 +1,5 @@
 using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using ViewPrism2.App.ViewModels;
@@ -25,6 +26,13 @@ public partial class ImageTabView : UserControl
     private Panel? _leftCluster;
     private Panel? _rightCluster;
 
+    private ScrollViewer? _gridScroll;
+    private ItemsRepeater? _gridRepeater;
+    private ImageTabViewModel? _hookedVm;
+    private bool _lastShowRightPane;
+    private int _trackedAnchorIndex = -1;
+    private int _pendingAnchorIndex = -1;
+
     public ImageTabView()
     {
         InitializeComponent();
@@ -37,10 +45,98 @@ public partial class ImageTabView : UserControl
         _toolbarRoot = this.FindControl<Border>("ToolbarRoot");
         _leftCluster = this.FindControl<Panel>("LeftCluster");
         _rightCluster = this.FindControl<Panel>("RightCluster");
-        LayoutUpdated += (_, _) => EvaluateToolbar();
+
+        // ECO-110: 右ペイン開閉のグリッドアンカー(CAD layoutInvariant「右ペインの開閉が中央を壊さない」の
+        // 保存対象=可視コンテンツ)。VM は一括通知(string.Empty)のため ShowRightPane のエッジは View 側で検出する。
+        _gridScroll = this.FindControl<ScrollViewer>("BrowseGridScroll");
+        _gridRepeater = this.FindControl<ItemsRepeater>("BrowseGridRepeater");
+        DataContextChanged += (_, _) => HookVm();
+        HookVm();
+
+        LayoutUpdated += (_, _) =>
+        {
+            EvaluateToolbar();
+            if (_pendingAnchorIndex >= 0) RestoreGridAnchor();
+            else TrackGridAnchor();
+        };
     }
 
     private ImageTabViewModel? Vm => DataContext as ImageTabViewModel;
+
+    /// <summary>VM 差し替えに自己修復で追随して PropertyChanged を購読し直す(IMG-014 と同じ流儀)。</summary>
+    private void HookVm()
+    {
+        if (_hookedVm is { } old) old.PropertyChanged -= OnVmPropertyChanged;
+        _hookedVm = Vm;
+        _lastShowRightPane = _hookedVm?.ShowRightPane ?? false;
+        _trackedAnchorIndex = -1;
+        _pendingAnchorIndex = -1;
+        if (_hookedVm is { } vm) vm.PropertyChanged += OnVmPropertyChanged;
+    }
+
+    /// <summary>
+    /// ECO-110: 開閉エッジの検出。モード切替は Recompute で Items を再構築してから一括通知するため、
+    /// 通知時点では旧段組のセルが既に破棄されている — アンカーはここでは実測せず、直前のレイアウト確定時に
+    /// 追跡済みの index(TrackGridAnchor)を採用する。
+    /// </summary>
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var show = vm.ShowRightPane;
+        if (show == _lastShowRightPane) return;
+        _lastShowRightPane = show;
+        _pendingAnchorIndex = _trackedAnchorIndex;
+    }
+
+    /// <summary>
+    /// ECO-110: レイアウト確定ごとに先頭完全可視アイテム(ビューポート上端以下で最上段・最左の実体化セル)の
+    /// index を追跡する(実体化セル数だけの走査= EvaluateToolbar と同水準の毎レイアウト評価)。
+    /// 先頭表示中(offset 0)は補正不要なので -1(余計なオフセット注入を避ける)。
+    /// </summary>
+    private void TrackGridAnchor()
+    {
+        _trackedAnchorIndex = -1;
+        if (Vm is not { ShowBrowseGrid: true } || _gridScroll is not { } scroll || _gridRepeater is not { } rep) return;
+        if (scroll.Offset.Y <= 0) return;
+
+        Control? best = null;
+        var bestPos = new Point(double.MaxValue, double.MaxValue);
+        foreach (var child in rep.Children)
+        {
+            if (!child.IsVisible) continue;
+            if (child.TranslatePoint(new Point(0, 0), scroll) is not { } pt || pt.Y < -0.5) continue;
+            if (best is null || pt.Y < bestPos.Y - 0.5 ||
+                (Math.Abs(pt.Y - bestPos.Y) <= 0.5 && pt.X < bestPos.X))
+            {
+                best = child;
+                bestPos = pt;
+            }
+        }
+        if (best is { } el)
+        {
+            var idx = rep.GetElementIndex(el);
+            if (idx >= 0) _trackedAnchorIndex = idx;
+        }
+    }
+
+    /// <summary>
+    /// ECO-110: 開閉後の最初のレイアウト確定で、記録済みアンカーをビューポート先頭へ戻す。
+    /// 仮想化で実体化から外れていても GetOrCreateElement で実体化してから位置を実測する。
+    /// 補正は一度きり(失敗時も再試行しない=毎レイアウト評価での発振防止・IMG-014 ヒステリシスと同趣旨)。
+    /// </summary>
+    private void RestoreGridAnchor()
+    {
+        if (_pendingAnchorIndex < 0) return;
+        var idx = _pendingAnchorIndex;
+        _pendingAnchorIndex = -1;
+        if (_gridScroll is not { } scroll || _gridRepeater is not { } rep) return;
+
+        var el = rep.TryGetElement(idx) ?? rep.GetOrCreateElement(idx);
+        if (el is null) return;
+        rep.UpdateLayout();
+        if (el.TranslatePoint(new Point(0, 0), scroll) is { } pt && Math.Abs(pt.Y) > 0.5)
+            scroll.Offset = new Vector(scroll.Offset.X, Math.Max(0, scroll.Offset.Y + pt.Y));
+    }
 
     /// <summary>
     /// レイアウト確定後にツールバー実測幅で段階収納(ラベル/退避)と tier3 回り込みを更新する。
@@ -132,3 +228,4 @@ public partial class ImageTabView : UserControl
 
     private void OnMenuClosed(object? sender, System.EventArgs e) => Vm?.CloseMenusFromDismiss();
 }
+
