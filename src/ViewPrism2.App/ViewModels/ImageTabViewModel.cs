@@ -699,7 +699,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         {
             bool active = string.Equals(_sortColKey, d.Key, StringComparison.Ordinal);
             SortColumns.Add(new SortOptionVM(
-                d.Key, d.Label, _localization.T(ListColumnBuilder.KindChipKey(d.Kind)), d.Color, active, active ? arrow : 0));
+                d.Key, d.Label, _localization.T(ListColumnBuilder.KindChipKey(d.Kind)), d.Color, active, active ? arrow : 0, d.Kind));
         }
 
         if (_sortColKey is { } key)

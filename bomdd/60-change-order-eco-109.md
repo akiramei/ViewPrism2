@@ -109,12 +109,78 @@ CAD 権威(`../ViewPrismUI`・乖離時は常に CAD が正):
 - BOM: E-UI-BROWSE-022 acceptance へ VC-FL-1〜4 参照追記・M-UI-WORK-033 の sort 注記追随(M4)。
 - CP: 転写完了時に CP-UI-G6 系へ観点刻印(accept 時)。
 
-## §6 残ゲート
+## §6 実施記録(fix・2026-07-18)
+
+### 6.1 プローブ先行(R5)
+
+VC-FL-1/2 チェックリストから視覚 probe を先行生成(GfSortMenuVisualParityTests・3 本・GF-073 様式)。
+是正前実測=**3 本とも不合格**(既存 799 は全緑): VC-FL-1①幅 248(期待 252)を先頭に各項目で赤。
+SortOptionVM への Kind 追加(視覚不変の受け皿)のみ probe コンパイルのため先行(視覚は不変=赤のまま
+であることを確認)。probe 初版→是正時強化(チップ Button 化に伴う特定変更・WorkTab seed)は
+GF-077(VC-7)前例の様式。
+
+### 6.2 是正内容(diff 規模: src 5 ファイル+tools 1+tests 1)
+
+- ListColumnModel.cs: SortOptionVM へ `Kind`(既定 BasicName)+IsBasicKind/IsNumKind/IsTextKind/IsSimpleKind。
+- App.axaml: ColumnGlyphGeometry(列グリフ 12px・stroke 1px)追加。
+- Components.axaml: 新設クラスのみ(既存クラス不変)= sortOpt(38px 固定+VerticalContentAlignment
+  明示=ECO-040 規約・hover #F6F8FB・active #F3F8FF)/sortOptLabel(13px・active 太字 #2459CF)/
+  sortColGlyph(20px 灰 #F0F2F6)/sortKindChip(.basic 灰 .num 緑 .text 青 .simple 紫=mock kindChip 実値)/
+  dirSeg(h32 全幅2分割・active 青地 #EAF1FE)/sortTrigger.open(枠 #CFD6E1+面 #FAFBFC)/
+  sortChip(h36 radius9 青地・hover #E1EBFD)。
+- ImageTabView.axaml/WorkTabView.axaml(同型 2 面を同時追随):
+  - メニュー: 幅 252・角丸 13・影 mock 実値・見出し行横並び+区切り線 #F1F3F6・リスト部 Margin 7・
+    候補行=先頭 20px アイコン列(基本=列グリフ/タグ=色ドット 9px)+種別チップ(ラベル直後=mock 位置)+
+    行末矢印 15px・セグメント=区切り線上・全幅 2 分割。
+  - ツールバー: バッジ=ChipTextBg 青地+太字 11px(mock sortMenuBadge)・トリガー開時 Classes.open。
+  - チップ: **mock 同型のチップ全体クリック解除へ**(Button 化・title=ソートを解除・✕ は装飾グリフ=
+    入れ子ボタンの click 競合を作らない[ECO-087 教訓]。FL-003「チップ✕で解除」は✕含む全体クリックが包含)。
+  - VC-FL-3 突合での是正 2 件: 非アクティブ列ヘッダーの ⇅ 常時表示を撤去(VC-FL-3①=矢印なし・両面)・
+    simple セルをラベル→ドット 8px+タグ色✓ 13px へ(VC-FL-3④)。
+- tools/CaptureHarness: ECO-109 撮影シナリオ追加(mock 初期状態=cols[name,date,評価,ガチャ]・
+  評価降順・grid を DB シードで再現。impl-fl-sort-menu/grid-sorted/list-sorted の 3 面)。
+
+裁定不要の確認: 候補並び順=表示列順で mock と一致(起票時実測)。横断規約(ECO-080)=新規文言なし
+(既存 i18n キーのみ消費)・XAML 直書き文言なし。
+
+### 6.3 機械受入(最終状態・全緑)
+
+- dotnet build: 0 error
+- Tests: **802/802**(probe 3 本 赤→緑転を含む)
+- Oracle: 109+2skip(固定行変更なし=R6)
+- validate_bom: 0 error / 0 warning
+
+### 6.4 R7 セルフゴールデン(captures 並置・差分全列挙)
+
+撮影=CaptureHarness(headless+Skia)で原器状態を再現し並置(scratchpad/eco109-captures)。
+
+**転写完了(乖離→是正済み・16 件)**: 起票時 a〜j の 10 件+fix 中に発見した 6 件
+(k=種別チップ位置が行末寄り→ラベル直後・l=非アクティブヘッダー ⇅→撤去・m=simple セル ラベル→✓・
+n=見出し行 縦積み→横並び+区切り線・o=セグメント構造 灰トレイ→全幅2分割/区切り線上・
+p=チップ radius14/黒文字→radius9/青太字/全体クリック)。
+
+**裁定済み許容差分(CP-UI-G6 歴代承認済み・再議論しない・3 件)**:
+1. アイコンの塗りシルエット言語(方向矢印・ソートアイコン・チェック・シェブロン=mock はストローク線画)。
+2. ツールバーボタン高 40(mock 36)= 既存ツールバー言語(表示列・タグ編集等と統一・IMG-014 系)。
+3. リスト列ヘッダーのアクティブ矢印 ▲▼(塗り三角)= 1 と同類。
+
+**新規差分=golden 裁定送り(軽微・3 件)**:
+4. タグ色ドットの halo(mock=boxShadow 0 0 0 2px 色20%)非転写 — VC 非明記の装飾レイヤー
+   (ECO-103 教訓 3 に従い列挙)。Ellipse に BoxShadow が無く Border 円+色バインド変換が要るため未転写。
+5. popupMenu 枠色 CardBorderBrush #E8EBF0(mock #e3e7ee)= 共有ポップアップ言語の近似(微差)。
+6. 見出し/非アクティブラベルの文字色・太さ(mock #1b2230/600・#2b3340/500)= VC 非明記につき
+   既存リソース言語(TextPrimaryBrush/FaintTextBrush)を維持。
+
+**WorkTab(原器 captures なし)**: 同型 XAML 転写+probe C(幅 252・列グリフ・基本チップ・セグメント
+配色)機械検査で確認。副文言は view.sortFromBasicInfo(基本 3 列限定の意味論=既存)。
+
+## §7 残ゲート(fix 後)
 
 - gate①(CAD 裁定): **不要**(CAD 改版は maintainer 納品済み・裁定候補①=候補並び順は実装一致で解消)。
-- gate②(golden): **必要**。基準= VC-FL-1 ①〜⑥・VC-FL-2 ①〜⑤の SORT-menu.png/TB-grid.png 並置突合+
-  VC-FL-3/4 突合結果(乖離ゼロ or 分類済み差分一覧)+未ソート状態(バッジ「なし」・チップなし)+
+- gate②(golden): **待ち**。基準= VC-FL-1 ①〜⑥・VC-FL-2 ①〜⑤の SORT-menu.png/TB-grid.png 並置突合+
+  VC-FL-3/4 突合(§6.4 の分類済み差分一覧が正)+未ソート状態(バッジ「なし」・チップなし)+
   リスト⇄アイコン切替でメニューが閉じソート状態共有(既存契約の実測再確認)。
-  Avalonia 制約(影・寸法)による近似が出た場合は R7 で分類し golden 裁定へ。
-- 裁定事項が発生したら本 ECO へ記録し、CAD への read-across 依頼メモ
-  (実機スクリーンショットは `artifacts/` 経由=SRC-009 方式)を作成。
+  **§6.4 の新規差分 4〜6(ドット halo・popupMenu 枠色・見出し文字色)の裁定**も golden で確定する
+  (承認なら CP-UI-G6 許容差分へ記録・否なら追加転写)。
+- 裁定確定後、CAD への read-across 依頼メモ(実機スクリーンショットは `artifacts/` 経由=SRC-009 方式)
+  を accept 時に作成。

@@ -863,7 +863,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
             var active = string.Equals(_sortColKey, column.Key, StringComparison.Ordinal);
             ListColumns.Add(new ListColumnHeaderVM(i, column.Key, column.Label, active, active ? arrow : 0));
             SortColumns.Add(new SortOptionVM(column.Key, column.Label,
-                _localization.T(ListColumnBuilder.KindChipKey(column.Kind)), null, active, active ? arrow : 0));
+                _localization.T(ListColumnBuilder.KindChipKey(column.Kind)), null, active, active ? arrow : 0, column.Kind));
         }
 
         ColumnSortLabel = _sortColKey is { } key

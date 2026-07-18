@@ -571,29 +571,30 @@
               BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
         <DockPanel VerticalAlignment="Center">
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <!-- ECO-069/FL-003案A: ImageTab v2を基本3列へ射影。listはheader、gridは単一menu。 -->
-            <Border IsVisible="{Binding ShowSortChip}" Background="#EAF1FE" BorderBrush="#CFE0FC" BorderThickness="1"
-                    CornerRadius="14" Padding="10,3" VerticalAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource ArrowUpIcon}" Width="12" Height="12" Foreground="{StaticResource AccentBrush}"
-                          RenderTransformOrigin="50%,50%">
+            <!-- ECO-069/FL-003案A: ImageTab v2を基本3列へ射影。listはheader、gridは単一menu。
+                 ECO-109(VC-FL-2①): ImageTab と同型転写=チップ全体クリックで解除・✕ は装飾グリフ。 -->
+            <Button x:Name="SortChip" Classes="sortChip" IsVisible="{Binding ShowSortChip}"
+                    Command="{Binding ClearColumnSortCommand}" VerticalAlignment="Center"
+                    ToolTip.Tip="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.clearSort]}">
+              <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource ArrowUpIcon}" Width="15" Height="15" Foreground="{StaticResource AccentBrush}"
+                          RenderTransformOrigin="50%,50%" VerticalAlignment="Center">
                   <PathIcon.RenderTransform><RotateTransform Angle="{Binding ColumnSortArrowAngle}" /></PathIcon.RenderTransform>
                 </PathIcon>
-                <TextBlock Text="{Binding ColumnSortLabel}" FontSize="12.5" VerticalAlignment="Center"
-                           Foreground="{StaticResource TextPrimaryBrush}" />
-                <Button Command="{Binding ClearColumnSortCommand}" Background="Transparent" Padding="2"
-                        ToolTip.Tip="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.clearSort]}" VerticalAlignment="Center">
-                  <PathIcon Data="{StaticResource CloseIcon}" Width="11" Height="11" Foreground="{StaticResource TextMutedBrush}" />
-                </Button>
+                <TextBlock Text="{Binding ColumnSortLabel}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                           Foreground="{StaticResource ChipTextFg}" />
+                <PathIcon Data="{StaticResource CloseIcon}" Width="13" Height="13" Foreground="#7BA0E6" VerticalAlignment="Center" />
               </StackPanel>
-            </Border>
+            </Button>
+            <!-- ECO-109(VC-FL-1): ImageTab と同型転写(基本3列限定・FL-003 read-across)。 -->
             <Panel IsVisible="{Binding IsGrid}">
-                <Button x:Name="SortTrigger" Classes="toolbarBtn" Command="{Binding ToggleSortMenuCommand}">
+                <Button x:Name="SortTrigger" Classes="toolbarBtn sortTrigger" Classes.open="{Binding SortMenuOpen}"
+                        Command="{Binding ToggleSortMenuCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <PathIcon Data="{StaticResource SortIcon}" Foreground="{StaticResource FaintTextBrush}" />
                     <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[toolbar.sort]}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <Border Background="{StaticResource CardSelectedBgBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding SortButtonBadge}" FontSize="11.5" Foreground="{StaticResource AccentBrush}" />
+                    <Border Background="{StaticResource ChipTextBg}" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SortButtonBadge}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
                     </Border>
                     <PathIcon Data="{StaticResource ChevronDownIcon}" Width="14" Height="14" Foreground="{StaticResource FaintTextBrush}" />
                   </StackPanel>
@@ -601,43 +602,51 @@
                 <Popup PlacementTarget="{Binding #SortTrigger}" Placement="BottomEdgeAlignedRight"
                        VerticalOffset="6" IsOpen="{Binding SortMenuOpen}" IsLightDismissEnabled="True"
                        Closed="OnSortMenuClosed">
-                  <Border Classes="popupMenu" Width="248">
+                  <Border Classes="popupMenu" Width="252" CornerRadius="13" Padding="0" BoxShadow="0 22 50 -16 #5C142040">
                     <StackPanel>
-                      <StackPanel Margin="12,10,12,6">
-                        <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[toolbar.sort]}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                        <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.sortFromBasicInfo]}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
-                      </StackPanel>
-                      <ItemsControl x:Name="SortColumnsList" ItemsSource="{Binding SortColumns}">
+                      <Border BorderBrush="#F1F3F6" BorderThickness="0,0,0,1" Padding="15,12,15,10">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[toolbar.sort]}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.sortFromBasicInfo]}" FontSize="11" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </Border>
+                      <ItemsControl x:Name="SortColumnsList" ItemsSource="{Binding SortColumns}" Margin="7">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:SortOptionVM">
                             <Button Classes="menuRow sortOpt" Classes.active="{Binding IsActive}"
                                     Command="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).SelectColumnSortCommand}"
                                     CommandParameter="{Binding Key}">
-                              <DockPanel>
-                                <PathIcon DockPanel.Dock="Right" Data="{StaticResource ArrowUpIcon}" Width="13" Height="13"
+                              <DockPanel VerticalAlignment="Center">
+                                <PathIcon DockPanel.Dock="Right" Data="{StaticResource ArrowUpIcon}" Width="15" Height="15"
                                           Foreground="{StaticResource AccentBrush}" IsVisible="{Binding IsActive}"
                                           RenderTransformOrigin="50%,50%" VerticalAlignment="Center">
                                   <PathIcon.RenderTransform><RotateTransform Angle="{Binding ArrowAngle}" /></PathIcon.RenderTransform>
                                 </PathIcon>
-                                <Border DockPanel.Dock="Right" Background="{StaticResource CardSelectedBgBrush}" CornerRadius="4"
-                                        Padding="5,1" Margin="6,0" VerticalAlignment="Center">
-                                  <TextBlock Text="{Binding KindChip}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
-                                </Border>
-                                <TextBlock Text="{Binding Label}" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                                <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                  <Border Classes="sortColGlyph" IsVisible="{Binding IsBasicKind}">
+                                    <Path Data="{StaticResource ColumnGlyphGeometry}" Stroke="#7B8595" StrokeThickness="1"
+                                          Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                  </Border>
+                                  <TextBlock Classes="sortOptLabel" Text="{Binding Label}" VerticalAlignment="Center" />
+                                  <Border Classes="sortKindChip" Classes.basic="{Binding IsBasicKind}" Classes.num="{Binding IsNumKind}"
+                                          Classes.text="{Binding IsTextKind}" Classes.simple="{Binding IsSimpleKind}">
+                                    <TextBlock Text="{Binding KindChip}" />
+                                  </Border>
+                                </StackPanel>
                               </DockPanel>
                             </Button>
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <Border Classes="segmented" Margin="12,6,12,10">
-                        <StackPanel Orientation="Horizontal" Spacing="2">
-                          <Button Classes="segBtn" Classes.active="{Binding SortAscActive}" Command="{Binding SetSortAscCommand}">
-                            <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.ascending]}" FontSize="12.5" />
+                      <Border BorderBrush="#F1F3F6" BorderThickness="0,1,0,0" Padding="12,9">
+                        <Grid ColumnDefinitions="*,7,*">
+                          <Button Grid.Column="0" Classes="dirSeg" Classes.active="{Binding SortAscActive}" Command="{Binding SetSortAscCommand}">
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.ascending]}" />
                           </Button>
-                          <Button Classes="segBtn" Classes.active="{Binding SortDescActive}" Command="{Binding SetSortDescCommand}">
-                            <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.descending]}" FontSize="12.5" />
+                          <Button Grid.Column="2" Classes="dirSeg" Classes.active="{Binding SortDescActive}" Command="{Binding SetSortDescCommand}">
+                            <TextBlock Text="{Binding $parent[UserControl].((vm:WorkTabViewModel)DataContext).Loc[view.descending]}" />
                           </Button>
-                        </StackPanel>
+                        </Grid>
                       </Border>
                     </StackPanel>
                   </Border>
@@ -917,8 +926,7 @@
                                    IsVisible="{Binding IsSortActive}">
                           <TextBlock.RenderTransform><RotateTransform Angle="{Binding ArrowAngle}" /></TextBlock.RenderTransform>
                         </TextBlock>
-                        <TextBlock Text="⇅" FontSize="10" Foreground="{StaticResource FaintTextBrush}"
-                                   IsVisible="{Binding !IsSortActive}" />
+                        <!-- ECO-109(VC-FL-3①): 非アクティブ列は矢印なし(ImageTab と同型・⇅ 撤去) -->
                       </StackPanel>
                     </Button>
                   </DataTemplate>

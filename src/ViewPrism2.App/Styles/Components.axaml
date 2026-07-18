@@ -1570,4 +1570,124 @@
     <Setter Property="Width" Value="15" />
     <Setter Property="Height" Value="15" />
   </Style>
+
+  <!-- ============ ECO-109: ファイル一覧 並び替えメニュー(VC-FL-1)/ソートチップ・トリガー(VC-FL-2) ============
+       mock 精緻化改版(2026-07-17)の転写。並び替えメニューは ImageTab/WorkTab の同型複製 surface のため
+       共通言語をここへ集約(既存クラスは触らず新設のみ)。配色は VC-FL-1/2 明記の mock 実値。 -->
+  <!-- 候補行: 38px 固定・角丸9(menuRow 継承)・active 青地 #F3F8FF・hover #F6F8FB。
+       固定高+縦 Padding 0 のため VerticalContentAlignment 明示(ECO-040 規約)。 -->
+  <Style Selector="Button.sortOpt">
+    <Setter Property="Height" Value="38" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.sortOpt:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#F6F8FB" />
+  </Style>
+  <Style Selector="Button.sortOpt.active">
+    <Setter Property="Background" Value="#F3F8FF" />
+  </Style>
+  <Style Selector="Button.sortOpt.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#F3F8FF" />
+  </Style>
+  <!-- 候補ラベル: 13px・アクティブ=太字 #2459CF(VC-FL-1④)。Foreground は XAML 直指定せずここで
+       (ローカル値が active 上書きを潰すため) -->
+  <Style Selector="Button.sortOpt TextBlock.sortOptLabel">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.sortOpt.active TextBlock.sortOptLabel">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
+  <!-- 基本情報行の先頭 20px 列グリフボックス(VC-FL-1③) -->
+  <Style Selector="Border.sortColGlyph">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="#F0F2F6" />
+  </Style>
+  <!-- 種別チップ(VC-FL-1③): 基本=灰/数値=緑/テキスト=青/シンプル=紫(mock kindChip 実値。
+       タグタブ typeChip と同系だがシンプルの紫は本面の新規言語=直値で保持) -->
+  <Style Selector="Border.sortKindChip">
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.sortKindChip TextBlock">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.sortKindChip.basic">
+    <Setter Property="Background" Value="#F0F2F6" />
+  </Style>
+  <Style Selector="Border.sortKindChip.basic TextBlock">
+    <Setter Property="Foreground" Value="#5B6473" />
+  </Style>
+  <Style Selector="Border.sortKindChip.num">
+    <Setter Property="Background" Value="#EAFAF3" />
+  </Style>
+  <Style Selector="Border.sortKindChip.num TextBlock">
+    <Setter Property="Foreground" Value="#0F8A5E" />
+  </Style>
+  <Style Selector="Border.sortKindChip.text">
+    <Setter Property="Background" Value="#EAF1FE" />
+  </Style>
+  <Style Selector="Border.sortKindChip.text TextBlock">
+    <Setter Property="Foreground" Value="#2459CF" />
+  </Style>
+  <Style Selector="Border.sortKindChip.simple">
+    <Setter Property="Background" Value="#F3EEFE" />
+  </Style>
+  <Style Selector="Border.sortKindChip.simple TextBlock">
+    <Setter Property="Foreground" Value="#7C4FD6" />
+  </Style>
+  <!-- 昇順/降順セグメント(VC-FL-1⑤): 区切り線上・全幅 2 分割・h32/角丸7。
+       アクティブ=青地 #EAF1FE/#2459CF・非アクティブ=灰地 #F4F6FA/#7B8595 -->
+  <Style Selector="Button.dirSeg">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Background" Value="#F4F6FA" />
+    <Setter Property="Foreground" Value="#7B8595" />
+  </Style>
+  <Style Selector="Button.dirSeg /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#F4F6FA" />
+  </Style>
+  <Style Selector="Button.dirSeg.active">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+    <Setter Property="Foreground" Value="{StaticResource ChipTextFg}" />
+  </Style>
+  <Style Selector="Button.dirSeg.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+  </Style>
+  <!-- 並び替えトリガー: メニュー開時は枠濃色 #CFD6E1+面 #FAFBFC(VC-FL-2④) -->
+  <Style Selector="Button.sortTrigger.open">
+    <Setter Property="BorderBrush" Value="#CFD6E1" />
+  </Style>
+  <Style Selector="Button.sortTrigger.open /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#FAFBFC" />
+  </Style>
+  <!-- ソートチップ(VC-FL-2①): 全体クリックで解除(mock title=ソートを解除)・✕ は装飾グリフ -->
+  <Style Selector="Button.sortChip">
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="12,0,11,0" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="#CFE0FC" />
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.sortChip /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ChipTextBg}" />
+  </Style>
+  <Style Selector="Button.sortChip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#E1EBFD" />
+  </Style>
 </Styles>

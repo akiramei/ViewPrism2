@@ -214,6 +214,102 @@ internal static class Program
         await PumpAsync();
         Capture(mainWindow, Path.Combine(outDir, "impl-nav-dirty.png"));
         mainWindow.Close();
+        await PumpAsync();
+
+        await CaptureFileListSortAsync(outDir, manager, tagRepo, tagService, viewService, locJa);
+    }
+
+    /// <summary>
+    /// ECO-109(VC-FL-1〜4): ファイル一覧 並び替え UI の R7 並置用撮影。
+    /// mock 原器(file_list SORT-menu/TB-grid/LIST-sorted/GRID-sorted)の初期状態=
+    /// cols[name,date,評価,ガチャ]・評価 降順・grid を再現する。画像はファイル実体なし
+    /// (サムネはプレースホルダー描画=クローム比較が目的・CP-UI-G6 許容)。
+    /// </summary>
+    private static async Task CaptureFileListSortAsync(
+        string outDir, DatabaseManager manager, TagRepository tagRepo, TagService tagService,
+        ViewService viewService, LocalizationService locJa)
+    {
+        var rating = (await tagRepo.GetAllAsync()).First(t => t.Name == "評価");
+        var gacha = (await tagService.CreateAsync("ガチャ", TagType.Simple, color: "#8b5cf6")).Value!;
+
+        var cols = $$"""
+            [{"type":"basic","key":"name","label":"名前","width":2},
+             {"type":"basic","key":"modified_date","label":"更新日","width":1},
+             {"type":"tag","key":"{{rating.Id}}","label":"評価","width":1},
+             {"type":"tag","key":"{{gacha.Id}}","label":"ガチャ","width":1}]
+            """;
+        var fieldView = (await viewService.CreateAsync("フィールド", displayColumns: cols)).Value!;
+
+        var folders = new SyncFolderRepository(manager);
+        var images = new ImageRepository(manager);
+        var col = new SyncFolder { Id = "col-eco109", Name = "画像", Path = @"X:\demo" };
+        await folders.AddAsync(col);
+        // mock 18 件から代表 8 件(評価値の分布+ガチャ有無+未設定行=空値末尾の視覚)
+        var seed = new (string Name, string? Rating, bool Gacha)[]
+        {
+            ("IMG_0847.jpg", "5", true), ("IMG_0851.jpg", "5", false), ("IMG_012.jpg", "4", true),
+            ("IMG_033.jpg", "4", false), ("IMG_204.jpg", "3", true), ("IMG_310.jpg", "3", false),
+            ("IMG_415.jpg", null, true), ("IMG_502.jpg", null, false),
+        };
+        var day = 10;
+        foreach (var (name, ratingValue, hasGacha) in seed)
+        {
+            var img = new ImageRecord
+            {
+                Id = "img-eco109-" + name,
+                SyncFolderId = col.Id,
+                RelativePath = name,
+                FileName = name,
+                FileSize = 4_204_019,
+                Hash = new string('0', 64),
+                Status = ImageStatus.Normal,
+                CreatedDate = $"2026-07-{day:00}T00:00:00.000Z",
+                ModifiedDate = $"2026-07-{day:00}T00:00:00.000Z",
+            };
+            day++;
+            await images.AddAsync(img);
+            if (ratingValue is not null) await tagService.TagImageAsync(img.Id, rating.Id, ratingValue);
+            if (hasGacha) await tagService.TagImageAsync(img.Id, gacha.Id, null);
+        }
+
+        var featureRepo = new ImageFeatureRepository(manager);
+        var simRepo = new ImageSimilarityRepository(manager);
+        var tab = new ImageTabViewModel(
+            folders, images, tagRepo, new ImageSorter(),
+            viewService, new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(folders, images, featureRepo, simRepo, new PHashImageReader(), new SystemClock()),
+            new MergeService(images, tagRepo, new MergeRepository(manager)),
+            new TrashService(images, folders, new FilePresenceProbe()),
+            new StubWindows(), new AppSettings(), new WorkspaceService(new WorkspaceRepository(manager), new SystemClock()),
+            locJa);
+        await tab.InitializeAsync(col.Id);
+        await tab.SelectAxisCommand.ExecuteAsync(fieldView.Id);
+        tab.SetGridCommand.Execute(null);
+        tab.SelectColumnSortCommand.Execute(rating.Id); // 昇順
+        tab.SelectColumnSortCommand.Execute(rating.Id); // → 降順(mock 初期状態)
+
+        var window = new Window
+        {
+            Content = new ImageTabView { DataContext = tab },
+            Width = 1240,
+            Height = 860,
+        };
+        window.Show();
+        await PumpAsync();
+
+        Capture(window, Path.Combine(outDir, "impl-fl-grid-sorted.png"));   // 原器 TB-grid.png / GRID-sorted.png
+
+        tab.ToggleSortMenuCommand.Execute(null);
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fl-sort-menu.png"));     // 原器 SORT-menu.png
+        tab.ToggleSortMenuCommand.Execute(null);
+        await PumpAsync();
+
+        tab.SetListCommand.Execute(null);
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fl-list-sorted.png"));   // 原器 LIST-sorted.png
+        window.Close();
+        await PumpAsync();
     }
 
     private static async Task SaveAsync(TagsTabViewModel tab)

@@ -45,9 +45,15 @@ public sealed record SortOptionVM(
     string KindChip,
     string? Color,
     bool IsActive,
-    double ArrowAngle)
+    double ArrowAngle,
+    ListCellKind Kind = ListCellKind.BasicName)
 {
     public bool ShowColorDot => Color is not null;
+    // ECO-109(VC-FL-1③): 先頭 20px アイコン列と種別チップ配色の出し分け。基本=列グリフ灰ボックス/タグ=色ドット。
+    public bool IsBasicKind => Kind is ListCellKind.BasicName or ListCellKind.BasicSize or ListCellKind.BasicDate;
+    public bool IsNumKind => Kind == ListCellKind.Num;
+    public bool IsTextKind => Kind == ListCellKind.Text;
+    public bool IsSimpleKind => Kind == ListCellKind.Simple;
 }
 
 /// <summary>ファイル一覧セル 1 件(行×列)。kind に応じて XAML が描画する。</summary>
