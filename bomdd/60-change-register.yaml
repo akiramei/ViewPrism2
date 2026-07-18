@@ -1633,3 +1633,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。ソート動作契約(FL-001〜004・ECO-069/070 type-primary)と既存テスト全緑を維持"
     body: 60-change-order-eco-109.md
     notes: "gate①=不要(CAD は maintainer 改版納品済み・候補並び順は実装一致で裁定不要)。gate②=必要(golden)。既知再発点= 装飾3レイヤー転写(ECO-103 教訓3・GF-103 グリフ実高)+固定高縦Padding0 は VerticalContentAlignment 明示(ECO-040・N=3)+CP-UI-G6 歴代許容差分は再議論しない。関連=ECO-025(β 元実装)・ECO-069/070(WorkTab read-across)・ECO-076(CAD 改版追随の前例)・ECO-103(撮影ハーネス+R7)"
+  - id: ECO-110
+    title: "右ペイン開閉時のグリッド作業対象喪失 — スクロールアンカー契約の未定義(gate① 裁定要)"
+    type: "不具合是正候補(UX・CAD layoutInvariant の保存対象曖昧)"
+    status: staged
+    golden: "pending(gate① 裁定後の fix 完了時に基準提示。実機シナリオ=グリッドで対象画像を視認→モード開始/終了で対象が可視のまま。R7 captures は動作契約のため対象外=headless probe 主体)"
+    baseline: "main 288ef9f"
+    findings: "maintainer UX 所見(2026-07-18)。グリッド表示で文脈モード(タグ編集/整理)開始→右ペイン(Dock Right 幅344・ImageTabView.axaml:110/:314)で中央幅が縮み UniformGridLayout が再流動→ピクセルオフセットは保持されるが同オフセットの指す内容が変わり、視認していた画像がスクロールアウト=作業対象喪失。終了時も逆方向で同型。リスト表示は行全幅+行高固定で症状なし。工程診断= CAD 曖昧が根: image_tab.md layoutInvariant 行87「右ペインの開閉が中央を壊さない…スクロール位置…が破綻しない」の保存対象が (a)オフセット か (b)可視コンテンツ か未規定 — 現実装は (a) 充足/(b) 破り。BOM= E-UI-BROWSE-022 acceptance に開閉×スクロール保全の観点なし。実装= アンカー処理皆無(Offset/BringIntoView 0 ヒット実測)。疑い(未検証)= mock は CSS overflow-anchor 既定でブラウザが先頭可視要素を自動維持=CAD は暗黙に (b) 意図の可能性。事実= 閲覧時は選択不可(ECO-017)のためモード開始時の手掛かりは視認位置のみ"
+    impacted_bom: ["CAD=../ViewPrismUI docs/screens/image_tab.md layoutInvariant 行87 精緻化(裁定文面・CAD 先行)", "src=ImageTabView.axaml.cs のみ見込み(モード遷移フック+先頭可視アイテムのアンカー補正。XAML/VM/Core 無変更見込み)", "tests=headless probe(開閉前後で先頭可視アイテム不変・是正前赤=R5)", "BOM=E-UI-BROWSE-022 acceptance へアンカー契約(M4)", "CP=CP-UI-G1 系へ観点刻印(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=未検査ケース(開閉×アンカー)で赤→緑転"
+    body: 60-change-order-eco-110.md
+    notes: "gate①=必要(案A=先頭可視アンカー推奨/案B=+選択優先(開始時は選択不可で増分薄)/案C=現状追認は非推奨+適用範囲 a=右ペイン開閉のみ推奨/b=左ペイン折畳み・リサイズへ一般化)。gate②=必要(実機シナリオ。R7 captures は動作契約のため対象外=probe 主体)。関連=ECO-017(閲覧=選択不可)・ECO-026(ItemsRepeater 仮想化グリッド)・ECO-027(右ペイン開閉×ツールバー収納=行85 の隣接不変条件)"
