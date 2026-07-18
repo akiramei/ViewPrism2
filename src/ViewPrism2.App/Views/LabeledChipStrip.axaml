@@ -65,7 +65,7 @@
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="chipPopSearch">
               <TextBox x:Name="ChipSearchBox" Classes="chipPopSearchBox" Text="{Binding ChipStrip.SearchText}"
-                       Watermark="{Binding #Root.((vm:IChipStripHost)DataContext).Loc[chip.searchPlaceholder]}" />
+                       PlaceholderText="{Binding #Root.((vm:IChipStripHost)DataContext).Loc[chip.searchPlaceholder]}" />
             </Border>
             <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
               <StackPanel>

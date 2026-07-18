@@ -1647,7 +1647,7 @@ changes:
   - id: ECO-111
     title: "廃止予定 API TextBox.Watermark の使用(AVLN5001 ビルド警告・PlaceholderText へ追随)"
     type: "実装規約是正(廃止 API リネーム追随・視覚/動作不変)"
-    status: staged
+    status: implemented   # 2026-07-18 是正+機械受入完了。機械証拠= --no-incremental フルビルドで AVLN5001 1件検出→リネーム後 0件・警告0個。追加確定=インクリメンタルビルドは XAML 再コンパイルなしで警告非表示(滞留の追加要因)。build 0/0・Tests 806/806・Oracle 109+2skip・validate 0/0。golden n/a=accept 指示待ち
     golden: "n/a 見込み(視覚・動作不変の API リネーム。検収=機械証拠: 是正前ビルドログ AVLN5001 1件→是正後 0件。ECO-090/105 前例)"
     baseline: "main ea7c83b"
     findings: "maintainer 指摘(2026-07-18)。Avalonia 12 で TextBox.Watermark が Obsolete(後継 PlaceholderText=機能等価リネーム)。使用は src 全体で LabeledChipStrip.axaml:68 の 1 箇所のみ(起票時 grep 全数調査)。混入= bf96bf0(ECO-091)で導入→ 8e866a9(ECO-094 共有部品化)で移設。滞留要因=機械受入基準が 0 error で警告を数えない。テスト側 CpI18n010TabBindingTests の検査属性リストは Watermark/PlaceholderText 両収載=変更不要。Watermark 参照スタイルセレクタなし(grep 0件)"

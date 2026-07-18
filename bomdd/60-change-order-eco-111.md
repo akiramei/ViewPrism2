@@ -66,5 +66,17 @@ Avalonia 12 で `TextBox.Watermark` が `[Obsolete]` となり、後継は `Plac
 ## §6 残ゲート
 
 1. gate①: 不要(実装層確定)。
-2. /eco-fix eco-111(是正前後のビルドログ採取→リネーム→機械受入 4 点)。
-3. gate②: n/a 見込み(機械証拠検収。クローズ時に maintainer へ報告のみ)。
+2. ~~/eco-fix eco-111~~ **実施済み(2026-07-18・§7)**。
+3. gate②: n/a(機械証拠検収=§7。maintainer の accept 指示でクローズ)。
+
+## §7 実施記録(2026-07-18・/eco-fix)
+
+- **是正前実測(プローブ相当・R5 の機械証拠形)**: `dotnet build --no-incremental` で
+  AVLN5001 を検出(LabeledChipStrip.axaml(67,16))。**追加確定事実=インクリメンタルビルドでは
+  XAML 再コンパイルが走らず警告が非表示** — 「出たり出なかったりする」ことが滞留の追加要因
+  (§3.1 の「0 error 基準が警告を数えない」に加える)。
+- **是正**: `Watermark=` → `PlaceholderText=` の属性リネーム 1 箇所(バインド式・Loc キー不変)。
+- **是正後実測**: `--no-incremental` フルビルドで **AVLN5001 = 0 件・警告 0 個**。
+- **機械受入(全緑)**: build 0 error・0 警告 / Tests 806/806 / Oracle 109+2skip / validate 0/0。
+- R7 セルフゴールデン=対象外(機能等価リネーム・視覚不変。プレースホルダの i18n 配線は
+  既存 lint CpI18n010TabBindingTests が PlaceholderText を検査対象に既収載で継続監視)。
