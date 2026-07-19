@@ -518,6 +518,31 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         OnPropertyChanged(string.Empty);
     }
 
+    /// <summary>ECO-114 read-across: モード開始/終了専用の軽量経路(画像タブと同型)。母集合は
+    /// モード遷移で不変のため全面 Recompute(絞り込み/ソート/Items 再構築)を通らず、在庫 Items の
+    /// モード依存フラグ+マーカーをその場更新する。全モードコマンド(編集/作業/整理/削除)は本メソッド
+    /// 到達前に選択を空にする(ToggleOrganize も ResetOrganizeState 末尾の _selected.Clear 経由=
+    /// R8 所見2 で「選択保持」の誤認を訂正)ため、マーカーは画像タブと同じ無条件クリアでよい。</summary>
+    private void ApplyModeTransition()
+    {
+        bool inSelect = _editMode || _workMode || _deleteMode; // 整理は選択でなくマージ先/整理対象の割当
+        foreach (var item in Items)
+        {
+            item.ApplyModeState(
+                selectable: inSelect,
+                showTagDots: !inSelect && item.TagDots.Count > 0,
+                isPlainCheck: false); // 作業タブにファイル操作モードはない
+        }
+        _markedItemIds.Clear();
+        BuildContextPanels(new HashSet<string>(_selected));
+        OnPropertyChanged(nameof(ShowGrid));
+        OnPropertyChanged(nameof(ShowList));
+        OnPropertyChanged(nameof(ShowBrowseGrid));
+        OnPropertyChanged(nameof(ShowBrowseList));
+        OnPropertyChanged(nameof(ShowSearchResults));
+        OnPropertyChanged(string.Empty);
+    }
+
     /// <summary>選択マーカーのみその場更新(Items を作り直さない=クリック応答性。ECO-020 perf 規律)。</summary>
     private void RefreshSelectionMarkers()
     {
@@ -819,7 +844,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         _workMode = !_workMode;
         if (_workMode) { _editMode = false; _organizeMode = false; ResetOrganizeState(); _deleteMode = false; _expandTag = null; }
         _selected.Clear(); MoveMenuOpen = false;
-        Recompute();
+        ApplyModeTransition(); // ECO-114 read-across(R8 所見1: 同型サイトの取りこぼし是正)
         NotifyModeChanged();
     }
 
@@ -944,7 +969,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         _editMode = !_editMode;
         if (_editMode) { _workMode = false; _organizeMode = false; ResetOrganizeState(); _deleteMode = false; MoveMenuOpen = false; }
         _selected.Clear(); _expandTag = null; _panelTab = "current";
-        Recompute();
+        ApplyModeTransition(); // ECO-114 read-across
         NotifyModeChanged();
     }
 
@@ -1028,7 +1053,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         _organizeMode = !_organizeMode;
         if (_organizeMode) { _editMode = false; _workMode = false; _deleteMode = false; MoveMenuOpen = false; }
         ResetOrganizeState();
-        Recompute();
+        ApplyModeTransition(); // ECO-114 read-across(選択保持=既存意味論のまま)
         NotifyModeChanged();
     }
 
@@ -1294,7 +1319,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         _deleteMode = true;
         _editMode = false; _workMode = false; _organizeMode = false; ResetOrganizeState(); MoveMenuOpen = false;
         _selected.Clear();
-        Recompute();
+        ApplyModeTransition(); // ECO-114 read-across
         NotifyModeChanged();
     }
 
@@ -1303,7 +1328,7 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
     {
         _deleteMode = false;
         _selected.Clear();
-        Recompute();
+        ApplyModeTransition(); // ECO-114 read-across
         NotifyModeChanged();
     }
 

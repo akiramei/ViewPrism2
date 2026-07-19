@@ -98,7 +98,8 @@ public sealed class CpUiG1GridScrollAnchorTests : IDisposable
 
     /// <summary>
     /// 開閉後のアンカーの現在位置。実体化から外れていたら null(=完全にスクロールアウト)。
-    /// モード切替は Recompute で ImageItemVM を作り直すため、同定は参照でなく Name(アイテム同一性)で行う。
+    /// 同定は参照でなく Name(アイテム同一性)で行う(当初はモード切替=Recompute の再構築が理由。
+    /// ECO-114 で再構築されなくなったが、Name 同定は再構築の有無に非依存で頑健なため維持)。
     /// </summary>
     private static double? ViewportYOf(ScrollViewer scroll, ItemsRepeater rep, string anchorName)
     {

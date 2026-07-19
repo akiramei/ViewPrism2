@@ -284,6 +284,17 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         return Color.FromRgb((byte)((n >> 16) & 255), (byte)((n >> 8) & 255), (byte)(n & 255));
     }
     private static IBrush Solid(string hex) => new SolidColorBrush(Hex(hex));
+    // ECO-114: タグドットのブラシキャッシュ(色数は高々タグ数=母集合件数×3 個の再生成を排除)
+    private readonly Dictionary<string, IBrush> _dotBrushCache = new(StringComparer.OrdinalIgnoreCase);
+    private IBrush DotBrush(string hex)
+    {
+        if (!_dotBrushCache.TryGetValue(hex, out var brush))
+        {
+            brush = Solid(hex);
+            _dotBrushCache[hex] = brush;
+        }
+        return brush;
+    }
     private static IBrush HexA(string hex, double a)
     {
         var c = Hex(hex);
@@ -1354,8 +1365,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         int? order = selected && !_fileOpsMode ? _selected.IndexOf(entry.Record.Id) + 1 : null;
         var tagsOf = ImgTagIds(entry);
         bool inSelect = _editMode || _workMode || _deleteMode || _fileOpsMode;
-        var dots = (!inSelect && tagsOf.Count > 0)
-            ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
+        // ECO-114: ドットは常時構築(表示可否は hasTagDots)= モード中構築のアイテムが閲覧へ戻った時の
+        // 欠落防止+ブラシは色キーでキャッシュ(26万件×3個の再生成を排除)
+        var dots = tagsOf.Count > 0
+            ? tagsOf.Take(3).Select(t => DotBrush(TagColor(_tagById.GetValueOrDefault(t)))).ToList()
             : new List<IBrush>();
         var cells = ListColumnBuilder.BuildCells(entry, _listColumnDefs, FmtSize, FmtDate);
         var sortItemCell = sortItemIndex >= 0 && sortItemIndex < cells.Count ? cells[sortItemIndex] : null;
@@ -1385,10 +1398,37 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     }
 
     /// <summary>
+    /// ECO-114: モード開始/終了専用の軽量経路。母集合(表示集合/チップ/パンくず/件数/ソート)は
+    /// モード遷移で不変のため、全面 Recompute(全件評価×(1+子数)+全件ソート+26万 VM 再構築+
+    /// CollectionChanged の嵐)を通らず、在庫 Items のモード依存フラグと選択マーカーだけを
+    /// その場更新する(ECO-026/#2「切替で Items を作り直さない」のモード遷移版)。
+    /// 残存計算量= O(表示件数) の単純フラグパス 1 本(アロケーション/評価/ソート/再構築なし。
+    /// 未実現アイテムの PropertyChanged はリスナー不在で軽量)。
+    /// </summary>
+    private void ApplyModeTransition()
+    {
+        if (!_loaded) { Recompute(); return; } // 未ロードは従来経路(空 UI の整合は Recompute が権威)
+        ClearCopyFeedback(); // モード遷移はフィードバック解除遷移(ECO-112/IMG-026②)
+        if (InAnyMode) ColumnPickerOpen = false; // 開いていた列ピッカーは閉じる(IMG-014・Recompute と同契約)
+        bool inSelect = _editMode || _workMode || _deleteMode || _fileOpsMode;
+        foreach (var item in Items)
+        {
+            if (item.IsFolder) continue;
+            item.ApplyModeState(
+                selectable: inSelect,
+                showTagDots: !inSelect && item.TagDots.Count > 0,
+                isPlainCheck: _fileOpsMode);
+        }
+        _markedItemIds.Clear(); // 選択マーカーは全クリア(モード遷移は選択クリアが契約=呼出側で _selected.Clear 済み)
+        BuildContextPanels(new HashSet<string>(_selected));
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>
     /// 選択/マーカーのみが変化したときの軽量更新。Items(グリッド)を作り直さず、
     /// 既存の各 ImageItemVM をその場更新する(大量画像でのクリック応答性=Items 全再構築と
     /// CollectionChanged Reset・スクロールリセットを避ける)。membership が変わる遷移(フォルダ移動・
-    /// チップ・軸/ソート・モード切替=selectable/タグドットが変わる)は従来どおり Recompute を使う。
+    /// チップ・軸/ソート)は従来どおり Recompute、モード切替は ApplyModeTransition(ECO-114)を使う。
     /// </summary>
     private void RefreshSelectionMarkers()
     {
@@ -1397,8 +1437,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         var selSet = new HashSet<string>(_selected);
         // ECO-113: 差分更新 — 前回マーカー保持(_markedItemIds)∪今回対象だけを触る。Items 全走査は
         // 母集合比例(26万件で顕在化・e39d68a の残余)。選択順も IndexOf 反復でなく一度の辞書構築で解決。
-        // モード遷移(isPlainCheck の切替)は必ず Recompute=全再構築を通るため、非対象アイテムの
-        // 構築時マーカー状態は現モードと常に一致する。
+        // モード遷移(isPlainCheck の切替)は Recompute(全再構築)または ApplyModeTransition
+        // (ECO-114=全非フォルダへ一括適用)を必ず通るため、非対象アイテムの状態は現モードと常に一致する。
         var orderById = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < _selected.Count; i++) orderById[_selected[i]] = i + 1;
         var affected = new HashSet<string>(_markedItemIds, StringComparer.Ordinal);
@@ -1928,7 +1968,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _editMode = !_editMode;
         if (_editMode) { _organizeMode = false; Organize.ResetState(); _workMode = false; _deleteMode = false; _fileOpsMode = false; } // 整理・作業・削除・ファイル操作と排他(ECO-014/017/018/112)
         _selected.Clear(); _expandTag = null; _panelTab = "current";
-        Recompute();
+        ApplyModeTransition(); // ECO-114: 母集合不変=全面 Recompute を通らない
     }
 
     [RelayCommand]
@@ -2137,7 +2177,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (_organizeMode) { _editMode = false; _workMode = false; _deleteMode = false; _fileOpsMode = false; } // タグ編集・作業・削除・ファイル操作と排他(ECO-014/017/018/112)
         Organize.ResetState();
         _selected.Clear();
-        Recompute();
+        ApplyModeTransition(); // ECO-114
     }
 
     // =====================================================================
@@ -2150,7 +2190,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _workMode = !_workMode;
         if (_workMode) { _editMode = false; _organizeMode = false; Organize.ResetState(); _deleteMode = false; _fileOpsMode = false; } // 他文脈モードと排他(ECO-018/112)
         _selected.Clear(); _expandTag = null;
-        Recompute();
+        ApplyModeTransition(); // ECO-114
     }
 
     /// <summary>
@@ -2181,7 +2221,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _deleteMode = true;
         _editMode = false; _organizeMode = false; Organize.ResetState(); _workMode = false; _fileOpsMode = false; // 排他
         _selected.Clear(); _expandTag = null;
-        Recompute();
+        ApplyModeTransition(); // ECO-114
     }
 
     /// <summary>削除モードを終了(選択クリア)。</summary>
@@ -2190,7 +2230,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     {
         _deleteMode = false;
         _selected.Clear();
-        Recompute();
+        ApplyModeTransition(); // ECO-114
     }
 
     // =====================================================================
@@ -2205,7 +2245,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _fileOpsMode = true;
         _editMode = false; _organizeMode = false; Organize.ResetState(); _workMode = false; _deleteMode = false; // 排他
         _selected.Clear(); _expandTag = null;
-        Recompute();
+        ApplyModeTransition(); // ECO-114
     }
 
     /// <summary>ファイル操作モードを終了(選択解除・CAD「終了時は選択を解除する」)。</summary>
@@ -2215,7 +2255,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _fileOpsMode = false;
         _selected.Clear();
         ClearCopyFeedback(); // モード離脱=フィードバック解除遷移(IMG-026②/ECO-104 教訓)
-        Recompute();
+        ApplyModeTransition(); // ECO-114
     }
 
     /// <summary>選択画像の絶対パスをクリップボードへ(1 行 1 ファイル)。IMG-026① 裁定=

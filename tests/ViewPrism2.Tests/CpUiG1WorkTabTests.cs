@@ -622,4 +622,46 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         Assert.Equal(ImageStatus.Normal, (await _db.Images.GetByIdAsync("dup_b"))!.Status); // source 復元
         Assert.Contains(vm.Items, i => i.Id == "dup_b"); // 現スペースの一覧へ戻る
     }
+    /// <summary>ECO-114 read-across: 作業タブもモード開始/終了で Items を再構築しない(構造 probe=
+    /// インスタンス同一性。ECO-058 方式=固定時間閾値なし)。全モードコマンド(編集/作業/整理/削除)を往復検査。</summary>
+    [Fact]
+    public async Task モード開始と終了はItemsを再構築しない()
+    {
+        await SeedAsync();
+        var ws = new WorkspaceService(_db.Workspaces, _db.Clock);
+        await ws.AddImagesToDefaultAsync(new[] { "a", "b", "c" });
+        var vm = NewVm();
+        await vm.InitializeAsync();
+        var before = vm.Items.Single(i => i.Id == "a");
+        Assert.True(before.HasTagDots); // a はタグ付き=閲覧時ドット表示
+
+        vm.ToggleEditCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.True(before.Selectable);
+        Assert.False(before.HasTagDots);
+        vm.ToggleEditCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.False(before.Selectable);
+        Assert.True(before.HasTagDots);
+
+        vm.ToggleWorkCommand.Execute(null); // R8 所見1: 未差し替えの同型サイト=是正前赤
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.True(before.Selectable);
+        vm.ToggleWorkCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.False(before.Selectable);
+
+        vm.ToggleOrganizeCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.False(before.Selectable); // 整理は選択でなく割当
+        vm.ToggleOrganizeCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+
+        vm.EnterDeleteCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.True(before.Selectable);
+        vm.ExitDeleteCommand.Execute(null);
+        Assert.Same(before, vm.Items.Single(i => i.Id == "a"));
+        Assert.False(before.Selectable);
+    }
 }

@@ -788,8 +788,8 @@ public sealed partial class ImageItemVM : ObservableObject
         bool isPlainCheck = false)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
-        ThumbBrush = thumbBrush; Selectable = selectable; _isSelected = isSelected;
-        HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
+        ThumbBrush = thumbBrush; _selectable = selectable; _isSelected = isSelected;
+        _hasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
         Target = target; AbsolutePath = absolutePath; _selectionOrder = selectionOrder;
         _isMergeTarget = isMergeTarget; _isOrganizeTarget = isOrganizeTarget;
         _isPlainCheck = isPlainCheck;
@@ -814,8 +814,11 @@ public sealed partial class ImageItemVM : ObservableObject
     public bool IsPlaceholder { get; }
     public bool HasThumb { get; }
     public IBrush? ThumbBrush { get; }
-    public bool Selectable { get; }
-    public bool HasTagDots { get; }
+    // ECO-114: モード依存フラグは観測可能=モード遷移で Items を再構築せずその場更新する
+    [ObservableProperty] private bool _selectable;
+    [ObservableProperty] private bool _hasTagDots;
+    /// <summary>タグ色ドット(常時構築=ECO-114。モード中に構築されたアイテムが閲覧へ戻った時の欠落防止。
+    /// 表示可否は HasTagDots が持つ)。</summary>
     public List<IBrush> TagDots { get; }
     public string SizeLabel { get; }
     public string DateLabel { get; }
@@ -853,6 +856,15 @@ public sealed partial class ImageItemVM : ObservableObject
         IsMergeTarget = isMergeTarget;
         IsOrganizeTarget = isOrganizeTarget;
         IsPlainCheck = isPlainCheck;
+    }
+
+    /// <summary>ECO-114: モード開始/終了のその場更新(Items を再構築しない)。モード依存フラグの
+    /// 切替+選択/整理マーカーの全クリア(モード遷移は選択クリアが契約=ECO-014/017/018/112)。</summary>
+    public void ApplyModeState(bool selectable, bool showTagDots, bool isPlainCheck)
+    {
+        Selectable = selectable;
+        HasTagDots = showTagDots;
+        SetSelectionMarkers(false, null, false, false, isPlainCheck);
     }
 }
 

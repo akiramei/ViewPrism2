@@ -75,9 +75,10 @@ public partial class ImageTabView : UserControl
     }
 
     /// <summary>
-    /// ECO-110: 開閉エッジの検出。モード切替は Recompute で Items を再構築してから一括通知するため、
-    /// 通知時点では旧段組のセルが既に破棄されている — アンカーはここでは実測せず、直前のレイアウト確定時に
-    /// 追跡済みの index(TrackGridAnchor)を採用する。
+    /// ECO-110: 開閉エッジの検出。通知時点の視覚状態は当てにできない(当初は Recompute の Items 再構築後
+    /// 一括通知が理由。ECO-114 でモード遷移は再構築しなくなったが、一括通知=string.Empty で幅変化前の
+    /// 段組という事情は不変)— アンカーはここでは実測せず、直前のレイアウト確定時に
+    /// 追跡済みの index(TrackGridAnchor)を採用する(tracked-index 方式は再構築の有無に非依存)。
     /// </summary>
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
