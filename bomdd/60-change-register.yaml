@@ -1655,3 +1655,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。検収=是正前後ビルドログの AVLN5001 件数(1→0)+機械受入 4 点全緑"
     body: 60-change-order-eco-111.md
     notes: "gate①=不要(実装層確定)。gate②=n/a 見込み(機械証拠検収)。関連=ECO-091(混入元)・ECO-094(移設)・ECO-105(golden n/a 前例)・K-AVALONIA(実装規約層)"
+  - id: ECO-112
+    title: "画像タブ ファイル操作モード(参照系・⋯入口・パスをコピー/場所を開く)の新設"
+    type: "新機能(CAD 2026-07-19 改版の取り込み・第5排他選択系モード)"
+    status: staged
+    golden: pending
+    baseline: "main c49286a"
+    findings: "CAD 正典=../ViewPrismUI docs/screens/image_tab.md「ファイル操作モード(2026-07-19)」節(409-455)+VC-IMG-11〜13+captures 5面(MENU-fileops/TB-fileops-{none,single,multi}/full-fileops=実在確認済み)+一次資料 dc.html(SHA-256 981D2071…82E112B0)。工程診断= CAD 健全(骨格確定+MOCK差分注記完備)・IMG-026 の挙動残余4点のみ gate① 裁定要・BOM 未宣言(net-new: 最新REQ-098/E-UI-MODE-041 は4モードで停止/E-UI-BROWSE-022 選択視覚は番号バッジ一貫適用=VC-IMG-13 と未整合)・実装 net-new(FileOps grep 0件。既存資産=排他4モード構造+InSelectMode+⋯メニュー。Clipboard/reveal 実装なし)。最近傍同型=削除モード(ECO-018=⋯入口・右ペインなし)"
+    impacted_bom: ["spec=REQ-099 新設(ファイル操作モード=参照系)", "ebom=E-UI-MODE-041(第5排他モード・出し分け・右ペインなし・ECO-027 ラベル維持則)+E-UI-BROWSE-022(選択順バッジのモード別抑止=fileops はチェック+青リングのみ)", "src=ImageTabViewModel/ImageTabView.axaml+App層 reveal サービス新設+i18n ja/en 新キー(Core 変更なし見込み)", "tests=モード遷移/出し分け/コピー文字列/バッジ抑止プローブ+R7 captures 並置(CaptureHarness fileops 5面追加)", "CP=CP-UI-G1 系刻印(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=モード不在で赤→緑転+既存モード排他/IMG-025 退行ガード"
+    body: 60-change-order-eco-112.md
+    notes: "gate①=必要(IMG-026 ①コピー順/改行/末尾 ②完了フィードバック ③Linux フォールバック検出 ④リスト選択視覚。推奨=1-a 表示順+OSネイティブ改行+末尾なし/2-b ボタン内一時表示/3-a 実装裁量=D-Bus 試行→xdg-open/4-a タグ編集と同型。裁定は CAD 先行反映)。gate②=必要(golden=VC-IMG-11〜13+原器5面並置+実挙動)。関連=ECO-018(削除モード=最近傍同型)・ECO-027(ラベル維持則)・ECO-097(IMG-025 交差)・ECO-077(⋯メニュー現行構成)・CP-I18N-010(新キー3層運用)"
