@@ -1665,4 +1665,4 @@ changes:
     impacted_bom: ["spec=REQ-099 新設(ファイル操作モード=参照系)", "ebom=E-UI-MODE-041(第5排他モード・出し分け・右ペインなし・ECO-027 ラベル維持則)+E-UI-BROWSE-022(選択順バッジのモード別抑止=fileops はチェック+青リングのみ)", "src=ImageTabViewModel/ImageTabView.axaml+App層 reveal サービス新設+i18n ja/en 新キー(Core 変更なし見込み)", "tests=モード遷移/出し分け/コピー文字列/バッジ抑止プローブ+R7 captures 並置(CaptureHarness fileops 5面追加)", "CP=CP-UI-G1 系刻印(accept 時)"]
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=モード不在で赤→緑転+既存モード排他/IMG-025 退行ガード"
     body: 60-change-order-eco-112.md
-    notes: "gate①=必要(IMG-026 ①コピー順/改行/末尾 ②完了フィードバック ③Linux フォールバック検出 ④リスト選択視覚。推奨=1-a 表示順+OSネイティブ改行+末尾なし/2-b ボタン内一時表示/3-a 実装裁量=D-Bus 試行→xdg-open/4-a タグ編集と同型。裁定は CAD 先行反映)。gate②=必要(golden=VC-IMG-11〜13+原器5面並置+実挙動)。関連=ECO-018(削除モード=最近傍同型)・ECO-027(ラベル維持則)・ECO-097(IMG-025 交差)・ECO-077(⋯メニュー現行構成)・CP-I18N-010(新キー3層運用)"
+    notes: "gate①=裁定済み(2026-07-19 maintainer: 4点とも推奨案=1-a 表示順+OSネイティブ改行+末尾なし/2-b ボタン内一時表示/3-a 実装裁量=D-Bus 試行→xdg-open/4-a タグ編集と同型。CAD 反映=ViewPrismUI 1401c9c)。gate②=必要(golden=VC-IMG-11〜13+原器5面並置+実挙動)。関連=ECO-018(削除モード=最近傍同型)・ECO-027(ラベル維持則)・ECO-097(IMG-025 交差)・ECO-077(⋯メニュー現行構成)・CP-I18N-010(新キー3層運用)"
