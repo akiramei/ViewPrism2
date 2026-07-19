@@ -97,3 +97,50 @@ plain/Ctrl クリックは救うが、BuildContextPanels の全評価×1 と全 
 - gate①(裁定): **不要**(実装層確定・視覚/意味論不変)。
 - gate②(golden): 必要 — maintainer 実機で 26 万件ビューの選択レスポンス改善を体感確認
   (タグ編集/ファイル操作の両モード・plain/Ctrl/shift)。
+
+## §7 実施記録(2026-07-19・/eco-fix)
+
+### 7.1 プローブ先行(R5)と赤の実測
+
+- 計器= `ImageTabViewModel.ContextEnumerationCount`(母集合列挙の累計回数)を先行追加
+  (ECO-112 様式=観測に計器が必要な欠陥は計器先行+挙動赤。Core シームは全 sealed で外部観測不能)。
+- 構造プローブ 3 本(CpUiG1ImageTabSelectionTests・ECO-058 方式=固定時間閾値なし):
+  ①選択クリック(plain/Ctrl)は母集合列挙を走らせない ②ファイル操作モードでも同様
+  ③SHIFT 範囲だけが 1 回だけ使う(union 意味論維持込み)→ **是正前 3/3 不合格を実測**
+  (①②= delta 2〔ToggleSelect+BuildContextPanels〕・③= delta 2)。既存 819 全緑=計器の無影響も実証。
+- R8 所見 1 の追加プローブ(7.4): スキャン段階公開×entry 解決(是正前赤=1/823)。
+
+### 7.2 是正の構造(案A 採用=真因構造の撤去)
+
+- **ToggleSelect**: 母集合列挙を SHIFT 分岐内へ遅延(plain/Ctrl はゼロコスト化)。
+- **RefreshSelectionMarkers**: 全 Items 走査→**差分更新**(`_markedItemIds`=前回マーカー保持∪今回対象
+  のみ更新・`_itemById` 辞書・選択順は orderById 辞書=IndexOf 反復も解消)。モード遷移は必ず
+  Recompute=全再構築を通るため非対象アイテムの構築時状態は常に現モードと一致(コメントで根拠残置)。
+- **BuildContextPanels**: 全件評価+ソート→ `_matchedIndexById`(表示順 index 辞書)+`_entryById`
+  で解決(共通タグ計算の「先頭=表示順先頭」を保存)。
+- **EntryById**: 線形走査→辞書(整理トレイ/場所を開く経路も母集合非比例化)。
+- インデックス維持= `_entries` 3 変異サイト(BuildEntries/ClearContentData/スキャン append)+
+  Items 4 変異サイト(BuildItemsFromMatched/スキャン append/未ロード Clear/フォルダ Insert=対象外)全部。
+- **WorkTab read-across**: ToggleSelect 遅延+RefreshSelectionMarkers 差分更新+Items 構築時の
+  インデックス再構築(同型 2 サイト+維持 1 サイト)。
+
+### 7.3 機械受入(2026-07-19・全緑)
+
+- dotnet build: 0 error。`--no-incremental` フルビルドで警告 0。
+- dotnet test Tests: **823/823**(既存 819+新プローブ 4)。Oracle: 109+2skip(R6 不変)。
+- validate_bom: 0/0。R7= 対象外(視覚・意味論不変の計算量是正=ECO-110 前例)。
+
+### 7.4 セルフレビュー(R8)+処置
+
+fresh context の独立レビュー(全変異サイト grep 悉皆+フルスイート実行)。所見全数と処置:
+
+| 所見 | 分類 | 処置 |
+| --- | --- | --- |
+| 1 スキャン段階公開で `_entryById` 未維持=公開直後の画像が entry 解決(場所を開く/選択パネル/整理トレイ)から無言脱落 | スコープ内欠陥 | プローブ先行(スキャン中×ファイル操作=是正前赤)→ append サイトへ 1 行+宣言コメントの維持サイト記載も是正 |
+| 2 ClearContentData が `_entryById` 残置(旧コレクション 26 万件のメモリ滞留) | スコープ内(軽微) | クリア 1 行追加 |
+| 3 WorkTab BuildContextPanels の `_sourceImages.Where`(O(スペース内件数))残余 | 残余明記 | 作業スペースはユーザー選別集合で 26 万件級にならない(追加は明示操作のみ)。宣言スコープ=同型 2 サイトどおり。将来スペースが大規模化したら分離起票 |
+| 4 プローブは是正 4 点中 2 点(①③)の構造 pin=②差分更新・④辞書化の**性能**退行は計器観測外 | 残余明記(検出限界の宣言) | 意味論は既存テストが差分経路で全検証(選択順/SHIFT/整理マーカー/IMG-025/ECO-112)。②④の性能 pin には呼び出し回数計器の増設が必要=過剰計器化を避け本欄に検出限界を刻む(ECO-107 教訓「lint 限界宣言には掃射手段紐づけ」の適用=再発時は ContextEnumerationCount と同型の計器を該当サイトへ) |
+| 5〜9 インデックス同期悉皆/マーカー会計/挙動保存(未分類・IMG-025・スキャン取込順)/WorkTab 対称性/計器 | 問題なし確認 | 全数確認済み(レビュー記録) |
+| 10 CpUiG6SaveBarTests 間欠不合格(レビュー実行時 1/1・本 ECO 無関係) | R3(既知 flaky) | 51-cheat-log へ発現追加(4 例目・一括起票候補の N 蓄積) |
+
+未処置のスコープ内所見= **0**。

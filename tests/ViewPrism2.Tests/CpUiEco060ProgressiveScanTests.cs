@@ -80,6 +80,68 @@ public sealed class CpUiEco060ProgressiveScanTests : IDisposable
         Assert.False(vm.SimilarSearchBlocked);
     }
 
+    [Fact]
+    public async Task スキャン中に段階公開された画像も選択操作のentry解決が通る()
+    {
+        // ECO-113 R8 所見1: スキャン append(OnScanUpdated)が _entryById を維持しないと、
+        // 段階公開直後の画像は「クリック・選択可能なのに entry 解決(場所を開く/選択パネル/
+        // 整理トレイ)から無言で脱落」する。是正前=不合格(RevealedPaths が空)。
+        const int fileCount = 513; // batch 512 + 1(第2batchで一時停止させ scan 中状態を固定)
+        for (var i = 0; i < fileCount; i++)
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(_root, $"image-{i:D3}.jpg"),
+                $"content-{i}",
+                TestContext.Current.CancellationToken);
+        }
+
+        var folder = new SyncFolder { Id = IdGenerator.NewId(), Name = "C", Path = _root };
+        Assert.True((await _db.Folders.AddAsync(folder)).IsSuccess);
+
+        using var secondBatchEntered = new ManualResetEventSlim();
+        using var releaseSecondBatch = new ManualResetEventSlim();
+        var pausingImages = new PausingImageRepository(_db.Images, secondBatchEntered, releaseSecondBatch);
+        var scan = new ScanService(_db.Folders, pausingImages, _db.Clock);
+        var coordinator = new ScanCoordinator(scan);
+        var fileOps = new FakeFileOps();
+        var vm = new ImageTabViewModel(
+            _db.Folders, pausingImages, _db.Tags, new ImageSorter(),
+            new ViewService(_db.Views, _db.Clock), new NodeGraphBuilder(),
+            new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(_db.Folders, pausingImages, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
+            new MergeService(pausingImages, _db.Tags, _db.Merges),
+            new TrashService(pausingImages, _db.Folders, new FilePresenceProbe()),
+            new StubWindowService(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja(),
+            coordinator, fileOps);
+        await vm.InitializeAsync(folder.Id);
+
+        var scanTask = coordinator.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken);
+        Assert.True(
+            secondBatchEntered.Wait(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken),
+            "第2batchまで到達しませんでした。");
+        await WaitUntilAsync(() => vm.Items.Count == 512 && vm.IsSelectedCollectionScanning);
+
+        vm.EnterFileOpsCommand.Execute(null);
+        var target = vm.Items.First(x => !x.IsFolder);
+        vm.HandleItemClick(target, ctrl: false, shift: false);
+        Assert.True(vm.ShowOpenLocation);
+
+        vm.OpenFileLocationCommand.Execute(null);
+        Assert.Single(fileOps.RevealedPaths); // 是正前: EntryById が段階公開分を解決できず空=赤
+
+        vm.ExitFileOpsCommand.Execute(null);
+        releaseSecondBatch.Set();
+        var result = await scanTask;
+        Assert.True(result.IsSuccess, result.Message);
+    }
+
+    private sealed class FakeFileOps : IFileOperationsService
+    {
+        public List<string> RevealedPaths { get; } = new();
+        public Task CopyTextAsync(string text) => Task.CompletedTask;
+        public void RevealInFileManager(string absolutePath) => RevealedPaths.Add(absolutePath);
+    }
+
     private ImageTabViewModel NewImageTab(IImageRepository images, ScanCoordinator coordinator)
         => new(
             _db.Folders, images, _db.Tags, new ImageSorter(),

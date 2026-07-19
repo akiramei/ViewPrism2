@@ -276,4 +276,52 @@ public sealed class CpUiG1ImageTabSelectionTests : IDisposable
         Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], ordered.Select(e => e.Record.FileName)); // 表示順
         Assert.Equal(1, idx); // b.jpg は表示順 index 1
     }
+    // ================================================================
+    //  ECO-113: 選択トグル経路の母集合再評価(26万件で顕在化)の構造プローブ。
+    //  計器= ImageTabViewModel.ContextEnumerationCount(母集合列挙=全件評価+ソートの累計回数)。
+    //  ECO-058 方式=固定時間閾値を設けず「選択クリックが母集合列挙を呼ばない」構造で pin する。
+    // ================================================================
+
+    [Fact]
+    public async Task 選択クリックは母集合列挙を走らせない()
+    {
+        var (vm, _) = await NewWithImagesAsync("a.jpg", "b.jpg", "c.jpg");
+        vm.ToggleEditCommand.Execute(null);
+        var baseline = vm.ContextEnumerationCount;
+
+        vm.HandleItemClick(Item(vm, "a.jpg"), ctrl: false, shift: false); // plain
+        vm.HandleItemClick(Item(vm, "b.jpg"), ctrl: true, shift: false);  // ctrl トグル
+        vm.HandleItemClick(Item(vm, "b.jpg"), ctrl: true, shift: false);  // ctrl 解除
+
+        Assert.True(vm.HasSelection);
+        Assert.Equal(baseline, vm.ContextEnumerationCount); // 選択コストは母集合サイズ非依存(ECO-113)
+    }
+
+    [Fact]
+    public async Task ファイル操作モードの選択クリックも母集合列挙を走らせない()
+    {
+        var (vm, _) = await NewWithImagesAsync("a.jpg", "b.jpg");
+        vm.EnterFileOpsCommand.Execute(null);
+        var baseline = vm.ContextEnumerationCount;
+
+        vm.HandleItemClick(Item(vm, "a.jpg"), ctrl: false, shift: false);
+        vm.HandleItemClick(Item(vm, "b.jpg"), ctrl: true, shift: false);
+
+        Assert.Equal(2, vm.FileOpsSelCount);
+        Assert.Equal(baseline, vm.ContextEnumerationCount); // 症状の観測面(ECO-112 のモード)でも非比例
+    }
+
+    [Fact]
+    public async Task SHIFT範囲選択だけが母集合列挙を1回だけ使う()
+    {
+        var (vm, _) = await NewWithImagesAsync("c.jpg", "a.jpg", "b.jpg"); // 表示順 a,b,c
+        vm.ToggleEditCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "a.jpg"), ctrl: false, shift: false);
+        var baseline = vm.ContextEnumerationCount;
+
+        vm.HandleItemClick(Item(vm, "c.jpg"), ctrl: false, shift: true); // 範囲は表示順の列挙が必要=1回だけ許容
+
+        Assert.Equal(3, vm.Items.Count(i => i.IsSelected)); // a,b,c の union(既存意味論の維持)
+        Assert.Equal(baseline + 1, vm.ContextEnumerationCount);
+    }
 }

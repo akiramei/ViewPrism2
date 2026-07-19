@@ -62,6 +62,9 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
     private readonly List<string> _selected = new();   // 選択順を保持(連番バッジ)
     private string? _tagFilter;                          // 現スペース内の絞り込み(単一)
     private List<ImageRecord> _sourceImages = new();     // 現スペースの全 normal 画像(絞り込み前=選択母集合の素)
+    // ECO-113 read-across: 選択クリック経路の差分更新用インデックス(画像タブと同型・維持サイト= Items 構築)
+    private readonly Dictionary<string, ImageItemVM> _itemById = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _markedItemIds = new(StringComparer.Ordinal);
 
     // ECO-β-2: タグ編集モード(作業と排他)
     private bool _editMode;
@@ -495,6 +498,15 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
                 sortItemLabel: sortItemCell is not null ? sortItemLabel : null, sortItemCell: sortItemCell));
         }
 
+        // ECO-113 read-across: 差分更新インデックスを Items 構築と同時に再構築
+        _itemById.Clear();
+        _markedItemIds.Clear();
+        foreach (var item in Items)
+        {
+            _itemById[item.Id] = item;
+            if (item.IsSelected || item.IsMergeTarget || item.IsOrganizeTarget) _markedItemIds.Add(item.Id);
+        }
+
         CountLabel = _localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = Items.Count.ToString() });
         WsEmpty = _sourceImages.Count == 0;
         BuildContextPanels(selSet);
@@ -511,13 +523,27 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
     {
         var selSet = new HashSet<string>(_selected);
         var orgSet = new HashSet<string>(_organizeTargets, StringComparer.Ordinal);
-        foreach (var item in Items)
+        // ECO-113 read-across: 前回マーカー保持∪今回対象だけを触る差分更新(Items 全走査は母集合比例。
+        // 画像タブの同型是正と対称)。選択順も IndexOf 反復でなく一度の辞書構築で解決。
+        var orderById = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < _selected.Count; i++) orderById[_selected[i]] = i + 1;
+        var affected = new HashSet<string>(_markedItemIds, StringComparer.Ordinal);
+        affected.UnionWith(selSet);
+        if (_organizeMode)
         {
-            bool selected = selSet.Contains(item.Id);
-            int? order = selected ? _selected.IndexOf(item.Id) + 1 : null;
-            bool merge = _organizeMode && string.Equals(item.Id, _mergeTargetId, StringComparison.Ordinal);
-            bool org = _organizeMode && orgSet.Contains(item.Id);
+            if (_mergeTargetId is { } mergeId) affected.Add(mergeId);
+            affected.UnionWith(orgSet);
+        }
+        _markedItemIds.Clear();
+        foreach (var id in affected)
+        {
+            if (!_itemById.TryGetValue(id, out var item)) continue;
+            bool selected = selSet.Contains(id);
+            int? order = selected ? orderById[id] : null;
+            bool merge = _organizeMode && string.Equals(id, _mergeTargetId, StringComparison.Ordinal);
+            bool org = _organizeMode && orgSet.Contains(id);
             item.SetSelectionMarkers(selected, order, merge, org);
+            if (selected || merge || org) _markedItemIds.Add(id);
         }
         BuildContextPanels(selSet); // タグ編集パネル/整理トレイ(選択・整理依存)をその場更新
         OnPropertyChanged(nameof(HasMoveSelection));
@@ -1413,9 +1439,11 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
 
     private void ToggleSelect(string id, bool ctrl, bool shift)
     {
-        var list = Items.Select(i => i.Id).ToList(); // 表示順(絞り込み+ソート後)が選択母集合
+        // ECO-113 read-across: 表示順リストの構築(O(母集合))は SHIFT 範囲だけが必要とする。
+        // plain/Ctrl クリックの経路に置かない(画像タブの同型是正と対称)。
         if (shift && _selected.Count > 0)
         {
+            var list = Items.Select(i => i.Id).ToList(); // 表示順(絞り込み+ソート後)が選択母集合
             var last = _selected[^1];
             int a = list.IndexOf(last), b = list.IndexOf(id);
             if (a >= 0 && b >= 0)

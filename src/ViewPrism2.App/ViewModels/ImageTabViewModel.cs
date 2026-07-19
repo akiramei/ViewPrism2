@@ -80,6 +80,14 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     // (ECO-026/#5) 現在表示中の matched をキャッシュ=表示列ライブ編集で母集合を再評価せず Items を作り直すため。
     private List<(string Name, int Count)> _matchedFolders = new();
     private List<ImageEntry> _matchedFiles = new();
+    // ECO-113: 選択クリック経路から母集合規模の処理を撤去するためのインデックス群。
+    // 維持サイト= _entryById: BuildEntries/ClearContentData/スキャン append(OnScanUpdated)の 3 変異サイト全部 /
+    // _itemById・_matchedIndexById: BuildItemsFromMatched+スキャン append+未ロード時 Items.Clear。
+    // _markedItemIds= 何らかのマーカー(選択/宛先/整理対象)を保持中の item id(差分更新の解除対象)。
+    private Dictionary<string, ImageEntry> _entryById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ImageItemVM> _itemById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _matchedIndexById = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _markedItemIds = new(StringComparer.Ordinal);
     private string? _tagFilter;
     private bool _editMode;
     private readonly List<string> _selected = new();
@@ -447,6 +455,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _normalIds = new HashSet<string>(StringComparer.Ordinal);
         _imageTags = new Dictionary<string, List<ImageTag>>(StringComparer.Ordinal);
         _entries = [];
+        _entryById = new Dictionary<string, ImageEntry>(StringComparer.Ordinal); // ECO-113 R8 所見2: 旧コレクションの滞留防止
         _selected.Clear();
         _fsPath.Clear();
         _tagFilter = null;
@@ -550,6 +559,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             .Where(r => _collectionId is not null && string.Equals(r.SyncFolderId, _collectionId, StringComparison.Ordinal))
             .Select(BuildEntry)
             .ToList();
+        _entryById = _entries.ToDictionary(e => e.Record.Id, StringComparer.Ordinal); // ECO-113: O(1) 解決
     }
 
     private ImageEntry BuildEntry(ImageRecord r)
@@ -737,8 +747,14 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _ => key,
     };
 
+    /// <summary>母集合列挙(全件評価+ソート)の累計実行回数 — ECO-113 の構造プローブ計器
+    /// (ECO-058 方式=固定時間閾値でなく構造で pin)。選択クリック経路はこれを増やしてはならない
+    /// (増える=選択コストが母集合サイズに比例する退行)。</summary>
+    public int ContextEnumerationCount { get; private set; }
+
     private List<ImageEntry> AllLoadedImagesInContext()
     {
+        ContextEnumerationCount++;
         // 編集モードの選択母集合・ビューアー順=現在の文脈で表示中の画像を**表示と同じソート順**で返す。
         // (SHIFT 範囲選択が表示順と一致する=歯抜け防止。連番/ビューアーの順序も表示順に一致する)
         if (_axis == "view" && _viewRoot is not null)
@@ -1163,6 +1179,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (!_loaded)
         {
             Items.Clear();
+            _itemById.Clear(); _matchedIndexById.Clear(); _markedItemIds.Clear(); // ECO-113: Items と同期
             Crumbs.Clear();
             Chips.Clear();
             AxisOptions.Clear();
@@ -1310,6 +1327,20 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         {
             Items.Add(CreateImageItem(e, selSet, sortItemIndex, sortItemLabel));
         }
+
+        // ECO-113: 選択経路の差分更新用インデックスを再構築(ここは元々 O(母集合) の再構築サイト。
+        // クリック毎の全走査をここへ一度だけ寄せる)
+        _itemById.Clear();
+        _matchedIndexById.Clear();
+        _markedItemIds.Clear();
+        for (int i = 0; i < _matchedFiles.Count; i++)
+            _matchedIndexById[_matchedFiles[i].Record.Id] = i;
+        foreach (var item in Items)
+        {
+            if (item.IsFolder) continue;
+            _itemById[item.Id] = item;
+            if (item.IsSelected || item.IsMergeTarget || item.IsOrganizeTarget) _markedItemIds.Add(item.Id);
+        }
     }
 
     private ImageItemVM CreateImageItem(
@@ -1364,15 +1395,30 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (!_loaded) return;
         ClearCopyFeedback(); // ECO-112/IMG-026②: 選択・マーカー変化はフィードバック解除遷移(ECO-104 教訓=全列挙)
         var selSet = new HashSet<string>(_selected);
-        foreach (var item in Items)
+        // ECO-113: 差分更新 — 前回マーカー保持(_markedItemIds)∪今回対象だけを触る。Items 全走査は
+        // 母集合比例(26万件で顕在化・e39d68a の残余)。選択順も IndexOf 反復でなく一度の辞書構築で解決。
+        // モード遷移(isPlainCheck の切替)は必ず Recompute=全再構築を通るため、非対象アイテムの
+        // 構築時マーカー状態は現モードと常に一致する。
+        var orderById = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < _selected.Count; i++) orderById[_selected[i]] = i + 1;
+        var affected = new HashSet<string>(_markedItemIds, StringComparer.Ordinal);
+        affected.UnionWith(selSet);
+        if (_organizeMode)
         {
-            if (item.IsFolder) continue;
-            bool selected = selSet.Contains(item.Id);
+            if (Organize.MergeTargetId is { } mergeId) affected.Add(mergeId);
+            affected.UnionWith(Organize.Targets);
+        }
+        _markedItemIds.Clear();
+        foreach (var id in affected)
+        {
+            if (!_itemById.TryGetValue(id, out var item)) continue;
+            bool selected = selSet.Contains(id);
             // ECO-112/VC-IMG-13: ファイル操作モードは番号バッジなし(白✓)
-            int? order = selected && !_fileOpsMode ? _selected.IndexOf(item.Id) + 1 : null;
-            bool merge = _organizeMode && string.Equals(item.Id, Organize.MergeTargetId, StringComparison.Ordinal);
-            bool org = _organizeMode && Organize.Targets.Contains(item.Id);
+            int? order = selected && !_fileOpsMode ? orderById[id] : null;
+            bool merge = _organizeMode && string.Equals(id, Organize.MergeTargetId, StringComparison.Ordinal);
+            bool org = _organizeMode && Organize.Targets.Contains(id);
             item.SetSelectionMarkers(selected, order, merge, org, isPlainCheck: _fileOpsMode);
+            if (selected || merge || org) _markedItemIds.Add(id);
         }
         BuildContextPanels(selSet);
         OnPropertyChanged(string.Empty);
@@ -1382,7 +1428,15 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void BuildContextPanels(HashSet<string> selSet)
     {
         // ---- edit panel ----
-        var selectedEntries = AllLoadedImagesInContext().Where(e => selSet.Contains(e.Record.Id)).ToList();
+        // ECO-113: 全件評価+ソート(AllLoadedImagesInContext)を撤去 — 選択は id 辞書で解決し、
+        // 表示順(共通タグ計算の「先頭」)は Recompute 時構築の index 辞書で保つ。文脈内判定=
+        // _matchedIndexById 含有(母集合変更は必ず Recompute 経由なのでスナップショットは常に現文脈)。
+        var selectedEntries = selSet
+            .Where(_matchedIndexById.ContainsKey)
+            .OrderBy(id => _matchedIndexById[id])
+            .Select(id => _entryById.GetValueOrDefault(id))
+            .OfType<ImageEntry>()
+            .ToList();
         CurrentTags.Clear();
         if (selectedEntries.Count > 0)
         {
@@ -1423,7 +1477,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     }
 
     private ImageEntry? EntryById(string id)
-        => _entries.FirstOrDefault(e => string.Equals(e.Record.Id, id, StringComparison.Ordinal));
+        => _entryById.GetValueOrDefault(id); // ECO-113: 線形走査→辞書(26万件で選択パネル経路が母集合比例だった)
 
     private OrganizeSlotVM? SlotFor(string id)
     {
@@ -1961,9 +2015,12 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
 
     private void ToggleSelect(string id, bool ctrl, bool shift)
     {
-        var list = AllLoadedImagesInContext().Select(e => e.Record.Id).ToList();
+        // ECO-113: 母集合列挙(全件評価+ソート=AllLoadedImagesInContext)は表示順の範囲が要る
+        // SHIFT 分岐だけが必要とする。無条件実行に置くと plain/Ctrl クリックのコストが
+        // 母集合サイズに比例する(26万件で顕在化・混入=M3a 初版 6f7b4f9)。
         if (shift && _selected.Count > 0)
         {
+            var list = AllLoadedImagesInContext().Select(e => e.Record.Id).ToList();
             var last = _selected[^1];
             int a = list.IndexOf(last), b = list.IndexOf(id);
             if (a >= 0 && b >= 0)
@@ -2428,7 +2485,11 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         foreach (var entry in visible)
         {
             _matchedFiles.Add(entry);
-            Items.Add(CreateImageItem(entry, selected));
+            var item = CreateImageItem(entry, selected);
+            Items.Add(item);
+            // ECO-113: スキャン段階公開の append でも差分更新インデックスを維持(新規 scan 画像は未選択)
+            _itemById[item.Id] = item;
+            _matchedIndexById[item.Id] = _matchedFiles.Count - 1;
         }
 
         CountLabel = _localization.T("view.itemCountLabel", new Dictionary<string, string> { ["count"] = (_matchedFolders.Count + _matchedFiles.Count).ToString() });
@@ -2478,6 +2539,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                         {
                             var entry = BuildEntry(image);
                             _entries.Add(entry);
+                            _entryById[image.Id] = entry; // ECO-113 R8 所見1: 段階公開分も entry 解決から脱落させない
                             appended.Add(entry);
                         }
                     }
