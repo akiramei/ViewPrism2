@@ -1658,7 +1658,7 @@ changes:
   - id: ECO-112
     title: "画像タブ ファイル操作モード(参照系・⋯入口・パスをコピー/場所を開く)の新設"
     type: "新機能(CAD 2026-07-19 改版の取り込み・第5排他選択系モード)"
-    status: staged
+    status: implemented   # 2026-07-19 是正+機械受入完了(build 0/0・フルビルド警告0・Tests 819/819・Oracle 109+2skip・validate 0/0)・R7 並置(転写漏れ0・裁定送り2=バッジ角丸/メニュー行高)・R8 独立レビュー(スコープ内所見5件是正済み・未処置0)。golden 待ち
     golden: pending
     baseline: "main c49286a"
     findings: "CAD 正典=../ViewPrismUI docs/screens/image_tab.md「ファイル操作モード(2026-07-19)」節(409-455)+VC-IMG-11〜13+captures 5面(MENU-fileops/TB-fileops-{none,single,multi}/full-fileops=実在確認済み)+一次資料 dc.html(SHA-256 981D2071…82E112B0)。工程診断= CAD 健全(骨格確定+MOCK差分注記完備)・IMG-026 の挙動残余4点のみ gate① 裁定要・BOM 未宣言(net-new: 最新REQ-098/E-UI-MODE-041 は4モードで停止/E-UI-BROWSE-022 選択視覚は番号バッジ一貫適用=VC-IMG-13 と未整合)・実装 net-new(FileOps grep 0件。既存資産=排他4モード構造+InSelectMode+⋯メニュー。Clipboard/reveal 実装なし)。最近傍同型=削除モード(ECO-018=⋯入口・右ペインなし)"

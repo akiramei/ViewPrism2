@@ -784,13 +784,15 @@ public sealed partial class ImageItemVM : ObservableObject
         IBrush? thumbBrush, bool selectable, bool isSelected, bool hasTagDots, List<IBrush> tagDots,
         string sizeLabel, string dateLabel, string? target, string? absolutePath = null,
         int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false,
-        IReadOnlyList<ListCell>? cells = null, string? sortItemLabel = null, ListCell? sortItemCell = null)
+        IReadOnlyList<ListCell>? cells = null, string? sortItemLabel = null, ListCell? sortItemCell = null,
+        bool isPlainCheck = false)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
         ThumbBrush = thumbBrush; Selectable = selectable; _isSelected = isSelected;
         HasTagDots = hasTagDots; TagDots = tagDots; SizeLabel = sizeLabel; DateLabel = dateLabel;
         Target = target; AbsolutePath = absolutePath; _selectionOrder = selectionOrder;
         _isMergeTarget = isMergeTarget; _isOrganizeTarget = isOrganizeTarget;
+        _isPlainCheck = isPlainCheck;
         Cells = cells ?? [];
         SortItemLabel = sortItemLabel; SortItemCell = sortItemCell;
     }
@@ -823,7 +825,9 @@ public sealed partial class ImageItemVM : ObservableObject
     public bool HasRealThumb => AbsolutePath is not null;
 
     // ---- 選択マーカー(可変・その場更新): Items 全再構築を避けクリック応答性を保つ ----
-    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPlainCheck))]
+    private bool _isSelected;
     /// <summary>タグ編集/作業モードの選択順(1 起点・REQ-041 CR-3)。未選択は null。連番付与の順序を可視化する。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectionOrderText))]
@@ -833,14 +837,22 @@ public sealed partial class ImageItemVM : ObservableObject
     [ObservableProperty] private bool _isMergeTarget;
     /// <summary>整理モード(ECO-014): このセルが整理対象(統合し削除対象)か。</summary>
     [ObservableProperty] private bool _isOrganizeTarget;
+    /// <summary>ファイル操作モード(ECO-112/VC-IMG-13): 選択チェックを番号なしの白✓で出すモードか。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPlainCheck))]
+    private bool _isPlainCheck;
+    /// <summary>選択済み かつ 番号なしモード=白✓ を表示(VC-IMG-13: ファイル操作は選択順バッジを出さない)。</summary>
+    public bool ShowPlainCheck => IsSelected && IsPlainCheck;
 
     /// <summary>選択/整理マーカーをその場更新(Items を作り直さない)。</summary>
-    public void SetSelectionMarkers(bool isSelected, int? selectionOrder, bool isMergeTarget, bool isOrganizeTarget)
+    public void SetSelectionMarkers(bool isSelected, int? selectionOrder, bool isMergeTarget, bool isOrganizeTarget,
+        bool isPlainCheck = false)
     {
         IsSelected = isSelected;
         SelectionOrder = selectionOrder;
         IsMergeTarget = isMergeTarget;
         IsOrganizeTarget = isOrganizeTarget;
+        IsPlainCheck = isPlainCheck;
     }
 }
 

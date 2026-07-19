@@ -217,6 +217,72 @@ internal static class Program
         await PumpAsync();
 
         await CaptureFileListSortAsync(outDir, manager, tagRepo, tagService, viewService, locJa);
+        await CaptureFileOpsAsync(outDir, manager, tagRepo, viewService, locJa);
+    }
+
+    /// <summary>
+    /// ECO-112(VC-IMG-11〜13): ファイル操作モードの R7 並置用撮影。
+    /// 原器= image_tab の MENU-fileops / TB-fileops-{none,single,multi} / full-fileops。
+    /// FS 軸で ⋯メニュー→モード 0/1/2 件選択を再現する。画像はファイル実体なし
+    /// (サムネはプレースホルダー描画=クローム比較が目的・CP-UI-G6 許容=ECO-109 と同じ)。
+    /// </summary>
+    private static async Task CaptureFileOpsAsync(
+        string outDir, DatabaseManager manager, TagRepository tagRepo,
+        ViewService viewService, LocalizationService locJa)
+    {
+        var folders = new SyncFolderRepository(manager);
+        var images = new ImageRepository(manager);
+        var featureRepo = new ImageFeatureRepository(manager);
+        var simRepo = new ImageSimilarityRepository(manager);
+        var tab = new ImageTabViewModel(
+            folders, images, tagRepo, new ImageSorter(),
+            viewService, new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(folders, images, featureRepo, simRepo, new PHashImageReader(), new SystemClock()),
+            new MergeService(images, tagRepo, new MergeRepository(manager)),
+            new TrashService(images, folders, new FilePresenceProbe()),
+            new StubWindows(), new AppSettings(), new WorkspaceService(new WorkspaceRepository(manager), new SystemClock()),
+            locJa);
+        await tab.InitializeAsync("col-eco109"); // ECO-109 シードのコレクション(FS 軸既定)を再利用
+        tab.SetGridCommand.Execute(null);
+
+        var window = new Window
+        {
+            Content = new ImageTabView { DataContext = tab },
+            Width = 1240,
+            Height = 860,
+        };
+        window.Show();
+        await PumpAsync();
+
+        tab.ToggleMoreMenuCommand.Execute(null);
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fileops-menu.png"));      // 原器 MENU-fileops.png
+
+        tab.EnterFileOpsCommand.Execute(null); // メニューは開始時に閉じる(CAD)
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fileops-tb-none.png"));   // 原器 TB-fileops-none.png
+
+        var first = tab.Items.First(i => !i.IsFolder);
+        tab.HandleItemClick(first, ctrl: false, shift: false);
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fileops-tb-single.png")); // 原器 TB-fileops-single.png
+        Capture(window, Path.Combine(outDir, "impl-fileops-full.png"));      // 原器 full-fileops.png(選択視覚込み全面)
+
+        // コピー完了フィードバック(IMG-026② 裁定=ボタン内一時表示)。mock は挙動未配線で原器なし=
+        // golden 判断用の実装面。撮影用に固定表示(SavedToastDuration と同じ様式)
+        tab.CopyFeedbackDuration = TimeSpan.FromHours(1);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)tab.CopyPathsCommand).ExecuteAsync(null);
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fileops-tb-copied.png"));
+
+        var second = tab.Items.Where(i => !i.IsFolder).Skip(1).First();
+        tab.HandleItemClick(second, ctrl: true, shift: false); // 選択変化=フィードバック解除遷移(multi 面はラベル復帰済み)
+        await PumpAsync();
+        Capture(window, Path.Combine(outDir, "impl-fileops-tb-multi.png"));  // 原器 TB-fileops-multi.png
+
+        tab.ExitFileOpsCommand.Execute(null);
+        window.Close();
+        await PumpAsync();
     }
 
     /// <summary>

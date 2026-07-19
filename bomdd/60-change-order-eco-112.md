@@ -152,3 +152,81 @@ CAD 先行反映済み= ViewPrismUI `1401c9c`(review_points.md IMG-026 決定化
 - ~~gate①(裁定)~~: **済(2026-07-19)**= 1-a/2-b/3-a/4-a 確定・CAD 反映済み(ViewPrismUI `1401c9c`)。
 - **gate②(golden)**: 実装後、maintainer 実機で VC-IMG-11〜13+原器 5 面並置の視覚検収+
   コピー/場所を開くの実挙動確認。
+
+## §7 実施記録(2026-07-19・/eco-fix)
+
+### 7.1 プローブ先行(R5)と赤の実測
+
+- 様式注記: ECO-084 の R5 様式(リフレクション解決)でなく **API 殻先行+挙動赤**を採用。理由=
+  コピー/場所を開くは副作用系でフェイク(IFileOperationsService)の ctor 注入がプローブに必須のため。
+  殻(状態フィールド+公開プロパティ+無配線コマンド・挙動ゼロ)のみ先行し、プローブ 11 本
+  (挙動 8= CpUiG1FileOpsModeTests・視覚 3= GfFileOpsVisualParityTests・VC-IMG-11〜13 から先行生成
+  =GF-073 様式)を実行して **11/11 不合格を実測**(既存 806 は全緑=殻の無影響も同時実証)→配線後 全緑転。
+- 追加プローブ(R8 由来・7.4): フィードバック中 CanExecute(是正前赤=1/818)+タイマ満了自動復帰。
+
+### 7.2 是正の構造
+
+- 第 5 排他モード `_fileOpsMode`: 既存 4 モードの全入口に排他解除を追加(全数 grep で漏れ 0 を R8 確認)。
+  InAnyMode/InSelectMode/ShowXxxEntry へ合流。右ペイン(ShowRightPane=edit/organize)は不変。
+- 選択視覚: inSelect 再利用+**番号バッジのモード別抑止**(CreateImageItem/RefreshSelectionMarkers の
+  両経路で order=null+isPlainCheck)。ImageItemVM に IsPlainCheck/ShowPlainCheck(白✓)を追加。
+  リスト行は既存 imageListRow.selected がそのまま適用(裁定④=追加実装なしで成立)。
+- コピー: 表示順(AllLoadedImagesInContext)+Environment.NewLine+末尾改行なし(裁定①)。
+  フィードバック(裁定②)は StartCopyFeedback= fire-and-forget タイマ+**解除遷移の全列挙**
+  (ECO-104 教訓)= タイマ/モード離脱(ExitFileOps)/選択・マーカー変化(RefreshSelectionMarkers)/
+  母集合・文脈再計算(Recompute 先頭)。ラベルは表示時解決(ECO-106 様式・CopyPathsLabel)。
+- OS 連携: IFileOperationsService 新設(App 層)。Windows=explorer /select・macOS=open -R・
+  Linux=D-Bus ShowItems 試行→xdg-open 親フォルダ(裁定③)、Linux 経路は Task.Run で UI 非ブロック。
+  クリップボードは Avalonia 12 ClipboardExtensions.SetTextAsync(IClipboard 拡張=K-AVALONIA 型解決規律で確認)。
+- i18n: 新キー 5(toolbar.fileOps/fileOpsExit/copyPaths/copyPathsDone/openFileLocation)を ja/en 同時追加。
+  lint 3 次元(重複/未使用/解決タイミング)全緑=CopyPathsLabel は算出プロパティで脆弱クラス非該当。
+
+### 7.3 機械受入(2026-07-19・全緑)
+
+- dotnet build: 0 error。`--no-incremental` フルビルドで警告 0(K-AVALONIA/ECO-111 規律)。
+- dotnet test Tests: **819/819**(既存 806+新プローブ 13)。Oracle: 109+2skip(R6=既存固定行変更なし)。
+- validate_bom: 0 error / 0 warning。
+
+### 7.4 セルフレビュー(R8)+処置
+
+fresh context の独立レビュー(diff 1210 行・全観点)を実施。所見全数と処置:
+
+| 所見 | 分類 | 処置 |
+| --- | --- | --- |
+| 2-1 タイマがコマンド実行を占有→表示中 2 秒ボタン disabled+文言グレー化 | スコープ内欠陥 | プローブ先行(CanExecute 赤)→タイマを fire-and-forget へ分離。撮影面 impl-fileops-tb-copied.png で青塗り白文字維持を視覚実測 |
+| 2-3 コピー側のみ例外無防備(reveal と非対称) | スコープ内(軽微) | try/catch(失敗時はフィードバックも出さない=成功偽装回避) |
+| 4-3 Linux reveal の UI スレッド 3 秒ブロック | スコープ内(軽微) | Task.Run へ分離 |
+| 4-2 dbus array:string のカンマ分割 | スコープ内(軽微) | URI の "," を %2C エスケープ(fail-safe は元々あり) |
+| 7-1 タイマ満了経路が未検査 | スコープ内(検査) | CopyFeedbackDuration プロパティ化(SavedToastDuration 様式)+満了テスト追加 |
+| 2-4 満了経路で CTS 残置 | 記録のみ | 実害なし(次回 Copy/Clear で解放)。コメントで根拠残置 |
+| 6-2 メニュー行高の面内差(fileops=42 / 既存行≒37) | golden 送り | VC-IMG-11③ は fileops 行のみ 42 を契約。既存行は ECO-018/077 golden 済み面=本 ECO で触らない。並置所見として §7.5 に列挙 |
+| 3-4 WorkTab ⋯メニュー幅 200 の面間非対称 | R3(スコープ外) | 51-cheat-log 記帳(2026-07-19)。WorkTab CAD に幅改版なし=現状適法 |
+| 排他遷移/バッジ抑止/出し分け/ctor・シグネチャ退行/i18n/XAML 実在 | 問題なし確認 | 全数確認済み(レビュー記録) |
+
+未処置のスコープ内所見= **0**。
+
+### 7.5 セルフゴールデン(R7・原器 5 面並置)
+
+撮影= tools/ViewPrism2.CaptureHarness へ CaptureFileOpsAsync 追加(ECO-109 FL 撮影と同型・
+シードはファイル実体なし=クローム比較目的・CP-UI-G6 許容)。出力 6 面(impl-fileops-{menu,tb-none,
+tb-single,tb-copied,tb-multi,full}.png)を原器 5 面と並置突合。
+
+**転写完了(一致)**: メニュー項目順(ファイル操作→修復→削除→ゴミ箱→区切り→設定行)・幅 208・
+フォルダグリフ+13.5/500・行高 42 / TB 出し分け 0/1/2 件(終了=✕+白地/コピー=青 #2F6BED 塗り+
+コピーグリフ+白地バッジ N/場所を開く=白地+フォルダグリフ)/ 選択視覚(青塗りチェック+白✓・
+番号なし・青リング+ハロー)/ 右ペインなし。
+
+**差分の全列挙と分類**:
+1. mock 残存「タグ編集」「⋯」(TB 3 面+full)= CAD MOCK 差分注記の未配線簡略→**実装が正(裁定済み)**。
+2. mock 旧固定ソート(名前/↑)= VP-UI-006・file_list v2 が正→**裁定済み**。
+3. 設定でバックアップ・転送行の淡紫ハイライト+1 行省略(mock=プレーン 2 行折返し)=
+   **ECO-077 実機 golden 済みの既存様式**(本 ECO 非対象)。
+4. メニューアイコンの塗り/輪郭(Material filled vs mock outline)= **K-DESIGN filled 規約
+   (ECO-009)の歴代 golden 済み同型**(修復/削除/ゴミ箱行と同輩)。
+5. コピー件数バッジの角丸(mock≈円形 / 実装= radius6 = 削除の delMoveBadge と同型・アプリ内一貫)=
+   **golden 判断へ送付**(VC-IMG-12 は「白地バッジに青文字」までを契約・形状は未規定)。
+6. メニュー行高の面内差(fileops=42・既存行≒37)= **golden 判断へ送付**(R8 所見 6-2)。
+7. full 面の背景差(実サムネなし・シード差・ウィンドウクローム)= **CP-UI-G6 許容(ECO-109 前例)**。
+
+転写漏れ= **0**。フィードバック面(原器なし=mock 挙動未配線)は impl-fileops-tb-copied.png を
+golden 材料として添付。

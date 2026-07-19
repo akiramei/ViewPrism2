@@ -895,14 +895,39 @@
                   </Border>
                 </StackPanel>
               </Button>
-              <!-- ⋯ = メンテナンスメニュー(修復/削除/ゴミ箱・ECO-015/018)。モード中は隠す(InAnyMode に作業・削除を含む) -->
+              <!-- ファイル操作モード(ECO-112/VC-IMG-12): ⋯メニュー「ファイル操作」で入る参照系排他モード。
+                   離脱/実行ボタンのラベルは狭幅でも畳まない(ECO-027 契約③)。出し分け=0件:終了のみ/
+                   1件:+パスをコピー(バッジ1)+場所を開く/2件以上:+パスをコピー(バッジN)のみ -->
+              <Button Classes="toolbarBtn" IsVisible="{Binding FileOpsMode}" Command="{Binding ExitFileOpsCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CloseIcon}" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.fileOpsExit]}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="copyPathsBtn" IsVisible="{Binding ShowCopyPaths}" Command="{Binding CopyPathsCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource CopyIcon}" Width="16" Height="16" />
+                  <TextBlock Text="{Binding CopyPathsLabel}" VerticalAlignment="Center" />
+                  <Border Classes="copyPathsBadge">
+                    <TextBlock Text="{Binding FileOpsSelCount}" />
+                  </Border>
+                </StackPanel>
+              </Button>
+              <Button Classes="toolbarBtn" IsVisible="{Binding ShowOpenLocation}" Command="{Binding OpenFileLocationCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16" />
+                  <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.openFileLocation]}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <!-- ⋯ = メンテナンスメニュー(ファイル操作/修復/削除/ゴミ箱・ECO-015/018/112)。モード中は隠す(InAnyMode に作業・削除・ファイル操作を含む)。
+                   幅 208=VC-IMG-11①(MENU-fileops 原器実測・旧 200 から追随) -->
               <Panel IsVisible="{Binding !InAnyMode}">
                 <Button x:Name="MoreTrigger" Classes="toolbarBtn square" Command="{Binding ToggleMoreMenuCommand}" ToolTip.Tip="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.more]}">
                   <PathIcon Data="{StaticResource MoreIcon}" />
                 </Button>
                 <Popup PlacementTarget="{Binding #MoreTrigger}" Placement="BottomEdgeAlignedRight"
                        VerticalOffset="6" IsOpen="{Binding MoreMenuOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
-                  <Border Classes="popupMenu" Width="200">
+                  <Border Classes="popupMenu" Width="208">
                     <StackPanel>
                       <!-- 整理(IMG-014 tier2 退避): 実測幅 <約640px で「整理」入口をここへ移す。ラベル維持。通常幅では非表示 -->
                       <Button Classes="menuRow" IsVisible="{Binding StowOrganizeToMenu}" Command="{Binding ToggleOrganizeCommand}">
@@ -912,6 +937,14 @@
                         </StackPanel>
                       </Button>
                       <Border Height="1" Background="{StaticResource CardBorderBrush}" Margin="8,4" IsVisible="{Binding StowOrganizeToMenu}" />
+                      <!-- ファイル操作(ECO-112/VC-IMG-11③): 参照系の選択モードに入る。フォルダグリフ #5B6473・
+                           ラベル 13.5/500・行高 42。コレクション未選択時は無効(他メンテ項目と同じ) -->
+                      <Button Classes="menuRow" MinHeight="42" Command="{Binding EnterFileOpsCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource FolderIcon}" Width="16" Height="16" Foreground="#5B6473" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.fileOps]}" FontSize="13.5" FontWeight="Medium" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                      </Button>
                       <!-- 修復: 既存モーダル(ECO-015・変更なし) -->
                       <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -1066,11 +1099,15 @@
                                 IsVisible="{Binding IsFolder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                       <PathIcon Data="{StaticResource ImageIcon}" Width="38" Height="38" Foreground="#C6CDD8"
                                 IsVisible="{Binding IsPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                      <!-- 選択順バッジ(REQ-041 CR-3): 選択時は連番順の番号・未選択(編集中)は空枠 -->
+                      <!-- 選択順バッジ(REQ-041 CR-3): 選択時は連番順の番号・未選択(編集中)は空枠。
+                           ファイル操作モード(ECO-112/VC-IMG-13)は番号を出さず白✓(ShowPlainCheck) -->
                       <Border Classes="thumbCheck" Classes.selected="{Binding IsSelected}" IsVisible="{Binding Selectable}">
-                        <TextBlock Text="{Binding SelectionOrderText}" IsVisible="{Binding IsSelected}"
-                                   FontSize="12" FontWeight="Bold" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Panel>
+                          <TextBlock Text="{Binding SelectionOrderText}" IsVisible="{Binding IsSelected}"
+                                     FontSize="12" FontWeight="Bold" Foreground="White"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          <PathIcon Data="{StaticResource CheckIcon}" IsVisible="{Binding ShowPlainCheck}" />
+                        </Panel>
                       </Border>
                       <!-- 整理モード(ECO-056/v2 モック): 宛先も対象も 左上チェック+右上バッジ の同型
                            (宛先=緑/対象=青。v1 実装の「ラベル/チェック排他」は 51ad8ee の CAD 逸脱) -->

@@ -129,6 +129,20 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     // ソフト削除(物理非破壊 INV-009・復元可)へ。修復/ゴミ箱は既存モーダル(ECO-015)のまま。
     private bool _deleteMode;
 
+    // ---- ファイル操作モード(ECO-112: ⋯メニュー「ファイル操作」=参照系・右ペインなし)----
+    // タグ編集/整理/作業/削除に並ぶ第5の排他文脈モード。選択機構(inSelect)を再利用するが、
+    // 選択順の番号バッジは出さない(VC-IMG-13=白✓)。パスをコピー/場所を開くは IFileOperationsService 経由。
+    private bool _fileOpsMode;
+    private readonly IFileOperationsService _fileOps;
+    // コピー完了フィードバック(IMG-026② 裁定: ボタン内一時表示・約2秒)。解除遷移の全列挙(ECO-104 教訓)=
+    // タイマ / モード離脱 / 選択・母集合変化(RefreshSelectionMarkers・Recompute 経由)。ラベルは表示時解決(ECO-106)。
+    private bool _copyFeedback;
+    private CancellationTokenSource? _copyFeedbackCts;
+
+    /// <summary>コピー完了フィードバックの表示時間(既定 約2秒=IMG-026② 裁定)。テスト/撮影ハーネスが
+    /// 短縮・固定表示に差し替える(TagsTab の SavedToastDuration と同じ様式)。</summary>
+    public TimeSpan CopyFeedbackDuration { get; set; } = TimeSpan.FromSeconds(2);
+
     // ---- ゴミ箱フィーチャ(ECO-018/ECO-019)は子 VM へ移送(ECO-036 第1段) ----
     public ImageTabTrashViewModel Trash { get; }
 
@@ -152,7 +166,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         AppSettings settings,
         WorkspaceService workspaces,
         LocalizationService localization,
-        ScanCoordinator? scanCoordinator = null)
+        ScanCoordinator? scanCoordinator = null,
+        IFileOperationsService? fileOps = null)
     {
         _folders = folders;
         _images = images;
@@ -165,6 +180,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _evaluator = evaluator;
         _windows = windows;
         _settings = settings;
+        _fileOps = fileOps ?? new FileOperationsService();
         Work = new ImageTabWorkViewModel(workspaces);
         _localization = localization;
         _viewLabel = localization.T("view.tagView"); // 既定ビュー軸ラベル(GF-079-01)
@@ -906,12 +922,13 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     // ---- 整理モード(ECO-014)公開契約 ----
     public bool OrganizeMode => _organizeMode;
     public string OrganizeButtonLabel => _organizeMode ? _localization.T("toolbar.organizeExit") : _localization.T("toolbar.organize");
-    /// <summary>いずれかの文脈モード中(タグ編集 or 整理 or 作業 or 削除)。モード中は他モード入口・⋯ を隠す(集中・排他可視化・幅)。ECO-017/018 で作業・削除へ拡張。</summary>
-    public bool InAnyMode => _editMode || _organizeMode || _workMode || _deleteMode;
+    /// <summary>いずれかの文脈モード中(タグ編集 or 整理 or 作業 or 削除 or ファイル操作)。モード中は他モード入口・⋯ を隠す(集中・排他可視化・幅)。ECO-017/018/112 で作業・削除・ファイル操作へ拡張。</summary>
+    public bool InAnyMode => _editMode || _organizeMode || _workMode || _deleteMode || _fileOpsMode;
 
     // ---- 作業モード(ECO-017)公開契約 ----
-    /// <summary>選択を有効化するモード(タグ編集 or 作業 or 削除)。グリッドの選択視覚=チェック/選択順バッジを出す。</summary>
-    public bool InSelectMode => _editMode || _workMode || _deleteMode;
+    /// <summary>選択を有効化するモード(タグ編集 or 作業 or 削除 or ファイル操作)。グリッドの選択視覚=チェック/選択順バッジを出す
+    /// (ファイル操作のみ番号バッジなしの白✓=VC-IMG-13・ECO-112)。</summary>
+    public bool InSelectMode => _editMode || _workMode || _deleteMode || _fileOpsMode;
     public bool WorkMode => _workMode;
     public string WorkButtonLabel => _workMode ? _localization.T("toolbar.workExit") : _localization.T("navigation.work");
     /// <summary>作業モード中に選択がある=「追加」が活性。</summary>
@@ -926,9 +943,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     // ---- ツールバー モード入口の出し分け(ECO-017/018: 排他隠し統一) ----
     // 各モード入口は他モードの最中は隠れる(自モード中は「終了」として残る)。削除は ⋯ メニューから入る
     // ためツールバー入口を持たず、削除中は全入口・⋯ が隠れて「削除を終了」+「ゴミ箱へ移動」のみ残る。
-    public bool ShowEditEntry => !_organizeMode && !_workMode && !_deleteMode;
-    public bool ShowOrganizeEntry => !_editMode && !_workMode && !_deleteMode;
-    public bool ShowWorkEntry => !_editMode && !_organizeMode && !_deleteMode;
+    public bool ShowEditEntry => !_organizeMode && !_workMode && !_deleteMode && !_fileOpsMode;
+    public bool ShowOrganizeEntry => !_editMode && !_workMode && !_deleteMode && !_fileOpsMode;
+    public bool ShowWorkEntry => !_editMode && !_organizeMode && !_deleteMode && !_fileOpsMode;
 
     // ---- ツールバー狭幅レスポンシブ収納(IMG-014) ----
     // 判定はビューポート幅でなく「ツールバー実測幅」(content 幅=Border 幅−水平パディング)。左ペイン折り畳み
@@ -1006,6 +1023,20 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     public bool HasDeleteSelection => _deleteMode && _selected.Count > 0;
     public int DeleteSelCount => _selected.Count;
     public bool CanDeleteToTrash => HasDeleteSelection;
+
+    // ---- ファイル操作モード(ECO-112)公開契約 ----
+    public bool FileOpsMode => _fileOpsMode;
+    public int FileOpsSelCount => _selected.Count;
+    /// <summary>「パスをコピー」の可視(VC-IMG-12: 選択 1 件以上)。</summary>
+    public bool ShowCopyPaths => _fileOpsMode && _selected.Count >= 1;
+    /// <summary>「ファイルの場所を開く」の可視(VC-IMG-12: 選択 1 件のときだけ)。</summary>
+    public bool ShowOpenLocation => _fileOpsMode && _selected.Count == 1;
+    /// <summary>コピー完了フィードバック(IMG-026②: ボタン内一時表示)中か。</summary>
+    public bool CopyFeedbackActive => _copyFeedback;
+    /// <summary>「パスをコピー」ボタンのラベル(フィードバック中は「コピーしました ✓」・表示時解決=ECO-106)。</summary>
+    public string CopyPathsLabel => _copyFeedback
+        ? _localization.T("toolbar.copyPathsDone")
+        : _localization.T("toolbar.copyPaths");
 
     // ---- ⋯「ゴミ箱」バッジ・ゴミ箱ポップアップ(ECO-018/ECO-019)は Trash 子 VM へ移送(ECO-036 第1段)。
     //      状態・ロジックは Trash が所有。以下は既存テスト(CpUiG1TrashPopupTests 等・変更禁止)の
@@ -1120,6 +1151,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     // =====================================================================
     private void Recompute()
     {
+        // ECO-112/IMG-026②: 母集合・文脈の再計算はコピー完了フィードバックの解除遷移(ECO-104 教訓=タイマ以外を全列挙。
+        // ナビゲーション/軸切替/言語切替/スキャン更新のいずれでも 2 秒の一時表示を持ち越さない)
+        ClearCopyFeedback();
         // ECO-064: catalogはcontentより先に公開する。content未readyでもcollection行だけは描画する。
         Collections.Clear();
         foreach (var collection in _collections)
@@ -1285,9 +1319,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         string? sortItemLabel = null)
     {
         bool selected = selectedIds.Contains(entry.Record.Id);
-        int? order = selected ? _selected.IndexOf(entry.Record.Id) + 1 : null;
+        // ECO-112/VC-IMG-13: ファイル操作モードは選択順の番号バッジを出さない(白✓)。順序は表示順が権威(IMG-026①)。
+        int? order = selected && !_fileOpsMode ? _selected.IndexOf(entry.Record.Id) + 1 : null;
         var tagsOf = ImgTagIds(entry);
-        bool inSelect = _editMode || _workMode || _deleteMode;
+        bool inSelect = _editMode || _workMode || _deleteMode || _fileOpsMode;
         var dots = (!inSelect && tagsOf.Count > 0)
             ? tagsOf.Take(3).Select(t => HexA(TagColor(_tagById.GetValueOrDefault(t)), 1)).ToList()
             : new List<IBrush>();
@@ -1302,7 +1337,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             isOrganizeTarget: _organizeMode && Organize.Targets.Contains(entry.Record.Id),
             cells: cells,
             sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
-            sortItemCell: sortItemCell);
+            sortItemCell: sortItemCell,
+            isPlainCheck: _fileOpsMode);
     }
 
     /// <summary>
@@ -1326,15 +1362,17 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void RefreshSelectionMarkers()
     {
         if (!_loaded) return;
+        ClearCopyFeedback(); // ECO-112/IMG-026②: 選択・マーカー変化はフィードバック解除遷移(ECO-104 教訓=全列挙)
         var selSet = new HashSet<string>(_selected);
         foreach (var item in Items)
         {
             if (item.IsFolder) continue;
             bool selected = selSet.Contains(item.Id);
-            int? order = selected ? _selected.IndexOf(item.Id) + 1 : null;
+            // ECO-112/VC-IMG-13: ファイル操作モードは番号バッジなし(白✓)
+            int? order = selected && !_fileOpsMode ? _selected.IndexOf(item.Id) + 1 : null;
             bool merge = _organizeMode && string.Equals(item.Id, Organize.MergeTargetId, StringComparison.Ordinal);
             bool org = _organizeMode && Organize.Targets.Contains(item.Id);
-            item.SetSelectionMarkers(selected, order, merge, org);
+            item.SetSelectionMarkers(selected, order, merge, org, isPlainCheck: _fileOpsMode);
         }
         BuildContextPanels(selSet);
         OnPropertyChanged(string.Empty);
@@ -1834,7 +1872,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void ToggleEdit()
     {
         _editMode = !_editMode;
-        if (_editMode) { _organizeMode = false; Organize.ResetState(); _workMode = false; _deleteMode = false; } // 整理・作業・削除と排他(ECO-014/017/018)
+        if (_editMode) { _organizeMode = false; Organize.ResetState(); _workMode = false; _deleteMode = false; _fileOpsMode = false; } // 整理・作業・削除・ファイル操作と排他(ECO-014/017/018/112)
         _selected.Clear(); _expandTag = null; _panelTab = "current";
         Recompute();
     }
@@ -1903,13 +1941,13 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             else if (item.Id != Organize.MergeTargetId) ToggleOrganizeTarget(item.Id);
             return;
         }
-        if (!_editMode && !_workMode && !_deleteMode)
+        if (!_editMode && !_workMode && !_deleteMode && !_fileOpsMode)
         {
             // 閲覧モード(モック準拠): シングルクリックは無操作・ダブルクリックでビューアー起動(REQ-041)
             if (isDoubleClick) OpenViewer(item.Id);
             return;
         }
-        ToggleSelect(item.Id, ctrl, shift); // 編集 or 作業 or 削除モード: 選択(inSelect・選択機構を再利用)
+        ToggleSelect(item.Id, ctrl, shift); // 編集 or 作業 or 削除 or ファイル操作モード: 選択(inSelect・選択機構を再利用)
     }
 
     /// <summary>閲覧モードのダブルクリック=ビューアー起動(REQ-041)。表示順(SortFiles)で開く。</summary>
@@ -2039,7 +2077,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void ToggleOrganize()
     {
         _organizeMode = !_organizeMode;
-        if (_organizeMode) { _editMode = false; _workMode = false; _deleteMode = false; } // タグ編集・作業・削除と排他(ECO-014/017/018)
+        if (_organizeMode) { _editMode = false; _workMode = false; _deleteMode = false; _fileOpsMode = false; } // タグ編集・作業・削除・ファイル操作と排他(ECO-014/017/018/112)
         Organize.ResetState();
         _selected.Clear();
         Recompute();
@@ -2053,7 +2091,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void ToggleWork()
     {
         _workMode = !_workMode;
-        if (_workMode) { _editMode = false; _organizeMode = false; Organize.ResetState(); _deleteMode = false; } // 他文脈モードと排他(ECO-018)
+        if (_workMode) { _editMode = false; _organizeMode = false; Organize.ResetState(); _deleteMode = false; _fileOpsMode = false; } // 他文脈モードと排他(ECO-018/112)
         _selected.Clear(); _expandTag = null;
         Recompute();
     }
@@ -2084,7 +2122,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     {
         MoreMenuOpen = false;
         _deleteMode = true;
-        _editMode = false; _organizeMode = false; Organize.ResetState(); _workMode = false; // 排他
+        _editMode = false; _organizeMode = false; Organize.ResetState(); _workMode = false; _fileOpsMode = false; // 排他
         _selected.Clear(); _expandTag = null;
         Recompute();
     }
@@ -2096,6 +2134,90 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         _deleteMode = false;
         _selected.Clear();
         Recompute();
+    }
+
+    // =====================================================================
+    //  ファイル操作モード コマンド(ECO-112: ⋯メニュー「ファイル操作」=参照系)
+    // =====================================================================
+    /// <summary>⋯メニュー「ファイル操作」: ファイル操作モードに入る。他文脈モードと排他・選択クリア・
+    /// メニューを閉じる(CAD「開始と終了」)。右ペインは開かない(ShowRightPane は edit/organize のみで不変)。</summary>
+    [RelayCommand]
+    private void EnterFileOps()
+    {
+        MoreMenuOpen = false;
+        _fileOpsMode = true;
+        _editMode = false; _organizeMode = false; Organize.ResetState(); _workMode = false; _deleteMode = false; // 排他
+        _selected.Clear(); _expandTag = null;
+        Recompute();
+    }
+
+    /// <summary>ファイル操作モードを終了(選択解除・CAD「終了時は選択を解除する」)。</summary>
+    [RelayCommand]
+    private void ExitFileOps()
+    {
+        _fileOpsMode = false;
+        _selected.Clear();
+        ClearCopyFeedback(); // モード離脱=フィードバック解除遷移(IMG-026②/ECO-104 教訓)
+        Recompute();
+    }
+
+    /// <summary>選択画像の絶対パスをクリップボードへ(1 行 1 ファイル)。IMG-026① 裁定=
+    /// 表示順(AllLoadedImagesInContext は表示と同じソート順)・OS ネイティブ改行・末尾改行なし。
+    /// クリップボード失敗は落とさない(参照系=RevealInFileManager と対称・R8 所見 2-3)。</summary>
+    [RelayCommand]
+    private async Task CopyPaths()
+    {
+        if (!_fileOpsMode || _selected.Count == 0) return;
+        var selSet = new HashSet<string>(_selected, StringComparer.Ordinal);
+        var text = string.Join(Environment.NewLine,
+            AllLoadedImagesInContext().Where(e => selSet.Contains(e.Record.Id)).Select(e => e.AbsolutePath));
+        try { await _fileOps.CopyTextAsync(text).ConfigureAwait(true); }
+        catch { return; } // コピー不能環境でもアプリを落とさない(フィードバックも出さない=成功表示の誤りを避ける)
+        StartCopyFeedback();
+    }
+
+    /// <summary>IMG-026② 裁定: ボタン内一時表示(約2秒→自動復帰)。トースト新設なし。ラベルは表示時解決(ECO-106)。
+    /// 復帰タイマはコマンド実行から切り離す(R8 所見 2-1: コマンド内 await だと AsyncRelayCommand の
+    /// 並行実行禁止で表示中ボタンが :disabled 化し、フィードバック文言がグレーアウトする)。</summary>
+    private void StartCopyFeedback()
+    {
+        _copyFeedbackCts?.Cancel();
+        _copyFeedbackCts?.Dispose();
+        _copyFeedbackCts = new CancellationTokenSource();
+        _copyFeedback = true;
+        OnPropertyChanged(string.Empty);
+        _ = RevertCopyFeedbackAsync(_copyFeedbackCts.Token); // fire-and-forget(解除遷移はトークンで先着勝ち)
+    }
+
+    private async Task RevertCopyFeedbackAsync(CancellationToken ct)
+    {
+        try { await Task.Delay(CopyFeedbackDuration, ct).ConfigureAwait(true); }
+        catch (TaskCanceledException) { return; } // 解除遷移(モード離脱/選択変化/再コピー)が先行した
+        if (ct.IsCancellationRequested || !_copyFeedback) return;
+        _copyFeedback = false;
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>コピー完了フィードバックの解除(タイマ以外の解除遷移=モード離脱・選択/マーカー変化から呼ぶ)。</summary>
+    private void ClearCopyFeedback()
+    {
+        _copyFeedbackCts?.Cancel();
+        _copyFeedbackCts?.Dispose();
+        _copyFeedbackCts = null;
+        if (!_copyFeedback) return;
+        _copyFeedback = false;
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>選択 1 件の親フォルダを OS ファイルマネージャで開く(可能ならファイル選択状態=CAD「ファイルの場所を開く」)。
+    /// 2 件以上ではボタン自体を出さない(VC-IMG-12③)ため、ここでも 1 件以外は無操作でガードする。</summary>
+    [RelayCommand]
+    private void OpenFileLocation()
+    {
+        if (!_fileOpsMode || _selected.Count != 1) return;
+        var entry = EntryById(_selected[0]);
+        if (entry is null) return;
+        _fileOps.RevealInFileManager(entry.AbsolutePath);
     }
 
     /// <summary>選択中の normal 画像をゴミ箱へ移動(normal→deleted のソフト削除・物理非破壊 INV-009・復元可)。選択なしは無操作。
