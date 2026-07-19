@@ -449,6 +449,7 @@ ebom:
         - (ECO-026/#2) 表示形式(grid/list)切替は `_layout` と表示切替のみ=同一データの `Items` を作り直さない(SetGrid/SetList で全件 ImageItemVM+BuildCells を再構築しない)
         - (ECO-026/#4) タグ列セルの値取得は画像ごとの tagId→値 辞書で O(1)(行×列×タグ数の線形探索を排除)。セル表示内容は不変
         - (ECO-026/#5) 表示列ライブ編集は列定義+各行セル(BuildCells)の再構築で足り、フォルダ/チップ/母集合の全 Recompute を回さない(除去列がソート中の解除は維持)
+        - (ECO-112/VC-IMG-13) 選択視覚の**モード別出し分け**: 選択順の番号バッジはタグ編集/作業/削除の正典・**ファイル操作モードでは出さない**(チェック=青塗り+白✓ ShowPlainCheck+青リング。ImageItemVM.IsPlainCheck で切替・CreateImageItem/RefreshSelectionMarkers の両経路で一貫適用)。リスト行の選択視覚は全選択系モード同型(imageListRow.selected=IMG-026④ 裁定)
         - (ECO-110/CAD image_tab.md layoutInvariant「右ペインの開閉が中央を壊さない」精緻化 2026-07-18) グリッド表示は文脈モード(タグ編集/整理)の右ペイン開閉で中央幅が変わっても、開閉直前の**先頭完全可視アイテムをビューポート先頭付近へ維持**する(保存対象=可視コンテンツ・ピクセルオフセット保持は非充足。先頭表示中は無補正)。実装=View 局所の 3 段構造(レイアウト確定ごとの常時追跡→ShowRightPane エッジで採用→一度きり復元。Recompute が Items 再構築後に一括通知するため通知時点実測は不成立)。適用範囲=右ペイン開閉のみ(左ペイン折畳み/リサイズへの一般化は拡張裁定=ECO-110 サブ裁定 a)。検査= CpUiG1GridScrollAnchorTests
       acceptance_refs: [CP-UI-G1, CP-UI-G2, CP-DISPLAY-PARITY-022, CP-COLPICKER-025, CP-NFR-026]
       fmea_refs: [FMEA-013]
@@ -474,11 +475,11 @@ ebom:
       acceptance_refs: [CP-UI-G1, CP-DISPLAY-PARITY-022]
 
     - id: E-UI-MODE-041
-      name: 画像タブ文脈モード統制(タグ編集・整理・メンテナンス入口・クリック意味論ディスパッチ)— 旧 E-UI-GRID-022 から ECO-016 で分割
+      name: 画像タブ文脈モード統制(タグ編集・整理・メンテナンス入口・クリック意味論ディスパッチ)— 旧 E-UI-GRID-022 から ECO-016 で分割。ECO-112 でファイル操作モード(REQ-099=参照系・⋯入口・パスをコピー/場所を開く)を追加
       classification: surface
       part_kind: screen-surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-046, REQ-065, REQ-067, REQ-070, REQ-071, REQ-072]
+      requirement_refs: [REQ-046, REQ-065, REQ-067, REQ-070, REQ-071, REQ-072, REQ-099]
       external_source_ref: K-AVALONIA
       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
       supersedes: E-UI-GRID-022
@@ -501,6 +502,7 @@ ebom:
         - コレクション管理は左「追加(+)」(ECO-013)に集約済で `⋯` に重複させない。詳細パネル/ノート(旧 E-UI-DETAIL-023)は ECO-023 で撤回(REQ-043 リバース誤り)=新 surface に配置しない
         - since ECO-027(IMG-014): モード中に残すツールバー項目は「表示軸・ソート・グリッド/リスト・当該モードの終了(+モード固有操作)」**だけ**とし、`表示列`(E-UI-BROWSE-022/ECO-025)も隠す(CAD image_tab.md「ツールバー」準拠。列編集はモードを抜けてから)。ECO-014 §8 の「他モード入口・作業・⋯ を隠す」規律に表示列を追加。モード突入時に開いていた列ピッカーは閉じる(プレースメント対象消失の浮き残り防止)
         - since ECO-027(IMG-014): ツールバーの**狭幅レスポンシブ収納**。判定はビューポート幅でなく**ツールバー実測幅**(左ペイン折り畳み・右ペイン開閉で使える幅が変わるため)。段階=①入口ボタンのラベルをアイコン化(<約820px・ToolTip 維持)→②「整理」を`⋯`へ退避(<約640px)→③回り込み(左右クラスタが単一行に収まらない時に右クラスタを2段目へ・左クラスタも極狭では内部折り返し)。確定契約(px 値でなく挙動)=①どの幅でも重ならない/潜り込まない ②畳む順序(ラベル→退避→回り込み) ③離脱/実行ボタンのラベルは狭幅でも維持(モード中の可視ボタン=終了/実行はラベルを畳まない)。判定/回り込みの状態計算は描画から独立して unit 検査可能(実測供給は View 責務)
+        - since ECO-112(REQ-099/VC-IMG-11〜13・IMG-026 裁定 2026-07-19): 「ファイル操作」= タグ編集/整理/作業/削除に並ぶ**第5の排他文脈モード**(`⋯` メニューから入りツールバー入口は持たない=削除と同型)。**参照系のみ**(実ファイル変更なし)・右ペインなし。開始=他モード解除+選択クリア+メニュー閉/終了=選択解除(離脱・実行ボタンのラベルは狭幅でも畳まない=ECO-027 契約③)。選択は E-UI-BROWSE-022 の inSelect 機構を再利用(IMG-025 交差・フォルダ選択不可)。ボタン出し分け= 0件:終了のみ/1件:パスをコピー(バッジ1)+ファイルの場所を開く/2件以上:コピー(バッジN)のみ。パスをコピー=表示順(AllLoadedImagesInContext)・OSネイティブ改行・末尾改行なし。完了フィードバック=ボタン内一時表示約2秒(解除遷移=タイマ/モード離脱/選択・母集合変化を全列挙=ECO-104 教訓の適用。復帰タイマはコマンド実行から分離=実行占有による :disabled 化の防止)。場所を開く=1件時のみ(Windows=explorer /select・macOS=open -R・Linux=D-Bus ShowItems→xdg-open)。OS 連携は App 層 IFileOperationsService に隔離し出し分け/コピー文字列は描画から独立して unit 検査可能
         - (ECO-090 暫定統制 → **ECO-094 で移管完了**) チップ行(ヒント見出し+WrapPanel)は E-UI-WORKSPACE-043 作業タブチップ行と同一意味論 — 暫定統制(別ファイル 2 面コピペ+read-across 必須記録)は **SC-CHIPSTRIP-001(LabeledChipStrip=35-dsbom)への構造的 DRY で置換済み**(2026-07-15)。両タブは同一部品を消費し同期は構造保証・構造 probe(CpUi094)が再コピペ化への後退を検出。共通受入= CP-CHIPWRAP-088 の共通ベクトル(CpUi090=両タブへ同一適用)は部品面の受入として存続
       acceptance_refs: [CP-UI-G1, CP-UI-G9, CP-UI-G10, CP-TOOLBAR-RESPONSIVE-027]
 

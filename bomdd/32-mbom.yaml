@@ -250,7 +250,7 @@ mbom:
         panel: "画像タブ タグ編集モード: CurrentTags(選択画像の共通タグ+解除)/ AddGroups(シンプル/テキスト/数値の追加候補・インライン値)/ ApplyTagAsync(原子バッチ)。選択 0 件はプレースホルダ(PanelEmpty)。原典 TaggingPanelViewModel は ECO-024 で撤去(インライン化)"
         numeric: "NumericValueDialog: モード=固定値|連番(開始値+選択順 i・ApplySequential=UQ-I02b)。min/max/step 検証をダイアログ内で実施し範囲外は適用前に拒否"
         textual: "候補値ドロップダウン(predefined_values 順・インライン値チップ)+自由入力"
-        mode_dispatch: "文脈モード(タグ編集/整理/作業/削除)の排他とグリッドクリック意味論のディスパッチ(E-UI-MODE-041)。フィーチャ実体は子 VM(032/033/034)"
+        mode_dispatch: "文脈モード(タグ編集/整理/作業/削除/ファイル操作=ECO-112)の排他とグリッドクリック意味論のディスパッチ(E-UI-MODE-041)。フィーチャ実体は子 VM(032/033/034)。ファイル操作(REQ-099)はホスト直持ち=第5排他モード+出し分け(0/1/2件)+コピー文字列生成(表示順・OSネイティブ改行・末尾なし)+フィードバック(CopyFeedbackDuration 注入可・fire-and-forget タイマ)。OS 連携= App/Services/FileOperationsService(IFileOperationsService・ctor 注入=テストはフェイク)"
         scan_lifecycle: "ScanCoordinator started/batch/completed → 選択collectionのfully-hashed normalを取込順append。sort条件は保持し完了時だけ全体へ適用。類似方式はscanning gate"
         sort: "(ECO-070/REQ-081/FL-003案A)ImageTabViewModelのFS adapterはResolveFs後にfolder/filesを分離維持。TryGetPreservedScanOrderを両群で共有し、通常時SortFolders=名前+現在方向、SortFiles=選択列+方向、BuildItemsFromMatched=folder全件→file全件。folder列値/集約なし。scan中/明示sortなし完了時は両群の取込順を保持"
         startup: "ECO-064/REQ-088: InitializeAsync=Task.Yield→catalog(全folder+normal GROUP BY count)→保存済み選択content(当該normal+image_tags+tag定義/view定義+deleted count)。IsCatalogLoading/IsContentLoading+error/retryを別公開し、未ready時Recomputeはcollection行だけ公開。collection切替はcontent generation+CTSで旧結果を破棄。XAMLは左/中央の領域内loading/errorを空状態と排他表示"

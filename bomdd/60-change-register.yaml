@@ -1658,8 +1658,8 @@ changes:
   - id: ECO-112
     title: "画像タブ ファイル操作モード(参照系・⋯入口・パスをコピー/場所を開く)の新設"
     type: "新機能(CAD 2026-07-19 改版の取り込み・第5排他選択系モード)"
-    status: implemented   # 2026-07-19 是正+機械受入完了(build 0/0・フルビルド警告0・Tests 819/819・Oracle 109+2skip・validate 0/0)・R7 並置(転写漏れ0・裁定送り2=バッジ角丸/メニュー行高)・R8 独立レビュー(スコープ内所見5件是正済み・未処置0)。golden 待ち
-    golden: pending
+    status: applied   # 2026-07-19 golden 合格(maintainer 実機・基準7点+裁定送り2件許容)→クローズ。是正=第5排他モード+inSelect 合流+番号バッジ抑止(白✓)+コピー(表示順/OSネイティブ改行/末尾なし)+フィードバック(fire-and-forget タイマ・解除遷移全列挙)+IFileOperationsService(explorer /select・open -R・D-Bus→xdg-open)。probe 13本(赤11+R8由来2→全緑転)。build 0/0(フルビルド警告0)・Tests 819/819・Oracle 109+2skip・validate 0/0。R7=原器5面並置(転写漏れ0)+フィードバック面新設。R8=独立レビュー(スコープ内5件是正・R3 1件記帳・未処置0)。M4=REQ-099 新設(spec §2.6)+E-UI-MODE-041/E-UI-BROWSE-022 invariant+M-UI-IMAGETAB-035+CP-UI-G1 刻印(許容差分2件込み)
+    golden: "approved(2026-07-19 maintainer 実機・基準7点: ①⋯入口=開始でメニュー閉+選択クリア+右ペインなし ②出し分け0/1/2件=原器並置一致 ③選択視覚=白✓+青リング・番号なし・フォルダ潜り・リスト行同型・タグ編集の連番退行なし ④コピー=表示順/1行1パス/末尾なし+ボタン内フィードバック(グレー化なし) ⑤場所を開く=explorer /select ⑥終了/排他/狭幅ラベル維持 ⑦裁定送り2件〔バッジ角丸radius6/メニュー行高の面内差〕も許容承認=CP-UI-G1 刻印)"
     baseline: "main c49286a"
     findings: "CAD 正典=../ViewPrismUI docs/screens/image_tab.md「ファイル操作モード(2026-07-19)」節(409-455)+VC-IMG-11〜13+captures 5面(MENU-fileops/TB-fileops-{none,single,multi}/full-fileops=実在確認済み)+一次資料 dc.html(SHA-256 981D2071…82E112B0)。工程診断= CAD 健全(骨格確定+MOCK差分注記完備)・IMG-026 の挙動残余4点のみ gate① 裁定要・BOM 未宣言(net-new: 最新REQ-098/E-UI-MODE-041 は4モードで停止/E-UI-BROWSE-022 選択視覚は番号バッジ一貫適用=VC-IMG-13 と未整合)・実装 net-new(FileOps grep 0件。既存資産=排他4モード構造+InSelectMode+⋯メニュー。Clipboard/reveal 実装なし)。最近傍同型=削除モード(ECO-018=⋯入口・右ペインなし)"
     impacted_bom: ["spec=REQ-099 新設(ファイル操作モード=参照系)", "ebom=E-UI-MODE-041(第5排他モード・出し分け・右ペインなし・ECO-027 ラベル維持則)+E-UI-BROWSE-022(選択順バッジのモード別抑止=fileops はチェック+青リングのみ)", "src=ImageTabViewModel/ImageTabView.axaml+App層 reveal サービス新設+i18n ja/en 新キー(Core 変更なし見込み)", "tests=モード遷移/出し分け/コピー文字列/バッジ抑止プローブ+R7 captures 並置(CaptureHarness fileops 5面追加)", "CP=CP-UI-G1 系刻印(accept 時)"]
