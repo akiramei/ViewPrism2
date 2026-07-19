@@ -1677,3 +1677,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(構造 probe=母集合列挙の呼び出し検出)→緑転"
     body: 60-change-order-eco-113.md
     notes: "gate①=不要(実装層確定・視覚/意味論不変)。gate②=必要(maintainer 実機=26万件ビューで両モード×plain/Ctrl/shift の体感確認)。関連=ECO-026(旧 perf 是正=e39d68a の残余)・ECO-064(26万級の前例=起動)・ECO-062(同=類似検索の全域走査抑止)・ECO-058(固定閾値なし構造ガードの検査様式)・ECO-112(ファイル操作=症状の観測面)"
+  - id: ECO-114
+    title: "モード開始/終了の応答劣化 — 母集合不変なのに全再評価+全再構築(26万件で顕在化)"
+    type: "不具合是正候補(性能・実装層。視覚/意味論不変)"
+    status: staged
+    golden: pending
+    baseline: "main 489b03f"
+    findings: "maintainer 実機観測(2026-07-19・26万件ビュー×タグ編集/整理等のモード開始/終了)。実装逸脱確定: 全モードコマンド7本が末尾で全面 Recompute → ①ViewMatched 全26万件評価 ②チップ件数=子ノード数×26万件評価(未分類は孫まで) ③SortFiles 全件 ④ImageItemVM 26万個全再構築(BuildCells/ドットブラシ/文字列整形) ⑤ObservableCollection へ26万回 Add(CollectionChanged の嵐)。一方モード遷移で母集合/チップ/件数/ソートは不変=①〜③は純粋な無駄・④⑤はその場フラグ更新で足りる。混入=6f7b4f9(M3a 初版=ECO-113 と同根・潜伏約1ヶ月)。ECO-113 教訓1(規模系NFRは経路ごとに独立して破れる)の予見経路+同 §7.4 所見4 の検出限界(計器は AllLoadedImagesInContext 経由のみ観測・Recompute は ViewMatched 直呼びで観測外)どおりの出現。read-across=WorkTab モードトグル同型"
+    impacted_bom: ["src=ImageTabViewModel(モードコマンド7本→ApplyModeTransition 新設=母集合パイプラインをスキップし在庫 Items のその場フラグ更新+パネル/通知のみ。ドット常時構築+ブラシ色キーキャッシュ)+ImageItemVM(Selectable/HasTagDots 観測可能化)+WorkTabViewModel 同型", "tests=構造 probe(Items インスタンス同一性=再構築されない構造証拠+フラグ遷移+チップ不変)+既存モード系全緑維持(排他/出し分け/ECO-110 アンカー/112/113)", "ebom=E-UI-BROWSE-022/E-UI-MODE-041 invariant(モード遷移は母集合パイプラインを通らない=ECO-026/#2 のモード遷移版)", "CP=CP-UI-G1 刻印(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(インスタンス同一性)→緑転"
+    body: 60-change-order-eco-114.md
+    notes: "gate①=不要(実装層確定)。gate②=必要(26万件実機=全5モードの開始/終了体感+視覚不変)。残存計算量の明記(ECO-113 教訓3)= O(表示件数) のフラグパス1本(アロケーション/評価/ソート/再構築なし)。関連=ECO-113(同根・同規模・隣接経路)・ECO-026#2(グリッド/リスト切替の同種契約)・ECO-058(構造ガード様式)・ECO-110(アンカーはモード遷移面の既存契約=退行ガード対象)"
