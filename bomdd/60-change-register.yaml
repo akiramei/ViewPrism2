@@ -1779,7 +1779,7 @@ changes:
   - id: ECO-123
     title: "CMP-006 インスタンス契約値への実装追随 — 作業タブ ⋯メニュー幅 200→208+画像タブ 表示軸メニュー幅 260→240"
     type: "実装是正候補(視覚寸法の転写ドリフト・挙動不変)"
-    status: staged
+    status: implemented   # 2026-07-20 是正+機械受入完了(フルビルド0警告/Tests 847/847=probe3本緑転/Oracle 109+2skip/validate 0/0)・golden 待ち(§8 基準4点)。R5=是正前赤2本実測(260/200=診断どおり)。R7=幅の実測 pin(ECO-116 型)。R8=独立レビュー所見7件全処置(スコープ内1=移動先240 の pin 欠落→1 Fact 追加で契約4値の全数 pin 完結・スコープ外2=cheat-log 記帳〔列ピッカー304 部品表未登録/chip overflow=chipPopCard で popupMenu クローム写像未検証=ECO-122 lint first-run で顕在化見込み〕・問題なし5=幅240/208 で崩れない構造/Popup 単一開前提/悉皆8サイト違反ゼロ/混入コミット言及正確/フルスイート共存)
     golden: "pending(gate②必要=軽量。基準は fix 時提示=両メニュー幅・長いビュー名の表示崩れなし等)"
     baseline: "main 0d3e0a5(ViewPrismUI 部品表改版後=REG-C1〜C4 裁定済み)"
     findings: "CAD 側 REG-C3 裁定(2026-07-20・CMP-006 Standard 昇格=幅はインスタンス契約値・同型複製は同値必須)の As-Built 乖離①「作業タブ ⋯ 200→208 追随=VP2 側 ECO」の実行+起票時悉皆の追加所見。悉皆= Classes=popupMenu 全7サイト grep 実測: 一致4(⋯ImageTab 208/並び替え両タブ 252/移動先 240)・乖離2(⋯WorkTab 200=WorkTabView.axaml:765・軸ImageTab 260=ImageTabView.axaml:767)・契約対象外1(表示列 304=部品表に幅契約なし=mock が正で現状維持)。mock 裏取り= dc.html 実測で ⋯=208px/軸=240px・260px は mock に不在=転写ドリフト確定。混入= 260 は 45a6c77(2026-06-18 M3b 製造時・潜伏約1ヶ月)・200 は f211f a9(作業タブ複製=ECO-112 R3 既知)。マスキング= 歴代 golden はメニュー幅を実測せず(既存 probe は並び替え 252 のみ pin)+ECO-109/112 許容差分リストに 260/200 なし=裁定許容でなく未検出。行高≒37(契約42)は裁定済み対象外(急がない・SRC-011 同便)。未検証= 260 の由来(意図的拡幅かドリフトか。mock 不在+許容差分記録なしからドリフト推定・幅240 の機能充足は golden で確認)"

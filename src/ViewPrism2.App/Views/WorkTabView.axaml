@@ -762,7 +762,8 @@
               </Button>
               <Popup PlacementTarget="{Binding #MoreTrigger}" Placement="BottomEdgeAlignedRight"
                      VerticalOffset="6" IsOpen="{Binding MoreMenuOpen}" IsLightDismissEnabled="True" Closed="OnMenuClosed">
-                <Border Classes="popupMenu" Width="200">
+                <!-- ECO-123: 幅は CMP-006 インスタンス契約値 208(同型インスタンスの面間複製は同値必須=画像タブ ⋯ と同値。旧 200 は f211fa9 複製時ドリフト) -->
+                <Border Classes="popupMenu" Width="208">
                   <StackPanel>
                     <Button Classes="menuRow" Command="{Binding EnterDeleteCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">

@@ -764,7 +764,8 @@
                 <Popup PlacementTarget="{Binding #AxisTrigger}" Placement="BottomEdgeAlignedLeft"
                        VerticalOffset="6" IsOpen="{Binding AxisMenuOpen}" IsLightDismissEnabled="True"
                        Closed="OnMenuClosed">
-                  <Border Classes="popupMenu" Width="260" MaxHeight="360">
+                  <!-- ECO-123: 幅は CMP-006 インスタンス契約値 240(mock 実測。旧 260 は mock に不在の転写ドリフト=45a6c77 混入) -->
+                  <Border Classes="popupMenu" Width="240" MaxHeight="360">
                     <ScrollViewer>
                       <ItemsControl ItemsSource="{Binding AxisOptions}">
                         <ItemsControl.ItemTemplate>
