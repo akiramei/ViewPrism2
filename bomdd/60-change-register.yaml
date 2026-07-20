@@ -1699,3 +1699,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(インスタンス同一性)→緑転"
     body: 60-change-order-eco-115.md
     notes: "gate①=不要(実装層確定・WorkTab に正解既在)。gate②=必要(26万件実機=タブ切替/行展開の体感+パネル挙動不変)。関連=ECO-114(同根・cheat-log 予告記帳からの分離起票)・ECO-041(AddQuery=正しい部分再構築様式の初出)・ECO-113(規模系NFR経路 N=5 目)"
+  - id: ECO-116
+    title: "タグ編集パネル「タグ追加」タブの末尾が表示しきれない — スクロールが最後まで到達しない"
+    type: "不具合是正候補(レイアウト/実装層見込み。真因未確定=プローブ先行で確定)"
+    status: staged
+    golden: "pending(gate②=必要。タグ追加タブを最下端までスクロールでき最後のタグ行が完全に見える+行展開後も同様+現在のタグ/作業タブも同様)"
+    baseline: "main c258030"
+    findings: "maintainer 実機観測(2026-07-20・スクリーンショット)。タグ編集モード右ペインの「タグ追加」タブでスクロールバーは出るが最後まで移動せず末尾(数値グループの行)が表示しきれない。工程診断= CAD 健全(image_tab.md 行101/103/107=ペインごと単一スクロール本体 overflow:auto・右ペインはヘッダ固定/本体スクロール。末尾到達性は overflow:auto の定義に含む)・BOM 観点欠落(右ペイン受入に「本体スクロールが末尾に到達する」なし。ECO-037 は同容器の幅のみ刻印)・実装逸脱(真因未確定)。確定した構造事実= ImageTabView.axaml:144-309 の DockPanel は子4つで、現在のタグ SV(:155) が Dock 無指定の非終端子(Dock.Left 既定)= ECO-037 で幅算定が壊れると確定済みの構造パターンが**タグ編集パネルには read-across されていない**(整理トレイ側のみ Panel 包みで是正済み=:329-333)。WorkTabView.axaml:141- が同一構造(面間対称=是正は両面同時)。容器の高さ有界は実測で確認済(MainWindow.axaml:222 の Panel は上=タブバー/下=ステータスバー28 に挟まれる)→「右ペインが窓より高くクリップ」系は容器レベルで否定。下部 docked アクションは非該当(CAD 行737/789-791=行クリックで即時付与が正典)。未検証=真因2候補: A=ECO-115(a2eb10e・本日)の退行(同一パネル・同一タブ経路から Recompute を撤去→全面再構築の巻き添えで起きていた測り直しが失われ ScrollViewer Extent が滞留する疑い。ECO-115 probe はインスタンス同一性のみでレイアウト量未検査=検査の谷間と整合)/ B=非終端子 Dock.Left 構造に起因する取りこぼし(ECO-037 と同根の高さ変種・潜伏)。両者は 7d5e0fd 個体との A/B 1回で分離可能"
+    impacted_bom: ["src=ImageTabView.axaml+WorkTabView.axaml(タグ編集パネル ScrollViewer 周り・両面同時=§8.2 閉包)。候補A確定時は ImageTabViewModel/WorkTabViewModel の通知側にも及ぶ可能性", "tests=到達性プローブ(Extent/Viewport/Offset 実測・最大送り時に最終要素下端が可視=固定閾値でなく関係式=ECO-058 様式。タブ切替+inlinePicker 展開経路も対象)+既存パネル意味論(ECO-115 probe)全緑維持", "ebom=右ペイン容器 acceptance へ「本体スクロールは末尾に到達する」を刻印", "CP=CP-UI-G1 系刻印(accept 時・ECO-037 の CP-UI-G9 と同系)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(末尾到達性)→緑転"
+    notes: "gate①=不要(CAD 健全・実装層)。gate②=必要(実機)。fix 第1手は是正ではなく切り分け A/B(7d5e0fd 個体で再現するか→候補A/B の分離)。R3 分離記録2件=①CAD 内部の記述不整合(image_tab.md 行107「付与操作は下部 docked」vs 行737/789-791「行クリックで即時付与」=行107 の例示が古い→ViewPrismUI 側 doc-only 分離起票候補)②ECO-037 パターン(DockPanel 直下の Dock 無指定な排他 IsVisible 兄弟)の残存サイト悉皆は未調査→是正確定後に grep 悉皆。関連=ECO-037(同容器・幅の同根欠陥・read-across 漏れの元)・ECO-115(候補A の被疑元・同一経路)・ECO-084(GF-084-01=ボディ単一スクロール系の既往)"
+    body: 60-change-order-eco-116.md
