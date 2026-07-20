@@ -152,8 +152,15 @@
           <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource CardBorderBrush}" />
 
           <!-- 現在のタグ -->
-          <ScrollViewer IsVisible="{Binding OnCurrentTab}" Padding="16">
-            <StackPanel>
+          <!-- ECO-116: パネル本体の余白は ScrollViewer.Padding ではなく内容の Margin で持つ。
+               Padding を使うと Viewport は SV 実高のまま(Padding が引かれない)で Extent が
+               内容と一致しないため、最大送り後も内容末尾が Padding.Top のぶんだけ到達不能になる
+               (本パネルでの実測: Padding="16" → 16px / Padding="16,14,16,20" → 14px が外側に残る)。
+               Margin なら余白ごと内容として測られ Extent に入る。CpUiG1TagPanelScrollTests が
+               4 サーフェス(2 面 × 2 タブ)で到達性と内寄せ量(視覚不変)を張る。
+               先行の同型注意書き= ViewerWindow.axaml / ViewEditDialog.axaml。 -->
+          <ScrollViewer IsVisible="{Binding OnCurrentTab}">
+            <StackPanel Margin="16">
               <StackPanel IsVisible="{Binding HasCurrentTags}">
                 <TextBlock Text="{Binding CurrentNote}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}"
                            Margin="0,0,0,11" />
@@ -189,8 +196,8 @@
           </ScrollViewer>
 
           <!-- タグ追加 -->
-          <ScrollViewer IsVisible="{Binding OnAddTab}" Padding="16,14,16,20">
-            <StackPanel>
+          <ScrollViewer IsVisible="{Binding OnAddTab}">
+            <StackPanel Margin="16,14,16,20">
               <Border Background="{StaticResource BadgeBg}" CornerRadius="10" Height="40" Padding="12,0" Margin="0,0,0,14">
                 <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
                   <PathIcon Data="{StaticResource SearchIcon}" Width="15" Height="15" Foreground="{StaticResource FaintTextBrush}" />

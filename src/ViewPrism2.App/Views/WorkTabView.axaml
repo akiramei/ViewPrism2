@@ -148,8 +148,12 @@
           <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource CardBorderBrush}" />
 
           <!-- 現在のタグ -->
-          <ScrollViewer IsVisible="{Binding OnCurrentTab}" Padding="16">
-            <StackPanel>
+          <!-- ECO-116: パネル本体の余白は ScrollViewer.Padding ではなく内容の Margin で持つ
+               (画像タブと同時是正・面間非対称を作らない)。Padding を使うと Viewport は SV 実高の
+               ままで Extent が内容と一致せず、最大送り後も内容末尾が Padding.Top のぶんだけ
+               到達不能になる(実測は ImageTabView.axaml の注記を参照)。 -->
+          <ScrollViewer IsVisible="{Binding OnCurrentTab}">
+            <StackPanel Margin="16">
               <StackPanel IsVisible="{Binding HasCurrentTags}">
                 <TextBlock Text="{Binding CurrentNote}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,0,0,11" />
                 <ItemsControl ItemsSource="{Binding CurrentTags}">
@@ -180,8 +184,8 @@
           </ScrollViewer>
 
           <!-- タグ追加 -->
-          <ScrollViewer IsVisible="{Binding OnAddTab}" Padding="16,14,16,20">
-            <StackPanel>
+          <ScrollViewer IsVisible="{Binding OnAddTab}">
+            <StackPanel Margin="16,14,16,20">
               <!-- ECO-041: タグ追加検索(画像タブと同一構造・mock 作業タブ準拠)。
                    整列は ECO-040 規約(VerticalContentAlignment+Padding 4,0)。 -->
               <Border Background="{StaticResource BadgeBg}" CornerRadius="10" Height="40" Padding="12,0" Margin="0,0,0,14">
