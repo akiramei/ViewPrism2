@@ -1768,7 +1768,7 @@ changes:
   - id: ECO-122
     title: "UI 部品表(04_component_registry)適合性検査の配線 — 部品適合 lint 新設+視覚 probe の照合先移行"
     type: "検査器新設(部品適合 lint)+既存視覚 probe の照合先移行(src 挙動/視覚は不変)"
-    status: staged
+    status: staged   # 2026-07-20 decide 補記: CAD 側 REG-C1〜C4 全裁定受領(VPUI 部品表改版=CMP-007 転写訂正・CMP-010 新設・CMP-006 Standard 昇格+末尾到達性条項)→未検証C解消=写像は CMP-006/007/010 含む全 Standard で構成可(Provisional 除外不要)。残る As-Built 乖離の是正は ECO-123 分離(推奨順序=123→122 なら写像の契約値と実装が最初から一致)
     golden: "pending(n/a 見込み=視覚/挙動不変。機械証拠検収= lint ゼロ基線+probe 移行前後の判定同一性+陽性対照赤転を予定= ECO-105/107/111/120 前例)"
     baseline: "main 8e42f14(ViewPrismUI 78c95a7)"
     findings: "maintainer 指示(2026-07-20・UI 部品表新設と恒久運用の柱5=lint/視覚 probe の照合先は部品表の契約とする=決定済み方針)の依頼項。検査器/tests 層の配線欠落確定: GfFileOpsVisualParityTests は MockBlue #2F6BED/幅208/行高42 等をテスト内定数で保持(:44/:122/:142)・GfSortMenuVisualParityTests は色8定数+寸法11箇所をテスト内保持(:50-57)=部品表の契約値と独立の二重定義で、部品契約の改版が probe に自動波及しない(照合先を一元化しない限り「部品表が正典」は検査上の実体を持たない)。lint 前例様式= CpI18n010XamlLintTests(直書き走査+層別 allowlist 全エントリ根拠つき)/CpAxamlLintScrollViewerPaddingTests(禁止則ゼロ基線)。未検証(着手時確定)= A: 照合先の物理形(a=CAD Markdown 越境パース〔脆い+CI 可搬性欠く〕/b=VP2 側契約値写像 1 ファイル+部品 ID・出典コメント〔推奨・OrganizeCriteria=ECO-055 共有写像の同型〕/c=部品表側機械可読ブロック〔ViewPrismUI 改稿=スコープ拡大〕) B: lint 第1トランシェの検出対象(生コントロール検出+Standard 契約値の重複直書き検出=ECO-119 型「画面ごと中央揃え」の機械化。検出限界は明示宣言) C: REG-C1/C2/C3 未収束契約は写像から除外または暫定注記つき pin(lint first-run 違反が面間差そのものの可能性=勝手に統合せず裁定材料へ=柱4)"
