@@ -30,7 +30,7 @@ internal static class TestImageTab
 
     private sealed class StubWindows : IWindowService
     {
-        public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(false);
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null) => Task.FromResult(false);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
         public Task ShowSettingsAsync() => Task.CompletedTask;

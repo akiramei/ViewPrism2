@@ -236,7 +236,8 @@ public sealed partial class TagsTabViewModel : ObservableObject
         {
             ["name"] = row.View.Name,
         });
-        if (!await _windows.ConfirmAsync(_localization.T("view.deleteConfirmTitle"), message))
+        if (!await _windows.ConfirmAsync(_localization.T("view.deleteConfirmTitle"), message,
+                _localization.T("common.ctaDelete"), destructive: true))
         {
             return;
         }

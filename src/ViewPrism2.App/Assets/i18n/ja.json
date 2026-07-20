@@ -122,12 +122,10 @@
   "common.languageJapanese": "日本語",
   "common.modifiedDate": "更新日",
   "common.name": "名前",
-  "common.no": "いいえ",
   "common.ok": "OK",
   "common.save": "保存",
   "common.selectedCount": "{count}件選択中",
   "common.size": "サイズ",
-  "common.yes": "はい",
   "error.circularReference": "循環参照のため操作できません",
   "error.database": "データベースエラーが発生しました",
   "error.duplicateFolderPath": "同じパスのフォルダが既に登録されています",
@@ -597,5 +595,9 @@
   "filelist.noAvailableColumns": "追加できる列はありません",
   "chip.moreItems": "ほか {count} 件",
   "chip.searchPlaceholder": "チップを検索…",
-  "chip.noMatch": "一致するチップがありません"
+  "chip.noMatch": "一致するチップがありません",
+  "common.ctaDelete": "削除する",
+  "relink.cta": "再リンクする",
+  "hierarchy.closeConfirm.discard": "破棄して終了",
+  "hierarchy.closeConfirm.back": "戻る"
 }

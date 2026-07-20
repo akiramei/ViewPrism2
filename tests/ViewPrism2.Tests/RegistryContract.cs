@@ -66,6 +66,17 @@ internal static class RegistryContract
     /// <summary>未選択時の枠 `#cbd1da`(白 85% 地とセット)。</summary>
     public static readonly Color CheckUncheckedBorder = Color.Parse("#CBD1DA");
 
+    // ---- CMP-011 DialogActionButton(S・Standard= 2026-07-21 登録・契約正本は 03_dialog_language L2)----
+
+    /// <summary>secondary(キャンセル/戻る/閉じる)の枠 `#D6E0EE`(白地・テーマ既定グレー禁止)。</summary>
+    public static readonly Color DlgSecondaryBorder = Color.Parse("#D6E0EE");
+
+    /// <summary>destructive の塗り `#d83a3f`(白文字・image_tab ゴミ箱確認 mock 実測)。</summary>
+    public static readonly Color DlgDestructiveFill = Color.Parse("#D83A3F");
+
+    /// <summary>destructive の枠 `#c4282d`。</summary>
+    public static readonly Color DlgDestructiveBorder = Color.Parse("#C4282D");
+
     // ---- CMP-010 DisplayCountBadge(S・Standard= REG-C2 裁定 2026-07-20・実装が原器)----
     // 状態情報としての件数表示(実行系 CMP-003 とは意味が異なる別部品)。
 

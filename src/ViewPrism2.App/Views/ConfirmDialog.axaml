@@ -6,12 +6,14 @@
         WindowStartupLocation="CenterOwner"
         FontSize="14"
         Background="{StaticResource AppBackgroundBrush}">
-  <!-- 汎用確認ダイアログ(REQ-010 削除確認 / REQ-017 再リンク確認等)。文言はコードビハインドで注入 -->
+  <!-- 汎用確認ダイアログ(REQ-010 削除確認 / REQ-017 再リンク確認等)。文言はコードビハインドで注入。
+       ECO-126: ボタンは CMP-011 DialogActionButton(dlgBtn)へ委譲 — キャンセル=secondary(左)・
+       CTA=destructive/primary(右・動詞ラベル= REG-C5「はい/いいえ」禁止)。CTA クラスはコードビハインドで付与 -->
   <StackPanel Margin="16" Spacing="16">
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button x:Name="NoButton" MinWidth="80" Click="OnNoClick" />
-      <Button x:Name="YesButton" MinWidth="80" Click="OnYesClick" />
+      <Button x:Name="CancelButton" Classes="dlgBtn secondary" Click="OnCancelClick" />
+      <Button x:Name="ConfirmButton" Classes="dlgBtn" Click="OnConfirmClick" />
     </StackPanel>
   </StackPanel>
 </Window>

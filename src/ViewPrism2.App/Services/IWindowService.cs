@@ -37,8 +37,13 @@ public enum SettingsSection
 /// </summary>
 public interface IWindowService
 {
-    /// <summary>確認ダイアログ(はい/いいえ)。</summary>
-    Task<bool> ConfirmAsync(string title, string message);
+    /// <summary>
+    /// 確認ダイアログ(ECO-126/CMP-011)。confirmLabel は応答が行為を名指す動詞ラベル
+    /// (REG-C5「はい/いいえ」禁止=必須引数で型強制)。destructive=true で赤塗り CTA。
+    /// cancelLabel 省略時は common.cancel。
+    /// </summary>
+    Task<bool> ConfirmAsync(string title, string message, string confirmLabel,
+        bool destructive = false, string? cancelLabel = null);
 
     /// <summary>フォルダ選択(StorageProvider)。キャンセルは null。</summary>
     Task<string?> PickFolderAsync(string title);

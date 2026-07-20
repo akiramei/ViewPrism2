@@ -373,7 +373,7 @@ public sealed class CpUiG6SaveBarTests : IDisposable
 
         public int ViewEditDialogCount { get; private set; }
 
-        public Task<bool> ConfirmAsync(string title, string message)
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null)
         {
             ConfirmCount++;
             return Task.FromResult(true);

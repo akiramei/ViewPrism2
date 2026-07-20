@@ -32,7 +32,7 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
     {
         public bool ConfirmResult { get; set; } = true;
         public int ConfirmCalls { get; private set; }
-        public Task<bool> ConfirmAsync(string title, string message) { ConfirmCalls++; return Task.FromResult(ConfirmResult); }
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null) { ConfirmCalls++; return Task.FromResult(ConfirmResult); }
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
         public Task ShowSettingsAsync() => Task.CompletedTask;

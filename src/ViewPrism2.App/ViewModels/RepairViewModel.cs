@@ -190,7 +190,8 @@ public sealed partial class RepairViewModel : ObservableObject
         }
 
         if (_windows is not null && !await _windows.ConfirmAsync(
-                _localization.T("repair.relink.title"), _localization.T("repair.relink.confirmMessage")))
+                _localization.T("repair.relink.title"), _localization.T("repair.relink.confirmMessage"),
+                _localization.T("relink.cta")))
         {
             return;
         }

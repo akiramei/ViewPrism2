@@ -28,7 +28,7 @@ public sealed class CpUiG1WorkModeTests : IDisposable
 
     private sealed class StubWindowService : IWindowService
     {
-        public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(true);
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null) => Task.FromResult(true);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
         public Task ShowSettingsAsync() => Task.CompletedTask;

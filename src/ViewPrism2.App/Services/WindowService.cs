@@ -76,14 +76,16 @@ public sealed class WindowService : IWindowService
     /// <summary>モーダルダイアログのオーナー(App 起動時に設定)。</summary>
     public Window? Owner { get; set; }
 
-    public async Task<bool> ConfirmAsync(string title, string message)
+    public async Task<bool> ConfirmAsync(string title, string message, string confirmLabel,
+        bool destructive = false, string? cancelLabel = null)
     {
         if (Owner is null)
         {
             return false;
         }
 
-        var dialog = new ConfirmDialog(new LocalizationProxy(_localization), title, message);
+        var dialog = new ConfirmDialog(new LocalizationProxy(_localization), title, message,
+            confirmLabel, destructive, cancelLabel);
         return await dialog.ShowDialog<bool?>(Owner) == true;
     }
 

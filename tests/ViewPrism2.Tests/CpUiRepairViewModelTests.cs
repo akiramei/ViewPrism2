@@ -49,7 +49,7 @@ public sealed class CpUiRepairViewModelTests
 
     private sealed class AcceptingWindows : IWindowService
     {
-        public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(true);
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null) => Task.FromResult(true);
 
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
 

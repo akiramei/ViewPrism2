@@ -126,7 +126,7 @@ public sealed class CpUiG6HierarchyEditorTests : IDisposable
 
         public NodeConditionResult? ConditionDialogResult { get; set; }
 
-        public Task<bool> ConfirmAsync(string title, string message)
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null)
         {
             ConfirmCount++;
             return Task.FromResult(ConfirmResult);

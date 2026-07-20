@@ -89,7 +89,9 @@ public partial class App : Application
                     e.Cancel = true;
                     if (await _provider!.GetRequiredService<WindowService>().ConfirmAsync(
                         localization.T("hierarchy.closeConfirm.title"),
-                        localization.T("hierarchy.closeConfirm.message")))
+                        localization.T("hierarchy.closeConfirm.message"),
+                        localization.T("hierarchy.closeConfirm.discard"), destructive: true,
+                        cancelLabel: localization.T("hierarchy.closeConfirm.back")))
                     {
                         closeConfirmed = true;
                         window.Close();

@@ -122,7 +122,8 @@ public sealed partial class RelinkViewModel : ObservableObject
         }
 
         // 確定前の確認(REQ-017: タグ・ノートが missing 側の画像として引き継がれる旨)
-        if (!await _windows.ConfirmAsync(_localization.T("relink.title"), _localization.T("relink.confirmMessage")))
+        if (!await _windows.ConfirmAsync(_localization.T("relink.title"), _localization.T("relink.confirmMessage"),
+                _localization.T("relink.cta")))
         {
             return;
         }

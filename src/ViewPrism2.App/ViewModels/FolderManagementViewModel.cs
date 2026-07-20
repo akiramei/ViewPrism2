@@ -239,7 +239,8 @@ public sealed partial class FolderManagementViewModel : ObservableObject
     {
         // 削除時は配下 images が連鎖削除されるため確認ダイアログ必須(REQ-010)
         var message = _localization.T("folder.deleteConfirm", new Dictionary<string, string> { ["name"] = row.Name });
-        if (!await _windows.ConfirmAsync(_localization.T("collection.deleteConfirmTitle"), message))
+        if (!await _windows.ConfirmAsync(_localization.T("collection.deleteConfirmTitle"), message,
+                _localization.T("common.ctaDelete"), destructive: true))
         {
             return;
         }

@@ -137,6 +137,72 @@ public sealed class CpRegistryLintTests
             $"allowlist の死亡エントリ {stale.Count} 件(サイト消滅=リストから除去): {string.Join(", ", stale)}");
     }
 
+    // ---- 検査C(ECO-126= トランシェ2): クラス無し生 Button の台帳 ----
+    // CMP-011 制約「生 Button(テーマ既定の外観)をダイアログフッターへ直接置かない」の機械化。
+    // フッター判定は構造的に困難なため、ファイル単位の件数 pin で全クラス無し Button を台帳化する
+    // (Recompute lint= CP-RECOMPUTE-LINT-125 と同型)。新規の生 Button は fail して分類を強制。
+    // 検出限界: 同一ファイル内での置換(件数不変)は不可視。インラインスタイル済みでもクラス無しなら
+    // 台帳対象(委譲漏れ= ECO-119 型の検出が目的のため意図どおり)。
+
+    // R8 所見2: \b は "Button." の間でも成立し <Button.Flyout> 等のプロパティ要素を誤計数する
+    // → 直後が語構成文字にも "." にも続かない場合のみ Button 要素とみなす
+    internal static int CountClasslessButtons(string text) =>
+        new Regex(@"<Button(?![\w.])[^>]*>", RegexOptions.Singleline).Matches(text)
+            .Count(m => !m.Value.Contains("Classes="));
+
+    /// <summary>
+    /// クラス無し Button の台帳(ECO-126 起票時掃射= 2026-07-21 の実態報告)。値= (件数, 根拠)。
+    /// フッター対 Button を含むファイルは CMP-011 lazy 遡及の対象(03 マトリクスへ行が増える際に
+    /// dlgBtn 系へ委譲)。ConfirmDialog は ECO-126 で 0 件化済み= 台帳に現れない。
+    /// </summary>
+    private static readonly Dictionary<string, (int Count, string Why)> ClasslessButtonLedger = new(StringComparer.Ordinal)
+    {
+        ["CollectionExportWindow.axaml"] = (1, "進捗内キャンセル(リンク風・L2 フッター外)"),
+        ["CollectionImportWindow.axaml"] = (3, "ウィザード内操作(インライン指定・golden 承認面=ECO-073)"),
+        ["FolderManagementWindow.axaml"] = (5, "ヘッダ/行内操作+フッター(legacy・lazy 遡及候補)"),
+        ["ImageTabView.axaml"] = (2, "レール/インライン操作(ダイアログ非該当)"),
+        ["NodeConditionDialog.axaml"] = (2, "フッター対=テーマ既定グレー(実態報告済み・lazy 遡及候補=cheat-log 2026-07-21)"),
+        ["NumericValueDialog.axaml"] = (2, "同上"),
+        ["RelinkWindow.axaml"] = (1, "ヘッダ操作(ダイアログフッター非該当)"),
+        ["RepairWindow.axaml"] = (5, "ツールバー/行内+フッター(legacy・lazy 遡及候補)"),
+        ["SettingsWindow.axaml"] = (1, "インライン操作"),
+        ["SnapshotRestoreConfirmWindow.axaml"] = (2, "フッター対=キャンセルがテーマ既定グレー(実態報告済み・lazy 遡及候補)"),
+        ["SnapshotWindow.axaml"] = (3, "行内操作+フッター(golden 承認面=ECO-072/073)"),
+        ["TagEditorWindow.axaml"] = (2, "インライン操作(ECO-087 golden 面)"),
+        ["ViewEditDialog.axaml"] = (2, "フッター対=キャンセルがテーマ既定グレー(実態報告済み・lazy 遡及候補)"),
+        // TagsTabView/ViewerWindow の旧 2 エントリは <Button.Flyout> の誤計数(R8 所見2)=幻につき除去
+    };
+
+    [Fact]
+    public void クラス無し生Buttonは台帳と全数一致する()
+    {
+        var actual = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (file, text) in AxamlFiles())
+        {
+            var n = CountClasslessButtons(text);
+            if (n > 0) actual[file] = n;
+        }
+        var unexpected = actual.Where(kv => !ClasslessButtonLedger.TryGetValue(kv.Key, out var e) || e.Count != kv.Value)
+            .Select(kv => $"{kv.Key}={kv.Value}(台帳 {(ClasslessButtonLedger.TryGetValue(kv.Key, out var e) ? e.Count : 0)})").ToList();
+        var stale = ClasslessButtonLedger.Keys.Except(actual.Keys, StringComparer.Ordinal).ToList();
+        Assert.True(unexpected.Count == 0,
+            $"台帳外のクラス無し Button {unexpected.Count} 件(CMP-011: 生 Button をダイアログフッターへ直接置かない・"
+            + $"Standard 外観は dlgBtn 系へ委譲=恒久運用柱2)。委譲するか、根拠つきで台帳へ: {string.Join(", ", unexpected)}");
+        Assert.True(stale.Count == 0,
+            $"台帳の死亡エントリ {stale.Count} 件(サイト消滅=台帳から除去): {string.Join(", ", stale)}");
+    }
+
+    [Fact]
+    public void 陽性対照_クラス無しButtonを検出できる()
+    {
+        Assert.Equal(1, CountClasslessButtons("""<Button MinWidth="80" Click="OnX" />"""));
+        Assert.Equal(0, CountClasslessButtons("""<Button Classes="dlgBtn secondary" Click="OnX" />"""));
+        Assert.Equal(2, CountClasslessButtons("<Button\n  MinWidth=\"80\">\n</Button><Button Content=\"x\"/>"));
+        // R8 所見2 の陰性対照: プロパティ要素・別要素名は Button 要素として数えない
+        Assert.Equal(0, CountClasslessButtons("""<Button.Flyout><MenuFlyout /></Button.Flyout>"""));
+        Assert.Equal(0, CountClasslessButtons("""<ButtonSpinner Value="1" />"""));
+    }
+
     // ---- 陽性対照(ECO-053/078/107/120 の型= 検査を追加する変更は陽性対照を同梱)----
 
     [Fact]

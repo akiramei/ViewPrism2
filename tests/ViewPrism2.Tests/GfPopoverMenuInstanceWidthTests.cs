@@ -139,7 +139,7 @@ public sealed class GfPopoverMenuInstanceWidthTests : IDisposable
     // 既存流儀(各テストクラス私有の最小スタブ)どおり。ECO-122 で共有化候補になり得るが本 ECO では複製維持
     private sealed class StubWindowService : IWindowService
     {
-        public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(true);
+        public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null) => Task.FromResult(true);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
         public Task ShowSettingsAsync() => Task.CompletedTask;

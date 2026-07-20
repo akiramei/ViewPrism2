@@ -87,11 +87,59 @@ R7(掃射義務): 共通言語 L2 に触れるため **03 マトリクス L2 列
 
 ## 6. 残ゲート
 
-- **gate①(裁定)**: 不要(CMP-011 Standard 登録+REG-C5 裁定済み。サイト別ラベルの文言は
-  実装裁量+golden で確認)
-- **gate②(golden)**: 必要(視覚変更。ビュー削除確認の CMP-011 準拠+L2 列全面の無変更+
-  ja/en 両言語+全 10 サイトの確認動作)
+- **gate①(裁定)**: 不要(CMP-011 Standard 登録+REG-C5 裁定済み)
+- **gate②(golden)**: **必要 — §8 の基準で維持者確認待ち。**
 
-## 7. 停止点
+## 7. 実施記録(2026-07-21 fix)
 
-裁定は不要です。`/eco-fix eco-126` で是正に着手できます。
+- **R5(赤採取)**: 視覚 probe 3 本(旧 ctor+同一アサーション)= **全赤**(中央揃え Left/テーマ既定
+  グレー/はい・いいえ)+lint 検査C= **赤**(`ConfirmDialog.axaml=2(台帳 0)`)。是正で ctor が
+  動詞ラベル必須へ変わったため(REG-C5 の型強制)、probe は新署名へ更新(アサーション本体不変)。
+- **是正= 案A 全 4 部**:
+  1. Components.axaml へ CMP-011 共有 Style(`dlgBtn`+secondary/primary/destructive・中央揃え内蔵・
+     値は golden 承認済み outlineButton+registry 実測 #D6E0EE/#D83A3F/#C4282D の転写)。
+     R8 所見1 で全 variant に `:pointerover`/`:pressed` の template 上書きを追加(Button.cta 様式=
+     擬似クラス無しの setter は Fluent 既定に負ける)。
+  2. ConfirmDialog: dlgBtn 委譲+ctor/ConfirmAsync 署名拡張(**confirmLabel 必須= REG-C5 違反を
+     型で再発不能に**・destructive・cancelLabel 任意)。Enter/Escape 既定・初期フォーカス
+     (キャンセル側)は旧実装から不変(R8 所見7 で git 遡り確認)。
+  3. 10 サイト動詞化台帳: destructive 7(ビュー削除/タグ削除/コレクション削除=「削除する」・
+     完全削除×2=「完全削除」・空にする×2=「ゴミ箱を空にする」= REG-C5 正典ラベル)+
+     primary 2(再リンク×2=「再リンクする」)+終了確認= destructive「破棄して終了」+cancel
+     「戻る」(**ECO-103 裁定文言の実現**= 従来ははい/いいえに退化していた)。
+     i18n ja/en 4 キー追加+`common.yes/no` 死キー削除(全消費ゼロを grep 悉皆)。
+  4. lint 検査C 新設(クラス無し Button のファイル別件数台帳= 13 ファイル・全根拠つき・
+     陽性/陰性対照)。R8 所見2 で `<Button.Flyout>` 誤計数を是正(`(?![\w.])`)+幻 2 エントリ除去。
+- **機械受入(4 点)**: フルビルド 0 error・0 警告 / Tests **865/865**(probe 5+lint 検査C 緑転・
+  Stub 42 箇所署名追随)/ Oracle 109+2skip / validate 0/0。
+- **R7**: ConfirmDialog は mock なし面(03 検査行に明記)= captures 並置の原器が無く、契約 probe
+  (GfConfirmDialogVisualParityTests 5 本= 中央揃え/secondary/destructive/primary/動詞・戻る)が
+  並置代替(ECO-116 実測 pin 型)。**L2 列 ○ 既存面(B-1/B-2/B-3/E-1)= 既存 Gf 視覚 parity
+  3 クラス(Snapshot/Package/EntryE1)が全緑維持= 無変更の機械証明**(dlgBtn は新設クラス=
+  既存面は未参照・base Button スタイルは CornerRadius のみで不変)。
+- **R8(独立レビュー・fresh context)**: 所見 11 件全処置。
+  - **スコープ内 3= 全て処置済み**: 所見1(primary の hover 退色= cta 様式の template 上書きを
+    全 variant へ)・所見2(lint の `<Button.Flyout>` 誤計数= 正規表現是正+幻 2 エントリ除去+
+    陰性対照)・所見3(primary variant+cancelLabel 経路の probe 追加)。処置後 再受入= 865/865。
+  - **スコープ外 3= cheat-log 記帳(2026-07-21)**: Escape/Enter キーボード契約の不在(既存・
+    CMP-011 改訂と対)・ECO-073 面の hover 同欠陥(golden 非実測次元= lazy 遡及時に解消)・
+    hover/pressed 値の CAD 未規定(暫定選択の申し送り)。
+  - 問題なし 5(機械裏取り済み): 署名追随の全数(必須引数= 型で閉包)・variant 選定の妥当性
+    (REG-C5 正典ラベルとの一致)・i18n 整合(601 キー対称・yes/no 消費ゼロ・BOM/改行健全)・
+    静的スタイル値の契約一致・ConfirmDialog 挙動不変(フォーカスはキャンセル側= 誤操作安全)。
+- **diff 規模**: src 10 ファイル+styles+i18n 2 ファイル・tests probe 1 クラス+lint 拡張+Stub 42 箇所。
+
+## 8. 停止点= golden 合格基準(gate②・実機。ja/en 両言語= ECO-079 規約)
+
+1. **ビュー削除確認(症状面)**: タグタブ→ビュー行「削除」→ ダイアログが「キャンセル」(白 outline)+
+   「削除する」(赤塗り・白文字)・**両ボタンともテキスト中央揃え**・キャンセル左/削除する右。
+2. **他の destructive 面**: タグ削除・コレクション削除=「削除する」/ゴミ箱の完全削除=「完全削除」/
+   ゴミ箱を空にする=「ゴミ箱を空にする」— いずれも赤 CTA+キャンセル。
+3. **primary 面**: 修復の再リンク確定=「再リンクする」(青塗り)+キャンセル。
+4. **終了確認(ECO-103 文言)**: 階層編集を未保存のままウィンドウを閉じる→「戻る」+「破棄して終了」(赤)。
+5. **言語切替**: en で Delete/Cancel/Delete permanently/Empty Trash/Relink/Discard and exit/Go back が
+   表示され、はみ出し・切れがない。ja 復帰で従来どおり。
+6. **回帰(L2 列既存面)**: 書き出し(B-1)・取り込み(B-2/B-3)・設定 データとバックアップ(E-1)の
+   ダイアログの見た目が従来どおり(共有 Style 新設の影響なし)。
+
+合格なら `/eco-accept eco-126` を指示してください。

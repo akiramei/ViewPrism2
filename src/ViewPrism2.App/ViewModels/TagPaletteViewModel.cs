@@ -306,7 +306,8 @@ public sealed partial class TagPaletteViewModel : ObservableObject
         {
             ["tagName"] = row.Tag.Name,
         });
-        if (!await _windows.ConfirmAsync(_localization.T("tag.deleteTag"), message))
+        if (!await _windows.ConfirmAsync(_localization.T("tag.deleteTag"), message,
+                _localization.T("common.ctaDelete"), destructive: true))
         {
             return;
         }

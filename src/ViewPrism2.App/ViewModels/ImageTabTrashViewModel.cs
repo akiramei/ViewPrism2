@@ -159,7 +159,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         if (_trashSel.Count == 0) return;
         int n = _trashSel.Count;
         if (!await _windows.ConfirmAsync(_localization.T("trash.purge"),
-                _localization.T("trash.purgeConfirm", new Dictionary<string, string> { ["count"] = n.ToString() })).ConfigureAwait(true))
+                _localization.T("trash.purgeConfirm", new Dictionary<string, string> { ["count"] = n.ToString() }),
+                _localization.T("trash.purge"), destructive: true).ConfigureAwait(true))
             return;
         foreach (var id in _trashSel.ToList())
             await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);
@@ -175,7 +176,8 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         if (TrashPopupItems.Count == 0) return;
         int n = TrashPopupItems.Count;
         if (!await _windows.ConfirmAsync(_localization.T("modals.trash.emptyTrash"),
-                _localization.T("trash.emptyConfirm", new Dictionary<string, string> { ["count"] = n.ToString() })).ConfigureAwait(true))
+                _localization.T("trash.emptyConfirm", new Dictionary<string, string> { ["count"] = n.ToString() }),
+                _localization.T("modals.trash.emptyTrash"), destructive: true).ConfigureAwait(true))
             return;
         foreach (var id in TrashPopupItems.Select(i => i.Id).ToList())
             await _trash.PermanentDeleteAsync(id).ConfigureAwait(true);

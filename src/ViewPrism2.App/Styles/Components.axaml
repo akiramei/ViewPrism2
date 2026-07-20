@@ -184,6 +184,78 @@
     <Setter Property="Foreground" Value="White" />
   </Style>
 
+  <!-- ============ CMP-011 DialogActionButton(ECO-126)============
+       ダイアログフッターの操作ボタン。契約正本= ViewPrismUI docs/03_dialog_language.md L2
+       (中央揃え=Avalonia 既定 Left の取り漏れ禁止・secondary=白 outline #D6E0EE=テーマ既定グレー禁止)
+       +04_component_registry CMP-011(destructive= #d83a3f 塗り+枠 #c4282d+白文字=ゴミ箱確認 mock 実測)。
+       値は golden 承認済み L2 面(ECO-073 outlineButton=CollectionExportWindow 等)からの転写。
+       template setter は Fluent 既定 hover の塗り退色を防ぐ(secondary/destructive とも塗りが契約)。 -->
+  <Style Selector="Button.dlgBtn">
+    <Setter Property="MinWidth" Value="96" />
+    <Setter Property="Padding" Value="16,7" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.dlgBtn.secondary">
+    <Setter Property="Background" Value="White" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="#D6E0EE" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.dlgBtn.secondary /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="White" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.dlgBtn.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#FAFBFC" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.dlgBtn.secondary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#FAFBFC" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.dlgBtn.primary">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <!-- R8 所見1: 擬似クラス無しの template setter は Fluent 既定の :pointerover/:pressed に負ける
+       (Button.cta が同理由で両方上書き済み=同様式)。hover/pressed 値は CMP-011 未規定のため
+       契約色の維持を優先(発明最小・cheat-log 2026-07-21 で CAD へ hover 契約の申し送り) -->
+  <Style Selector="Button.dlgBtn.primary /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.dlgBtn.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.dlgBtn.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.dlgBtn.destructive">
+    <Setter Property="Background" Value="#D83A3F" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderBrush" Value="#C4282D" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.dlgBtn.destructive /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#D83A3F" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.dlgBtn.destructive:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#C4282D" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.dlgBtn.destructive:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#C4282D" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
   <!-- ============ アイコンボタン(行内 編集/削除) ============ -->
   <Style Selector="Button.iconBtn">
     <Setter Property="Width" Value="28" />

@@ -122,12 +122,10 @@
   "common.languageJapanese": "日本語",
   "common.modifiedDate": "Modified Date",
   "common.name": "Name",
-  "common.no": "No",
   "common.ok": "OK",
   "common.save": "Save",
   "common.selectedCount": "{count} selected",
   "common.size": "Size",
-  "common.yes": "Yes",
   "error.circularReference": "Cannot perform the operation due to a circular reference",
   "error.database": "Database error occurred",
   "error.duplicateFolderPath": "A folder with the same path is already registered",
@@ -597,5 +595,9 @@
   "filelist.noAvailableColumns": "No columns available to add",
   "chip.moreItems": "+{count} more",
   "chip.searchPlaceholder": "Search chips…",
-  "chip.noMatch": "No matching chips"
+  "chip.noMatch": "No matching chips",
+  "common.ctaDelete": "Delete",
+  "relink.cta": "Relink",
+  "hierarchy.closeConfirm.discard": "Discard and exit",
+  "hierarchy.closeConfirm.back": "Go back"
 }
