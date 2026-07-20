@@ -1721,3 +1721,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(ゴミ箱到達性+lint 4件)→緑転"
     notes: "gate①=不要(CAD 非該当=到達性は overflow:auto の定義・余白量不変)。gate②=必要(軽量)。関連=ECO-116(法則の実測元・remedy 様式・教訓1)・ECO-107(資産 lint 様式・教訓1=lint限界宣言には掃射手段紐づけ)・ECO-019(ゴミ箱混入元)・ECO-009(TagsTab 混入元)・ECO-111(K-AVALONIA 刻印様式)"
     body: 60-change-order-eco-117.md
+  - id: ECO-118
+    title: "タグ付与/剥奪の応答劣化 — 選択規模の変更が母集合規模の再読・再構築を通る(26万件で顕在化)"
+    type: "不具合是正候補(性能・実装層。視覚/意味論不変)"
+    status: staged
+    golden: "pending(gate②=必要。26万件実機=付与〔シンプル/候補値/数値〕・剥奪が即時+意味論退行なし〔チップ件数追随/REQ-094 未分類離脱/タグドット・Added・現在のタグ反映〕+作業タブも同様)"
+    baseline: "main 1dc1f5c"
+    findings: "maintainer 実機観測(2026-07-20・26万件ビュー×タグ編集の付与/剥奪で約2秒)。26万件経路の6経路目。ECO-115 が「データ変化=Recompute 正当」として明示的に対象外へ送った残余の顕在化(ECO-114 R8 cheat-log 予告の ApplySequential 系を含む)= R3 分離起票の実行。切り分けの精密化=115 が正当としたのは意味論でありO(母集合)実装コストではない。実装逸脱確定(コード証拠): 付与/剥奪全経路が ReloadTagsAsync(ImageTabViewModel.cs:2171)に合流し ①RefreshImageTagsAsync=コレクション全付与行の DB 再取得+全再グループ化 ②BuildEntries=全26万 ImageEntry 再構築+辞書再構築 ③Recompute=全件条件評価×(1+子チップ)+全件ソート+26万 ImageItemVM 再構築+26万 Add。WorkTab 同型で DB スコープはより広い(ReloadTagsAsync:1037=GetAllImageTagsAsync=タグ1枚の付与で全DB付与行を読む)。混入=6f7b4f9(M3a 初版=113/114/115 と同根)。意味論の分解=変更は選択画像の image_tags 行のみ→再解決を要するのは選択分の表示/チップ件数/ビュー軸帰属(選択分だけ条件再評価・二分挿入)/タグ依存ソートの選択分再配置=全て選択規模で閉じる。未検証=3サイトの寄与割合・チップ件数の差分加算vs構築のみ再実行・タグ列ソート中の位置変動経路の実在"
+    impacted_bom: ["src=ImageTabViewModel(ReloadTagsAsync=差分再読+差分エントリ更新+表示差分更新+チップ件数差分)+WorkTabViewModel 同型(全DB取得→選択スコープ)。Core=選択スコープ読み口が無ければ ITagRepository へ追加(互換構造化=ECO-086 前例)", "tests=構造 probe(付与/剥奪が母集合列挙・全再構築を通らない=Items インスタンス同一性+ECO-113 計器・是正前赤)+既存タグ意味論(REQ-094/チップ件数/ECO-115 パネル probe)全緑維持", "ebom=E-UI-BROWSE-022 invariant 追記(タグ変更コストは変更集合サイズ比例=データ変更系への計算量契約の拡張)", "CP=CP-UI-G1 刻印(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(構造 probe)→緑転"
+    notes: "gate①=不要(実装層確定)。gate②=必要(26万件実機)。関連=ECO-115(対象外送りの残余・切り分け精密化)・ECO-114(cheat-log 予告記帳・ApplyModeTransition/観測可能化資産の再利用)・ECO-113(辞書資産・計器・期待計算量の乖離=教訓2再適用)・ECO-041(部分再構築様式の初出)・REQ-094(未分類離脱=意味論維持の要)。26万件経路 N=6=経路棚卸し様式の昇格候補を更に強化"
+    body: 60-change-order-eco-118.md
