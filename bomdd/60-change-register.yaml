@@ -1776,3 +1776,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。陽性対照=写像/lint を一時破壊して赤転実測→復旧緑"
     notes: "gate①=不要(方針は maintainer 裁定済み 2026-07-20。物理形/トランシェは実装裁量=着手時確定し ECO 本文へ記録)。gate②=n/a 見込み(機械証拠)。前提整備= ECO-121(CMP-008 の末尾到達性脱落=照合先昇格前の正本是正)が先行起票済み。関連=ECO-107(lint 様式+限界宣言)・ECO-117(ゼロ基線 lint)・ECO-055(共有写像で転写ドリフト防止の前例)・ECO-109/112(部品表正典化の動機となった golden 許容差分)・ViewPrismUI 78c95a7(恒久運用規則の刻印元)"
     body: 60-change-order-eco-122.md
+  - id: ECO-123
+    title: "CMP-006 インスタンス契約値への実装追随 — 作業タブ ⋯メニュー幅 200→208+画像タブ 表示軸メニュー幅 260→240"
+    type: "実装是正候補(視覚寸法の転写ドリフト・挙動不変)"
+    status: staged
+    golden: "pending(gate②必要=軽量。基準は fix 時提示=両メニュー幅・長いビュー名の表示崩れなし等)"
+    baseline: "main 0d3e0a5(ViewPrismUI 部品表改版後=REG-C1〜C4 裁定済み)"
+    findings: "CAD 側 REG-C3 裁定(2026-07-20・CMP-006 Standard 昇格=幅はインスタンス契約値・同型複製は同値必須)の As-Built 乖離①「作業タブ ⋯ 200→208 追随=VP2 側 ECO」の実行+起票時悉皆の追加所見。悉皆= Classes=popupMenu 全7サイト grep 実測: 一致4(⋯ImageTab 208/並び替え両タブ 252/移動先 240)・乖離2(⋯WorkTab 200=WorkTabView.axaml:765・軸ImageTab 260=ImageTabView.axaml:767)・契約対象外1(表示列 304=部品表に幅契約なし=mock が正で現状維持)。mock 裏取り= dc.html 実測で ⋯=208px/軸=240px・260px は mock に不在=転写ドリフト確定。混入= 260 は 45a6c77(2026-06-18 M3b 製造時・潜伏約1ヶ月)・200 は f211f a9(作業タブ複製=ECO-112 R3 既知)。マスキング= 歴代 golden はメニュー幅を実測せず(既存 probe は並び替え 252 のみ pin)+ECO-109/112 許容差分リストに 260/200 なし=裁定許容でなく未検出。行高≒37(契約42)は裁定済み対象外(急がない・SRC-011 同便)。未検証= 260 の由来(意図的拡幅かドリフトか。mock 不在+許容差分記録なしからドリフト推定・幅240 の機能充足は golden で確認)"
+    impacted_bom: ["src=WorkTabView.axaml:765(200→208)+ImageTabView.axaml:767(260→240)の2行", "tests=メニュー幅 probe 新設(⋯WorkTab/軸ImageTab=是正前赤→緑転。ECO-122 写像が未着なら テスト内定数 pin→122 fix 時に写像参照へ置換)", "CP=CP-UI-G1 刻印(accept 時・転写ドリフト潜伏実績つき)", "CAD=無変更(契約確定済み)。As-Built 乖離リストへ3件目(軸 260→240)追記を CAD 側へ申し送り(部品表は VP2 側で編集しない=柱4)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(幅 pin 2本)→緑転"
+    notes: "gate①=不要(①REG-C3 裁定済み ②Standard 契約+mock 実測一致+ドリフト証拠=実装逸脱の明白事例)。gate②=必要(軽量・260→240 は視覚変化)。推奨順序= 123→122(写像の契約値と実装が最初から一致し probe 置換が機械的)。関連=ECO-112(R3 予告=cheat-log 2026-07-19 の実行)・ECO-050(転写ドリフトの型=仕様値と実装値の乖離が golden の非実測でマスク)・ECO-109(GfSortMenuVisualParityTests=既存幅 probe の前例)・REG-C3(裁定元)"
+    body: 60-change-order-eco-123.md
