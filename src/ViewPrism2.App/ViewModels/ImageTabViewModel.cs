@@ -2637,7 +2637,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     {
         if (Organize.MergeTargetId is null || string.Equals(imageId, Organize.MergeTargetId, StringComparison.Ordinal)) return;
         Organize.AddCandidate(imageId);
-        Recompute();
+        // ECO-125(B-1): マーカー付与のみ=Items を作り直さない(グリッドクリック側 SetMergeTarget/
+        // ToggleOrganizeTarget と同様式=ECO-113。ClearCopyFeedback は RefreshSelectionMarkers 先頭が継承)
+        RefreshSelectionMarkers();
     }
 
     /// <summary>マージ実行: E-MERGE-034(原子・タグ union・source=deleted・物理非破壊 INV-009)。完了後にデータ再読込。
@@ -2666,7 +2668,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     {
         Organize.ContinueOrganize();
         _selected.Clear();
-        Recompute();
+        // ECO-125(B-2): データ不変=トレイリセット+マーカー解除のみ(旧マーカーは _markedItemIds の
+        // 差分クリアが消す=ECO-113 構造。ClearCopyFeedback は RefreshSelectionMarkers 先頭が継承)
+        RefreshSelectionMarkers();
     }
 
     private void EnsureScanOrder(string folderId)
@@ -2762,7 +2766,17 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                     _completedScanOrderByCollection.Remove(update.FolderId);
                     EnsureScanOrder(update.FolderId);
                     _scanNoticeKey = null;
-                    if (_loaded) Recompute();
+                    // ECO-125(B-3・R8 所見3 で条件化): 表示中コレクション自身の再スキャン開始は
+                    // 従来どおり Recompute — Started はソート実現状態の変異点(取込順固定=ECO-060 の
+                    // TryGetPreservedScanOrder が有効化)であり、その即時実現を部分更新は担えない。
+                    // 他コレクションの Started は母集合・ソートとも不変=行バッジ+通知のみ
+                    // (BatchCommitted の部分更新様式と対称)。他コレクション分岐の ClearCopyFeedback
+                    // 非継承は機構列挙(Recompute 先頭)からの縮小=タイマ後詰めで軽微(cheat-log 判定送り)
+                    if (_loaded)
+                    {
+                        if (string.Equals(update.FolderId, _collectionId, StringComparison.Ordinal)) Recompute();
+                        else { RebuildCollectionRows(); OnPropertyChanged(string.Empty); }
+                    }
                     break;
 
                 case CollectionScanPhase.BatchCommitted:

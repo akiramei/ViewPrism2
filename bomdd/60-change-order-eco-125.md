@@ -89,10 +89,63 @@ C は台帳に判断(分離起票 or 許容+根拠)を記載して本 ECO の di
 
 ## 6. 残ゲート
 
-- **gate①(裁定)**: 不要(棚卸し+既確立の是正型の適用。C の分離起票は個別に /eco-file へ)
-- **gate②(golden)**: **条件付き**= B 是正が出れば軽量実機(該当経路の体感+意味論不変)。
-  B が 0 件なら n/a(機械証拠= 台帳+lint ゼロ基線+陽性対照= ECO-105/120/122 前例)
+- **gate①(裁定)**: 不要
+- **gate②(golden)**: **必要(軽量実機)— B 是正 3 サイトが出たため。§8 の基準で維持者確認待ち。**
 
-## 7. 停止点
+## 7. 実施記録(2026-07-21 fix)
 
-裁定は不要です。`/eco-fix eco-125` で棚卸し(全数分類)から着手できます。
+- **全数分類の結果(台帳の正本= CpRecomputeCouplingLintTests.Ledger・機械 pin)**:
+  直呼び 39 サイト(是正後: ImageTab 26+WorkTab 13)を A/A'/C で分類・全エントリ根拠つき。
+  - **B(不要結合)= 3 サイト発見・全て本 ECO 内是正**(第一印象「既知 0」を全数調査が覆した=
+    ECO-107 教訓2 の実証):
+    - **B-1 AddCandidateToTargets**: 検索候補の「整理対象に追加」が全面 Recompute。グリッドクリック側
+      5 サイト(SetMergeTarget 等)は ECO-113 で RefreshSelectionMarkers 済み= **面内非対称**の取り残し。
+      → RefreshSelectionMarkers へ(ClearCopyFeedback は同メソッド先頭が継承)。
+    - **B-2 ContinueOrganize**: データ不変のトレイリセット+マーカー解除で全面 Recompute。
+      → RefreshSelectionMarkers へ。
+    - **B-3 OnScanUpdated Started**: 母集合不変(画像未公開)で全面 Recompute。
+      → **R8 所見3 で条件化**: 表示中コレクション自身の再スキャンは Recompute 残置(Started は
+      取込順固定= ECO-060 TryGetPreservedScanOrder の有効化点であり即時実現が必要)・
+      他コレクションは部分更新(RebuildCollectionRows+通知= BatchCommitted 様式と対称)。
+  - **C(条件付き正当・予告記帳)3**: OpenRepair/OpenBackupSettings(モーダル閉じ後の無条件全再読)+
+    R8 所見6 発見の **Organize 子 VM RunSearchAsync 成功末尾(注入 _recompute 経由・検索結果格納のみで
+    全面 Recompute)**。いずれも経路名+是正型を cheat-log 予告記帳(ECO-114→115 様式)。
+  - A'= DeleteToTrash(差分化は症状観測時)+WorkTab organize/tag 系(workspace 規模前提= ECO-113 R3/
+    ECO-118 の残置裁定を引用)。残りは A。
+- **R5**: probe 3 本(B-1/B-2= CpUiG1OrganizeTests・B-3= CpUiEco060ProgressiveScanTests の
+  別コレクションスキャン単離)= **是正前赤 3 本**(Assert.Same 失敗)→ 是正で緑転。
+- **lint 新設**: CpRecomputeCouplingLintTests(CP-RECOMPUTE-LINT-125)= 「ファイル:メソッド→件数」の
+  台帳 pin+死亡エントリ検出+陽性対照。**新規の直呼び結合は fail して分類を強制**(列挙軸の谷間を
+  構造的に塞ぐ= ECO-124 教訓1 の機械化)。検出限界を宣言(注入デリゲート 4 サイト・撮影ハーネス・
+  メソッド同定の限界)。
+- **E-BOM**: invariant へ棚卸し完了刻印(直呼び全数+限定句= R8 所見6 で過大主張を訂正)。
+- **機械受入(4 点)**: フルビルド 0 error・0 警告 / Tests **858/858**(probe 3+lint 2 緑転)/
+  Oracle 109+2skip / validate 0/0。
+- **R7**: 対象外宣言(XAML 無変更・視覚不変)。
+- **R8(独立レビュー・fresh context)**: 所見 9 件全処置。
+  - **スコープ内 3= 全て処置済み**: 所見3(B-3 が表示中コレクション再スキャンで ECO-060「取込順固定」の
+    実現を失う→ 条件分岐で旧挙動保存・再受入緑)・所見4(ECO-112 解除列挙の引用が正本と不一致→
+    コメント/cheat-log を正本引用へ訂正+Started 他コレクション分岐を判定対象へ追加)・
+    所見6(注入 _recompute 4 サイトの誤 characterization → 限界宣言訂正+RunSearchAsync:299 を C 記帳+
+    E-BOM 限定句)。
+  - **スコープ外 2= cheat-log 記帳**: _refreshSelectionMarkers 死亡配線(製造時から未行使)・
+    lint パス可搬性ほか軽微(所見7)。
+  - 問題なし 4(機械裏取り済み): B-1/B-2 の意味論被覆(affected 集合・子 VM 通知・転送プロパティ)・
+    件数 pin の独立検算(grep 実測と全数一致)・probe 3 本の真因固定とレース耐性・A' 引用の
+    正本一致(ECO-113 §7.4/ECO-118)。
+- **diff 規模**: src= ImageTabViewModel 3 サイト・tests= probe 3+lint 1 クラス・E-BOM/cheat-log。
+
+## 8. 停止点= golden 合格基準(gate②・軽量実機。26 万件推奨)
+
+1. **整理モード・検索候補の追加(B-1)**: 26 万件ビューで整理モード→マージ先設定→類似 or 条件検索→
+   結果の「整理対象に追加」が**即時**(従来は 1〜2 秒級)。追加した候補にチェック+「対象」バッジが
+   付き、トレイの整理対象リストへ載る(意味論不変)。
+2. **別の整理を続ける(B-2)**: マージ実行→完了→「別の整理を続ける」が**即時**。完了パネルが畳まれ、
+   トレイが空に戻り、グリッドのマージ先/対象マーカーが消える(意味論不変)。
+3. **別コレクションのスキャン開始(B-3)**: 26 万件ビュー表示中に別コレクションのスキャンを開始しても
+   引っかかりがない。左ペインの当該行にスキャンバッジが出る。
+4. **回帰(表示中コレクションの再スキャン)**: 表示中コレクション自身を再スキャンした場合の挙動が
+   従来どおり(スキャン中は取込順で追記・完了時に最新ソート適用= ECO-060)。
+5. **回帰(整理の実行系)**: マージ実行・取り消す・グリッドクリックでのマージ先/対象指定が従来どおり。
+
+合格なら `/eco-accept eco-125` を指示してください。

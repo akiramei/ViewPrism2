@@ -135,6 +135,67 @@ public sealed class CpUiEco060ProgressiveScanTests : IDisposable
         Assert.True(result.IsSuccess, result.Message);
     }
 
+    /// <summary>
+    /// ECO-125(結合点棚卸し B-3): スキャン開始(Started)は母集合不変(画像はまだ 1 枚も
+    /// 公開されていない)=表示中コレクションの Items を再構築しない。必要なのはコレクション行の
+    /// スキャンバッジ+通知のみ(同メソッド内 BatchCommitted の部分更新様式が正解既在)。
+    /// </summary>
+    [Fact]
+    public async Task 別コレクションのスキャン開始は表示中Itemsを再構築しない()
+    {
+        // 表示中= folder1(DB シードのみ・スキャン非対象)
+        var folder1 = new SyncFolder { Id = IdGenerator.NewId(), Name = "C1", Path = @"C:\col1" };
+        Assert.True((await _db.Folders.AddAsync(folder1)).IsSuccess);
+        foreach (var name in new[] { "a.jpg", "b.jpg" })
+        {
+            await _db.Images.AddAsync(new ImageRecord
+            {
+                Id = IdGenerator.NewId(),
+                SyncFolderId = folder1.Id,
+                RelativePath = name,
+                FileName = name,
+                FileSize = 10,
+                Hash = new string('0', 64),
+                Status = ImageStatus.Normal,
+                CreatedDate = "2026-06-11T00:00:00.000Z",
+                ModifiedDate = "2026-06-11T00:00:00.000Z",
+            });
+        }
+        // スキャン対象= folder2(513 ファイル=第2バッチで一時停止し Started+第1バッチ後の状態を保持)
+        const int fileCount = 513;
+        for (var i = 0; i < fileCount; i++)
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(_root, $"scan-{i:D3}.jpg"), $"content-{i}", TestContext.Current.CancellationToken);
+        }
+        var folder2 = new SyncFolder { Id = IdGenerator.NewId(), Name = "C2", Path = _root };
+        Assert.True((await _db.Folders.AddAsync(folder2)).IsSuccess);
+
+        using var secondBatchEntered = new ManualResetEventSlim();
+        using var releaseSecondBatch = new ManualResetEventSlim();
+        var pausingImages = new PausingImageRepository(_db.Images, secondBatchEntered, releaseSecondBatch);
+        var scan = new ScanService(_db.Folders, pausingImages, _db.Clock);
+        var coordinator = new ScanCoordinator(scan);
+        var vm = NewImageTab(pausingImages, coordinator);
+        await vm.InitializeAsync(folder1.Id);
+        Assert.Equal(2, vm.Items.Count(x => !x.IsFolder));
+        var before = vm.Items.First(x => !x.IsFolder && x.Name == "a.jpg");
+
+        var scanTask = coordinator.ScanAsync(folder2.Id, null, TestContext.Current.CancellationToken);
+        Assert.True(
+            secondBatchEntered.Wait(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken),
+            "第2batchまで到達しませんでした。");
+        // Started の反映(folder2 行のスキャンバッジ)を待ってから同一性を検査する
+        await WaitUntilAsync(() => vm.Collections.Any(c => c.Id == folder2.Id && c.IsScanning));
+
+        Assert.Same(before, vm.Items.First(x => !x.IsFolder && x.Name == "a.jpg")); // 母集合不変=再構築しない
+        Assert.Equal(2, vm.Items.Count(x => !x.IsFolder)); // 他コレクションの段階公開分は現ビューへ混入しない
+
+        releaseSecondBatch.Set();
+        var result = await scanTask;
+        Assert.True(result.IsSuccess, result.Message);
+    }
+
     private sealed class FakeFileOps : IFileOperationsService
     {
         public List<string> RevealedPaths { get; } = new();

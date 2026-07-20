@@ -290,4 +290,57 @@ public sealed class CpUiG1OrganizeTests : IDisposable
         var normals = (await _db.Images.GetAllNormalAsync()).Select(r => r.Id).ToHashSet(StringComparer.Ordinal);
         Assert.DoesNotContain(Id("drop.jpg"), normals); // source は deleted のまま
     }
+
+    /// <summary>
+    /// ECO-125(結合点棚卸し B-1): 検索候補の「整理対象に追加」はマーカー付与のみ=Items を
+    /// 再構築しない。グリッドクリック側(SetMergeTarget/ToggleOrganizeTarget)は ECO-113 で
+    /// RefreshSelectionMarkers 済み — 検索パネル側だけ Recompute のままの面内非対称が対象。
+    /// </summary>
+    [Fact]
+    public async Task 検索候補の整理対象追加はItemsを再構築しない()
+    {
+        var vm = await NewVmAsync("IMG_9.jpg", "IMG_9 (1).jpg", "IMG_9 (2).jpg");
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "IMG_9.jpg"), false, false); // マージ先
+        vm.SetSearchMethodCommand.Execute("criteria");
+        vm.CondName = true;
+        await vm.RunSearchCommand.ExecuteAsync(null);
+
+        var untouched = Item(vm, "IMG_9 (2).jpg");
+        var added = Item(vm, "IMG_9 (1).jpg");
+
+        vm.AddCandidateToTargetsCommand.Execute(Id("IMG_9 (1).jpg"));
+
+        Assert.Same(untouched, Item(vm, "IMG_9 (2).jpg")); // 母集合不変=再構築しない
+        Assert.Same(added, Item(vm, "IMG_9 (1).jpg"));
+        Assert.True(added.IsOrganizeTarget);               // マーカー意味論は維持
+        Assert.Single(vm.OrganizeTargets);
+    }
+
+    /// <summary>
+    /// ECO-125(結合点棚卸し B-2): 「別の整理を続ける」はトレイリセット+マーカー解除のみ=
+    /// データ不変で Items を再構築しない(解除は RefreshSelectionMarkers の差分クリアで足りる)。
+    /// </summary>
+    [Fact]
+    public async Task 別の整理を続けるはItemsを再構築せずマーカーを解除する()
+    {
+        var vm = await NewVmAsync("keep.jpg", "drop.jpg", "other.jpg");
+        vm.ToggleOrganizeCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "keep.jpg"), false, false); // マージ先
+        vm.HandleItemClick(Item(vm, "drop.jpg"), false, false); // 整理対象
+        await vm.ExecuteMergeCommand.ExecuteAsync(null);        // 完了(ここまでの再構築は正当=データ変化)
+        Assert.True(vm.OrganizeDone);
+
+        var keep = Item(vm, "keep.jpg");
+        var other = Item(vm, "other.jpg");
+
+        vm.ContinueOrganizeCommand.Execute(null);
+
+        Assert.Same(keep, Item(vm, "keep.jpg"));   // データ不変=再構築しない
+        Assert.Same(other, Item(vm, "other.jpg"));
+        Assert.False(keep.IsMergeTarget);          // マーカー解除の意味論は維持
+        Assert.False(keep.IsOrganizeTarget);
+        Assert.False(vm.OrganizeDone);
+        Assert.False(vm.HasMergeTarget);
+    }
 }
