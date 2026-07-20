@@ -1809,3 +1809,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。B 是正はプローブ先行=是正前赤→緑転。lint は陽性対照同梱"
     notes: "gate①=不要(棚卸し+既確立の是正型の適用。C の分離起票は個別 /eco-file)。gate②=条件付き(B 是正の有無で実機/機械証拠)。関連=ECO-124(教訓1=軸の切替の発案元・是正型)・ECO-115/118(分類基準=意味論上の再解決必要性と O(母集合) 実装の区別)・ECO-114(モード軸棚卸し)・ECO-107(allowlist 様式+教訓2)・ECO-122(lint 前例)・26万件経路 N=7 の予防転換(事後観測→予防棚卸し)"
     body: 60-change-order-eco-125.md
+  - id: ECO-126
+    title: "確認ダイアログ(ConfirmDialog)の CMP-011/L2 準拠是正 — 中央揃え漏れ+テーマ既定グレー+「はい/いいえ」の動詞化(REG-C5)"
+    type: "実装是正候補(共有ダイアログ部品の視覚+ラベル語彙。CAD 裁定済み)"
+    status: staged
+    golden: "pending(gate②必要=視覚変更。基準は fix 時提示=ビュー削除確認の CMP-011 準拠〔中央揃え/secondary 白outline/destructive 赤塗り/動詞ラベル〕+L2 列 ○ 全面の無変更+ja/en 両言語+全10サイトの確認動作)"
+    baseline: "main 7501d61(ViewPrismUI c84e435=REG-C5 裁定済み)"
+    findings: "maintainer 指示(2026-07-21・ビュー削除確認の L2 逸脱報告→CAD 正典化完了を受けた実装追随)。CAD 健全= CMP-011 DialogActionButton 登録(VPUI 8eb29ea・バリアント primary/secondary/destructive+制約「生 Button 直置き禁止・はい/いいえ禁止」)+REG-C5 裁定(c84e435=動詞ラベル標準)+03_dialog_language へビュー削除確認(legacy)行追加(L1/L2=○)。実装逸脱確定= ConfirmDialog.axaml の生 Button 2個(クラス無し=テーマ既定グレー+Avalonia 既定 Left=L2 取り漏れ禁止の明記事項どおり)+common.yes/no(axaml.cs:21-22)。混入=1446321(Phase 4 初期製造=最古参 legacy)。起票時掃射3点= ①「はい/いいえ」消費は ConfirmDialog 1箇所に集約(common.yes/no grep 悉皆)=他 legacy ダイアログに独自実装なし=掃射クリーン ②呼び出し10サイト共有(ビュー削除/タグ削除/コレクション削除/完全削除・空×2タブ/再リンク/修復/終了系)=現署名 ConfirmAsync(title,message) にラベル引数なし=構造的に はい/いいえ しか出せない ③L2 準拠様式 footerBtn/outlineButton は CollectionExport/Import/Snapshot の3面にローカル複製(ECO-073 面・golden 済み)=共有 Style 未抽出=CMP-011 の実装写像が無い(4つ目のローカル複製は権威規則3違反)。未検証= 10サイトの CTA ラベル+バリアント台帳(削除系7=destructive 見込み・再リンク/修復/終了系は fix で判定)・yes/no 死キー化"
+    impacted_bom: ["src=ConfirmDialog(.axaml/.cs)+IWindowService/WindowService(署名拡張=ConfirmAsync へ CTA ラベルキー必須引数+destructive 指定=REG-C5 違反を型で再発不能に)+呼び出し10サイト+Components.axaml(CMP-011 共有 Style 新設=dlgBtn/secondary/destructive/primary・既存3面のローカル style は触らない=lazy 遡及を cheat-log 記帳)+i18n ja/en(動詞キー追加・common.yes/no 死キー削除=ECO-107 流儀)", "tests=lint 検査C(ダイアログ Window のフッター生 Button 検出=CMP-011 制約の機械化・是正前赤=ConfirmDialog 2個+陽性対照)+RegistryContract へ CMP-011 色3値写像+ConfirmDialog 視覚 probe(中央揃え=GF-109-01 型の距離実測+バリアント色)+Stub 群の署名追随", "CAD=無変更(正典化済み)", "CP=CP-UI-G1 系刻印+lint 拡張(accept 時)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ先行=是正前赤(視覚 probe+lint)→緑転"
+    notes: "gate①=不要(CMP-011 Standard+REG-C5 裁定済み。サイト別ラベル文言は実装裁量+golden 確認)。gate②=必要(視覚変更・R7=共通言語 L2 に触れるため 03 マトリクス L2 列 ○ 全面を並置〔GF-073 の4連鎖再発防止〕・golden は ja/en 両言語=ECO-079 規約)。関連=CMP-011/REG-C5(裁定元)・ECO-073(L2 の確立元・footerBtn 様式)・ECO-107(死キー掃射流儀)・ECO-122(lint トランシェ拡張先)・ECO-119(画面ごと個別再現の禁止=共有 Style 新設の根拠)・GF-109-01(整列は距離実測)"
+    body: 60-change-order-eco-126.md
