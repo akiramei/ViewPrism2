@@ -1672,7 +1672,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private Task RetryContent() => _collectionId is { } id ? LoadContentAsync(id) : Task.CompletedTask;
 
     [RelayCommand]
-    private void ToggleSidebar() { _collapsed = !_collapsed; Recompute(); }
+    // ECO-124: サイドバー状態しか変えない=母集合パイプライン(Recompute)を通さず通知のみ
+    // (WorkTab ToggleSidebar と対称。26万件で Recompute 結合が 1〜2 秒の体感遅延=経路7例目)。
+    // ClearCopyFeedback は旧 Recompute 先頭の解除遷移を明示継承(ECO-113/114 の置換時と同じ・ECO-104 全列挙)
+    private void ToggleSidebar() { ClearCopyFeedback(); _collapsed = !_collapsed; OnPropertyChanged(string.Empty); }
 
     /// <summary>
     /// コレクション「追加(+)」(ECO-013/IMG-009): コレクション管理(追加・スキャン・削除)ビューを開く

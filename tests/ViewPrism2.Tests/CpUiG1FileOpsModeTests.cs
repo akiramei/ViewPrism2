@@ -197,6 +197,21 @@ public sealed class CpUiG1FileOpsModeTests : IDisposable
     }
 
     [Fact]
+    public async Task サイドバー開閉もコピーフィードバックの解除遷移である()
+    {
+        // ECO-124 R8 所見 1-1: Recompute→通知のみへの置換で ClearCopyFeedback(Recompute 先頭)が
+        // 落ちる= ECO-113/114 は置換時に明示的に残した前例(ECO-104 教訓=解除遷移の全列挙)。
+        var vm = await NewWithImagesAsync("a.jpg");
+        vm.EnterFileOpsCommand.Execute(null);
+        vm.HandleItemClick(Item(vm, "a.jpg"), ctrl: false, shift: false);
+
+        _ = vm.CopyPathsCommand.ExecuteAsync(null);
+        Assert.True(vm.CopyFeedbackActive);
+        vm.ToggleSidebarCommand.Execute(null);
+        Assert.False(vm.CopyFeedbackActive);
+    }
+
+    [Fact]
     public async Task フィードバック表示中もコピーボタンは活性のまま()
     {
         // R8 所見 2-1(2026-07-19): タイマをコマンド本体に置くと AsyncRelayCommand の並行実行禁止で

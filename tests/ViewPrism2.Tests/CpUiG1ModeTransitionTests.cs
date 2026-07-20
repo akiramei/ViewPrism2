@@ -177,4 +177,33 @@ public sealed class CpUiG1ModeTransitionTests : IDisposable
         Assert.Same(before, Item(vm, "a.jpg"));
         Assert.True(vm.OnCurrentTab);
     }
+
+    /// <summary>
+    /// ECO-124(26 万件経路 7 例目): 左ペイン(コレクション)開閉はサイドバー状態
+    /// (Collapsed/Expanded/SidebarWidth)しか変えない=母集合パイプラインを通らない
+    /// (WorkTab ToggleSidebar=通知のみ、と対称)。往復とも検査。
+    /// </summary>
+    [Fact]
+    public async Task サイドバー開閉はItemsもチップも再構築しない()
+    {
+        var vm = await NewWithTaggedImagesAsync("a.jpg", "b.jpg");
+        var before = Item(vm, "a.jpg");
+        Assert.True(vm.Chips.Count > 0);
+        var chipBefore = vm.Chips[0];
+        Assert.True(vm.Expanded);
+
+        vm.ToggleSidebarCommand.Execute(null); // 折り畳み(276→64)
+
+        Assert.True(vm.Collapsed);
+        Assert.Equal(64, vm.SidebarWidth);
+        Assert.Same(before, Item(vm, "a.jpg")); // ECO-124: 母集合不変=再構築しない
+        Assert.Same(chipBefore, vm.Chips.Count > 0 ? vm.Chips[0] : null);
+
+        vm.ToggleSidebarCommand.Execute(null); // 展開(64→276)
+
+        Assert.True(vm.Expanded);
+        Assert.Equal(276, vm.SidebarWidth);
+        Assert.Same(before, Item(vm, "a.jpg"));
+        Assert.Same(chipBefore, vm.Chips.Count > 0 ? vm.Chips[0] : null);
+    }
 }
