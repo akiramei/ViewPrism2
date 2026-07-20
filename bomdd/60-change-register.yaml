@@ -1765,3 +1765,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。doc-only につきプローブ非該当(検収=部品契約と出典 CAD の記述一致+VP2 機械受入4点が是正前と同一)"
     notes: "gate①=要判断(CMP-008 は Standard=部品表運用規則では改版に maintainer 裁定必須。ただし追加内容は ECO-116/117 の golden 承認済み契約の転写=部品表初期投入方針「新規発明ゼロの転写」と同性質)。AI 推奨=転写と読み裁定不要(①新規発明でない②適用面で実測済み③契約を強める方向のみで既存実装に変更を要求しない④放置すると lazy 遡及で契約が CAD から消失)。gate②=n/a 見込み(視覚/挙動不変・機械証拠で検収=ECO-119/120 前例)。案B(画面 CAD 各面へ個別追記)は部品表 権威規則3「黙って面ごとの値として転写しない」に反し ECO-116/117 の発生機序そのもの=却下。画面 CAD 側の委譲関係成立(未検証A)は lazy 遡及方針どおり各面に触れる fix の仕事=本 ECO では触れない(R3)。関連=ECO-116/117(契約の実測元・lint)・ECO-119(出典 image_tab.md:107 の是正元・部品表の原器裏取り規律)・ECO-107(教訓1=注意書きは掃射手段を紐づけて初めて規約=案A-2 の予防適用)"
     body: 60-change-order-eco-121.md
+  - id: ECO-122
+    title: "UI 部品表(04_component_registry)適合性検査の配線 — 部品適合 lint 新設+視覚 probe の照合先移行"
+    type: "検査器新設(部品適合 lint)+既存視覚 probe の照合先移行(src 挙動/視覚は不変)"
+    status: staged
+    golden: "pending(n/a 見込み=視覚/挙動不変。機械証拠検収= lint ゼロ基線+probe 移行前後の判定同一性+陽性対照赤転を予定= ECO-105/107/111/120 前例)"
+    baseline: "main 8e42f14(ViewPrismUI 78c95a7)"
+    findings: "maintainer 指示(2026-07-20・UI 部品表新設と恒久運用の柱5=lint/視覚 probe の照合先は部品表の契約とする=決定済み方針)の依頼項。検査器/tests 層の配線欠落確定: GfFileOpsVisualParityTests は MockBlue #2F6BED/幅208/行高42 等をテスト内定数で保持(:44/:122/:142)・GfSortMenuVisualParityTests は色8定数+寸法11箇所をテスト内保持(:50-57)=部品表の契約値と独立の二重定義で、部品契約の改版が probe に自動波及しない(照合先を一元化しない限り「部品表が正典」は検査上の実体を持たない)。lint 前例様式= CpI18n010XamlLintTests(直書き走査+層別 allowlist 全エントリ根拠つき)/CpAxamlLintScrollViewerPaddingTests(禁止則ゼロ基線)。未検証(着手時確定)= A: 照合先の物理形(a=CAD Markdown 越境パース〔脆い+CI 可搬性欠く〕/b=VP2 側契約値写像 1 ファイル+部品 ID・出典コメント〔推奨・OrganizeCriteria=ECO-055 共有写像の同型〕/c=部品表側機械可読ブロック〔ViewPrismUI 改稿=スコープ拡大〕) B: lint 第1トランシェの検出対象(生コントロール検出+Standard 契約値の重複直書き検出=ECO-119 型「画面ごと中央揃え」の機械化。検出限界は明示宣言) C: REG-C1/C2/C3 未収束契約は写像から除外または暫定注記つき pin(lint first-run 違反が面間差そのものの可能性=勝手に統合せず裁定材料へ=柱4)"
+    impacted_bom: ["tests=RegistryContract 契約値写像新設(CMP-ID+部品表出典コメント)+部品適合 lint 新設(層別 allowlist+陽性対照同梱=N=4 昇格候補の適用)+GfFileOpsVisualParityTests/GfSortMenuVisualParityTests の定数を写像参照へ置換(期待値の意味不変=移行前後で同一判定)", "CP=CP-REGISTRY-LINT-122 新設(automated・accept 時)", "src=無変更", "CAD=無変更(部品表は読み取りのみ。改稿必要時は ViewPrismUI 側へ分離=恒久運用柱4)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。陽性対照=写像/lint を一時破壊して赤転実測→復旧緑"
+    notes: "gate①=不要(方針は maintainer 裁定済み 2026-07-20。物理形/トランシェは実装裁量=着手時確定し ECO 本文へ記録)。gate②=n/a 見込み(機械証拠)。前提整備= ECO-121(CMP-008 の末尾到達性脱落=照合先昇格前の正本是正)が先行起票済み。関連=ECO-107(lint 様式+限界宣言)・ECO-117(ゼロ基線 lint)・ECO-055(共有写像で転写ドリフト防止の前例)・ECO-109/112(部品表正典化の動機となった golden 許容差分)・ViewPrismUI 78c95a7(恒久運用規則の刻印元)"
+    body: 60-change-order-eco-122.md
