@@ -79,6 +79,12 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private IReadOnlyList<ListColumnDef> _listColumnDefs = [];
     // (ECO-026/#5) 現在表示中の matched をキャッシュ=表示列ライブ編集で母集合を再評価せず Items を作り直すため。
     private List<(string Name, int Count)> _matchedFolders = new();
+    // ECO-118: タグ付与/剥奪の差分更新用キャッシュ(Recompute の母集合評価時に確保し、
+    // タグ変更時は選択分の旧/新評価の差分だけでチップ件数を追随させる)
+    private readonly List<(GraphNode Child, int Matched, int Unclassified)> _viewChipCounts = new();
+    private readonly Dictionary<string, int> _fsChipCounts = new(StringComparer.Ordinal);
+    /// <summary>ECO-118(R8 F4): 差分経路の選択規模上限。超過時は全面再計算のほうが安い(逐次 DB 再読の定数回避)。</summary>
+    private const int DeltaSelectionLimit = 256;
     private List<ImageEntry> _matchedFiles = new();
     // ECO-113: 選択クリック経路から母集合規模の処理を撤去するためのインデックス群。
     // 維持サイト= _entryById: BuildEntries/ClearContentData/スキャン append(OnScanUpdated)の 3 変異サイト全部 /
@@ -1176,6 +1182,50 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     // =====================================================================
     //  Recompute
     // =====================================================================
+    /// <summary>view 軸のチップ行を件数キャッシュ(_viewChipCounts)から構築(Recompute から抽出・ECO-118)。</summary>
+    private void BuildViewChips()
+    {
+        Chips.Clear();
+        _currentChildren.Clear();
+        int ci = 0;
+        foreach (var (child, matchedCount, unclassifiedCount) in _viewChipCounts)
+        {
+            int count = _viewUnclassified ? unclassifiedCount : matchedCount;
+            // (REQ-096 裁定 d) 「0件の値ノードを隠す」: 表示のみスキップ(構築・意味論は不変)
+            if (child.IsDefinedExpansion && child.HideEmptyValues && matchedCount == 0)
+            {
+                continue;
+            }
+
+            var key = "vc" + ci++;
+            _currentChildren[key] = child;
+            var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
+            // (REQ-095/096・CAD VC-IMG-6) 未定義値=琥珀破線+バッジ / 0 件の定義値=淡色で表示維持
+            Chips.Add(child.IsUndefinedValue
+                ? ChipVM.Undefined(key, child.DisplayName, count, _localization.T("view.undefinedBadge"))
+                : child.IsDefinedExpansion && count == 0
+                    ? ChipVM.ColoredZero(key, child.DisplayName, color, isNav: true)
+                    : ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
+        }
+        if (Chips.Count > 0) { ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.drillHierarchy"); }
+    }
+
+    /// <summary>FS 軸のチップ行を件数キャッシュ(_fsChipCounts)から構築(Recompute から抽出・ECO-118)。</summary>
+    private void BuildFsChips()
+    {
+        Chips.Clear();
+        ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.filterByTag");
+        Chips.Add(ChipVM.Neutral(_localization.T("common.clear"), _tagFilter is null));
+        foreach (var (tid, count) in _fsChipCounts.OrderBy(c => c.Key, StringComparer.Ordinal))
+        {
+            if (!_tagById.TryGetValue(tid, out var def)) continue;
+            Chips.Add(ChipVM.Colored(tid, def.Name, TagColor(def), count, _tagFilter == tid, isNav: false));
+        }
+    }
+
+    /// <summary>entry 1 件がノード経路の全条件に一致するか(ECO-118 差分評価用)。</summary>
+    private bool MatchesPath(IReadOnlyList<GraphNode> path, ImageEntry e) => ViewMatched(path, new[] { e }).Count > 0;
+
     private void Recompute()
     {
         // ECO-112/IMG-026②: 母集合・文脈の再計算はコピー完了フィードバックの解除遷移(ECO-104 教訓=タイマ以外を全列挙。
@@ -1235,30 +1285,17 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             crumbNames = _viewPath.Select(n => n.DisplayName).ToList();
             HomeActive = _viewPath.Count == 0;
 
-            int ci = 0;
+            // ECO-118: 子ごとの件数をキャッシュしてからチップ VM を構築(差分更新と共有)
+            _viewChipCounts.Clear();
             foreach (var (child, matched) in childMatched)
             {
                 // (REQ-094) 未分類モードの件数はその子自身の未分類件数(孫 matched を減算)=表示とチップの数字を一致させる
-                int count = _viewUnclassified
+                int uncls = _viewUnclassified
                     ? Unclassified(matched, child.Children.Select(g => ViewMatched(Append(Append(fullPath, child), g), matched))).Count
-                    : matched.Count;
-                // (REQ-096 裁定 d) 「0件の値ノードを隠す」: 表示のみスキップ(構築・意味論は不変)
-                if (child.IsDefinedExpansion && child.HideEmptyValues && matched.Count == 0)
-                {
-                    continue;
-                }
-
-                var key = "vc" + ci++;
-                _currentChildren[key] = child;
-                var color = TagColor(child.TagId is { } tid ? _tagById.GetValueOrDefault(tid) : null);
-                // (REQ-095/096・CAD VC-IMG-6) 未定義値=琥珀破線+バッジ / 0 件の定義値=淡色で表示維持
-                Chips.Add(child.IsUndefinedValue
-                    ? ChipVM.Undefined(key, child.DisplayName, count, _localization.T("view.undefinedBadge"))
-                    : child.IsDefinedExpansion && count == 0
-                        ? ChipVM.ColoredZero(key, child.DisplayName, color, isNav: true)
-                        : ChipVM.Colored(key, child.DisplayName, color, count, active: false, isNav: true));
+                    : 0;
+                _viewChipCounts.Add((child, matched.Count, uncls));
             }
-            if (Chips.Count > 0) { ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.drillHierarchy"); }
+            BuildViewChips();
         }
         else
         {
@@ -1268,15 +1305,12 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             folders = SortFolders(ctx.Folders);
             crumbNames = _fsPath.ToList();
             HomeActive = _fsPath.Count == 0;
+            // ECO-118: 現スコープのタグ別件数をキャッシュしてからチップ VM を構築(差分更新と共有)
+            _fsChipCounts.Clear();
+            foreach (var (tid, count) in ctx.Chips) _fsChipCounts[tid] = count;
             if (ctx.AnyTagged)
             {
-                ShowChips = true; ShowChipHint = true; ChipHintLabel = _localization.T("view.filterByTag");
-                Chips.Add(ChipVM.Neutral(_localization.T("common.clear"), _tagFilter is null));
-                foreach (var (tid, count) in ctx.Chips.OrderBy(c => c.TagId, StringComparer.Ordinal))
-                {
-                    if (!_tagById.TryGetValue(tid, out var def)) continue;
-                    Chips.Add(ChipVM.Colored(tid, def.Name, TagColor(def), count, _tagFilter == tid, isNav: false));
-                }
+                BuildFsChips();
             }
             else if (_fsPath.Count > 0)
             {
@@ -1312,21 +1346,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void BuildItemsFromMatched()
     {
         var selSet = new HashSet<string>(_selected);
-        // アイコンタイルのソート項目(ECO-025 β/FL-003 v2): ソート中かつ名前以外のとき、タイルに列名+当該列値を表示
-        int sortItemIndex = -1;
-        string? sortItemLabel = null;
-        if (_sortColKey is { } sortKey && !string.Equals(sortKey, ViewColumnModel.NameKey, StringComparison.Ordinal))
-        {
-            for (int i = 0; i < _listColumnDefs.Count; i++)
-            {
-                if (string.Equals(_listColumnDefs[i].Key, sortKey, StringComparison.Ordinal))
-                {
-                    sortItemIndex = i;
-                    sortItemLabel = _listColumnDefs[i].Label;
-                    break;
-                }
-            }
-        }
+        var (sortItemIndex, sortItemLabel) = ResolveSortItem();
 
         Items.Clear();
         foreach (var (name, _) in _matchedFolders)
@@ -1352,6 +1372,22 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             _itemById[item.Id] = item;
             if (item.IsSelected || item.IsMergeTarget || item.IsOrganizeTarget) _markedItemIds.Add(item.Id);
         }
+    }
+
+    /// <summary>アイコンタイルのソート項目(ECO-025 β/FL-003 v2): ソート中かつ名前以外のとき列 index+ラベル(ECO-118 で抽出)。</summary>
+    private (int Index, string? Label) ResolveSortItem()
+    {
+        if (_sortColKey is { } sortKey && !string.Equals(sortKey, ViewColumnModel.NameKey, StringComparison.Ordinal))
+        {
+            for (int i = 0; i < _listColumnDefs.Count; i++)
+            {
+                if (string.Equals(_listColumnDefs[i].Key, sortKey, StringComparison.Ordinal))
+                {
+                    return (i, _listColumnDefs[i].Label);
+                }
+            }
+        }
+        return (-1, null);
     }
 
     private ImageItemVM CreateImageItem(
@@ -2168,7 +2204,158 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (result.IsSuccess) await ReloadTagsAsync();
     }
 
+    /// <summary>
+    /// タグ付与/剥奪後の表示反映(ECO-118: 選択規模の差分経路)。
+    /// 変更されたのは選択画像の付与行だけ — 母集合規模の再読(コレクション全付与行)・全 ImageEntry
+    /// 再構築・全面 Recompute(26 万件で約 2 秒)を通らず、選択分の旧/新評価の差分で反映する。
+    /// 意味論は全面再計算と同一: 影響画像の表示・チップ件数・表示帰属(REQ-094 の未分類離脱/
+    /// FS フィルタ離脱)。差分経路の前提=「選択が全員表示中」(このとき帰属は stay/leave のみで
+    /// enter は起きない)。前提が破れるケース(過去の leave で表示外の選択=ゴーストが混在)は
+    /// 全面経路へ fallback し、旧経路の「次のタグ操作で必ず再解決」と同一挙動を保つ(R8 F1)。
+    /// fallback= 未ロード・選択なし・表示外選択の混在・大選択(逐次 DB 再読の定数劣化を避ける
+    /// しきい値= R8 F4)・タグ列ソート中(値変更でソート位置が動く)。
+    /// 残存計算量(明記= ECO-113 教訓 3): _entries 参照差し替えの O(母集合) ポインタ走査 1 本と、
+    /// 除去発生時の _matchedIndexById 詰め直し(int 書き換え)のみ。アロケーション/評価/ソート/
+    /// VM 再構築はすべて選択規模。
+    /// </summary>
     private async Task ReloadTagsAsync()
+    {
+        if (!_loaded || _selected.Count == 0 || _selected.Count > DeltaSelectionLimit
+            || (_sortColKey is { } sk && !ViewColumnModel.BasicKeys.Contains(sk))
+            || _selected.Any(id => !_matchedIndexById.ContainsKey(id)))
+        {
+            await FullReloadTagsAsync().ConfigureAwait(true);
+            return;
+        }
+
+        // ① 選択分のみ DB 再読(O(選択))
+        var affected = new List<(string Id, ImageEntry Old, ImageEntry New)>();
+        foreach (var id in SelectedIds.ToList())
+        {
+            if (!_entryById.TryGetValue(id, out var oldEntry)) continue; // 防御(選択⊆表示⊆母集合が通常)
+            var rows = await _tags.GetImageTagsAsync(id).ConfigureAwait(true);
+            if (rows.Count > 0) _imageTags[id] = rows.ToList(); else _imageTags.Remove(id);
+            affected.Add((id, oldEntry, BuildEntry(oldEntry.Record)));
+        }
+        if (affected.Count == 0)
+        {
+            await FullReloadTagsAsync().ConfigureAwait(true);
+            return;
+        }
+
+        // ② 差分エントリ更新(参照差し替えの O(母集合) ポインタ走査のみ・アロケーションなし)
+        var newById = affected.ToDictionary(a => a.Id, a => a.New, StringComparer.Ordinal);
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            if (newById.TryGetValue(_entries[i].Record.Id, out var ne)) _entries[i] = ne;
+        }
+        foreach (var a in affected) _entryById[a.Id] = a.New;
+
+        // ③ チップ件数差分+表示帰属(stay/leave)
+        var leaving = new HashSet<string>(StringComparer.Ordinal);
+        if (_axis == "view" && _viewRoot is not null)
+        {
+            var fullPath = new List<GraphNode> { _viewRoot };
+            fullPath.AddRange(_viewPath);
+            var current = fullPath[^1];
+            for (int i = 0; i < _viewChipCounts.Count; i++)
+            {
+                var (child, m, u) = _viewChipCounts[i];
+                var childPath = Append(fullPath, child);
+                foreach (var a in affected)
+                {
+                    bool oldIn = MatchesPath(childPath, a.Old);
+                    bool newIn = MatchesPath(childPath, a.New);
+                    m += (newIn ? 1 : 0) - (oldIn ? 1 : 0);
+                    if (_viewUnclassified)
+                    {
+                        // (REQ-094) 未分類件数=子に一致し、かつどの孫にも一致しない
+                        bool oldU = oldIn && !child.Children.Any(g => MatchesPath(Append(childPath, g), a.Old));
+                        bool newU = newIn && !child.Children.Any(g => MatchesPath(Append(childPath, g), a.New));
+                        u += (newU ? 1 : 0) - (oldU ? 1 : 0);
+                    }
+                }
+                _viewChipCounts[i] = (child, m, u);
+            }
+            ShowChips = false; ShowChipHint = false;
+            BuildViewChips();
+            foreach (var a in affected)
+            {
+                bool member = MatchesPath(fullPath, a.New);
+                if (member && _viewUnclassified)
+                {
+                    member = !current.Children.Any(c => MatchesPath(Append(fullPath, c), a.New));
+                }
+                if (!member) leaving.Add(a.Id);
+            }
+        }
+        else
+        {
+            foreach (var a in affected)
+            {
+                foreach (var tid in ImgTagIds(a.Old))
+                {
+                    if (!_fsChipCounts.TryGetValue(tid, out var c)) continue;
+                    if (c <= 1) _fsChipCounts.Remove(tid); else _fsChipCounts[tid] = c - 1;
+                }
+                foreach (var tid in ImgTagIds(a.New))
+                {
+                    _fsChipCounts[tid] = _fsChipCounts.GetValueOrDefault(tid) + 1;
+                }
+                if (_tagFilter is { } tf && !ImgTagIds(a.New).Contains(tf)) leaving.Add(a.Id);
+            }
+            ShowChips = false; ShowChipHint = false; ShowEmptyTagNote = false;
+            if (_fsChipCounts.Count > 0) BuildFsChips();
+            else if (_fsPath.Count > 0) ShowEmptyTagNote = true;
+        }
+
+        // ④ Items 差分: stay= in-place 置換 / leave= 除去(挿入は起きない=③の帰属分析)
+        var selSet = new HashSet<string>(_selected);
+        var (sortItemIndex, sortItemLabel) = ResolveSortItem();
+        var removals = new List<int>();
+        foreach (var a in affected)
+        {
+            if (!_matchedIndexById.TryGetValue(a.Id, out var mi)) continue; // 到達不能(入口で表示外選択は fallback 済み)
+            if (leaving.Contains(a.Id)) { removals.Add(mi); continue; }
+            _matchedFiles[mi] = a.New;
+            var item = CreateImageItem(a.New, selSet, sortItemIndex, sortItemLabel);
+            Items[_matchedFolders.Count + mi] = item;
+            _itemById[a.Id] = item;
+            if (item.IsSelected || item.IsMergeTarget || item.IsOrganizeTarget) _markedItemIds.Add(a.Id);
+            else _markedItemIds.Remove(a.Id);
+        }
+        if (removals.Count > 0)
+        {
+            removals.Sort();
+            for (int i = removals.Count - 1; i >= 0; i--)
+            {
+                var mi = removals[i];
+                var id = _matchedFiles[mi].Record.Id;
+                _matchedFiles.RemoveAt(mi);
+                Items.RemoveAt(_matchedFolders.Count + mi);
+                _itemById.Remove(id);
+                _markedItemIds.Remove(id);
+            }
+            // インデックス詰め直し(int 書き換えの O(表示件数) 走査のみ)
+            _matchedIndexById.Clear();
+            for (int i = 0; i < _matchedFiles.Count; i++) _matchedIndexById[_matchedFiles[i].Record.Id] = i;
+            CountLabel = _localization.T("view.itemCountLabel",
+                new Dictionary<string, string> { ["count"] = (_matchedFolders.Count + _matchedFiles.Count).ToString() });
+        }
+
+        // (R8 F2) REQ-094 専用空状態: 未分類モードで全員 leave した場合の追随(Recompute 行と同じ式)
+        if (_axis == "view")
+        {
+            ShowUnclassifiedEmpty = _viewUnclassified && _matchedFiles.Count == 0;
+        }
+
+        // ⑤ パネル(現在のタグ/タグ追加)再構築+通知(ECO-041/115 様式)
+        BuildContextPanels(selSet);
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>全面再計算の従来経路(ECO-118 の fallback: タグ列ソート中・未ロード時)。</summary>
+    private async Task FullReloadTagsAsync()
     {
         await RefreshImageTagsAsync().ConfigureAwait(true);
         BuildEntries();

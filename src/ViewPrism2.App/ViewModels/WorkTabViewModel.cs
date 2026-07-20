@@ -1036,9 +1036,14 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
     /// <summary>タグ変更後の再読込(image_tags 再取得 → Items + パネル再構築)。</summary>
     private async Task ReloadTagsAsync()
     {
-        var all = await _tags.GetAllImageTagsAsync().ConfigureAwait(true);
-        _imageTags = all.GroupBy(it => it.ImageId, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+        // ECO-118: 全 DB 付与行(GetAllImageTagsAsync)の再読は、26 万件コレクションが同居する DB で
+        // タグ 1 枚の付与に全域コストを課す — 変わったのは選択分だけなので選択スコープで再読する。
+        // Recompute は workspace 規模(ECO-113 R3 の規模前提と同型)につき残置。
+        foreach (var id in _selected.ToList())
+        {
+            var rows = await _tags.GetImageTagsAsync(id).ConfigureAwait(true);
+            if (rows.Count > 0) _imageTags[id] = rows.ToList(); else _imageTags.Remove(id);
+        }
         Recompute();
     }
 
