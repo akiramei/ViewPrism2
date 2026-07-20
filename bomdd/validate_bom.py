@@ -5,7 +5,9 @@
         python bomdd/validate_bom.py --quiet     (ERROR のみ表示)
         python bomdd/validate_bom.py --selftest  (検査器の自己検査 — ECO-053 素通し様式の再発防止)
 
-終了コード:  0 = ERROR なし(WARN は許容) / 1 = ERROR あり / 2 = 実行不能(parse 失敗等)
+終了コード:  0 = ERROR なし(WARN は許容) / 1 = ERROR あり(台帳 YAML の構文破壊= E20 を含む。
+              pre-commit は rc=2 を fail-open 扱いするため、台帳起因の失敗は必ず 1= ECO-120)
+              / 2 = 実行不能(PyYAML 不在等の環境起因のみ)
 
 設計意図(会話 2026-06-22):
   ECO-016 の再分割で「手書き検査を2回」やった内容を常設化する。PLM 風フィールドを
@@ -41,8 +43,11 @@
     モード: --commit-msg <file>(遷移コミットへの trailer 強制 — commit-msg hook 用)/
             --selftest-lifecycle(実 git 統合の陽性対照: 正常・別系統ブランチ・順序逆転)
   YAML 共通
+    [E20] 構文床(ECO-120: bomdd/*.yaml 全数の parse 健全性。未読台帳の構文破壊が 0/0 で
+          素通しだった実測の是正。検出時は意味検査へ進まず exit 1 で停止)
     [E13] 重複キー禁止(ECO-053: PyYAML safe_load の警告なし後勝ちが register 誤挿入事故を素通しした欠陥の是正。
-          全 YAML 台帳ロードに適用・ファイル名+キー+行番号を報告)
+          ECO-120 で bomdd/*.yaml 全数へ拡張〔未読台帳= sweep が報告・本流 load の 4 本= load_yaml が報告〕。
+          ファイル名+キー+行番号を報告)
   UI-BOM (ui/image-tab/ui-bom.json・存在時のみ)
     [E12] ebomCandidate / ebomItemsReferenced の E-* 参照は active(superseded 欄は除外)
   Cross (00-manifest.yaml ↔ 60-change-register.yaml)
@@ -120,6 +125,48 @@ def load_yaml(name):
         return _load_yaml_text(f.read(), name)
 def load_json(name):
     return json.load(open(os.path.join(BOMDD, name), encoding="utf-8"))
+
+# ---- [E20] YAML 構文床(ECO-120) ----
+# 本検査器が意味検査のために load するのは MAIN_LOADED の 4 本だけで、残る台帳(33-control-plan=
+# golden CP 正本ほか 10 本)は構文が壊れていても 0/0 で素通しだった(2026-07-20 実測: 33 の
+# flow mapping 破壊を検出したのは隣接リポの bomdd-lint のみ=単一障害点かつ pre-commit では
+# fail-open)。ここで bomdd/*.yaml 全数の構文健全性を床として検査する(意味検査= 参照解決等は
+# bomdd-lint の役割のまま。役割分担: 構文床= 本検査器 fail-closed / 意味= bomdd-lint)。
+# _DupKeyLoader を再利用するため、E13(重複キー= ECO-053)も未読台帳へ自動拡張される
+# (MAIN_LOADED の 4 本は後段 load_yaml が E13 を報告するため二重報告を避けてここでは構文のみ)。
+MAIN_LOADED = {"30-ebom.yaml", "32-mbom.yaml", "60-change-register.yaml", "00-manifest.yaml"}
+
+def _yaml_syntax_check(text, name, report_dups):
+    """構文 parse(E20)+必要なら重複キー(E13)。parse 成功で True。"""
+    loader = _DupKeyLoader(text)
+    loader.duplicates = []
+    try:
+        loader.get_single_data()
+    except yaml.YAMLError as e:
+        first = str(e).splitlines()
+        err("E20", f"{name}: YAML 構文エラー — {' / '.join(first[:2])}"
+                   "(壊れた台帳は警告なく検査圏外に落ちる= ECO-120 実測様式)")
+        return False
+    finally:
+        dups = loader.duplicates
+        loader.dispose()
+    if report_dups:
+        for key, line, first_line in dups:
+            err("E13", f"{name}: キー {key!r} が重複(行 {line}・初出 行 {first_line})— "
+                       "YAML は警告なく後勝ちになり値が化ける(ECO-049 事故様式)")
+    return True
+
+def sweep_yaml_syntax():
+    """bomdd/*.yaml 全数の構文床検査。E20 の件数を返す。"""
+    bad = 0
+    for fn in sorted(os.listdir(BOMDD)):
+        if not fn.endswith(".yaml"):
+            continue
+        with open(os.path.join(BOMDD, fn), encoding="utf-8") as f:
+            text = f.read()
+        if not _yaml_syntax_check(text, fn, report_dups=fn not in MAIN_LOADED):
+            bad += 1
+    return bad
 
 def golden_ok(gd):
     """[E10] golden は宣言語彙で始まる(prefix 一致 — 運用の approved(日付 …) 形式に追随)。"""
@@ -293,6 +340,11 @@ if "--selftest" in sys.argv:
     _load_yaml_text("changes:\n  - id: X\n    baseline: a\n    notes: n\n    baseline: b\n", "selftest.yaml")
     if not any(c == "E13" for _, c, _ in findings):
         print("selftest FAIL: 重複キーを検出できない(E13)"); ok = False
+    # [E20] 構文破壊の陽性対照(ECO-120: 未読台帳の破壊が 0/0 で素通しだった様式の再発防止)
+    if _yaml_syntax_check("a: [1,\n", "selftest-broken.yaml", report_dups=False):
+        print("selftest FAIL: YAML 構文破壊を検出できない(E20)"); ok = False
+    if not any(f[1] == "E20" for f in findings):
+        print("selftest FAIL: E20 finding が記録されない"); ok = False
     # (2) 語彙検査の意味論: prefix 一致と違反
     if not golden_ok("approved(2026-07-06 maintainer 実機: …)"):
         print("selftest FAIL: approved(…) 形式を許容しない(E10 prefix)"); ok = False
@@ -495,6 +547,16 @@ if "--selftest-lifecycle" in sys.argv:
 
 def is_e(x):  # E-BOM 部品 id か
     return isinstance(x, str) and x.startswith("E-")
+
+# ---------------------------------------------------------------- [E20] 構文床(ECO-120)
+# 床が破れていたら意味検査に進まない(MAIN_LOADED が壊れている場合の生 traceback 回避も兼ねる)。
+if sweep_yaml_syntax():
+    _errs = [f for f in findings if f[0] == "ERROR"]
+    print("bomdd integrity validator — YAML 構文床(E20)で停止")
+    for _sev, _code, _msg in _errs:
+        print(f"  [{_code}] {_msg}")
+    print(f"\nresult: {len(_errs)} error(s), 0 warning(s)")
+    sys.exit(1)
 
 # ---------------------------------------------------------------- E-BOM
 eb = load_yaml("30-ebom.yaml")

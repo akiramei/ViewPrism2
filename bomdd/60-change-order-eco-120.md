@@ -84,3 +84,55 @@ lint は **fail-open**(隣接リポの CLI 不在なら skip)。
 - **gate①(裁定)**: 不要(検査器の欠落・案 B 却下は ECO-117 教訓の適用)。
 - **gate②(golden)**: **n/a 見込み**(検査器変更・機械証拠検収= 破壊注入で赤/復旧で緑+
   既存 4 点受入不変。ECO-105/111/119 前例)。
+
+## §7 実施記録(2026-07-20 — 是正+機械受入完了)
+
+### 7.1 プローブ(症状再現→赤転→緑転の全系列)
+
+1. **是正前の症状再現**: 33-control-plan の flow mapping を破壊 → 現行 validator **0/0**
+   (PyYAML は同ファイルでパースエラー)= §1 の実測を fix 直前に再確認。
+2. **是正後の赤転**: 同じ破壊 → **E20 で exit 1**(「YAML 構文床(E20)で停止」・fail-fast)。
+3. **復旧で緑転**: 0/0。
+4. **E13 拡張の陽性対照**: 未読台帳 31-kbom へ重複キー注入 → **E13 で exit 1** → 復旧で緑
+   (ECO-053 の検査が未読 10 本へ拡張された証拠)。
+5. **selftest**: E20 陽性対照(合成の壊れた YAML)を追加し `--selftest` OK・
+   `--selftest-lifecycle` OK。
+
+### 7.2 是正(案 A)
+
+`bomdd/validate_bom.py` +57 行(+docstring 同期):
+
+- `_yaml_syntax_check`/`sweep_yaml_syntax`= **bomdd/*.yaml 全数**の構文床検査(E20 新設)。
+  `_DupKeyLoader` 再利用で **E13 も未読台帳へ自動拡張**(本流 load の 4 本= `MAIN_LOADED` は
+  後段 load_yaml が報告するため二重報告なし)。
+- **fail-fast**: E20 検出時は意味検査へ進まず exit 1(MAIN_LOADED 破壊時の生 traceback 回避も兼ねる)。
+- 役割分担を明記: **構文床= validate_bom(fail-closed)/意味(参照解決)= bomdd-lint**。
+- 意味検査は追加していない(bomdd-lint との重複を作らない= §4 案 A どおり)。
+
+### 7.3 機械受入(4 点)
+
+build 0/0(フルビルド警告 0)・Tests **844/844**・Oracle 109+2skip・validate 0/0
+(src/tests 無変更= dotnet 系は不変の確認)。
+
+### 7.4 R7 / R8
+
+- **R7= 対象外宣言**(UI 無関係)。
+- **R8= 独立レビュー(検査器はゲートそのものにつき実施)**: 所見 1+観測 5。
+  - **スコープ内 1 件(是正済み)**: **docstring の検査一覧に E20 が無く、行 8 の終了コード契約
+    「2= 実行不能(parse 失敗等)」が新実装と矛盾**。レビューの裏取りで**実装側が正**と確定 —
+    pre-commit は rc=2 を fail-open(skip)扱いするため、台帳起因の失敗を 2 にしていたら
+    床が破れていた。docstring を同期(E20 追記・E13 適用範囲更新・終了コード契約是正)。
+  - **観測(スコープ外・記帳のみ)**: 非 UTF-8 ファイルは生 traceback だが exit 1= fail-closed
+    維持/空ファイルは None で床通過(既存挙動)/MAIN_LOADED は手動ミラー(将来の load 追加で
+    未更新だと E13 二重報告= うるさい側に破れるため許容)/.yml・サブディレクトリは現物ゼロを
+    実測確認/E20 併発時の MAIN E13 は次 run 検出(過渡的・fail-closed 不破)。
+  - レビューが白と確認: sweep 網羅性(最上位 14 本全捕捉・BOM なし実測)・finally/dispose の
+    例外安全・MAIN_LOADED と load サイト 4 つの完全一致・未読 E13 単独時も exit 1・
+    selftest 配線(sweep 二重実行なし)・pre-commit 連携(hook は --selftest も毎コミット実行
+    = E20 陽性対照が毎回運転される)・性能(全体 2.7 秒)。
+  - **未処置のスコープ内所見= 0**。
+
+## §8 残ゲート
+
+**なし(gate② = n/a)。** 検収は機械証拠(§7.1 の破壊注入 赤/緑 系列+selftest 陽性対照+
+受入 4 点不変)で成立。maintainer の accept 指示でクローズ可(ECO-105/111/119 前例)。
