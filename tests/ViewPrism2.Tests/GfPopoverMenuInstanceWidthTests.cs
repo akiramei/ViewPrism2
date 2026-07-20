@@ -23,7 +23,7 @@ namespace ViewPrism2.Tests;
 /// ②画像タブ 表示軸メニュー 260(混入 45a6c77=M3b 製造時・mock 実測 240・260 は mock に不在)。
 /// 並び替え 252 は GfSortMenuVisualParityTests・⋯画像タブ 208 は GfFileOpsVisualParityTests が既 pin。
 /// 移動先 240(契約適合・是正なし)も本クラスで pin し契約 4 値の全数を閉じる(R8 所見5)。
-/// 期待値定数は ECO-122(部品表 適合性検査の配線)で RegistryContract 写像参照へ置換予定。
+/// 期待値は部品表写像 RegistryContract 参照(ECO-122 移行済み=契約改版が probe へ自動波及)。
 /// </summary>
 [Trait("cp", "CP-UI-G1")]
 public sealed class GfPopoverMenuInstanceWidthTests : IDisposable
@@ -66,8 +66,8 @@ public sealed class GfPopoverMenuInstanceWidthTests : IDisposable
                 vm.ToggleAxisMenuCommand.Execute(null);
                 RunJobs();
                 var menu = OpenMenuPanel(window);
-                // CMP-006 インスタンス契約: 表示軸メニュー=幅 240(mock 実測。旧 260 は mock に不在の転写ドリフト)
-                Assert.True(menu.Width == 240, $"CMP-006: 表示軸メニュー幅が {menu.Width}(契約 240)");
+                // CMP-006 インスタンス契約(mock 実測。旧 260 は mock に不在の転写ドリフト)
+                Assert.True(menu.Width == RegistryContract.MenuWidthAxis, $"CMP-006: 表示軸メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthAxis})");
             }
             finally
             {
@@ -96,8 +96,8 @@ public sealed class GfPopoverMenuInstanceWidthTests : IDisposable
                 vm.ToggleMoreMenuCommand.Execute(null);
                 RunJobs();
                 var menu = OpenMenuPanel(window);
-                // CMP-006 インスタンス契約: ⋯メニュー=幅 208(同型インスタンスの面間複製は同値必須=画像タブと同値)
-                Assert.True(menu.Width == 208, $"CMP-006: 作業タブ ⋯メニュー幅が {menu.Width}(契約 208)");
+                // CMP-006 インスタンス契約(同型インスタンスの面間複製は同値必須=画像タブと同値)
+                Assert.True(menu.Width == RegistryContract.MenuWidthMore, $"CMP-006: 作業タブ ⋯メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthMore})");
             }
             finally
             {
@@ -126,8 +126,8 @@ public sealed class GfPopoverMenuInstanceWidthTests : IDisposable
                 vm.MoveMenuOpen = true;
                 RunJobs();
                 var menu = OpenMenuPanel(window);
-                // CMP-006 インスタンス契約: 移動先メニュー=幅 240(契約適合の pin=是正なし。契約 4 値の全数 pin を閉じる)
-                Assert.True(menu.Width == 240, $"CMP-006: 移動先メニュー幅が {menu.Width}(契約 240)");
+                // CMP-006 インスタンス契約(契約適合の pin=是正なし。契約 4 値の全数 pin を閉じる)
+                Assert.True(menu.Width == RegistryContract.MenuWidthMove, $"CMP-006: 移動先メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthMove})");
             }
             finally
             {

@@ -47,11 +47,14 @@ public sealed class GfSortMenuVisualParityTests : IDisposable
         }
     }
 
+    // ECO-122: 部品表トークン所掌の値のみ写像(RegistryContract)参照へ移行(値不変=移行前後で同一判定)。
+    // 種別チップ配色・セグメント地・開時トリガー枠は画面 CAD(VC-FL-1/2)所掌= 部品表トークンに不在
+    // または同値でも意味が別(登載基準= トークン所掌の一致・RegistryContract 冒頭)のため局所定数を維持。
     private static readonly Color MockBasicGlyphBg = Color.Parse("#F0F2F6");
     private static readonly Color MockNumChipBg = Color.Parse("#EAFAF3");
     private static readonly Color MockTextChipBg = Color.Parse("#EAF1FE");
     private static readonly Color MockSimpleChipBg = Color.Parse("#F3EEFE");
-    private static readonly Color MockActiveFg = Color.Parse("#2459CF");
+    private static readonly Color MockActiveFg = RegistryContract.ColorAccentTextStrong; // color.accent.text-strong(VC-FL-1④)
     private static readonly Color MockSegActiveBg = Color.Parse("#EAF1FE");
     private static readonly Color MockSegInactiveBg = Color.Parse("#F4F6FA");
     private static readonly Color MockOpenTriggerBorder = Color.Parse("#CFD6E1");
@@ -107,7 +110,7 @@ public sealed class GfSortMenuVisualParityTests : IDisposable
                 var menu = SortMenuPanel(window);
 
                 // VC-FL-1①: ポップオーバー幅 252(mock 実測。現行 248 は乖離)
-                Assert.True(menu.Width == 252, $"VC-FL-1①: メニュー幅が {menu.Width}(期待 252)");
+                Assert.True(menu.Width == RegistryContract.MenuWidthSort, $"VC-FL-1①: メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthSort})");
 
                 // VC-FL-1③: 基本情報行の先頭 20px 列グリフ(灰地 #F0F2F6 ボックス)
                 var rows = menu.GetLogicalDescendants().OfType<Button>()
@@ -130,14 +133,14 @@ public sealed class GfSortMenuVisualParityTests : IDisposable
                 Assert.True(BorderBg(ChipOf(menu, "シンプル")) == MockSimpleChipBg, "VC-FL-1③: シンプルチップが紫 #F3EEFE でない");
 
                 // VC-FL-1③/後段検証: 候補行は固定高 38px(ECO-040 規約=固定高は VerticalContentAlignment 明示とセット)
-                Assert.All(rows, r => Assert.True(r.Height == 38, $"VC-FL-1③: 候補行 Height が {r.Height}(期待 38)"));
+                Assert.All(rows, r => Assert.True(r.Height == RegistryContract.MenuRowHeightSort, $"VC-FL-1③: 候補行 Height が {r.Height}(契約 {RegistryContract.MenuRowHeightSort})"));
 
                 // VC-FL-1④: アクティブ行(名前)のラベルが太字+#2459CF、行末に方向矢印
                 Assert.True(basicRow.Classes.Contains("active"), "VC-FL-1④: アクティブ行に active クラスが無い");
                 var label = basicRow.GetLogicalDescendants().OfType<TextBlock>().First(t => t.Text == "名前");
                 Assert.True(label.FontWeight >= FontWeight.Bold, $"VC-FL-1④: アクティブラベルが太字でない({label.FontWeight})");
                 var labelFg = Assert.IsAssignableFrom<ISolidColorBrush>(label.Foreground).Color;
-                Assert.True(labelFg == MockActiveFg, $"VC-FL-1④: アクティブラベルが #2459CF でない({labelFg})");
+                Assert.True(labelFg == MockActiveFg, $"VC-FL-1④: アクティブラベルが 契約 accent.text-strong でない({labelFg})");
                 var arrow = basicRow.GetLogicalDescendants().OfType<PathIcon>().FirstOrDefault(p => p.IsVisible);
                 Assert.True(arrow is not null, "VC-FL-1④: アクティブ行の方向矢印が無い");
 
@@ -197,7 +200,7 @@ public sealed class GfSortMenuVisualParityTests : IDisposable
                 var chipText = chip!.GetLogicalDescendants().OfType<TextBlock>().FirstOrDefault();
                 Assert.True(chipText is not null, "VC-FL-2①: ソートチップ文言 TextBlock が見つからない");
                 var chipFg = Assert.IsAssignableFrom<ISolidColorBrush>(chipText!.Foreground).Color;
-                Assert.True(chipFg == MockActiveFg, $"VC-FL-2①: チップ文言が #2459CF でない({chipFg})");
+                Assert.True(chipFg == MockActiveFg, $"VC-FL-2①: チップ文言が 契約 accent.text-strong でない({chipFg})");
                 Assert.True(chipText.FontWeight >= FontWeight.SemiBold, $"VC-FL-2①: チップ文言が太字でない({chipText.FontWeight})");
                 Assert.True(chip.CornerRadius == new CornerRadius(9), $"VC-FL-2①: チップ角丸が {chip.CornerRadius}(期待 9)");
                 var chipBg = chip.Background is ISolidColorBrush cb ? cb.Color : Colors.Transparent;
@@ -285,7 +288,7 @@ public sealed class GfSortMenuVisualParityTests : IDisposable
                 RunJobs();
 
                 var menu = SortMenuPanel(window);
-                Assert.True(menu.Width == 252, $"WorkTab: メニュー幅が {menu.Width}(期待 252)");
+                Assert.True(menu.Width == RegistryContract.MenuWidthSort, $"WorkTab: メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthSort})");
 
                 // 基本 3 列限定=全行が列グリフ灰ボックスを持つ(FL-003 read-across)
                 var rows = menu.GetLogicalDescendants().OfType<Button>()

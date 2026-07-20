@@ -41,8 +41,11 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private static readonly Color MockBlue = Color.Parse("#2F6BED");
-    private static readonly Color MockMenuGlyph = Color.Parse("#5B6473");
+    // ECO-122: 期待値は部品表写像(RegistryContract)参照へ移行(値不変=移行前後で同一判定)。
+    // MockBlue= color.accent(VC-IMG-12② 主 CTA 塗り/VC-IMG-13 チェック= CMP-007 check)・
+    // MockMenuGlyph= color.text.secondary(VC-IMG-11③ フォルダグリフ stroke)。
+    private static readonly Color MockBlue = RegistryContract.ColorAccent;
+    private static readonly Color MockMenuGlyph = RegistryContract.ColorTextSecondary;
 
     private static void RunJobs()
     {
@@ -118,8 +121,9 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
                     .FirstOrDefault(b => FindText(b, "修復") is not null);
                 Assert.True(menu is not null, "⋯ メニューの Popup が見つからない");
 
-                // VC-IMG-11①: ポップオーバー幅 208(mock 実測。現行 200 は乖離)
-                Assert.True(menu!.Width == 208, $"VC-IMG-11①: メニュー幅が {menu.Width}(期待 208)");
+                // VC-IMG-11①: ポップオーバー幅= CMP-006 インスタンス契約値(ECO-122 で写像参照へ)
+                Assert.True(menu!.Width == RegistryContract.MenuWidthMore,
+                    $"VC-IMG-11①: メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthMore})");
 
                 // VC-IMG-11②③: 「ファイル操作」行が存在し、修復より先に並ぶ
                 var fileOpsText = FindText(menu, "ファイル操作");
@@ -136,10 +140,11 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
                 var glyph = row.GetLogicalDescendants().OfType<PathIcon>().FirstOrDefault();
                 Assert.True(glyph is not null, "VC-IMG-11③: フォルダグリフが無い");
                 var glyphFg = Assert.IsAssignableFrom<ISolidColorBrush>(glyph!.Foreground).Color;
-                Assert.True(glyphFg == MockMenuGlyph, $"VC-IMG-11③: グリフ色が #5B6473 でない({glyphFg})");
+                Assert.True(glyphFg == MockMenuGlyph, $"VC-IMG-11③: グリフ色が契約 {RegistryContract.ColorTextSecondary} でない({glyphFg})");
                 Assert.True(fileOpsText!.FontSize == 13.5, $"VC-IMG-11③: ラベルが 13.5px でない({fileOpsText.FontSize})");
                 Assert.True(fileOpsText.FontWeight == FontWeight.Medium, $"VC-IMG-11③: ラベルが 500 でない({fileOpsText.FontWeight})");
-                Assert.True(row.Bounds.Height == 42, $"VC-IMG-11③: 行高が {row.Bounds.Height}(期待 42)");
+                Assert.True(row.Bounds.Height == RegistryContract.MenuRowHeightMore,
+                    $"VC-IMG-11③: 行高が {row.Bounds.Height}(契約 {RegistryContract.MenuRowHeightMore})");
             }
             finally
             {
@@ -178,7 +183,7 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
                 var presenter = copyBtn.GetVisualDescendants().OfType<ContentPresenter>().FirstOrDefault();
                 var bg = presenter?.Background as ISolidColorBrush;
                 Assert.True(bg is not null && bg.Color == MockBlue,
-                    $"VC-IMG-12②: コピーが青 #2F6BED 塗りでない({bg?.Color.ToString() ?? "null"})");
+                    $"VC-IMG-12②: コピーが青 契約 accent 塗りでない({bg?.Color.ToString() ?? "null"})");
                 var badge1 = copyBtn.GetLogicalDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == "1");
                 Assert.True(badge1 is not null, "VC-IMG-12②/④: バッジ 1 が無い");
 
@@ -232,7 +237,7 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
                     .FirstOrDefault(b => b.Classes.Contains("thumbCheck"));
                 Assert.True(check is not null && check.Classes.Contains("selected"), "VC-IMG-13: 選択チェックが無い");
                 var checkBg = Assert.IsAssignableFrom<ISolidColorBrush>(check!.Background).Color;
-                Assert.True(checkBg == MockBlue, $"VC-IMG-13: チェックが青 #2F6BED 塗りでない({checkBg})");
+                Assert.True(checkBg == MockBlue, $"VC-IMG-13: チェックが青 契約 accent 塗りでない({checkBg})");
                 var plainCheck = check.GetLogicalDescendants().OfType<PathIcon>()
                     .FirstOrDefault(p => p.IsEffectivelyVisible);
                 Assert.True(plainCheck is not null, "VC-IMG-13: 白✓(番号なしチェック)が出ていない");
