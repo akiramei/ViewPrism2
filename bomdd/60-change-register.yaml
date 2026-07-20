@@ -1691,8 +1691,8 @@ changes:
   - id: ECO-115
     title: "タグ編集パネル操作の応答劣化 — パネル状態変更が全面 Recompute を通る(26万件で顕在化)"
     type: "不具合是正候補(性能・実装層。視覚/意味論不変)"
-    status: implemented   # 2026-07-19 是正+機械受入完了(build 0/0・フルビルド警告0・Tests 829/829・Oracle 109+2skip・validate 0/0)。案A= TabCurrent=通知のみ/TabAdd・ClickAddRow=BuildContextPanels+通知(ECO-041 既存様式・WorkTab と対称化)+E-BOM invariant 適用範囲拡張。probe 1本(4遷移のインスタンス同一性+チップ不変+パネル意味論=赤→緑転)。R7=対象外(XAML 不変)。R8=独立レビュー(スコープ内欠陥0・軽微1採用=Chips 同一性追加・悉皆確認=データ変更系の再構築経路/モード排他)。golden 待ち
-    golden: pending
+    status: applied   # 2026-07-19 golden 合格(maintainer 実機・26万件ビュー基準4点)→クローズ。案A= TabCurrent=通知のみ/TabAdd・ClickAddRow=BuildContextPanels+通知(ECO-041 既存様式・WorkTab と対称化)+E-BOM invariant 適用範囲拡張(fix 時)。probe 1本(4遷移のインスタンス同一性+チップ不変+パネル意味論=赤→緑転)。build 0/0(フルビルド警告0)・Tests 829/829・Oracle 109+2skip・validate 0/0。R8=スコープ内欠陥0(データ変更系の再構築経路/モード排他を悉皆裏取り・軽微1採用)。M4= CP-UI-G1 刻印(accept 時)。26万件経路の是正=5経路目(064/062/113/114/115)
+    golden: "approved(2026-07-19 maintainer 実機・26万件ビュー基準4点: ①現在のタグ⇄タグ追加の切替が即時 ②行展開/畳みが即時 ③パネル挙動不変〔候補値チップ/★セル/検索/付与反映〕 ④中央一覧〔グリッド/スクロール/チップ/件数〕が一切動かない)"
     baseline: "main 7d5e0fd"
     findings: "maintainer 実機観測(2026-07-19・26万件ビュー×タグ編集の現在のタグ⇄タグ追加切替)。ECO-114 R8 で cheat-log へ予告記帳済みの同族残余の顕在化=R3 分離起票の実行。実装逸脱確定(3サイト): TabCurrent:2082/TabAdd:2085/ClickAddRow:2102・2105 がパネル状態(_panelTab/_expandTag)しか変えないのに全面 Recompute(=ECO-114 と同一の母集合コスト)。対照=同一ファイルの AddQuery setter(ECO-041)は BuildContextPanels のみ・WorkTab は3サイトとも既に軽量(通知のみ/RebuildAddPanel)=面間非対称の逸脱側が ImageTab(正解が隣の面に既在)。混入=6f7b4f9(M3a 初版=113/114 と同根)。タグ付与/剥奪系は対象外(データ変化=Recompute 正当・REQ-094 の未分類離脱含む)"
     impacted_bom: ["src=ImageTabViewModel 3サイトのみ(Recompute→BuildContextPanels+通知=ECO-041 既存様式・WorkTab と対称化。数行)", "tests=構造 probe(タブ切替/展開の Items インスタンス同一性=ECO-114 様式)+パネル意味論維持(展開で ValueChips/NumCells・タブ復帰)", "ebom=E-UI-BROWSE-022 の ECO-114 invariant へ適用範囲追記(パネル状態変更も母集合パイプライン非通過)", "CP=CP-UI-G1 刻印(accept 時)"]
