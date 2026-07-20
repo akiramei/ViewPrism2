@@ -136,4 +136,45 @@ public sealed class CpUiG1ModeTransitionTests : IDisposable
         Assert.Equal("", item.SelectionOrderText);
         Assert.True(item.Selectable); // 作業モードも選択系
     }
+    /// <summary>ECO-115: タグ編集パネルの操作(タブ切替・行展開)はパネル状態しか変えないため
+    /// Items を再構築しない(構造 probe=インスタンス同一性・ECO-114 と同型)。パネル意味論
+    /// (展開で NumCells が出る・タブ復帰)の維持も併せて固定する。</summary>
+    [Fact]
+    public async Task パネルのタブ切替と行展開はItemsを再構築しない()
+    {
+        _ = await NewWithTaggedImagesAsync("a.jpg", "b.jpg"); // コレクション+画像+シンプルタグのシード
+        // 展開検証用の数値タグ(定義域つき=展開で NumCells が構築される)。VM のタグカタログは
+        // 初期化時ロードのため、タグを揃えてから検査用 VM を作り直す
+        var tagService = new TagService(_db.Tags);
+        var rating = (await tagService.CreateAsync("評価", TagType.Numeric, color: "#e8b931")).Value!;
+        Assert.True((await tagService.SetNumericSettingsAsync(rating.Id, 1, 5, 1, "★")).IsSuccess);
+        var vm = TestImageTab.NewVm(_db);
+        await vm.InitializeAsync(_col.Id);
+
+        vm.ToggleEditCommand.Execute(null);
+        var item = Item(vm, "a.jpg");
+        vm.HandleItemClick(item, ctrl: false, shift: false); // 選択=タグ追加パネルが構築される
+
+        var before = Item(vm, "a.jpg");
+        var chipBefore = vm.Chips.Count > 0 ? vm.Chips[0] : null;
+        await vm.TabAddCommand.ExecuteAsync(null);
+        Assert.Same(before, Item(vm, "a.jpg")); // ECO-115: タブ切替はパネル状態のみ=再構築しない
+        Assert.Same(chipBefore, vm.Chips.Count > 0 ? vm.Chips[0] : null); // チップも不変(invariant 文言との整合)
+        Assert.True(vm.OnAddTab);
+
+        var row = vm.AddGroups.SelectMany(g => g.Tags).Single(r => r.Id == rating.Id);
+        await vm.ClickAddRowCommand.ExecuteAsync(row); // 展開
+        Assert.Same(before, Item(vm, "a.jpg"));
+        var expanded = vm.AddGroups.SelectMany(g => g.Tags).Single(r => r.Id == rating.Id);
+        Assert.True(expanded.Expanded);
+        Assert.NotEmpty(expanded.NumCells); // 定義域 1..5=展開の意味論維持
+
+        await vm.ClickAddRowCommand.ExecuteAsync(expanded); // 畳み
+        Assert.Same(before, Item(vm, "a.jpg"));
+        Assert.False(vm.AddGroups.SelectMany(g => g.Tags).Single(r => r.Id == rating.Id).Expanded);
+
+        vm.TabCurrentCommand.Execute(null);
+        Assert.Same(before, Item(vm, "a.jpg"));
+        Assert.True(vm.OnCurrentTab);
+    }
 }

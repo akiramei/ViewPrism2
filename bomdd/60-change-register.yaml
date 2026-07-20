@@ -1691,7 +1691,7 @@ changes:
   - id: ECO-115
     title: "タグ編集パネル操作の応答劣化 — パネル状態変更が全面 Recompute を通る(26万件で顕在化)"
     type: "不具合是正候補(性能・実装層。視覚/意味論不変)"
-    status: staged
+    status: implemented   # 2026-07-19 是正+機械受入完了(build 0/0・フルビルド警告0・Tests 829/829・Oracle 109+2skip・validate 0/0)。案A= TabCurrent=通知のみ/TabAdd・ClickAddRow=BuildContextPanels+通知(ECO-041 既存様式・WorkTab と対称化)+E-BOM invariant 適用範囲拡張。probe 1本(4遷移のインスタンス同一性+チップ不変+パネル意味論=赤→緑転)。R7=対象外(XAML 不変)。R8=独立レビュー(スコープ内欠陥0・軽微1採用=Chips 同一性追加・悉皆確認=データ変更系の再構築経路/モード排他)。golden 待ち
     golden: pending
     baseline: "main 7d5e0fd"
     findings: "maintainer 実機観測(2026-07-19・26万件ビュー×タグ編集の現在のタグ⇄タグ追加切替)。ECO-114 R8 で cheat-log へ予告記帳済みの同族残余の顕在化=R3 分離起票の実行。実装逸脱確定(3サイト): TabCurrent:2082/TabAdd:2085/ClickAddRow:2102・2105 がパネル状態(_panelTab/_expandTag)しか変えないのに全面 Recompute(=ECO-114 と同一の母集合コスト)。対照=同一ファイルの AddQuery setter(ECO-041)は BuildContextPanels のみ・WorkTab は3サイトとも既に軽量(通知のみ/RebuildAddPanel)=面間非対称の逸脱側が ImageTab(正解が隣の面に既在)。混入=6f7b4f9(M3a 初版=113/114 と同根)。タグ付与/剥奪系は対象外(データ変化=Recompute 正当・REQ-094 の未分類離脱含む)"

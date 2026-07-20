@@ -83,3 +83,37 @@ CollectionChanged の嵐= ECO-114 §3.1 と同一のコスト)を呼ぶ
 - gate①(裁定): **不要**(実装層確定・WorkTab に正解が既在・視覚/意味論不変)。
 - gate②(golden): 必要 — maintainer 実機で 26 万件ビュー×タグ編集モードの
   「現在のタグ」⇄「タグ追加」切替+行展開/畳みの体感確認+パネル挙動不変。
+
+## §7 実施記録(2026-07-19・/eco-fix)
+
+### 7.1 プローブ先行(R5)と赤の実測
+
+- 構造プローブ(CpUiG1ModeTransitionTests・ECO-114 と同型のインスタンス同一性): タブ切替/行展開/
+  畳み/タブ復帰の 4 遷移で Items(+チップ)を再構築しないこと+パネル意味論(展開で NumCells・
+  Expanded 状態・タブ復帰)→ **是正前 1/1 不合格を実測**(TabAdd の Recompute で最初の Same が破れる)。
+  既存 828 全緑。
+
+### 7.2 是正の構造(案A 採用)
+
+- TabCurrent= 通知のみ / TabAdd・ClickAddRow(展開/畳み)= `BuildContextPanels`+通知へ置換
+  (AddQuery setter=ECO-041 の既存様式・WorkTab と構造対称化)。EnsureSettingsAsync は従来どおり先行。
+- E-BOM: E-UI-BROWSE-022 の ECO-114 invariant へ適用範囲拡張(右ペイン内パネル状態変更も
+  母集合パイプライン非通過)を同時記帳。
+
+### 7.3 機械受入(2026-07-19・全緑)
+
+- build 0 error(`--no-incremental` 警告 0)・Tests **829/829**(既存 828+プローブ 1)・
+  Oracle 109+2skip(R6 不変)・validate_bom 0/0。R7= 対象外(XAML 不変)。
+
+### 7.4 セルフレビュー(R8)+処置
+
+fresh context の独立レビュー(旧 Recompute 副作用の悉皆裏取り+全テスト独立実行)。
+**スコープ内欠陥= 0**。処置つき所見:
+
+| 所見 | 分類 | 処置 |
+| --- | --- | --- |
+| CurrentTags 鮮度(TabCurrent 通知のみ化)— データ変更系全数(Apply系/Remove/scan/外部変更)が ReloadTagsAsync 等でパネル再構築を伴うことを悉皆確認 | 問題なし確認 | — |
+| ClearCopyFeedback/ColumnPicker 閉鎖の不在 — モード排他+ApplyModeTransition 経由で構造的に到達不能 | 問題なし確認 | — |
+| プローブに Chips 同一性がない(invariant 文言は「Items/チップ/件数」) | 軽微(任意) | Chips[0] 同一性 1 行を採用追加 |
+| WorkTab との通知粒度差(狭通知 vs string.Empty 全通知=本ファイル支配様式) | 記録のみ | 実害なし(全通知は母集合非依存)・構造対称の意で許容 |
+| HashSet comparer 表記ゆれ/ImageTab の部分再構築メソッド未分化 | スコープ外(記録) | 機能差なし・将来の掃除候補(起票不要の粒度) |

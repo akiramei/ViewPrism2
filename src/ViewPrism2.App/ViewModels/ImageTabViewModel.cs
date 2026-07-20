@@ -2079,13 +2079,17 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     }
 
     [RelayCommand]
-    private void TabCurrent() { _panelTab = "current"; Recompute(); }
+    // ECO-115: パネル状態(_panelTab/_expandTag)しか変えない操作は全面 Recompute(母集合再評価+
+    // Items 再構築=26万件で応答劣化)を通らず、パネルのみ部分再構築する(AddQuery setter=ECO-041 の
+    // 既存様式・WorkTab の TabCurrent/TabAdd/ClickAddRow と対称化)。
+    private void TabCurrent() { _panelTab = "current"; OnPropertyChanged(string.Empty); }
 
     [RelayCommand]
     private async Task TabAdd()
     {
         _panelTab = "add"; _expandTag = null;
-        Recompute();
+        BuildContextPanels(new HashSet<string>(_selected)); // 展開状態のリセットを行へ反映(Items 不変)
+        OnPropertyChanged(string.Empty);
         await Task.CompletedTask;
     }
 
@@ -2098,11 +2102,18 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             await ApplyTagAsync(row.Id, null);
             return;
         }
-        // 展開: 設定をロードしてから再描画
-        if (_expandTag == row.Id) { _expandTag = null; Recompute(); return; }
+        // 展開: 設定をロードしてからパネルのみ再描画(ECO-115)
+        if (_expandTag == row.Id)
+        {
+            _expandTag = null;
+            BuildContextPanels(new HashSet<string>(_selected));
+            OnPropertyChanged(string.Empty);
+            return;
+        }
         _expandTag = row.Id;
         await EnsureSettingsAsync(row.Id);
-        Recompute();
+        BuildContextPanels(new HashSet<string>(_selected));
+        OnPropertyChanged(string.Empty);
     }
 
     private async Task EnsureSettingsAsync(string tagId)
