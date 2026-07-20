@@ -1743,3 +1743,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。doc-only につきプローブ非該当(検収=原器との記述一致+機械受入不変)"
     notes: "gate①=不要(未定義・曖昧ではなく原器/正典/隣接面の3点一致による明白な事実誤認)。案B(タグ編集パネルへ docked 新設)は原器不在+正典矛盾のため却下=望む場合は mock 改版先行の別 ECO。gate②=n/a 見込み。関連=ECO-116(発見元・§6-1)・ECO-115(面間非対称は逸脱側の同定から=正解既在側が正)・ECO-117(遡及掃射=横展開コミットの他の実例も悉皆)・ECO-056(整理トレイ3ゾーン=docked の正しい実例)"
     body: 60-change-order-eco-119.md
+  - id: ECO-120
+    title: "検査器の欠陥 — validate_bom が台帳15本中4本しか読まず 33-control-plan の構文破壊でも 0/0 を返す"
+    type: "検査器是正(validate_bom.py の検査範囲欠落。src/tests 無変更)"
+    status: staged
+    golden: "n/a(検査器変更・機械証拠検収=破壊注入で赤/復旧で緑+既存4点受入不変。ECO-105/111/119 前例)"
+    baseline: "main 240d645"
+    findings: "ECO-116 accept 作業中の実測発見(spawn タスクは着手痕跡なし→起票し直し)。実測4点= ①33-control-plan.yaml の flow mapping を壊した状態で validate_bom が 0/0 ②PyYAML safe_load は同ファイルでパースエラー ③検出したのは bomdd-lint のみ(R-003 大量=CP 定義全滅を捕捉)=単一障害点かつ pre-commit では fail-open(CLI 不在で skip) ④grep control 0ヒット=そもそも読んでいない。起票時悉皆= load サイト全数は 30-ebom/32-mbom/60-register/00-manifest の4本のみ。未読 YAML 台帳10本=33-control-plan(golden CP 正本・実測済み)/10-requirements(R-003 解決先=ECO-112)/31-kbom/41-fixed-oracle(R6 保護対象)/50-as-built(golden 承認記録)/34-routing/35-dsbom/42-probes/52-metrics/53-service-bom。既知対称= ECO-053 の重複キー検査(E13)も load される4本にしか効かない=未読10本は重複キーも素通し(同じ穴の別面)。未検証= 未読10本の現時点 parse 可否(fix プローブが兼ねる)・Markdown 台帳の対象外宣言"
+    impacted_bom: ["検査器=bomdd/validate_bom.py(bomdd/*.yaml 全数の parse 健全性検査を追加=既存 _DupKeyLoader 再利用で E13 重複キー検査も全数へ自動拡張。意味検査は追加しない=bomdd-lint との役割分担を docstring 明記〔構文床=validate_bom fail-closed/意味=bomdd-lint〕)", "src/tests=無変更", "台帳=変更なし見込み(全数 parse が現状緑なら)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。プローブ=33 を一時破壊して是正前 0/0(症状再現)→是正後赤→復旧で緑"
+    notes: "gate①=不要。案B(33 だけ追加)は掃射なし単発是正=ECO-117 教訓1 により却下。関連=ECO-053(PyYAML 後勝ち素通しの同族=E13 の検査範囲がそのまま本欠陥の範囲)・ECO-116(発見の経緯=accept 928616d 時)・ECO-117(悉皆の型)・bomdd-lint(意味検査側・fail-open の構造は BomDD-Plm 側課題として現状維持)"
+    body: 60-change-order-eco-120.md
