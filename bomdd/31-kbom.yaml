@@ -90,6 +90,7 @@ kbom:
       - "動的 i18n: 文言は LocalizationService 経由のバインディング。XAML 直書き文字列禁止。罠(v1.3/ECO-002 DF-3): コンパイル済みバインディングはインデクサ('Item[]')の PropertyChanged 通知では再評価されない事例を確認 — 文言は名前付きプロパティ経由で公開する(またはロケール切替時に明示的に再バインド)。言語切替で全ラベル・ボタンが実際に切り替わることを L1 スモークで確認する(CP-L1-SMOKE)"
       - "罠(v1.3/ECO-002 DF-4): PointerPressedEventArgs.ClickCount によるダブルクリック判定は環境依存で 2 にならない事例がある — DoubleClickDetector(時間+座標の自前判定)で補完する(V1 実装済み。再利用)"
       - "(ECO-111) 廃止(Obsolete)API は警告顕在化の時点で後継へ追随し、AVLN 系ビルド警告 0 を維持する(例: TextBox.Watermark→PlaceholderText)。検証は必ずフルビルド(dotnet build --no-incremental)で行う — インクリメンタルビルドは XAML 再コンパイルが走らず AVLN 警告を非表示にする(Watermark 警告が 3 日滞留した実績。機械受入の 0 error 基準が警告を数えないことも滞留要因=二重のマスク)"
+      - "(ECO-117) ScrollViewer.Padding 禁止 — Avalonia の ScrollViewer.Padding は Viewport から引かれず Extent とも一致しないため、内容末尾が Padding.Top のぶんスクロール到達不能になる(ECO-116 実測: 16→16px/14→14px、ECO-117 実測: 18→18px)。余白は内容側要素の Margin で持つ。機械検査= CpAxamlLintScrollViewerPaddingTests(src 全 .axaml の要素属性+Style Setter を 0 件 pin・allowlist なし)。教訓: 法則発見時(2026-07-01/02)に注意書きコメントは書かれたが既存サイトの遡及掃射が行われず、先行して製造済みの違反 8 サイト(2026-06-16〜29)が潜伏し続けた — 禁止則は遡及掃射+lint を紐づけて初めて規約になる(R8 が起票時の「後発 8 サイトが全違反」という時系列誤りを git 遡りで反証・訂正)"
       # ---- v2.0 追補(ビューア拡張 — 事前ずる列挙で分散が確認された技術判断) ----
       - "(v2.0) ScrollViewer はカーソルキー・PageUp/Down を自分で消費する — ビューアのキーボードは Window レベルの AddHandler(KeyDownEvent, handler, RoutingStrategies.Tunnel) で受けて e.Handled=true にし、ScrollViewer の既定キー処理に渡さない(scroll モードのキー移動も ViewModel 経由で明示スクロール)"
       - "(v2.0) フォーカス管理: ビューア本体領域を Focusable=true にし、ウィンドウ表示時と設定 Flyout クローズ時にフォーカスを戻す(矢印キーが効かなくなる事故の定番予防)"

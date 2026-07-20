@@ -633,8 +633,9 @@
       <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[view.savedViews]}" FontSize="11"
                  Foreground="{StaticResource FaintTextBrush}" Margin="14,2,14,8" />
       <Panel>
-        <ScrollViewer Padding="12,0,12,8">
-          <ItemsControl ItemsSource="{Binding Views}">
+        <!-- ECO-117: 余白は ScrollViewer.Padding でなく内容 Margin(ECO-116 禁止則) -->
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Views}" Margin="12,0,12,8">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ViewRowViewModel">
                 <!-- ECO-009 ②: ビューカード行(先頭アイコン+名前+タグ数+編集/削除。選択=淡青) -->
@@ -858,8 +859,9 @@
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding Palette.StatusMessage}"
                  Foreground="{StaticResource DangerBrush}" FontSize="12" Margin="16,4" TextWrapping="Wrap" />
       <Panel>
-        <ScrollViewer Padding="14,0,14,8">
-          <ItemsControl ItemsSource="{Binding Palette.Tags}">
+        <!-- ECO-117: 余白は ScrollViewer.Padding でなく内容 Margin(ECO-116 禁止則) -->
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Palette.Tags}" Margin="14,0,14,8">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TagPaletteRowViewModel">
                 <!-- ECO-099: クリック=配置モードのトグル/ドラッグ=従来 D&D(閾値で判別)。

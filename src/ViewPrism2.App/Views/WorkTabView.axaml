@@ -1120,8 +1120,9 @@
 
         <!-- body: グリッド or 空状態 -->
         <Panel>
-          <ScrollViewer IsVisible="{Binding HasTrashItems}" Padding="18" HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding TrashPopupItems}">
+          <!-- ECO-117: 余白は ScrollViewer.Padding でなく内容 Margin(ECO-116 禁止則・実測18px到達不能) -->
+          <ScrollViewer IsVisible="{Binding HasTrashItems}" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding TrashPopupItems}" Margin="18">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TrashPopupItemVM">
