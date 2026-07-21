@@ -2898,7 +2898,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         }
     }
 
-    /// <summary>マージ後またはscan完了後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
+    /// <summary>マージ後・scan完了後・裁定/修復閉じ後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
     private async Task ReloadImagesAsync()
     {
         if (_collectionId is null)
@@ -2907,6 +2907,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             return;
         }
         _allNormal = (await _images.GetNormalByFolderAsync(_collectionId).ConfigureAwait(true)).ToList();
+        // GF-129-01: pending も再取得する(LoadContentAsync と対)。stale な _allPending は
+        // ⋯メニュー件数・一覧バッジの残存に加え、裁定済み(normal 化)画像が両母集合へ重複し
+        // SortFiles の ToDictionary(ID キー)で duplicate key 例外に至る
+        _allPending = (await _images.GetPendingByFolderAsync(_collectionId).ConfigureAwait(true)).ToList();
         _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
         _collectionCounts[_collectionId] = _allNormal.Count;
         await RefreshImageTagsAsync().ConfigureAwait(true);

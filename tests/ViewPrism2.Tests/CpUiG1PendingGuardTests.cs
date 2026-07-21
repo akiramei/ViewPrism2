@@ -24,7 +24,7 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private async Task<ImageTabViewModel> NewAsync()
+    private async Task<ImageTabViewModel> NewAsync(IWindowService? windows = null)
     {
         _col = new SyncFolder { Id = IdGenerator.NewId(), Name = "C", Path = @"C:\col" };
         await _db.Folders.AddAsync(_col);
@@ -54,7 +54,7 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
             new SimilaritySearchService(_db.Folders, _db.Images, _db.Features, _db.Similarities, new FakePHashImageReader(), _db.Clock),
             new MergeService(_db.Images, _db.Tags, _db.Merges),
             new TrashService(_db.Images, _db.Folders, new FilePresenceProbe()),
-            new NullWindows(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
+            windows ?? new NullWindows(), new AppSettings(), new WorkspaceService(_db.Workspaces, _db.Clock), TestLoc.Ja());
         await vm.InitializeAsync(_col.Id);
         return vm;
     }
@@ -109,6 +109,37 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
     }
 
     [Fact]
+    public async Task 裁定後の再読込で未裁定件数とバッジが消え裁定済みは二重表示しない()
+    {
+        // GF-129-01(golden 所見・2026-07-21): 裁定ダイアログ閉じ後の ReloadImagesAsync が
+        // pending を再取得せず、⋯メニュー件数・一覧バッジが stale のまま残り、
+        // 裁定済み画像が normal(fresh)と pending(stale)の二重タイルで並ぶ。
+        var windows = new NullWindows
+        {
+            PendingReview = async collectionId =>
+            {
+                // 実機 PD-2 相当: 未裁定を全件「受け入れる」(T13)で裁定し、1 件以上裁定した= true
+                var review = new PendingReviewService(_db.Images);
+                foreach (var row in await _db.Images.GetPendingByFolderAsync(collectionId))
+                {
+                    Assert.True((await review.AcceptAsync(row.Id)).IsSuccess);
+                }
+
+                return true;
+            },
+        };
+        var vm = await NewAsync(windows);
+        Assert.Equal(1, vm.PendingCount);
+
+        await vm.OpenPendingReviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, vm.PendingCount);                  // ⋯メニューの件数バッジが消える
+        Assert.False(vm.HasPending);
+        var tile = Assert.Single(vm.Items, i => !i.IsFolder && i.Name == "p.jpg");
+        Assert.False(tile.IsPending);                      // 一覧の未裁定バッジが消える(normal の 1 枚のみ)
+    }
+
+    [Fact]
     public async Task 整理モードでpendingはマージ先にも整理対象にもならない()
     {
         var vm = await NewAsync();
@@ -120,6 +151,12 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
 
     private sealed class NullWindows : IWindowService
     {
+        /// <summary>GF-129-01 プローブ用: 裁定ダイアログの代役(null なら既定=何もしない/false)。</summary>
+        public Func<string, Task<bool>>? PendingReview { get; init; }
+
+        public Task<bool> ShowPendingReviewAsync(string collectionId)
+            => PendingReview?.Invoke(collectionId) ?? Task.FromResult(false);
+
         public Task<bool> ConfirmAsync(string title, string message, string confirmLabel,
             bool destructive = false, string? cancelLabel = null) => Task.FromResult(true);
 
