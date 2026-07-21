@@ -1842,3 +1842,14 @@ changes:
     oracle: "S-29 が旧意味論(存在→Normal)を exact pin=「既存固定オラクル行は変更しない」(R6)と正面衝突。処置(skip 化+理由刻印/廃止手続き新設/その他)は gate① で一括裁定(ECO-129 の OC-5 と同一論点)"
     notes: "gate①=必要(①実施順序の承認=推奨 130→129→128・単独先行は不可視化+タグ損失リスク ②S-29 旧オラクル行の処置=R6 衝突・129 と一括裁定推奨)。gate②=是正後提示(復元→pending の一覧挙動・実機)。関連=ECO-129(依存先=pending 意味論)・ECO-130(同一設計まとめ起点)・v4.0 G2 裁定 B-2(T6 の由来=当時は正)"
     body: 60-change-order-eco-128.md
+  - id: ECO-129
+    title: "pending 意味論の再定義 — 「relink 候補」から「存在するが未裁定」の管理状態へ(スキャン判定の pending 化+裁定導線。状態管理モデル改訂 3 分割の b)"
+    type: "仕様改訂候補(状態機械の中核意味論変更+UI 新設。実装逸脱ではない)"
+    status: staged
+    golden: "pending(是正後に基準提示=裁定 UI・26 万件実機含む。CAD mock 先行=gate①)"
+    baseline: "main 390e1f4"
+    findings: "maintainer 設計まとめ(2026-07-21 §2/§3/§7/§13)の投入=3 分割の中核。変更内容=①内容変更(規則2)は status 不変→pending(編集/差し替えは機械判定しない) ②新規発見(規則3b)は normal→pending ③pending のファイル消失は行削除(手順5)→missing 保持 ④pending 裁定導線新設(受入れ/別画像/削除/保留)。工程診断=仕様層の設計変更+CAD 未定義(実装は現仕様に忠実: ScanJudge.cs:64/:87・ScanService.cs:163=v4.0 どおり・逸脱ゼロ。pending 裁定 UI の mock/screen_spec 不在=CAD 先行)。確定事実=①OC-5 exact 行+S-01(初回3枚 normal 前提)が旧意味論を pin=R6 衝突(裁定必要) ②INV-010 と新規衝突=内容変更→pending でタグ付き画像が全ビューから消える UX(現行は規則2 が status 不変のため起きない)=可視化方針の裁定必要 ③INV-015 前提が破れる=新モデルの pending はタグを持ち得る(内容変更由来・復元由来)→手順5 無条件行削除はタグ損失=行削除廃止が安全性の要 ④candidate_link_id は新モデルでも候補ヒントとして有用(3a は自然に再解釈可) ⑤適用前確認なしで新規全 pending 化すると初回登録26万件で裁定爆発=ECO-130 先行または同時(maintainer 指示済み)。未検証=初回スキャン特例の要否・「別画像として扱う」の遷移詳細(§7=履歴の厳密管理はしない方針)・status=normal 前提の全消費サイト棚卸し(fix 時 grep 悉皆)"
+    impacted_bom: ["CAD=pending 裁定 UI+pending 可視化の mock/screen_spec 新設(ViewPrismUI・先行)", "spec=§2.1 規則2/3b・手順5・遷移表 T1/T2 改訂+裁定遷移追加・INV-010/013/015 改訂・REQ 新設(採番は spec 改訂時)", "src=ScanJudge/ScanService+裁定サービス/VM/View 新設+INV-010 消費サイト追随", "tests=OC-5 追随+oracle 新規行+裁定遷移 unit+UI probe"]
+    oracle: "OC-5 exact 行+S-01 が旧意味論を pin=R6 と衝突。処置は ECO-128 S-29 と一括裁定推奨。判定器(純粋関数)の器は維持"
+    notes: "gate①=必要(①初回スキャンの新規の扱い=全 pending/初回のみ normal/適用=裁定とみなす、の三択 ②pending の可視化=INV-010 改訂・「編集で画像がビューから消える」の可否 ③固定オラクル旧行の処置=128 と一括 ④CAD mock 作成=ViewPrismUI 側)。gate②=是正後提示。26 万件経路の性能規律適用(pending 件数比例処理を裁定画面外へ漏らさない)。関連=ECO-130(先行または同時=前提)・ECO-128(本 ECO に依存)・ECO-125(Recompute 台帳=新経路追加時の分類強制)"
+    body: 60-change-order-eco-129.md
