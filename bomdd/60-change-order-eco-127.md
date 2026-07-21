@@ -1,4 +1,4 @@
-# ECO-127 — CP-REGISTRY-LINT-122 allowlist 根拠の張り替え — REG-C6/C7 裁定への追随(doc-only)
+# ECO-127 — CP-REGISTRY-LINT-122 allowlist 根拠の張り替え — REG-C6/C7 裁定への追随(doc-only)(applied)
 
 - 起票日: 2026-07-21
 - 報告者: BomDD 側 → VP2 短信(ECO-122 検収反映=REG-C6/C7 裁定の受領)
@@ -77,6 +77,28 @@ ECO-122 検収を受けて CAD 側が 2 件の未収束を裁定した(ViewPrism
 - **gate②(golden)**: n/a(doc-only・視覚/挙動/検査ロジック不変。機械証拠= tests 緑+validate 0/0=
   ECO-111/120 前例)
 
-## 7. 停止点
+## 7. 実施記録+クローズ(2026-07-21・applied)
+
+- **是正= 案A**: allowlist 根拠 3 エントリ+説明コメント 2 箇所を張り替え:
+  - `chipPopCard`: 「専用クローム(写像未検証・CAD 側判定待ち)」→「REG-C7 裁定済みインスタンス契約
+    (chipPopCard 実装追認・幅360/padding10・地は白でクローム一致)」。
+  - `Width=252` ×2: 「radius13(REG-C3 裁定…)」→「REG-C3/C6 裁定済みインスタンス契約
+    (radius13=REG-C3・padding0/影=REG-C6 補完・menu-inline バリアント含む)」。
+  - 説明コメントも判定待ち/暫定→裁定済みの現況へ。実装(src)は無変更。
+- **射程の正確性**: allowlist が覆う要素(Border クローム上書き/chipPopCard クラス)と裁定の射程を
+  突合して根拠を書いた(REG-C6 の menu-inline はセグメント= メニュー内包要素・padding0/影は
+  CMP-006 補完= 別々に帰属)。REG-C6/C7 は CAD `fcaee3f` で git 裏取り済み(作話でない)。
+- **機械受入(4 点・張り替え前後で不変= doc-only の機械証拠)**: フルビルド 0 error・0 警告 /
+  Tests **865/865** / Oracle 109+2skip / validate 0/0。
+- **R5**: doc-only につきプローブ非該当(allowlist value は lint 挙動非関与= 張り替えは挙動ゼロ影響)。
+  **R7/R8**: 対象外宣言(doc-only・ECO-111/119 型)。
+- **検収= 機械証拠**(gate② n/a): ①根拠が裁定(REG-C6/C7)を正しく引用・射程一致 ②tests 緑・
+  validate 不変(張り替え前後で同一)。ECO-111/120/121 前例。
+- **教訓**: **allowlist の「判定待ち」根拠は CAD 裁定で確定へ昇格する — 検査台帳は契約の未収束を
+  可視化する場でもある**(ECO-121「照合先の昇格は正本の検収イベント」の allowlist 版)。lint
+  first-run が CAD 申し送りを生み(ECO-122 R8)→ CAD 裁定(REG-C6/C7)→ allowlist 根拠確定、の
+  一巡が「照合先一元化」の運用サイクルの実証。
+
+## 8. 停止点(起票時)
 
 裁定は不要です。`/eco-fix eco-127` で張り替えに着手できます。

@@ -75,10 +75,10 @@ public sealed class CpRegistryLintTests
     /// </summary>
     private static readonly Dictionary<string, string> NonMenuChromeAllowlist = new(StringComparer.Ordinal)
     {
-        // chip overflow ポップオーバー(IMG-023A 面)。部品表は CMP-006 インスタンスに列挙するが実装は
-        // 専用クローム chipPopCard で、popupMenu クロームとの写像一致は未検証(51-cheat-log 2026-07-20)。
-        // 契約適合と判定するかバリアント記帳とするかは CAD 側裁定待ち= 判定までの暫定許容。
-        ["LabeledChipStrip.axaml:chipPopCard"] = "chip overflow=専用クローム(写像未検証・CAD 側判定待ち)",
+        // chip overflow ポップオーバー(IMG-023A 面)。REG-C7 裁定(2026-07-21)= 実装 chipPopCard を追認。
+        // 裁定時実測で地は白= クローム一致(起票時「地の不一致」は誤認)・実不一致は幅360/padding10 のみで
+        // CMP-006 インスタンス契約値として記帳済み。専用クラスのまま存続(mock 原器化は SRC-011 ⑥)。
+        ["LabeledChipStrip.axaml:chipPopCard"] = "chip overflow=REG-C7 裁定済みインスタンス契約(chipPopCard 実装追認・幅360/padding10・地は白でクローム一致)",
     };
 
     [Fact]
@@ -117,11 +117,12 @@ public sealed class CpRegistryLintTests
     /// <summary>検査B allowlist(様式は検査A と同じ)。</summary>
     private static readonly Dictionary<string, string> ChromeOverrideAllowlist = new(StringComparer.Ordinal)
     {
-        // 並び替えメニュー(両タブ同型複製)= radius 13 はインスタンス契約差として REG-C3 裁定で確定
-        // (VC-FL-1① mock 契約・「非対称ではない」)。Padding 0/BoxShadow はその mock 実測の随伴
-        // (ECO-109 golden 承認面)。裁定済みの上書きのみ許容= 新規の上書きはここに現れず fail する。
-        ["ImageTabView.axaml:Width=252:CornerRadius|Padding|BoxShadow"] = "並び替え=radius13(REG-C3 裁定・VC-FL-1①)",
-        ["WorkTabView.axaml:Width=252:CornerRadius|Padding|BoxShadow"] = "並び替え=radius13(REG-C3 裁定・同型複製の同値)",
+        // 並び替えメニュー(両タブ同型複製)は CMP-006 インスタンス契約値: radius13=REG-C3 裁定・
+        // padding0/影=REG-C6 同日補完(file_list mock 実測=ECO-122 R8 所見8「As-Built 乖離リスト不在」への
+        // 回答で正典値化・乖離ではない)。メニューが内包する昇降セグメントは REG-C6 の menu-inline バリアント。
+        // 裁定済みの上書きのみ許容= 新規の上書きはここに現れず fail する。
+        ["ImageTabView.axaml:Width=252:CornerRadius|Padding|BoxShadow"] = "並び替え=REG-C3/C6 裁定済みインスタンス契約(radius13=REG-C3・padding0/影=REG-C6 補完・menu-inline バリアント含む)",
+        ["WorkTabView.axaml:Width=252:CornerRadius|Padding|BoxShadow"] = "並び替え=REG-C3/C6 裁定済みインスタンス契約(同型複製の同値)",
     };
 
     [Fact]
