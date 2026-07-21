@@ -36,7 +36,8 @@ public static class DatabaseSchema
             candidate_link_id TEXT    NULL,
             created_date      TEXT    NOT NULL,
             modified_date     TEXT    NOT NULL,
-            notes             TEXT    NULL
+            notes             TEXT    NULL,
+            pending_origin    TEXT    NULL
         );
         CREATE UNIQUE INDEX idx_images_folder_path ON images(sync_folder_id, relative_path);
         CREATE INDEX idx_images_folder_status ON images(sync_folder_id, status);
@@ -309,6 +310,13 @@ public static class DatabaseSchema
             ALTER TABLE textual_tag_settings ADD COLUMN value_domain TEXT NOT NULL DEFAULT 'suggest';
             ALTER TABLE view_tag_hierarchies ADD COLUMN expansion_mode TEXT NULL;
             ALTER TABLE view_tag_hierarchies ADD COLUMN hide_empty_values INTEGER NOT NULL DEFAULT 0;
+            """),
+
+        // ECO-129(REQ-101): pending 裁定 UI の由来表示('changed'/'new'/'reappeared'/'restored')。
+        // NULL 既定(既存行=由来なし)。pending 以外へ遷移時に NULL クリア(履歴の厳密管理はしない)。
+        // ALTER ADD COLUMN は末尾に列を足す。LatestDdl も同じ列順(末尾)で定義しスキーマ同値を保つ(CP-DB-006)。
+        new("010-pending-origin", """
+            ALTER TABLE images ADD COLUMN pending_origin TEXT NULL;
             """),
     ];
 }

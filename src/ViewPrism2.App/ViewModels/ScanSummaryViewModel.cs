@@ -350,13 +350,13 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
             _ => T("scan.rateDescGreen"),
         };
 
-        // 遷移別サマリー(0 件の行は出さない。「変更なし」「変更合計」は常設)
+        // 遷移別サマリー(0 件の行は出さない。「変更なし」「変更合計」は常設。語彙= v5.0/ECO-129)
         SummaryRows.Clear();
         SummaryRows.Add(new ScanSummaryRow(DotGray, T("scan.rowUnchanged"), null, N0(s.Unchanged), true, false));
-        AddRowIf(s.MetaUpdated, DotAmber, "scan.rowMeta", "scan.transMeta", false);
+        AddRowIf(s.ContentChanged, DotAmber, "scan.rowMeta", "scan.transMeta", false);
+        AddRowIf(s.Reappeared, DotAmber, "scan.rowReappeared", "scan.transReappeared", false);
         AddRowIf(s.MissingFromNormal, DotRed, "scan.rowMissing", "scan.transMissing", false);
-        AddRowIf(s.PendingRemoved, DotAmber, "scan.rowCandidateLost", "scan.transCandidateLost", false);
-        AddRowIf(s.AddedNormal, DotBlue, "scan.rowAddedNormal", "scan.transAddedNormal", false);
+        AddRowIf(s.MissingFromPending, DotRed, "scan.rowCandidateLost", "scan.transCandidateLost", false);
         AddRowIf(s.AddedPending, DotBlue, "scan.rowAddedPending", "scan.transAddedPending", false);
         AddRowIf(s.DeletedExcluded, DotGray, "scan.rowDeletedExcluded", null, true);
         AddRowIf(s.ReadFailures, DotAmber, "scan.rowReadFailed", null, false);
@@ -371,11 +371,15 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
             }
         }
 
-        // 適用後作業量(該当があるときのみ=CAD)
-        HasWorkload = s.MissingTotal > 0;
+        // 適用後作業量(該当があるときのみ=CAD)。裁定対象= 新規+内容変更+再出現(§2.11.7 へ接続)
+        HasWorkload = s.MissingTotal > 0 || s.PendingTotal > 0;
         if (HasWorkload)
         {
-            WorkloadLeadText = T("scan.workloadLead", ("missing", N0(s.MissingTotal)));
+            WorkloadLeadText = s.PendingTotal > 0 && s.MissingTotal > 0
+                ? T("scan.workloadLeadBoth", ("missing", N0(s.MissingTotal)), ("pending", N0(s.PendingTotal)))
+                : s.PendingTotal > 0
+                    ? T("scan.workloadLeadPending", ("pending", N0(s.PendingTotal)))
+                    : T("scan.workloadLead", ("missing", N0(s.MissingTotal)));
             // R8 所見6: 「このうち K 件」= 今回 missing 化する行のうち候補が付いた distinct 件数
             // (同一 missing を複数新ファイルが参照しても 1 と数える。既存 missing への候補は含めない)
             var newMissing = s.StatusUpdates
@@ -405,14 +409,14 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
     private void BuildDetailGroups(ScanStaging s)
     {
         DetailGroups.Clear();
-        AddGroup(ScanTransitionKind.MetaUpdated, s.MetaUpdated, "scan.rowMeta",
-            e => new ScanDetailItem(e, T("scan.stateNormal"), T("scan.stateMetaChip"), "amber"));
+        AddGroup(ScanTransitionKind.ContentChanged, s.ContentChanged, "scan.rowMeta",
+            e => new ScanDetailItem(e, T("scan.stateNormal"), T("scan.statePending"), "amber"));
+        AddGroup(ScanTransitionKind.Reappeared, s.Reappeared, "scan.rowReappeared",
+            e => new ScanDetailItem(e, T("scan.stateMissing"), T("scan.statePending"), "amber"));
         AddGroup(ScanTransitionKind.MissingFromNormal, s.MissingFromNormal, "scan.rowMissing",
             e => new ScanDetailItem(e, T("scan.stateNormal"), T("scan.stateMissing"), "red"));
-        AddGroup(ScanTransitionKind.PendingRemoved, s.PendingRemoved, "scan.rowCandidateLost",
-            e => new ScanDetailItem(e, T("scan.statePending"), T("scan.stateRemoved"), "amber"));
-        AddGroup(ScanTransitionKind.AddedNormal, s.AddedNormal, "scan.rowAddedNormal",
-            e => new ScanDetailItem(e, T("scan.stateNew"), T("scan.stateNormal"), "blue"));
+        AddGroup(ScanTransitionKind.MissingFromPending, s.MissingFromPending, "scan.rowCandidateLost",
+            e => new ScanDetailItem(e, T("scan.statePending"), T("scan.stateMissing"), "red"));
         AddGroup(ScanTransitionKind.AddedPending, s.AddedPending, "scan.rowAddedPending",
             e => new ScanDetailItem(e, T("scan.stateNew"), T("scan.statePending"), "blue"));
 

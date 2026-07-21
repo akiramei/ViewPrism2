@@ -22,28 +22,39 @@ public sealed record ScanDbFacts(
     ImageRecord? ExistingAtPath,
     IReadOnlyList<ImageRecord> MissingInFolder);
 
-/// <summary>スキャン判定の結果種別(REQ-012 の規則 1/2/3b/3a に対応)。</summary>
+/// <summary>スキャン判定の結果種別(v5.0=ECO-129/REQ-101。仕様 §2.1 規則 1/2/3 に対応)。</summary>
 public enum ScanDecisionKind
 {
-    /// <summary>規則 (1): 変更なし(スキップ)。</summary>
+    /// <summary>規則 (1): 変更なし(スキップ。missing 起点を除く)。</summary>
     Skip,
 
-    /// <summary>規則 (2): hash/file_size/modified_date を更新(status は変更しない)。</summary>
+    /// <summary>規則 (2): メタ更新のみ・status 不変(pending 起点=origin 維持/deleted 起点=除外)。</summary>
     UpdateMeta,
 
-    /// <summary>規則 (3b): status=normal で新規登録。</summary>
+    /// <summary>規則 (2): メタ更新+pending 化(normal→'changed'/missing→'reappeared')。</summary>
+    UpdateMetaAndPend,
+
+    /// <summary>規則 (1) 例外: missing 起点・メタ一致の再出現 → pending 化のみ('reappeared')。</summary>
+    PendInPlace,
+
+    /// <summary>規則 (3-初回): status=normal で新規登録(初回スキャンのみ=登録行為が裁定)。</summary>
     AddNormal,
 
-    /// <summary>規則 (3a): status=pending+candidate_link_id で新規登録。</summary>
+    /// <summary>規則 (3-再): status=pending('new')で新規登録(同ハッシュ missing があれば candidate 付き)。</summary>
     AddPending,
 }
 
-/// <summary>スキャン判定の出力(OC-5)。Hash は判定中に計算した値(Skip では null)。</summary>
-public sealed record ScanDecision(ScanDecisionKind Kind, string? Hash = null, string? CandidateLinkId = null);
+/// <summary>スキャン判定の出力(OC-5)。Hash は判定中に計算した値(Skip/PendInPlace では null)。</summary>
+public sealed record ScanDecision(
+    ScanDecisionKind Kind,
+    string? Hash = null,
+    string? CandidateLinkId = null,
+    PendingOrigin? PendingOrigin = null);
 
 /// <summary>
-/// スキャン判定器(OC-5、REQ-012)。純粋関数(I/O なし。ハッシュは入力の遅延計算デリゲート経由)。
+/// スキャン判定器(OC-5、REQ-012/REQ-101)。純粋関数(I/O なし。ハッシュは入力の遅延計算デリゲート経由)。
 /// 各ファイルを優先順で判定する(最初に成立した規則のみ適用)。
+/// v5.0(ECO-129): 不確実は pending に倒す=機械観測とユーザー裁定の分離。
 /// </summary>
 public sealed class ScanJudge
 {
@@ -54,36 +65,46 @@ public sealed class ScanJudge
 
         if (db.ExistingAtPath is { } existing)
         {
-            // (1) 同一相対パスの行があり、file_size と modified_date がともに一致 → 変更なし
+            // (1) 同一相対パスの行があり、file_size と modified_date がともに一致
             if (existing.FileSize == file.FileSize &&
                 string.Equals(existing.ModifiedDate, file.ModifiedDate, StringComparison.Ordinal))
             {
-                return new ScanDecision(ScanDecisionKind.Skip);
+                // 例外(v5.0): missing のパスに再出現 → pending(無条件 normal 化はしない=REQ-101)
+                return existing.Status == ImageStatus.Missing
+                    ? new ScanDecision(ScanDecisionKind.PendInPlace, PendingOrigin: Models.PendingOrigin.Reappeared)
+                    : new ScanDecision(ScanDecisionKind.Skip);
             }
 
-            // (2) いずれかが異なる → SHA-256 再計算し hash/file_size/modified_date を更新(status 不変)
-            return new ScanDecision(ScanDecisionKind.UpdateMeta, file.ComputeHash());
+            // (2) いずれかが異なる → SHA-256 再計算+メタ更新。status は起点別(v5.0)
+            var updatedHash = file.ComputeHash();
+            return existing.Status switch
+            {
+                ImageStatus.Normal => new ScanDecision(
+                    ScanDecisionKind.UpdateMetaAndPend, updatedHash, PendingOrigin: Models.PendingOrigin.Changed),
+                ImageStatus.Missing => new ScanDecision(
+                    ScanDecisionKind.UpdateMetaAndPend, updatedHash, PendingOrigin: Models.PendingOrigin.Reappeared),
+                // pending=origin 維持のままメタだけ追随/deleted=再登録しない(除外)がメタは従来どおり更新
+                _ => new ScanDecision(ScanDecisionKind.UpdateMeta, updatedHash),
+            };
         }
 
         // (3) 新規 → SHA-256 計算
         var hash = file.ComputeHash();
 
-        // (3a) 初回スキャンでない、かつ同一フォルダ内に同ハッシュ・status=missing の行が存在する
-        //      → pending+candidate_link_id(複数一致時は id 昇順の先頭)
-        if (!isInitialScan)
+        // (3-初回) 初回スキャン= normal(フォルダ登録行為を裁定とみなす — gate① 裁定/CAD SCAN-001)
+        if (isInitialScan)
         {
-            var candidate = db.MissingInFolder
-                .Where(m => m.Status == ImageStatus.Missing &&
-                            string.Equals(m.Hash, hash, StringComparison.Ordinal))
-                .OrderBy(m => m.Id, StringComparer.Ordinal)
-                .FirstOrDefault();
-            if (candidate is not null)
-            {
-                return new ScanDecision(ScanDecisionKind.AddPending, hash, candidate.Id);
-            }
+            return new ScanDecision(ScanDecisionKind.AddNormal, hash);
         }
 
-        // (3b) それ以外 → status=normal で登録
-        return new ScanDecision(ScanDecisionKind.AddNormal, hash);
+        // (3-再) 再スキャンの新規はすべて pending('new')。同一フォルダ内の同ハッシュ missing は
+        // candidate_link_id ヒント(複数一致時は id 昇順の先頭=旧規則 3a の包含)
+        var candidate = db.MissingInFolder
+            .Where(m => m.Status == ImageStatus.Missing &&
+                        string.Equals(m.Hash, hash, StringComparison.Ordinal))
+            .OrderBy(m => m.Id, StringComparer.Ordinal)
+            .FirstOrDefault();
+        return new ScanDecision(
+            ScanDecisionKind.AddPending, hash, candidate?.Id, Models.PendingOrigin.New);
     }
 }

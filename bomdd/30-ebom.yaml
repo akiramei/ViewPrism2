@@ -69,7 +69,7 @@ ebom:
       name: スキャン判定器+スキャンサービス+ステータス遷移
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016, REQ-086, REQ-100]
+      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016, REQ-086, REQ-100, REQ-101]
       kbom_refs: [K-WINFS]
       depends_on: [E-DOMAIN-001, E-HASH-006, E-DB-010]
       invariants:
@@ -80,7 +80,8 @@ ebom:
         - (ECO-059) スキャン中のDB変更は件数上限を持つバッチで明示トランザクション適用し、画像1件ごとの暗黙commitを禁止する。進捗は整数百分率が変化した時だけ通知し、非空入力は100で完了する。列挙時に得たサイズ/日時を再利用してFileInfoの再照会を避け、SHA-256全体読取はHDD向け直列+SequentialScanで維持する
         - (ECO-059/GF-059-01) スキャン本体の列挙・ハッシュ・DBバッチは呼出元UIスレッドから明示分離し、同期完了するrepository awaitに依存しない。進捗だけを呼出元のProgress経由でUI contextへ通知する
         - (ECO-060/REQ-086) 初回対象はstreaming列挙し、fully-hashed normal画像をDB batch commit成功後だけ取込順で公開通知する。commit失敗batchは通知しない
-        - (ECO-130/REQ-100) 再スキャンは差分計算(DB 完全無変更・last_scan も不変)と適用(有界バッチ一括+last_scan 更新)を分離する。判定規則(REQ-012)は両段階で同一=適用後状態は一段階スキャンと同値(パリティ)。キャンセル/破棄/失敗は部分適用ゼロ。読み取り失敗は変更に数えず独立集計。ステージング保持は有界レコード列(母集合規模の VM/文字列を作らない)
+        - (ECO-130/REQ-100) 再スキャンは差分計算(DB 完全無変更・last_scan も不変)と適用(有界バッチ一括+last_scan 更新)を分離する。判定規則(REQ-012/REQ-101)は両段階で同一=適用後状態は一段階スキャンと同値(パリティ)。キャンセル/破棄/失敗は部分適用ゼロ。読み取り失敗は変更に数えず独立集計。ステージング保持は有界レコード列(母集合規模の VM/文字列を作らない)
+        - (ECO-129/REQ-101) 不確実は pending に倒す(v5.0 判定): 内容変更=normal→pending('changed')・再スキャン新規=pending('new')・missing 再出現=pending('reappeared')・pending 消失=missing(行削除廃止=タグ保全)。初回スキャンのみ normal(登録行為=裁定)。pending_origin は pending 以外への遷移で NULL クリア。1 パス 1 行の不変(byPath 前提)を全遷移で維持する
       acceptance_refs: [CP-SCAN-004]
 
     - id: E-HASH-006
@@ -774,6 +775,24 @@ ebom:
         - フッターは docked・右寄せ+「結果を破棄」は左端分離(誤操作防止)。dlgBtn 委譲(生 Button 禁止=CP-REGISTRY-LINT-122 検査C)
         - 詳細一覧は遷移別グループ+例示上限+「…ほか N 件」(母集合規模の行 VM を作らない=26 万件経路の性能規律)
         - 進捗は総件数不明の間 percent を捏造しない(処理済み件数+不定形バー=ECO-060 進捗規律)
+      acceptance_refs: [CP-UI-G1]
+
+    - id: E-UI-PENDING-049
+      name: "pending 裁定 UI(未裁定バッジ+入口+裁定ダイアログ〔受入れ/別画像=行置換/削除/保留〕)— ECO-129 新設"
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-101]
+      external_source_ref: K-DESIGN
+      external_source_note: "CAD= ViewPrismUI docs/screens/pending_review.md(PD-1〜4・06f36c8・mock 承認済み 2026-07-21)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-SCAN-005, E-UI-BROWSE-022, E-TRASH-038, E-THUMB-020]
+      invariants:
+        - 裁定 3 遷移(T13/T14/T15)は core サービス(PendingReviewService)経由のみ・pending 以外は拒否。UI 側で状態遷移を再実装しない
+        - T14(別画像として扱う=行置換)は単一トランザクションで原子(置換後も 1 パス 1 行・旧タグ/特徴量は CASCADE 消滅=PEND-001 裁定)
+        - 未裁定バッジはタイル寸法・グリッド流動へ影響しない重畳描画。pending の表示は無絞り込み FS 軸ブラウズのみ(INV-010 v5.0)
+        - 裁定は 1 件ずつ確定・✕クローズはいつでも可(破棄の概念なし)。「別画像として扱う」は changed/reappeared/restored 由来のみ・candidate つき新規は「修復で再リンク…」導線(relink は T4 へ委譲)
+        - 一覧・由来分岐・CTA 出し分けは描画から独立した決定論ロジックとして unit 検査可能にする
+        - pending 件数・一覧の取得は DB 境界で status 限定(全行 materialize 禁止=ECO-098 同型・26 万件経路の性能規律)
       acceptance_refs: [CP-UI-G1]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)

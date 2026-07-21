@@ -24,8 +24,10 @@ public sealed class RelinkService
 
     /// <summary>
     /// 構築する。<paramref name="tags"/>(INV-015 のタグ安全ガード用)は production DI で必ず注入する。
-    /// 既存の同ハッシュ pending のみの V1 経路(criteria なし・タグ判定不要)互換のため省略可能とするが、
-    /// criteria 候補・タグ安全ガードを使う production ではコンストラクタ注入する(App.axaml.cs)。
+    /// **v5.0 注記(ECO-129/R8 所見8)**: pending はタグを持ち得る(内容変更・再出現由来)ため
+    /// 「pending=新規スキャンで未タグ」の旧前提は成立しない。null 省略はタグ概念を持たない
+    /// 旧テスト互換専用であり、タグ付き pending が存在し得る文脈では必ず注入する
+    /// (注入時は実タグ照会でガード= INV-015 v5.0・App.axaml.cs)。
     /// </summary>
     public RelinkService(IImageRepository images, ITagRepository? tags = null)
     {

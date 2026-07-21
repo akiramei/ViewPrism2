@@ -92,7 +92,7 @@ requirements:
       - "拡張子だけ .jpg の非画像ファイルでサムネイル生成がクラッシュし、スキャン全体が停止する"
 
   - id: REQ-012
-    statement: "スキャンは増分方式とする: (a)新規ファイルは登録、(b)DB に normal で存在するが物理に無いファイルは missing へ、(c)同一相対パスで内容が変わったファイルはハッシュ・サイズ・更新日時を更新、(d)新規ファイルのハッシュが同一フォルダ内の missing 画像と一致する場合は pending(candidate_link_id 付き)で登録する。一致する missing 画像が複数ある場合は id 昇順の先頭を candidate_link_id とする"
+    statement: "スキャンは増分方式とする: (a)新規ファイルは登録、(b)DB に normal で存在するが物理に無いファイルは missing へ、(c)同一相対パスで内容が変わったファイルはハッシュ・サイズ・更新日時を更新、(d)新規ファイルのハッシュが同一フォルダ内の missing 画像と一致する場合は pending(candidate_link_id 付き)で登録する。一致する missing 画像が複数ある場合は id 昇順の先頭を candidate_link_id とする。【v5.0 注記=ECO-129/REQ-101】(a)の登録 status は初回=normal/再スキャン=pending・(c)は normal 起点で pending 化・(d)は「再スキャンの新規=pending」に包含(candidate はヒント付与)。判定の正本は 20-spec §2.1 v5.0"
     rationale: |
       原典 scanner.ts:114-472、file-verifier.ts:201-217。タグ等の関連は image_id に紐づくため、
       ファイル移動・リネームを安易に新規+削除と扱うとタグが失われる。それを防ぐ pending/再リンクが本質。
@@ -136,7 +136,7 @@ requirements:
       - "スキャン中の例外で last_scan が更新されず、毎回フルスキャン相当になる"
 
   - id: REQ-016
-    statement: "画像ステータスは normal/missing/deleted/pending の 4 値とし、一覧・ビュー・グリッド・NodeGraph の値抽出は常に normal のみを対象にする。deleted は V1 では予約値とし、deleted へ遷移させる操作は実装しない(遷移の全列挙は 20-spec.md §2.1 の遷移表)"
+    statement: "画像ステータスは normal/missing/deleted/pending の 4 値とし、一覧・ビュー・グリッド・NodeGraph の値抽出は常に normal のみを対象にする。deleted は V1 では予約値とし、deleted へ遷移させる操作は実装しない(遷移の全列挙は 20-spec.md §2.1 の遷移表)。【v3.0〜v5.0 注記】deleted は v3.0(マージ)以降使用・遷移の正本は §2.11.0 状態機械 T1〜T15。v5.0(ECO-129/REQ-101)= 無絞り込み FS 軸ブラウズに限り pending をバッジつき並置表示(INV-010 v5.0)"
     rationale: |
       原典 shared/types/images.ts:7、image-repository.ts:50,107,162(既定検索が normal のみ)、611,679(deleted 除外)。
       missing=物理消失(再リンク待ち)、deleted=論理削除、pending=再リンク候補確定待ち。
@@ -1395,6 +1395,28 @@ requirements:
       - "コピーが選択順で並ぶ・末尾に余分な改行が付く(貼り付け先で空行が生まれる)"
       - "フィードバック表示中にボタンが無効化されラベルがグレーアウトする(一時表示がボタンを占有)"
       - "移動・リネーム・削除等の実ファイル変更操作がこのモードに紛れ込む(参照系契約の破れ)"
+
+  - id: REQ-101
+    statement: "pending は「ファイルは存在するが ViewPrism 上の扱いが未裁定」の管理状態とする(v5.0=ECO-129。REQ-012(d)/REQ-016 の旧 pending 意味論〔新規発見ファイル側の relink 候補〕を包含・置換)。①スキャン判定(§2.1 v5.0): 内容変更(normal 起点のメタ不一致)→pending('changed')/再スキャンの新規→pending('new'・同ハッシュ missing があれば candidate_link_id 付き。初回スキャンのみ normal=登録行為が裁定)/missing のパスにファイル再出現→pending('reappeared'・無条件 normal 化しない)/pending のファイル消失→missing(行削除を廃止・candidate/origin クリア)。②可視化: 無絞り込みの FS 軸ブラウズにのみ pending を未裁定バッジつきで並置表示(集計・評価・検索・エクスポート・作業タブは normal のみ=INV-010 v5.0)。③裁定(1 件ずつ確定・§2.11.7): 受け入れる=normal 化(タグ/ID 不変)/別画像として扱う=原子的な行置換(新 ID・タグ/特徴量 CASCADE 消滅・パス/メタ維持=1 パス 1 行の不変維持)/削除する=deleted(ゴミ箱・タグ保持)/保留=遷移なし。pending_origin('changed'/'new'/'reappeared'/'restored')は由来表示用で、pending 以外へ遷移時に NULL クリア(履歴の厳密管理はしない)"
+    rationale: |
+      maintainer 設計まとめ(2026-07-21 §2/§3/§7/§13)の取り込み= ECO-129(状態管理モデル改訂の中核)。
+      機械観測とユーザー裁定の分離: 編集/差し替え/削除/移動は機械的に確定できないため、不確実は pending に
+      倒し、裁定はユーザーが行う。gate① 裁定(2026-07-21)= 初回のみ normal・既定一覧+バッジ。
+      PEND-001 裁定(2026-07-21)= 別画像として扱う=行置換(旧行 missing 化案はパス一意性〔スキャンの
+      byPath 前提・T4〕と衝突し不成立)。UI 正典= ViewPrismUI docs/screens/pending_review.md(PD-1〜4)。
+      受入: 判定規則の全遷移(内容変更/新規/再出現/消失)・裁定 3 遷移+pending 限定拒否+T14 原子性を
+      unit exact。バッジ・入口・ダイアログは CP-UI-G1 golden+headless probe。凍結オラクル S-01 は
+      新意味論でも全アサーション成立(初回=normal・3a 候補 pending 包含)= R6 無接触。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "ViewPrismUI docs/screens/pending_review.md(06f36c8)/ maintainer 設計まとめ 2026-07-21/ PEND-001 裁定"
+    counterexamples:
+      - "外部エディタで画像を編集しただけで一覧から消える(pending 不可視=旧 INV-010 のまま)"
+      - "ファイルが再出現しただけで無条件に normal へ戻る(裁定の迂回)"
+      - "タグ付き pending がスキャンで行削除されタグが失われる(旧手順 5 の残存)"
+      - "「別画像として扱う」で同一パスに 2 行できてスキャンが二重登録・例外を起こす"
+      - "pending のタグがビュー集計・NodeGraph に混入する(未裁定タグの漏出)"
+      - "再スキャンの新規が normal で即受入れされる(裁定の不在=v4.0 への退行)"
 
   - id: REQ-100
     statement: "再スキャン(last_scan が NULL でないフォルダのスキャン)は二段階とする: ①差分計算(ステージング)= §2.1 手順 1〜5 の判定を DB 無変更で実行し変更案を遷移別に集計 ②遷移別サマリー(変更なし/内容変更/新規発見/見つからない/候補消失/deleted 除外/読み取り失敗)+missing 率の 3 色注意表示(<1% グリーン/<50% イエロー/以上レッド)をユーザーへ提示 ③適用時のみ変更案を有界バッチで一括反映し last_scan を更新する。キャンセル(途中)・結果破棄(完了後)・差分計算の失敗・ウィンドウクローズ= DB 完全無変更(部分適用なし)。適用開始後は中断させない(クローズをブロック)。適用中の失敗は有界バッチ単位の部分適用があり得る(失敗理由を表示してサマリーへ復帰・残余は次回スキャンの差分計算が収束させる)。missing 率= 新規 missing ÷ ステージング時点の管理行数(全 status)。missing 率でシステムが適用禁止・自動破棄・状態変更を行うことはない(適用はレッドでも有効)。確認強度は変更合計に比例(100 以上=内訳確認導線/1,000 以上=適用前確認ダイアログ)し、適用 CTA ラベルは変更合計件数を含む。読み取り失敗は変更に数えない(次回再試行)。初回スキャン(last_scan=NULL)は従来の一段階+段階的公開(REQ-086)のまま(登録行為=適用の同意)。判定規則(REQ-012)は不変"

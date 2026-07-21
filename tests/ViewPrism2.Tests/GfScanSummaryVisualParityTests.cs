@@ -38,20 +38,22 @@ public sealed class GfScanSummaryVisualParityTests
     }
 
     private static ScanStaging Staging(
-        int missing, int managed, int metaUpdated = 0, int addedNormal = 0,
-        int addedPending = 0, int pendingRemoved = 0, int readFailures = 0)
+        int missing, int managed, int contentChanged = 0,
+        int addedPending = 0, int missingFromPending = 0, int readFailures = 0)
         => new()
         {
             FolderId = "folder-1",
             ManagedTotal = managed,
             ScannedFiles = managed - missing,
-            Unchanged = managed - missing - metaUpdated,
-            MetaUpdated = metaUpdated,
-            AddedNormal = addedNormal,
+            Unchanged = managed - missing - contentChanged,
+            ContentChanged = contentChanged,
             AddedPending = addedPending,
+            Reappeared = 0,
             MissingFromNormal = missing,
-            PendingRemoved = pendingRemoved,
+            MissingFromPending = missingFromPending,
             DeletedUnchanged = 0,
+            DeletedMetaRefreshed = 0,
+            PendedWithoutMeta = 0,
             ReadFailures = readFailures,
             Adds = [],
             MetaUpdates = [],
@@ -99,7 +101,7 @@ public sealed class GfScanSummaryVisualParityTests
         {
             // SC-3 相当: 変更合計 10,000(9,842+124+18+16)
             var (window, vm) = Create(Staging(
-                missing: 9842, managed: 259984, metaUpdated: 124, addedPending: 16, pendingRemoved: 18));
+                missing: 9842, managed: 259984, contentChanged: 124, addedPending: 16, missingFromPending: 18));
             try
             {
                 var apply = window.FindControl<Button>("ApplyButton")!;
@@ -120,7 +122,7 @@ public sealed class GfScanSummaryVisualParityTests
         await Session.Dispatch(() =>
         {
             // SC-2: 変更 28 件 → [変更内容を確認] なし(通常の 2 ボタン)
-            var (small, _) = Create(Staging(missing: 9, managed: 12400, metaUpdated: 3, addedNormal: 16));
+            var (small, _) = Create(Staging(missing: 9, managed: 12400, contentChanged: 3, addedPending: 16));
             try
             {
                 Assert.False(small.FindControl<Button>("DetailButton")!.IsVisible);
@@ -132,7 +134,7 @@ public sealed class GfScanSummaryVisualParityTests
 
             // SC-3: 変更 10,000 件 → 表示
             var (large, _) = Create(Staging(
-                missing: 9842, managed: 259984, metaUpdated: 124, addedPending: 16, pendingRemoved: 18));
+                missing: 9842, managed: 259984, contentChanged: 124, addedPending: 16, missingFromPending: 18));
             try
             {
                 Assert.True(large.FindControl<Button>("DetailButton")!.IsVisible);
@@ -209,7 +211,7 @@ public sealed class GfScanSummaryVisualParityTests
     {
         await Session.Dispatch(() =>
         {
-            var (window, vm) = Create(Staging(missing: 9, managed: 12400, metaUpdated: 3, addedNormal: 16));
+            var (window, vm) = Create(Staging(missing: 9, managed: 12400, contentChanged: 3, addedPending: 16));
             try
             {
                 Assert.True(vm.SummaryRows[^1].IsTotal);

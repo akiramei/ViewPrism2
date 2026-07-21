@@ -9,16 +9,16 @@ public sealed class ImageRepository : IImageRepository
 {
     private const string InsertSql = """
         INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash,
-                            status, candidate_link_id, created_date, modified_date, notes)
+                            status, candidate_link_id, created_date, modified_date, notes, pending_origin)
         VALUES (@Id, @SyncFolderId, @RelativePath, @FileName, @FileSize, @Hash,
-                @Status, @CandidateLinkId, @CreatedDate, @ModifiedDate, @Notes)
+                @Status, @CandidateLinkId, @CreatedDate, @ModifiedDate, @Notes, @PendingOrigin)
         """;
 
     private const string SelectColumns = """
         SELECT id AS Id, sync_folder_id AS SyncFolderId, relative_path AS RelativePath,
                file_name AS FileName, file_size AS FileSize, hash AS Hash, status AS Status,
                candidate_link_id AS CandidateLinkId, created_date AS CreatedDate,
-               modified_date AS ModifiedDate, notes AS Notes
+               modified_date AS ModifiedDate, notes AS Notes, pending_origin AS PendingOrigin
         FROM images
         """;
 
@@ -48,12 +48,20 @@ public sealed class ImageRepository : IImageRepository
             using var tx = conn.BeginTransaction();
             if (batch.StatusUpdates.Count > 0)
             {
-                await conn.ExecuteAsync(
-                    "UPDATE images SET status = @Status WHERE id = @Id",
+                // ECO-129/REQ-101: pending_origin は遷移ごとに明示上書き(NULL=クリア)。
+                // pending 以外へ遷移する行は candidate_link_id もクリアする(候補関係の失効=手順 5)
+                await conn.ExecuteAsync("""
+                    UPDATE images
+                    SET status = @Status,
+                        pending_origin = @PendingOrigin,
+                        candidate_link_id = CASE WHEN @Status <> 'pending' THEN NULL ELSE candidate_link_id END
+                    WHERE id = @Id
+                    """,
                     batch.StatusUpdates.Select(update => new
                     {
                         update.Id,
                         Status = update.Status.ToDb(),
+                        PendingOrigin = update.PendingOrigin.ToDb(),
                     }), tx).ConfigureAwait(false);
             }
 
@@ -246,10 +254,66 @@ public sealed class ImageRepository : IImageRepository
         });
     }
 
+    public Task<IReadOnlyList<ImageRecord>> GetPendingByFolderAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        // ECO-129/E-UI-PENDING-049: pending だけを DB 境界で限定(全行 materialize 禁止=ECO-098 同型)
+        return _db.RunAsync<IReadOnlyList<ImageRecord>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<Row>(
+                $"{SelectColumns} WHERE sync_folder_id = @SyncFolderId AND status = 'pending' " +
+                "ORDER BY file_name COLLATE NOCASE, id",
+                new { SyncFolderId = syncFolderId }).ConfigureAwait(false);
+            return rows.Select(r => ToEntity(r)!).ToList();
+        }, ct);
+    }
+
+    public Task<bool> AdjudicatePendingAsync(string id, ImageStatus status)
+    {
+        // ECO-129 T13/T15: pending 限定を UPDATE の WHERE で原子的に強制(0 行=拒否)。
+        // candidate_link_id/pending_origin はクリア(履歴の厳密管理はしない)
+        return _db.RunAsync(async conn =>
+        {
+            var affected = await conn.ExecuteAsync("""
+                UPDATE images
+                SET status = @Status, candidate_link_id = NULL, pending_origin = NULL
+                WHERE id = @Id AND status = 'pending'
+                """,
+                new { Id = id, Status = status.ToDb() }).ConfigureAwait(false);
+            return affected == 1;
+        });
+    }
+
+    public Task<bool> ReplacePendingAsync(string oldId, ImageRecord replacement)
+    {
+        ArgumentNullException.ThrowIfNull(replacement);
+
+        // ECO-129 T14(別画像として扱う=PEND-001 裁定): 単一トランザクションの原子的な行置換。
+        // 旧行 DELETE(image_tags/image_features/image_similarity は FK CASCADE 消滅)→ 新行 INSERT。
+        // DELETE の WHERE で pending 限定を強制(0 行=拒否・rollback)。1 パス 1 行の不変を維持
+        // (UNIQUE(sync_folder_id, relative_path) は DELETE→INSERT の順で衝突しない)
+        return _db.RunAsync(async conn =>
+        {
+            using var tx = conn.BeginTransaction();
+            var affected = await conn.ExecuteAsync(
+                "DELETE FROM images WHERE id = @Id AND status = 'pending'",
+                new { Id = oldId }, tx).ConfigureAwait(false);
+            if (affected != 1)
+            {
+                tx.Rollback();
+                return false;
+            }
+
+            await conn.ExecuteAsync(InsertSql, ToInsertParameters(replacement), tx).ConfigureAwait(false);
+            tx.Commit();
+            return true;
+        });
+    }
+
     private sealed record Row(
         string Id, string SyncFolderId, string RelativePath, string FileName, long FileSize,
         string Hash, string Status, string? CandidateLinkId, string CreatedDate,
-        string ModifiedDate, string? Notes);
+        string ModifiedDate, string? Notes, string? PendingOrigin);
 
     private static object ToInsertParameters(ImageRecord image)
     {
@@ -266,6 +330,7 @@ public sealed class ImageRepository : IImageRepository
             image.CreatedDate,
             image.ModifiedDate,
             image.Notes,
+            PendingOrigin = image.PendingOrigin.ToDb(),
         };
     }
 
@@ -286,6 +351,7 @@ public sealed class ImageRepository : IImageRepository
                 CreatedDate = row.CreatedDate,
                 ModifiedDate = row.ModifiedDate,
                 Notes = row.Notes,
+                PendingOrigin = DbMapping.ToPendingOrigin(row.PendingOrigin),
             };
     }
 }

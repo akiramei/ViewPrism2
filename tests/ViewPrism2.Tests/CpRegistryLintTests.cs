@@ -161,6 +161,7 @@ public sealed class CpRegistryLintTests
         ["CollectionExportWindow.axaml"] = (1, "進捗内キャンセル(リンク風・L2 フッター外)"),
         ["CollectionImportWindow.axaml"] = (3, "ウィザード内操作(インライン指定・golden 承認面=ECO-073)"),
         ["FolderManagementWindow.axaml"] = (5, "ヘッダ/行内操作+フッター(legacy・lazy 遡及候補)"),
+        ["PendingReviewWindow.axaml"] = (1, "左ペイン一覧の行セレクタ(透明ボタン=行ハイライトは内側 Border)。フッター操作ではない=CMP-011 の対象外(ECO-129)"),
         ["ImageTabView.axaml"] = (2, "レール/インライン操作(ダイアログ非該当)"),
         ["NodeConditionDialog.axaml"] = (2, "フッター対=テーマ既定グレー(実態報告済み・lazy 遡及候補=cheat-log 2026-07-21)"),
         ["NumericValueDialog.axaml"] = (2, "同上"),

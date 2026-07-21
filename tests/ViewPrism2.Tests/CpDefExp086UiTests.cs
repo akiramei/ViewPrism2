@@ -218,8 +218,10 @@ public sealed class CpDefExp086UiTests : IDisposable
             window.Show();
             RunJobs();
 
+            // ECO-129: 未裁定バッジ(同族の破線枠)がテンプレート上は常在するため、
+            // 自身の IsVisible でなく実効可視(祖先の IsVisible 込み)で数える=検査意図は不変
             var dashed = window.GetVisualDescendants().OfType<Rectangle>()
-                .Where(r => r.IsVisible && r.StrokeDashArray is { Count: > 0 })
+                .Where(r => r.IsEffectivelyVisible && r.StrokeDashArray is { Count: > 0 })
                 .ToList();
             Assert.True(dashed.Count == 1, $"破線枠の未定義値チップが 1 個でない(実測 {dashed.Count})");
 

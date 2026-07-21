@@ -50,6 +50,11 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private readonly Dictionary<string, int> _collectionCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _collectionPath = new(StringComparer.Ordinal);
     private List<ImageRecord> _allNormal = new();
+
+    // ECO-129/REQ-101: 選択コレクションの pending(未裁定)。無絞り込み FS ブラウズへの並置+
+    // ⋯メニュー「未裁定の画像…」の件数に使う(件数は通常小=裁定対象のみ)
+    private List<ImageRecord> _allPending = new();
+    private List<ImageEntry> _pendingEntries = new();
     private HashSet<string> _normalIds = new(StringComparer.Ordinal);
     private Dictionary<string, List<ImageTag>> _imageTags = new(StringComparer.Ordinal);
     private Dictionary<string, Tag> _tagById = new(StringComparer.Ordinal);
@@ -421,13 +426,14 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             var content = await Task.Run(async () =>
             {
                 var images = await _images.GetNormalByFolderAsync(collectionId, ct).ConfigureAwait(false);
+                var pendings = await _images.GetPendingByFolderAsync(collectionId, ct).ConfigureAwait(false); // ECO-129
                 var imageTags = await _tags.GetImageTagsByFolderAsync(collectionId, ct).ConfigureAwait(false);
                 var tags = await _tags.GetAllAsync().ConfigureAwait(false);
                 var views = await _views.GetAllAsync().ConfigureAwait(false);
                 var trashCount = await _images.CountByFolderAndStatusAsync(
                     collectionId, ImageStatus.Deleted, ct).ConfigureAwait(false);
-                return (Images: images.ToList(), ImageTags: imageTags.ToList(), Tags: tags.ToList(),
-                    Views: views.ToList(), TrashCount: trashCount);
+                return (Images: images.ToList(), Pendings: pendings.ToList(), ImageTags: imageTags.ToList(),
+                    Tags: tags.ToList(), Views: views.ToList(), TrashCount: trashCount);
             }, ct).ConfigureAwait(true);
 
             if (_loadingStopped || generation != _contentLoadGeneration || ct.IsCancellationRequested ||
@@ -435,6 +441,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                 return;
 
             _allNormal = content.Images;
+            _allPending = content.Pendings; // ECO-129
             _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
             _imageTags = content.ImageTags.GroupBy(it => it.ImageId, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
@@ -469,6 +476,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private void ClearContentData()
     {
         _allNormal = [];
+        _allPending = [];
+        _pendingEntries = [];
         _normalIds = new HashSet<string>(StringComparer.Ordinal);
         _imageTags = new Dictionary<string, List<ImageTag>>(StringComparer.Ordinal);
         _entries = [];
@@ -577,6 +586,11 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             .Select(BuildEntry)
             .ToList();
         _entryById = _entries.ToDictionary(e => e.Record.Id, StringComparer.Ordinal); // ECO-113: O(1) 解決
+        // ECO-129/INV-010 v5.0: pending は無絞り込みの FS ブラウズにのみ並置(件数は通常小=裁定対象)
+        _pendingEntries = _allPending
+            .Where(r => _collectionId is not null && string.Equals(r.SyncFolderId, _collectionId, StringComparison.Ordinal))
+            .Select(BuildEntry)
+            .ToList();
     }
 
     private ImageEntry BuildEntry(ImageRecord r)
@@ -630,7 +644,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             else
                 files.Add(e);
         }
-        var folders = folderCounts.Select(kv => (kv.Key, kv.Value)).ToList();
+        // チップ集計・anyTagged は normal のみ(未裁定タグの漏出防止= INV-010 v5.0)。pending の追加より先に確定する
         bool anyTagged = files.Any(f => ImgTagIds(f).Count > 0);
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var f in files)
@@ -638,7 +652,27 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                 counts[tid] = counts.GetValueOrDefault(tid) + 1;
         var chips = counts.Select(kv => (kv.Key, kv.Value)).ToList();
         if (_tagFilter is not null)
+        {
             files = files.Where(f => ImgTagIds(f).Contains(_tagFilter)).ToList();
+        }
+        else
+        {
+            // ECO-129/INV-010 v5.0: pending は無絞り込みの FS ブラウズにのみ並置(バッジ表示)。
+            // タグチップ絞り込み中・view 軸・集計には現れない
+            foreach (var e in _pendingEntries)
+            {
+                var rel = e.Record.RelativePath;
+                if (prefix.Length > 0 && !rel.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                var remainder = prefix.Length > 0 ? rel[prefix.Length..] : rel;
+                int slash = remainder.IndexOf('/');
+                if (slash >= 0)
+                    folderCounts[remainder[..slash]] = folderCounts.GetValueOrDefault(remainder[..slash]) + 1;
+                else
+                    files.Add(e);
+            }
+        }
+
+        var folders = folderCounts.Select(kv => (kv.Key, kv.Value)).ToList();
         return new FsContext(folders, files, chips, anyTagged);
     }
 
@@ -1400,7 +1434,10 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         // ECO-112/VC-IMG-13: ファイル操作モードは選択順の番号バッジを出さない(白✓)。順序は表示順が権威(IMG-026①)。
         int? order = selected && !_fileOpsMode ? _selected.IndexOf(entry.Record.Id) + 1 : null;
         var tagsOf = ImgTagIds(entry);
-        bool inSelect = _editMode || _workMode || _deleteMode || _fileOpsMode;
+        // ECO-129 R8 所見2/3: pending はモード操作の対象外(操作は裁定ダイアログのみ=§2.11.7)。
+        // 選択段で塞ぐ=実行段の normal 限定拒否(TrashService 等)が黙殺される穴を作らない
+        bool isPending = entry.Record.Status == ImageStatus.Pending;
+        bool inSelect = (_editMode || _workMode || _deleteMode || _fileOpsMode) && !isPending;
         // ECO-114: ドットは常時構築(表示可否は hasTagDots)= モード中構築のアイテムが閲覧へ戻った時の
         // 欠落防止+ブラシは色キーでキャッシュ(26万件×3個の再生成を排除)
         var dots = tagsOf.Count > 0
@@ -1418,7 +1455,8 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             cells: cells,
             sortItemLabel: sortItemCell is not null ? sortItemLabel : null,
             sortItemCell: sortItemCell,
-            isPlainCheck: _fileOpsMode);
+            isPlainCheck: _fileOpsMode,
+            isPending: entry.Record.Status == ImageStatus.Pending); // ECO-129: 未裁定バッジ
     }
 
     /// <summary>
@@ -1450,8 +1488,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         foreach (var item in Items)
         {
             if (item.IsFolder) continue;
+            // ECO-129 R8 所見2/3: pending はモード操作対象外(CreateImageItem と同じガード=面内対称)
             item.ApplyModeState(
-                selectable: inSelect,
+                selectable: inSelect && !item.IsPending,
                 showTagDots: !inSelect && item.TagDots.Count > 0,
                 isPlainCheck: _fileOpsMode);
         }
@@ -1919,6 +1958,30 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     //      RestoreSelectedTrash/PurgeSelectedTrash/EmptyTrash)は Trash 子 VM へ移送(ECO-036 第1段)。
     //      XAML は Trash.OpenTrashCommand 等へバインド。
 
+    // ---- 未裁定(pending)裁定の入口(ECO-129/E-UI-PENDING-049・CAD PD-1) ----
+
+    /// <summary>選択コレクションの未裁定件数(⋯メニューの CMP-010 表示系バッジ。0 件では出さない)。</summary>
+    public int PendingCount => _allPending.Count;
+
+    public bool HasPending => _allPending.Count > 0;
+
+    /// <summary>⋯ メニュー: 未裁定の画像(pending)裁定ダイアログを開く(ECO-129/§2.11.7)。閉じ後に再読込。</summary>
+    [RelayCommand]
+    private async Task OpenPendingReview()
+    {
+        MoreMenuOpen = false;
+        if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
+        OnPropertyChanged(string.Empty);
+        var adjudicated = await _windows.ShowPendingReviewAsync(_collectionId).ConfigureAwait(true);
+        if (adjudicated)
+        {
+            // 裁定は normal 化/行置換/deleted 化を含む= 母集合・件数・ゴミ箱件数が変わる
+            await ReloadImagesAsync().ConfigureAwait(true);
+            await Trash.RefreshCountAsync().ConfigureAwait(true);
+            Recompute();
+        }
+    }
+
     /// <summary>⋯ メニュー: 修復ライフサイクル(criteria/relink/復元)を既存モーダルで開く(ECO-015)。閉じ後にデータ再読込。</summary>
     [RelayCommand]
     private async Task OpenRepair()
@@ -2065,6 +2128,12 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         if (item.IsFolder)
         {
             if (item.Target is not null) { Organize.InvalidateSearchContext(); _fsPath.Add(item.Target); _tagFilter = null; _selected.Clear(); Recompute(); }
+            return;
+        }
+        // ECO-129 R8 所見2/3: pending はモード操作(選択・整理)の対象外=操作は裁定ダイアログのみ(§2.11.7)。
+        // 閲覧のダブルクリック(ビューア)は許可=裁定判断の助け(表示集合と整合)
+        if (item.IsPending && (_organizeMode || _editMode || _workMode || _deleteMode || _fileOpsMode))
+        {
             return;
         }
         if (_organizeMode)

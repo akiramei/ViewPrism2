@@ -33,6 +33,22 @@ public interface IImageRepository
     /// <summary>ECO-098: 選択 collection の status=deleted 画像だけをファイル名順で読む。</summary>
     Task<IReadOnlyList<ImageRecord>> GetDeletedByFolderAsync(string syncFolderId, CancellationToken ct = default);
 
+    /// <summary>ECO-129/E-UI-PENDING-049: 選択 collection の status=pending だけをファイル名順で読む(DB 境界限定)。</summary>
+    Task<IReadOnlyList<ImageRecord>> GetPendingByFolderAsync(string syncFolderId, CancellationToken ct = default);
+
+    /// <summary>
+    /// ECO-129 T13/T15(裁定=受入れ/削除): pending 限定を UPDATE の WHERE で原子的に強制。
+    /// candidate_link_id/pending_origin はクリア。false= 対象が pending でなかった(拒否)。
+    /// </summary>
+    Task<bool> AdjudicatePendingAsync(string id, ImageStatus status);
+
+    /// <summary>
+    /// ECO-129 T14(裁定=別画像として扱う・PEND-001): 単一トランザクションの原子的な行置換。
+    /// 旧 pending 行を DELETE(タグ/特徴量/類似は FK CASCADE 消滅)し replacement を INSERT する。
+    /// false= 対象が pending でなかった(拒否・rollback)。1 パス 1 行の不変を維持する。
+    /// </summary>
+    Task<bool> ReplacePendingAsync(string oldId, ImageRecord replacement);
+
     /// <summary>ECO-064: collection行/ゴミ箱badge等の集約用。画像行をmaterializeしない。</summary>
     Task<int> CountByFolderAndStatusAsync(
         string syncFolderId, ImageStatus status, CancellationToken ct = default);

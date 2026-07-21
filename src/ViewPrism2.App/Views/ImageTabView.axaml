@@ -953,6 +953,16 @@
                           <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.fileOps]}" FontSize="13.5" FontWeight="Medium" Foreground="{StaticResource TextPrimaryBrush}" />
                         </StackPanel>
                       </Button>
+                      <!-- 未裁定の画像(ECO-129/CAD PD-1): pending 裁定ダイアログ+CMP-010 件数バッジ -->
+                      <Button Classes="menuRow" Command="{Binding OpenPendingReviewCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                        <DockPanel VerticalAlignment="Center">
+                          <PathIcon DockPanel.Dock="Left" Data="{StaticResource ImageIcon}" Width="16" Height="16" Margin="0,0,10,0" Foreground="#B5670C" />
+                          <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding HasPending}">
+                            <TextBlock Text="{Binding PendingCount}" />
+                          </Border>
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[pending.menuEntry]}" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </DockPanel>
+                      </Button>
                       <!-- 修復: 既存モーダル(ECO-015・変更なし) -->
                       <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -1140,6 +1150,19 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
+                      <!-- 未裁定バッジ(ECO-129/CAD PD-1・REG-C8 琥珀破線族): タイル左上・レイアウト非干渉 -->
+                      <Panel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
+                             IsVisible="{Binding IsPending}">
+                        <Border Background="#F2FDF8EF" CornerRadius="6" Padding="7,2">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Ellipse Width="6" Height="6" Fill="#B5670C" VerticalAlignment="Center" />
+                            <TextBlock FontSize="11" FontWeight="Bold" Foreground="#8A5A20"
+                                       Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[pending.badge]}" />
+                          </StackPanel>
+                        </Border>
+                        <Rectangle Stroke="#E0B36A" StrokeThickness="1" StrokeDashArray="3,2"
+                                   RadiusX="6" RadiusY="6" IsHitTestVisible="False" />
+                      </Panel>
                     </Panel>
                   </Border>
                   <TextBlock Classes="thumbName" Text="{Binding Name}" HorizontalAlignment="Center" />
@@ -1264,6 +1287,19 @@
                                     IsVisible="{Binding IsPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Panel>
                       </Border>
+                      <!-- 未裁定バッジ(ECO-129): リスト行は行末チップ(名前セルは列テンプレート内のため行末=実装立地。golden 判断材料) -->
+                      <Panel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0"
+                             IsVisible="{Binding IsPending}">
+                        <Border Background="#FDF8EF" CornerRadius="6" Padding="7,2">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Ellipse Width="6" Height="6" Fill="#B5670C" VerticalAlignment="Center" />
+                            <TextBlock FontSize="11" FontWeight="Bold" Foreground="#8A5A20"
+                                       Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[pending.badge]}" />
+                          </StackPanel>
+                        </Border>
+                        <Rectangle Stroke="#E0B36A" StrokeThickness="1" StrokeDashArray="3,2"
+                                   RadiusX="6" RadiusY="6" IsHitTestVisible="False" />
+                      </Panel>
                       <!-- 型別セル(Grid=ColumnTemplate で列位置一致) -->
                       <ItemsControl ItemsSource="{Binding Cells}">
                         <ItemsControl.ItemsPanel>

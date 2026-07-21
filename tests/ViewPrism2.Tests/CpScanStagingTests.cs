@@ -99,9 +99,10 @@ public sealed class CpScanStagingTests : IDisposable
     }
 
     /// <summary>
-    /// 標準フィクスチャ: 初回スキャン(a/b/e=normal)後に全遷移を仕込む。
-    /// 期待: unchanged=e / meta=b / addNormal=c / addPending=d(candidate=a) / missing=a /
-    /// pendingRemoved=p / deletedExcluded=x(メタ更新) / readFailure=locked。
+    /// 標準フィクスチャ: 初回スキャン(a/b/e=normal)後に全遷移を仕込む(v5.0=ECO-129 意味論)。
+    /// 期待: unchanged=e / contentChanged=b(normal→pending) / addedPending=c(候補なし)+d(candidate=a) /
+    /// missingFromNormal=a / missingFromPending=p(行削除の廃止) / deletedExcluded=x(メタ更新のみ) /
+    /// readFailure=locked。
     /// 返り値はロック保持ストリーム(caller が dispose するまで locked.jpg は読めない)。
     /// </summary>
     private async Task<(SyncFolder Folder, string AId, FileStream Lock)> BuildRescanFixtureAsync()
@@ -175,25 +176,31 @@ public sealed class CpScanStagingTests : IDisposable
         var s = staged.Value!;
 
         Assert.Equal(1, s.Unchanged);            // e.jpg
-        Assert.Equal(1, s.MetaUpdated);          // b.jpg
-        Assert.Equal(1, s.AddedNormal);          // c.jpg
-        Assert.Equal(1, s.AddedPending);         // d.jpg(candidate=a)
+        Assert.Equal(1, s.ContentChanged);       // b.jpg(normal→pending)
+        Assert.Equal(2, s.AddedPending);         // c.jpg(候補なし)+d.jpg(candidate=a)
+        Assert.Equal(0, s.Reappeared);
         Assert.Equal(1, s.MissingFromNormal);    // a.jpg
-        Assert.Equal(1, s.PendingRemoved);       // p.jpg
+        Assert.Equal(1, s.MissingFromPending);   // p.jpg(行削除の廃止=missing 保持)
         Assert.Equal(1, s.DeletedExcluded);      // deleted/x.jpg(メタ更新のみ)
         Assert.Equal(1, s.ReadFailures);         // locked.jpg
-        Assert.Equal(5, s.TotalChanges);         // meta+addN+addP+missing+pendingRemoved
+        Assert.Equal(5, s.TotalChanges);         // content+addP×2+missN+missP
         Assert.Equal(5, s.ManagedTotal);         // a,b,e,p,x
         Assert.Equal(6, s.ScannedFiles);         // e,b,c,d,x,locked
+        Assert.Equal(3, s.PendingTotal);         // 裁定対象= addP×2+content
 
-        // 変更案の中身: candidate_link_id が missing 化される a を指す
-        var pendingAdd = Assert.Single(s.Adds, r => r.Status == ImageStatus.Pending);
-        Assert.Equal(aId, pendingAdd.CandidateLinkId);
+        // 変更案の中身: d の candidate_link_id が missing 化される a を指す・c は候補なし
+        Assert.Equal(2, s.Adds.Count);
+        Assert.All(s.Adds, r => Assert.Equal(ImageStatus.Pending, r.Status));
+        Assert.All(s.Adds, r => Assert.Equal(PendingOrigin.New, r.PendingOrigin));
+        Assert.Equal(aId, s.Adds.Single(r => r.RelativePath == "d.jpg").CandidateLinkId);
+        Assert.Null(s.Adds.Single(r => r.RelativePath == "c.jpg").CandidateLinkId);
         Assert.Equal(2, s.MetaUpdates.Count);    // b(規則2)+x(deleted 行のメタ更新も従来どおり)
-        var statusUpdate = Assert.Single(s.StatusUpdates);
-        Assert.Equal(aId, statusUpdate.Id);
-        Assert.Equal(ImageStatus.Missing, statusUpdate.Status);
-        Assert.Equal("img-p0000000001", Assert.Single(s.Deletes));
+        Assert.Equal(3, s.StatusUpdates.Count);  // a→missing・p→missing・b→pending('changed')
+        Assert.Equal(ImageStatus.Missing, s.StatusUpdates.Single(u => u.Id == aId).Status);
+        Assert.Equal(ImageStatus.Missing, s.StatusUpdates.Single(u => u.Id == "img-p0000000001").Status);
+        var bPend = s.StatusUpdates.Single(u => u.Status == ImageStatus.Pending);
+        Assert.Equal(PendingOrigin.Changed, bPend.PendingOrigin);
+        Assert.Empty(s.Deletes);                 // v5.0: 行削除は発生しない
     }
 
     // ---- ⑥ 例示の上限 ----
@@ -214,10 +221,10 @@ public sealed class CpScanStagingTests : IDisposable
         Assert.True(staged.IsSuccess, staged.Message);
         var s = staged.Value!;
 
-        Assert.Equal(ScanStaging.ExamplesPerKind + 3, s.AddedNormal);
+        Assert.Equal(ScanStaging.ExamplesPerKind + 3, s.AddedPending);
         Assert.Equal(
             ScanStaging.ExamplesPerKind,
-            s.Examples.Count(e => e.Kind == ScanTransitionKind.AddedNormal));
+            s.Examples.Count(e => e.Kind == ScanTransitionKind.AddedPending));
     }
 
     // ---- ③ キャンセル=無変更 ----
@@ -254,10 +261,16 @@ public sealed class CpScanStagingTests : IDisposable
 
         var rows = await SnapshotRowsAsync(folder.Id);
         Assert.Equal(ImageStatus.Missing, rows.Single(r => r.Id == aId).Status);            // a: missing 化
-        Assert.DoesNotContain(rows, r => r.RelativePath == "p.jpg");                        // p: 行削除
-        Assert.Equal(HashOf("content-b-changed"), rows.Single(r => r.RelativePath == "b.jpg").Hash);
+        var p = rows.Single(r => r.RelativePath == "p.jpg");                                // p: 行保持(v5.0)
+        Assert.Equal(ImageStatus.Missing, p.Status);
+        Assert.Null(p.PendingOrigin);
+        var b = rows.Single(r => r.RelativePath == "b.jpg");
+        Assert.Equal(HashOf("content-b-changed"), b.Hash);
+        Assert.Equal(ImageStatus.Pending, b.Status);                                        // 内容変更→pending
+        Assert.Equal(PendingOrigin.Changed, b.PendingOrigin);
         var c = rows.Single(r => r.RelativePath == "c.jpg");
-        Assert.Equal(ImageStatus.Normal, c.Status);
+        Assert.Equal(ImageStatus.Pending, c.Status);                                        // 再スキャン新規→pending
+        Assert.Equal(PendingOrigin.New, c.PendingOrigin);
         var d = rows.Single(r => r.RelativePath == "d.jpg");
         Assert.Equal(ImageStatus.Pending, d.Status);
         Assert.Equal(aId, d.CandidateLinkId);
@@ -269,11 +282,38 @@ public sealed class CpScanStagingTests : IDisposable
         // last_scan 更新+summary(ScanAsync と同じ意味論)
         Assert.NotEqual(lastScanBefore, (await _db.Folders.GetByIdAsync(folder.Id))!.LastScan);
         var summary = applied.Value!;
-        Assert.Equal(1, summary.Added);
-        Assert.Equal(1, summary.Pending);
-        Assert.Equal(1, summary.Missing);
+        Assert.Equal(0, summary.Added);     // v5.0: normal 登録は初回のみ
+        Assert.Equal(2, summary.Pending);   // c+d
+        Assert.Equal(2, summary.Missing);   // a+p
         Assert.Equal(2, summary.Updated);   // b+x(deleted 行メタ更新も従来どおり計上)
-        Assert.Equal(2, summary.Skipped);   // e(変更なし)+locked(読み取り失敗)
+        Assert.Equal(2, summary.Skipped);   // e(変更なし)+locked(読み取り失敗)= 一段階と同一計上(deleted 規則2 は Updated 側のみ=R8 所見5)
+    }
+
+    [Fact]
+    public async Task 再出現はステージ適用でもpending化し一段階とサマリーが一致する()
+    {
+        // R8 所見9: T11(missing 再出現)のステージ経路被覆。判定器共有のためロジックは同一だが、
+        // origin 書込+サマリー計上(PendInPlace→Updated)を Stage→Apply 経由で機械検査する
+        WriteFile("a.jpg", "content-a");
+        var folder = await RegisterFolderAsync();
+        Assert.True((await _scan.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken)).IsSuccess);
+        DeleteFile("a.jpg");
+        Assert.True((await _scan.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken)).IsSuccess);
+        Assert.Equal(ImageStatus.Missing,
+            (await _db.Images.GetByFolderAsync(folder.Id)).Single().Status);
+
+        WriteFile("a.jpg", "content-a"); // 同一内容で再出現(メタ差の有無に依らず pending 化=規則 1 例外/2)
+        var staged = await _scan.StageAsync(folder.Id, null, TestContext.Current.CancellationToken);
+        Assert.True(staged.IsSuccess, staged.Message);
+        Assert.Equal(1, staged.Value!.Reappeared);
+        Assert.Equal(1, staged.Value.TotalChanges);
+
+        var applied = await _scan.ApplyStagedAsync(staged.Value, null, TestContext.Current.CancellationToken);
+        Assert.True(applied.IsSuccess, applied.Message);
+        Assert.Equal(1, applied.Value!.Updated); // 一段階(updated++)と同一計上=R8 所見5
+        var row = (await _db.Images.GetByFolderAsync(folder.Id)).Single();
+        Assert.Equal(ImageStatus.Pending, row.Status);
+        Assert.Equal(PendingOrigin.Reappeared, row.PendingOrigin);
     }
 
     [Fact]
@@ -341,7 +381,7 @@ public sealed class CpScanStagingTests : IDisposable
 
             // R8 所見12: 候補は「参照先の相対パス」で正規化(bool では別 missing への誤リンクを見逃す)。
             // FileSize も比較に含める(EQ-001: id/日時の具体値のみ無視)
-            static List<(string Path, ImageStatus Status, string Hash, long Size, string? CandidatePath)> Normalize(
+            static List<(string Path, ImageStatus Status, PendingOrigin? Origin, string Hash, long Size, string? CandidatePath)> Normalize(
                 IReadOnlyList<ImageRecord> rows)
             {
                 var pathById = rows.ToDictionary(r => r.Id, r => r.RelativePath.ToLowerInvariant(), StringComparer.Ordinal);
@@ -349,6 +389,7 @@ public sealed class CpScanStagingTests : IDisposable
                     .Select(r => (
                         r.RelativePath.ToLowerInvariant(),
                         r.Status,
+                        r.PendingOrigin,
                         r.Hash,
                         r.FileSize,
                         r.CandidateLinkId is { } link ? pathById[link] : null))

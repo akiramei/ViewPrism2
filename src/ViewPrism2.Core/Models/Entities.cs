@@ -41,6 +41,9 @@ public sealed record ImageRecord
     /// <summary>pending 時の再リンク候補(missing 行の id)(REQ-012 規則 3a)。</summary>
     public string? CandidateLinkId { get; init; }
 
+    /// <summary>pending の由来(REQ-101/ECO-129)。pending 以外へ遷移時に NULL クリア。</summary>
+    public PendingOrigin? PendingOrigin { get; init; }
+
     /// <summary>ISO 8601 UTC 文字列(INV-002)。</summary>
     public required string CreatedDate { get; init; }
 

@@ -219,6 +219,114 @@ internal static class Program
         await CaptureFileListSortAsync(outDir, manager, tagRepo, tagService, viewService, locJa);
         await CaptureFileOpsAsync(outDir, manager, tagRepo, viewService, locJa);
         await CaptureScanSummaryAsync(outDir, locJa);
+        await CapturePendingReviewAsync(outDir, manager, tagRepo, viewService, locJa);
+    }
+
+    /// <summary>
+    /// ECO-129(pending_review PD-1〜4): 未裁定バッジ+裁定ダイアログの R7 並置用撮影。
+    /// 原器= pending_review/PD-*.png。pending 行を直接シード(実ファイルなし=クローム比較・ECO-109 同様式)。
+    /// </summary>
+    private static async Task CapturePendingReviewAsync(
+        string outDir, DatabaseManager manager, TagRepository tagRepo,
+        ViewService viewService, LocalizationService locJa)
+    {
+        var folders = new SyncFolderRepository(manager);
+        var images = new ImageRepository(manager);
+        var col = (await folders.GetAllAsync()).First(f => f.Id == "col-eco109");
+
+        // pending 3 種をシード(PD-1 バッジ+PD-2/3 一覧の由来チップ)
+        async Task<ImageRecord> SeedPendingAsync(string path, PendingOrigin origin, string? candidate = null)
+        {
+            var record = new ImageRecord
+            {
+                Id = IdGenerator.NewId(),
+                SyncFolderId = col.Id,
+                RelativePath = path,
+                FileName = path[(path.LastIndexOf('/') + 1)..],
+                FileSize = 2_516_582, // 2.4 MB(PD-2 の比較行)
+                Hash = "pending-" + path,
+                Status = ImageStatus.Pending,
+                PendingOrigin = origin,
+                CandidateLinkId = candidate,
+                CreatedDate = "2026-07-19T09:02:00.000Z",
+                ModifiedDate = "2026-07-20T13:41:00.000Z",
+            };
+            await images.AddAsync(record);
+            return record;
+        }
+
+        var changed = await SeedPendingAsync("hakone_0142.jpg", PendingOrigin.Changed);
+        await SeedPendingAsync("hakone_0198.jpg", PendingOrigin.Changed);
+        var missing = new ImageRecord
+        {
+            Id = IdGenerator.NewId(), SyncFolderId = col.Id, RelativePath = "album_0004.png",
+            FileName = "album_0004.png", FileSize = 1, Hash = "same-content",
+            Status = ImageStatus.Missing,
+            CreatedDate = "2026-01-01T00:00:00.000Z", ModifiedDate = "2026-01-01T00:00:00.000Z",
+        };
+        await images.AddAsync(missing);
+        await SeedPendingAsync("scan_0001.jpg", PendingOrigin.New, missing.Id);
+        await SeedPendingAsync("dsc_8820.jpg", PendingOrigin.Restored);
+
+        // ---- PD-1: 画像タブのバッジ+⋯メニュー入口 ----
+        var featureRepo = new ImageFeatureRepository(manager);
+        var simRepo = new ImageSimilarityRepository(manager);
+        var tab = new ImageTabViewModel(
+            folders, images, tagRepo, new ImageSorter(),
+            viewService, new NodeGraphBuilder(), new PathConditionConverter(), new ConditionEvaluator(),
+            new SimilaritySearchService(folders, images, featureRepo, simRepo, new PHashImageReader(), new SystemClock()),
+            new MergeService(images, tagRepo, new MergeRepository(manager)),
+            new TrashService(images, folders, new FilePresenceProbe()),
+            new StubWindows(), new AppSettings(), new WorkspaceService(new WorkspaceRepository(manager), new SystemClock()),
+            locJa);
+        await tab.InitializeAsync(col.Id);
+        tab.SetGridCommand.Execute(null);
+        var tabWindow = new Window { Content = new ImageTabView { DataContext = tab }, Width = 1240, Height = 860 };
+        tabWindow.Show();
+        await PumpAsync();
+        tab.ToggleMoreMenuCommand.Execute(null);
+        await PumpAsync();
+        Capture(tabWindow, Path.Combine(outDir, "impl-pending-PD-1.png"));   // 原器 PD-1.png(バッジ+メニュー)
+        tabWindow.Close();
+        await PumpAsync();
+
+        // ---- PD-2/3/4: 裁定ダイアログ ----
+        var review = new ViewPrism2.Core.Services.Repair.PendingReviewService(images);
+        async Task<PendingReviewViewModel> NewVmAsync()
+        {
+            var vm = new PendingReviewViewModel(review, images, tagRepo, locJa, new StubWindows(), col);
+            await vm.LoadAsync();
+            return vm;
+        }
+
+        async Task ShotAsync(PendingReviewViewModel vm, string file)
+        {
+            var window = new PendingReviewWindow { DataContext = vm };
+            window.Show();
+            await PumpAsync();
+            await PumpAsync();
+            Capture(window, Path.Combine(outDir, file));
+            window.Close();
+            await PumpAsync();
+        }
+
+        var pd2 = await NewVmAsync();
+        pd2.Selected = pd2.Items.First(i => string.Equals(i.Record.Id, changed.Id, StringComparison.Ordinal));
+        await ShotAsync(pd2, "impl-pending-PD-2.png");                        // 内容変更由来
+
+        var pd3 = await NewVmAsync();
+        pd3.Selected = pd3.Items.First(i => i.Record.CandidateLinkId is not null);
+        await ShotAsync(pd3, "impl-pending-PD-3.png");                        // 新規・候補あり
+
+        // PD-4 空状態: 全件裁定して空へ(受け入れ=T13)
+        var pd4 = await NewVmAsync();
+        while (pd4.Items.Count > 0)
+        {
+            pd4.Selected = pd4.Items[0];
+            await pd4.AcceptCommand.ExecuteAsync(null);
+        }
+
+        await ShotAsync(pd4, "impl-pending-PD-4.png");
     }
 
     /// <summary>
@@ -260,8 +368,9 @@ internal static class Program
         small.PresentSummary(new ScanStaging
         {
             FolderId = "scan-demo", ManagedTotal = 12400, ScannedFiles = 12391,
-            Unchanged = 12372, MetaUpdated = 3, AddedNormal = 16, AddedPending = 0,
-            MissingFromNormal = 9, PendingRemoved = 0, DeletedUnchanged = 0, ReadFailures = 0,
+            Unchanged = 12372, ContentChanged = 3, AddedPending = 16, Reappeared = 0,
+            MissingFromNormal = 9, MissingFromPending = 0,
+            DeletedUnchanged = 0, DeletedMetaRefreshed = 0, PendedWithoutMeta = 0, ReadFailures = 0,
             Adds = [], MetaUpdates = [], StatusUpdates = [], Deletes = [], Examples = [],
         });
         await ShotAsync(small, "impl-scan-SC-2.png");
@@ -273,10 +382,11 @@ internal static class Program
             vm.PresentSummary(new ScanStaging
             {
                 FolderId = "scan-demo", ManagedTotal = 259984, ScannedFiles = 250142,
-                Unchanged = 249963, MetaUpdated = 124, AddedNormal = 0, AddedPending = 16,
-                MissingFromNormal = 9842, PendingRemoved = 18, DeletedUnchanged = 37, ReadFailures = 2,
+                Unchanged = 249963, ContentChanged = 124, AddedPending = 16, Reappeared = 0,
+                MissingFromNormal = 9842, MissingFromPending = 18,
+                DeletedUnchanged = 0, DeletedMetaRefreshed = 37, PendedWithoutMeta = 0, ReadFailures = 2,
                 Deletes = [],
-                // DeletedExcluded/候補件数は変更案リストから導出されるため件数を実データと同型に埋める
+                // 候補件数(裁定対象の内数)は変更案リストから導出されるため件数を実データと同型に埋める
                 MetaUpdates = Enumerable.Range(0, 124)
                     .Select(i => new ScanFileMetaUpdate($"img-{i:D6}", "hash", 1, "2026-01-01T00:00:00.000Z"))
                     .ToList(),
@@ -300,11 +410,11 @@ internal static class Program
                     .ToList(),
                 Examples =
                 [
-                    new ScanTransitionExample(ScanTransitionKind.MetaUpdated, "2024/旅行/hakone_0142.jpg"),
-                    new ScanTransitionExample(ScanTransitionKind.MetaUpdated, "2024/旅行/hakone_0198.jpg"),
+                    new ScanTransitionExample(ScanTransitionKind.ContentChanged, "2024/旅行/hakone_0142.jpg"),
+                    new ScanTransitionExample(ScanTransitionKind.ContentChanged, "2024/旅行/hakone_0198.jpg"),
                     new ScanTransitionExample(ScanTransitionKind.MissingFromNormal, "2023/家族/album_0004.png"),
                     new ScanTransitionExample(ScanTransitionKind.MissingFromNormal, "2023/家族/album_0005.png"),
-                    new ScanTransitionExample(ScanTransitionKind.PendingRemoved, "取り込み/dsc_8811.jpg"),
+                    new ScanTransitionExample(ScanTransitionKind.MissingFromPending, "取り込み/dsc_8811.jpg"),
                     new ScanTransitionExample(ScanTransitionKind.AddedPending, "2026/スキャン/scan_0001.jpg"),
                 ],
             });
@@ -319,8 +429,9 @@ internal static class Program
         large.PresentSummary(new ScanStaging
         {
             FolderId = "scan-demo", ManagedTotal = 260000, ScannedFiles = 2600,
-            Unchanged = 2600, MetaUpdated = 0, AddedNormal = 0, AddedPending = 0,
-            MissingFromNormal = 257400, PendingRemoved = 0, DeletedUnchanged = 0, ReadFailures = 0,
+            Unchanged = 2600, ContentChanged = 0, AddedPending = 0, Reappeared = 0,
+            MissingFromNormal = 257400, MissingFromPending = 0,
+            DeletedUnchanged = 0, DeletedMetaRefreshed = 0, PendedWithoutMeta = 0, ReadFailures = 0,
             Adds = [], MetaUpdates = [], StatusUpdates = [], Deletes = [], Examples = [],
         });
         await ShotAsync(large, "impl-scan-SC-4.png");

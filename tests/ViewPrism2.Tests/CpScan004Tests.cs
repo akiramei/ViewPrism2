@@ -130,21 +130,33 @@ public sealed class CpScan004Tests : IDisposable
     }
 
     [Fact]
-    public void 規則2_サイズまたは日時の差異はUpdateMetaでハッシュ再計算()
+    public void 規則2_サイズまたは日時の差異はハッシュ再計算しnormal起点はpending化する()
     {
+        // v5.0(ECO-129/REQ-101): 内容変更= 編集か差し替えかを機械判定しない → pending('changed')
         var judge = new ScanJudge();
         var existing = NewRecord("img-1", "a.jpg", 10, "2026-01-01T00:00:00.000Z");
 
         var bySize = judge.Judge(
             new ScanFileFacts("a.jpg", 20, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h1"),
             new ScanDbFacts(existing, []), isInitialScan: false);
-        Assert.Equal(ScanDecisionKind.UpdateMeta, bySize.Kind);
+        Assert.Equal(ScanDecisionKind.UpdateMetaAndPend, bySize.Kind);
         Assert.Equal("h1", bySize.Hash);
+        Assert.Equal(PendingOrigin.Changed, bySize.PendingOrigin);
 
         var byDate = judge.Judge(
             new ScanFileFacts("a.jpg", 10, "2026-01-02T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h2"),
             new ScanDbFacts(existing, []), isInitialScan: false);
-        Assert.Equal(ScanDecisionKind.UpdateMeta, byDate.Kind);
+        Assert.Equal(ScanDecisionKind.UpdateMetaAndPend, byDate.Kind);
+
+        // pending 起点= メタ追随のみ(origin 維持)/deleted 起点= 除外(メタ更新のみ・status 不変)
+        var pendingRow = NewRecord("img-2", "b.jpg", 10, "2026-01-01T00:00:00.000Z", ImageStatus.Pending);
+        Assert.Equal(ScanDecisionKind.UpdateMeta, judge.Judge(
+            new ScanFileFacts("b.jpg", 20, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h3"),
+            new ScanDbFacts(pendingRow, []), isInitialScan: false).Kind);
+        var deletedRow = NewRecord("img-3", "c.jpg", 10, "2026-01-01T00:00:00.000Z", ImageStatus.Deleted);
+        Assert.Equal(ScanDecisionKind.UpdateMeta, judge.Judge(
+            new ScanFileFacts("c.jpg", 20, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h4"),
+            new ScanDbFacts(deletedRow, []), isInitialScan: false).Kind);
     }
 
     [Fact]
@@ -384,8 +396,9 @@ public sealed class CpScan004Tests : IDisposable
         };
 
     [Fact]
-    public async Task 規則2_内容変更でhashとメタが更新されstatusは不変()
+    public async Task 規則2_内容変更でhashとメタが更新されnormal起点はpending化する()
     {
+        // v5.0(ECO-129/REQ-101): 旧「status は変更しない」は superseded — 不確実は pending に倒す
         var path = WriteFile("a.jpg", "before");
         var folder = await RegisterFolderAsync();
         await ScanOkAsync(folder.Id);
@@ -397,7 +410,8 @@ public sealed class CpScan004Tests : IDisposable
         Assert.Equal(0, summary.Added);
         var row = Assert.Single(await _db.Images.GetByFolderAsync(folder.Id));
         Assert.Equal(HashOf("after-longer-content"), row.Hash);
-        Assert.Equal(ImageStatus.Normal, row.Status); // status は変更しない
+        Assert.Equal(ImageStatus.Pending, row.Status);              // T10: 内容変更→pending
+        Assert.Equal(PendingOrigin.Changed, row.PendingOrigin);
         Assert.Equal(Encoding.UTF8.GetBytes("after-longer-content").Length, row.FileSize);
     }
 
@@ -417,15 +431,20 @@ public sealed class CpScan004Tests : IDisposable
     }
 
     [Fact]
-    public async Task 手順5_物理消失したpending行は削除される()
+    public async Task 手順5_物理消失したpending行はmissingへ遷移し行は保持される()
     {
+        // v5.0(ECO-129/REQ-101): 旧「行削除」は superseded — pending はタグを持ち得るため保全(T12)
         var folder = await RegisterFolderAsync();
         await ScanOkAsync(folder.Id); // last_scan を確定(以降は非初回)
         await SeedImageAsync(folder.Id, "ghost.jpg", ImageStatus.Pending, "ghost", "p-1");
 
         await ScanOkAsync(folder.Id);
 
-        Assert.Empty(await _db.Images.GetByFolderAsync(folder.Id)); // 行削除
+        var row = Assert.Single(await _db.Images.GetByFolderAsync(folder.Id));
+        Assert.Equal("p-1", row.Id);
+        Assert.Equal(ImageStatus.Missing, row.Status);
+        Assert.Null(row.CandidateLinkId);   // 候補関係の失効
+        Assert.Null(row.PendingOrigin);     // origin クリア
     }
 
     [Fact]
@@ -476,9 +495,13 @@ public sealed class CpScan004Tests : IDisposable
         var row = Assert.Single(await _db.Images.GetByFolderAsync(folder.Id));
         Assert.Equal("ok.jpg", row.RelativePath); // ロックファイルの行は作られない
 
-        // 次回スキャンで再試行され、今度は取り込まれる
+        // 次回スキャンで再試行され、今度は取り込まれる(v5.0: 再スキャンの新規= pending)
         var retry = await ScanOkAsync(folder.Id);
-        Assert.Equal(1, retry.Added);
+        Assert.Equal(0, retry.Added);
+        Assert.Equal(1, retry.Pending);
+        var locked = Assert.Single(
+            await _db.Images.GetByFolderAsync(folder.Id), r => r.RelativePath == "locked.jpg");
+        Assert.Equal(ImageStatus.Pending, locked.Status);
     }
 
     [Fact]
@@ -765,6 +788,15 @@ public sealed class CpScan004Tests : IDisposable
 
         public Task<IReadOnlyList<ImageRecord>> GetDeletedByFolderAsync(string syncFolderId, CancellationToken ct = default)
             => _inner.GetDeletedByFolderAsync(syncFolderId, ct);
+
+        public Task<IReadOnlyList<ImageRecord>> GetPendingByFolderAsync(string syncFolderId, CancellationToken ct = default)
+            => _inner.GetPendingByFolderAsync(syncFolderId, ct);
+
+        public Task<bool> AdjudicatePendingAsync(string id, ImageStatus status)
+            => _inner.AdjudicatePendingAsync(id, status);
+
+        public Task<bool> ReplacePendingAsync(string oldId, ImageRecord replacement)
+            => _inner.ReplacePendingAsync(oldId, replacement);
 
         public Task<int> CountByFolderAndStatusAsync(string syncFolderId, ImageStatus status, CancellationToken ct = default)
             => _inner.CountByFolderAndStatusAsync(syncFolderId, status, ct);

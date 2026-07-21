@@ -178,10 +178,10 @@ public sealed class ScanService
             }
         }
 
-        int missingFromNormal = 0, pendingRemoved = 0;
+        int missingFromNormal = 0, missingFromPending = 0;
         var examined = 0; // 処理済み件数(DB 行の実在確認+ファイル判定の合算。SC-1 の表示単位)
 
-        // 手順 4・5 相当(仕様 §2.1 実行順序): DB へは書かず、変更案とメモリ上の判定用ビューを作る
+        // 手順 4・5 相当(仕様 §2.1 実行順序・v5.0): DB へは書かず、変更案とメモリ上の判定用ビューを作る
         var current = new List<ImageRecord>(existing.Count);
         foreach (var record in existing)
         {
@@ -193,18 +193,25 @@ public sealed class ScanService
             }
 
             var fullPath = Path.Combine(root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (record.Status == ImageStatus.Normal && !File.Exists(fullPath))
+            if (record.Status is ImageStatus.Normal or ImageStatus.Pending && !File.Exists(fullPath))
             {
                 statusUpdates.Add(new ScanStatusUpdate(record.Id, ImageStatus.Missing));
-                current.Add(record with { Status = ImageStatus.Missing });
-                missingFromNormal++;
-                AddExample(ScanTransitionKind.MissingFromNormal, record.RelativePath);
-            }
-            else if (record.Status == ImageStatus.Pending && !File.Exists(fullPath))
-            {
-                deletes.Add(record.Id);
-                pendingRemoved++;
-                AddExample(ScanTransitionKind.PendingRemoved, record.RelativePath);
+                current.Add(record with
+                {
+                    Status = ImageStatus.Missing,
+                    CandidateLinkId = null,
+                    PendingOrigin = null,
+                });
+                if (record.Status == ImageStatus.Normal)
+                {
+                    missingFromNormal++;
+                    AddExample(ScanTransitionKind.MissingFromNormal, record.RelativePath);
+                }
+                else
+                {
+                    missingFromPending++;
+                    AddExample(ScanTransitionKind.MissingFromPending, record.RelativePath);
+                }
             }
             else
             {
@@ -215,8 +222,9 @@ public sealed class ScanService
         var byPath = current.ToDictionary(i => i.RelativePath, StringComparer.OrdinalIgnoreCase);
         var missingInFolder = current.Where(i => i.Status == ImageStatus.Missing).ToList();
 
-        int unchanged = 0, metaUpdated = 0, deletedUnchanged = 0, readFailures = 0;
-        int addedNormal = 0, addedPending = 0;
+        int unchanged = 0, contentChanged = 0, reappeared = 0, readFailures = 0;
+        int deletedUnchanged = 0, deletedMetaRefreshed = 0, pendedWithoutMeta = 0;
+        var addedPending = 0;
         var scannedFiles = 0;
 
         // 手順 2〜3 相当: 判定のみ(OC-5 の器は不変)。DB へは書かない
@@ -253,20 +261,48 @@ public sealed class ScanService
                         break;
 
                     case ScanDecisionKind.UpdateMeta:
+                        // pending 起点=メタ追随(内容変更に計上)/deleted 起点=除外(メタ更新のみ適用)
                         metaUpdates.Add(new ScanFileMetaUpdate(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate));
-                        if (row.Status != ImageStatus.Deleted)
+                        if (row.Status == ImageStatus.Deleted)
                         {
-                            metaUpdated++;
-                            AddExample(ScanTransitionKind.MetaUpdated, relativePath);
+                            deletedMetaRefreshed++;
+                        }
+                        else
+                        {
+                            contentChanged++;
+                            AddExample(ScanTransitionKind.ContentChanged, relativePath);
                         }
 
                         break;
 
-                    case ScanDecisionKind.AddNormal:
-                        adds.Add(NewRecord(folder.Id, facts, decision, ImageStatus.Normal));
-                        addedNormal++;
-                        AddExample(ScanTransitionKind.AddedNormal, relativePath);
+                    case ScanDecisionKind.UpdateMetaAndPend:
+                        metaUpdates.Add(new ScanFileMetaUpdate(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate));
+                        statusUpdates.Add(new ScanStatusUpdate(row.Id, ImageStatus.Pending, decision.PendingOrigin));
+                        if (decision.PendingOrigin == PendingOrigin.Reappeared)
+                        {
+                            reappeared++;
+                            AddExample(ScanTransitionKind.Reappeared, relativePath);
+                        }
+                        else
+                        {
+                            contentChanged++;
+                            AddExample(ScanTransitionKind.ContentChanged, relativePath);
+                        }
+
                         break;
+
+                    case ScanDecisionKind.PendInPlace:
+                        statusUpdates.Add(new ScanStatusUpdate(row!.Id, ImageStatus.Pending, decision.PendingOrigin));
+                        reappeared++;
+                        pendedWithoutMeta++; // R8 所見5: 一段階の updated++ と適用後サマリーを揃える
+                        AddExample(ScanTransitionKind.Reappeared, relativePath);
+                        break;
+
+                    case ScanDecisionKind.AddNormal:
+                        // R8 所見6: 再スキャン専用のステージングでは到達しない(規則 3-初回= isInitialScan のみ)。
+                        // 「normal を挿入しつつ pending と表示」する自己矛盾を作らないため明示的に封じる
+                        throw new InvalidOperationException(
+                            "StageAsync は再スキャン専用です(初回スキャンは ScanAsync=REQ-086/SCAN-001)。");
 
                     case ScanDecisionKind.AddPending:
                     default:
@@ -299,12 +335,14 @@ public sealed class ScanService
             ManagedTotal = existing.Count,
             ScannedFiles = scannedFiles,
             Unchanged = unchanged,
-            MetaUpdated = metaUpdated,
-            AddedNormal = addedNormal,
+            ContentChanged = contentChanged,
             AddedPending = addedPending,
+            Reappeared = reappeared,
             MissingFromNormal = missingFromNormal,
-            PendingRemoved = pendingRemoved,
+            MissingFromPending = missingFromPending,
             DeletedUnchanged = deletedUnchanged,
+            DeletedMetaRefreshed = deletedMetaRefreshed,
+            PendedWithoutMeta = pendedWithoutMeta,
             ReadFailures = readFailures,
             Adds = adds,
             MetaUpdates = metaUpdates,
@@ -407,12 +445,14 @@ public sealed class ScanService
 
             await _folders.UpdateLastScanAsync(staging.FolderId, _clock.UtcNowIso()).ConfigureAwait(false);
 
+            // R8 所見5: 一段階スキャンの計上規則と一致させる(updated= メタ更新+PendInPlace/
+            // skipped= 変更なし+deleted 規則1+読み取り失敗。deleted 規則2 は updated 側のみ=二重計上しない)
             return Result<ScanSummary>.Ok(new ScanSummary
             {
-                Added = staging.AddedNormal,
-                Missing = staging.MissingFromNormal,
+                Added = 0, // 再スキャン専用(normal 登録は初回のみ=REQ-101)
+                Missing = staging.MissingFromNormal + staging.MissingFromPending,
                 Pending = staging.AddedPending,
-                Updated = staging.MetaUpdates.Count,
+                Updated = staging.MetaUpdates.Count + staging.PendedWithoutMeta,
                 Skipped = staging.Unchanged + staging.DeletedUnchanged + staging.ReadFailures,
             });
         }
@@ -457,23 +497,25 @@ public sealed class ScanService
         var batch = new ScanBatchBuffer(_images, folder.Id, committed, ScanBatchSize);
 
         // 手順 4: status=normal で物理ファイルが存在しない行 → missing
-        // 手順 5: 物理ファイルが存在しない status=pending の行 → 行削除
+        // 手順 5(v5.0=ECO-129): 物理ファイルが存在しない status=pending の行 → missing
+        //   (行削除を廃止=タグを持ち得る pending の保全。candidate/origin はクリア=適用側の契約)
         // 注: 判定(手順 3)より先に適用する。リネーム(旧ファイル消失+新ファイル出現)を単一スキャンで
-        //     missing+pending にするため(FMEA-004 / 遷移表)。判定規則 3a は missing 化後の状態を参照する。
+        //     missing+pending にするため(FMEA-004 / 遷移表)。判定規則 3-再は missing 化後の状態を参照する。
         var current = new List<ImageRecord>(existing.Count);
         foreach (var record in existing)
         {
             ct.ThrowIfCancellationRequested();
             var fullPath = Path.Combine(root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (record.Status == ImageStatus.Normal && !File.Exists(fullPath))
+            if (record.Status is ImageStatus.Normal or ImageStatus.Pending && !File.Exists(fullPath))
             {
                 batch.AddStatus(record.Id, ImageStatus.Missing);
-                current.Add(record with { Status = ImageStatus.Missing });
+                current.Add(record with
+                {
+                    Status = ImageStatus.Missing,
+                    CandidateLinkId = null,
+                    PendingOrigin = null,
+                });
                 missing++;
-            }
-            else if (record.Status == ImageStatus.Pending && !File.Exists(fullPath))
-            {
-                batch.AddDelete(record.Id); // 候補が消えたため
             }
             else
             {
@@ -516,6 +558,19 @@ public sealed class ScanService
 
                     case ScanDecisionKind.UpdateMeta:
                         batch.AddFileMeta(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate);
+                        updated++;
+                        break;
+
+                    case ScanDecisionKind.UpdateMetaAndPend:
+                        // v5.0: 内容変更(normal 起点)/再出現(missing 起点)= メタ更新+pending 化
+                        batch.AddFileMeta(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate);
+                        batch.AddStatus(row.Id, ImageStatus.Pending, decision.PendingOrigin);
+                        updated++;
+                        break;
+
+                    case ScanDecisionKind.PendInPlace:
+                        // v5.0: missing 起点・メタ一致の再出現= pending 化のみ
+                        batch.AddStatus(row!.Id, ImageStatus.Pending, decision.PendingOrigin);
                         updated++;
                         break;
 
@@ -603,6 +658,7 @@ public sealed class ScanService
             Hash = decision.Hash!,
             Status = status,
             CandidateLinkId = decision.CandidateLinkId,
+            PendingOrigin = decision.PendingOrigin,
             CreatedDate = facts.CreatedDate,
             ModifiedDate = facts.ModifiedDate,
         };
@@ -660,8 +716,8 @@ public sealed class ScanService
         public void AddFileMeta(string id, string hash, long fileSize, string modifiedDate)
             => _fileMetaUpdates.Add(new ScanFileMetaUpdate(id, hash, fileSize, modifiedDate));
 
-        public void AddStatus(string id, ImageStatus status)
-            => _statusUpdates.Add(new ScanStatusUpdate(id, status));
+        public void AddStatus(string id, ImageStatus status, PendingOrigin? origin = null)
+            => _statusUpdates.Add(new ScanStatusUpdate(id, status, origin));
 
         public void AddDelete(string id) => _deletes.Add(id);
 

@@ -59,6 +59,13 @@ public interface IWindowService
     Task<ScanStagingOutcome> ShowScanStagingAsync(SyncFolder folder)
         => Task.FromResult(ScanStagingOutcome.Discarded);
 
+    /// <summary>
+    /// pending 裁定ダイアログ(ECO-129/REQ-101・§2.11.7・CAD PD-1〜4)。選択コレクションの未裁定を
+    /// 1 件ずつ裁定する。戻り値= 1 件以上裁定した(呼び出し側の再読込トリガ)。
+    /// 既定実装=何もしない(テスト Stub 追随の負担を避ける。実体は WindowService)。
+    /// </summary>
+    Task<bool> ShowPendingReviewAsync(string collectionId) => Task.FromResult(false);
+
     /// <summary>設定ウィンドウ(モーダル)。</summary>
     Task ShowSettingsAsync();
 

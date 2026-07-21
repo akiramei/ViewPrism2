@@ -785,7 +785,7 @@ public sealed partial class ImageItemVM : ObservableObject
         string sizeLabel, string dateLabel, string? target, string? absolutePath = null,
         int? selectionOrder = null, bool isMergeTarget = false, bool isOrganizeTarget = false,
         IReadOnlyList<ListCell>? cells = null, string? sortItemLabel = null, ListCell? sortItemCell = null,
-        bool isPlainCheck = false)
+        bool isPlainCheck = false, bool isPending = false)
     {
         Id = id; Name = name; IsFolder = isFolder; IsPlaceholder = isPlaceholder; HasThumb = hasThumb;
         ThumbBrush = thumbBrush; _selectable = selectable; _isSelected = isSelected;
@@ -793,9 +793,13 @@ public sealed partial class ImageItemVM : ObservableObject
         Target = target; AbsolutePath = absolutePath; _selectionOrder = selectionOrder;
         _isMergeTarget = isMergeTarget; _isOrganizeTarget = isOrganizeTarget;
         _isPlainCheck = isPlainCheck;
+        IsPending = isPending;
         Cells = cells ?? [];
         SortItemLabel = sortItemLabel; SortItemCell = sortItemCell;
     }
+
+    /// <summary>未裁定(status=pending)= 琥珀破線バッジを重畳表示(ECO-129/INV-010 v5.0)。</summary>
+    public bool IsPending { get; }
 
     /// <summary>ファイル一覧(リスト)の型別セル(ECO-025 β・アクティブビューの display_columns 由来)。</summary>
     public IReadOnlyList<ListCell> Cells { get; }

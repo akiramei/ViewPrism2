@@ -85,6 +85,7 @@ public sealed class CpRecomputeCouplingLintTests
         ["ImageTabViewModel.cs:SelectAxis"] = (1, "A: 軸切替=母集合変化"),
         ["ImageTabViewModel.cs:LoadViewAsync"] = (1, "A: view不在fallback=FS退避"),
         ["ImageTabViewModel.cs:ReloadViewGraphAsync"] = (1, "A: graph再構築=母集合変化"),
+        ["ImageTabViewModel.cs:OpenPendingReview"] = (1, "A: 裁定確定後のみ(adjudicated ガード)= normal 化/行置換/deleted 化で母集合が変わる=再解決が意味論上必要(ECO-129)"),
         ["ImageTabViewModel.cs:OpenRepair"] = (1, "C: モーダル閉じ後の無条件再読(変化検出なし・cheat-log 2026-07-21 予告記帳=症状観測で分離起票)"),
         ["ImageTabViewModel.cs:OpenBackupSettings"] = (1, "C: 同上(取り込みが表示中コレクションを変えうる=ECO-077 由来)"),
         ["ImageTabViewModel.cs:SetSortAsc"] = (1, "A: 全件ソート本質"),

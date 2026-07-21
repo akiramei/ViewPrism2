@@ -18,6 +18,27 @@ internal static class DbMapping
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
     };
 
+    /// <summary>pending_origin(REQ-101/ECO-129)。NULL=由来なし。</summary>
+    public static string? ToDb(this PendingOrigin? origin) => origin switch
+    {
+        null => null,
+        PendingOrigin.Changed => "changed",
+        PendingOrigin.New => "new",
+        PendingOrigin.Reappeared => "reappeared",
+        PendingOrigin.Restored => "restored",
+        _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null),
+    };
+
+    public static PendingOrigin? ToPendingOrigin(string? value) => value switch
+    {
+        null => null,
+        "changed" => PendingOrigin.Changed,
+        "new" => PendingOrigin.New,
+        "reappeared" => PendingOrigin.Reappeared,
+        "restored" => PendingOrigin.Restored,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), value, null),
+    };
+
     public static ImageStatus ToImageStatus(string value) => value switch
     {
         "normal" => ImageStatus.Normal,

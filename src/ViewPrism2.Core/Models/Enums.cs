@@ -9,6 +9,25 @@ public enum ImageStatus
     Pending,
 }
 
+/// <summary>
+/// pending の由来(仕様 §2.11.7 REQ-101/ECO-129。裁定 UI の由来表示用)。
+/// pending 以外へ遷移するとき NULL へクリアする(履歴の厳密管理はしない)。
+/// </summary>
+public enum PendingOrigin
+{
+    /// <summary>内容変更(規則 2: normal 起点のメタ不一致)。</summary>
+    Changed,
+
+    /// <summary>再スキャンの新規(規則 3-再)。</summary>
+    New,
+
+    /// <summary>missing のパスにファイル再出現(規則 1/2)。</summary>
+    Reappeared,
+
+    /// <summary>ゴミ箱復元(ECO-128 予約)。</summary>
+    Restored,
+}
+
 /// <summary>タグの 3 種意味論(仕様 §2.2 REQ-020)。</summary>
 public enum TagType
 {

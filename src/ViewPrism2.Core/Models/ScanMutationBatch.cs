@@ -7,8 +7,12 @@ public sealed record ScanFileMetaUpdate(
     long FileSize,
     string ModifiedDate);
 
-/// <summary>スキャン規則 4 で適用するステータス変更。</summary>
-public sealed record ScanStatusUpdate(string Id, ImageStatus Status);
+/// <summary>
+/// スキャン手順 4/5・規則 1/2 で適用するステータス変更(v5.0=ECO-129: pending 化に由来を添える)。
+/// PendingOrigin は遷移ごとに明示上書き(null=クリア)。pending 以外へ遷移する行は
+/// candidate_link_id もクリアされる(適用側の契約=ImageRepository)。
+/// </summary>
+public sealed record ScanStatusUpdate(string Id, ImageStatus Status, PendingOrigin? PendingOrigin = null);
 
 /// <summary>
 /// ECO-059: スキャン中のDB変更を単一トランザクションで適用する有界バッチ。

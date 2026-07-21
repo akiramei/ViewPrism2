@@ -1845,8 +1845,8 @@ changes:
   - id: ECO-129
     title: "pending 意味論の再定義 — 「relink 候補」から「存在するが未裁定」の管理状態へ(スキャン判定の pending 化+裁定導線。状態管理モデル改訂 3 分割の b)"
     type: "仕様改訂候補(状態機械の中核意味論変更+UI 新設。実装逸脱ではない)"
-    status: staged
-    golden: "pending(是正後に基準提示=裁定 UI・26 万件実機含む。CAD mock 先行=gate①)"
+    status: implemented   # 2026-07-21 是正+機械受入完了(build 0/0・Tests 915/915・Oracle 109+2skip=凍結行無接触〔skip 化裁定は 129 でも行使不要と実測確定〕・validate 0/0)。PEND-001 追加裁定=行置換(旧提案はパス一意性と衝突)。R5 赤8→緑+R8 是正前赤3。R7=PD-1〜4 並置+ECO-130 面が mock へ収束(SC-3 完全一致)。R8 所見12件全処置(要修正2=修復前の無同意スキャン撤去/pending のモード操作ガード)。golden 待ち(本文 §9 基準10点)
+    golden: "pending(本文 §9 基準10点=内容変更→pending+バッジ/裁定4操作/新規・再出現/初回無傷/モードガード/修復無スキャン/新語彙/視覚並置 ja・en/回帰)"
     baseline: "main 390e1f4"
     findings: "maintainer 設計まとめ(2026-07-21 §2/§3/§7/§13)の投入=3 分割の中核。変更内容=①内容変更(規則2)は status 不変→pending(編集/差し替えは機械判定しない) ②新規発見(規則3b)は normal→pending ③pending のファイル消失は行削除(手順5)→missing 保持 ④pending 裁定導線新設(受入れ/別画像/削除/保留)。工程診断=仕様層の設計変更+CAD 未定義(実装は現仕様に忠実: ScanJudge.cs:64/:87・ScanService.cs:163=v4.0 どおり・逸脱ゼロ。pending 裁定 UI の mock/screen_spec 不在=CAD 先行)。確定事実=①OC-5 exact 行+S-01(初回3枚 normal 前提)が旧意味論を pin=R6 衝突(裁定必要) ②INV-010 と新規衝突=内容変更→pending でタグ付き画像が全ビューから消える UX(現行は規則2 が status 不変のため起きない)=可視化方針の裁定必要 ③INV-015 前提が破れる=新モデルの pending はタグを持ち得る(内容変更由来・復元由来)→手順5 無条件行削除はタグ損失=行削除廃止が安全性の要 ④candidate_link_id は新モデルでも候補ヒントとして有用(3a は自然に再解釈可) ⑤適用前確認なしで新規全 pending 化すると初回登録26万件で裁定爆発=ECO-130 先行または同時(maintainer 指示済み)。未検証=初回スキャン特例の要否・「別画像として扱う」の遷移詳細(§7=履歴の厳密管理はしない方針)・status=normal 前提の全消費サイト棚卸し(fix 時 grep 悉皆)"
     impacted_bom: ["CAD=pending 裁定 UI+pending 可視化の mock/screen_spec 新設(ViewPrismUI・先行)", "spec=§2.1 規則2/3b・手順5・遷移表 T1/T2 改訂+裁定遷移追加・INV-010/013/015 改訂・REQ 新設(採番は spec 改訂時)", "src=ScanJudge/ScanService+裁定サービス/VM/View 新設+INV-010 消費サイト追随", "tests=OC-5 追随+oracle 新規行+裁定遷移 unit+UI probe"]

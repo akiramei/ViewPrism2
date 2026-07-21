@@ -128,6 +128,28 @@ public sealed class WindowService : IWindowService
     /// <summary>スキャン結果確認の親付け先(R8 所見3: sibling 活性の穴を塞ぐ)。</summary>
     private Window? _activeFolderManagement;
 
+    public async Task<bool> ShowPendingReviewAsync(string collectionId)
+    {
+        if (Owner is null)
+        {
+            return false;
+        }
+
+        var folder = await _folders.GetByIdAsync(collectionId);
+        if (folder is null)
+        {
+            return false;
+        }
+
+        // ECO-129/§2.11.7: 裁定は 1 件ずつ確定・遷移は PendingReviewService(T13/T14/T15)経由のみ
+        var vm = new PendingReviewViewModel(
+            new PendingReviewService(_images), _images, _tags, _localization, this, folder);
+        var window = new PendingReviewWindow { DataContext = vm };
+        await vm.LoadAsync();
+        await window.ShowDialog(Owner);
+        return vm.Adjudicated;
+    }
+
     public async Task<ScanStagingOutcome> ShowScanStagingAsync(SyncFolder folder)
     {
         // R8 所見3: Owner(メイン窓)親だとフォルダ管理ウィンドウが sibling として活性のまま=
@@ -461,11 +483,10 @@ public sealed class WindowService : IWindowService
             return;
         }
 
-        // GF-V4-02(原典 view-prism 準拠): 修復を開く前にコレクションをスキャンしてリンク切れを検出する。
-        // 記録パスのファイル消失→missing 化 / リネーム後の新ファイル→pending 登録(=自動修復候補)。
-        // これにより「再起動/コレクション展開で検出される」原典挙動に相当(明示再スキャン不要)。
-        // ルート消失時の一括 missing 化は ScanService 側が抑止(INV-009/V1 F-3 保護)。
-        await _scans.ScanAsync(collectionId, null, System.Threading.CancellationToken.None);
+        // ECO-129 R8 所見1: 旧 GF-V4-02 の「修復を開く前の暗黙一段階スキャン」は撤去。
+        // v5.0(REQ-100/REQ-101)では再スキャン=二段階(サマリー+適用同意)が正であり、
+        // 暗黙スキャンは同意なく DB を変更し(内容変更の pending 化を含む)REQ-100 を迂回する。
+        // 修復は「開いた時点の DB 状態」を表示し、鮮度が必要ならユーザーが明示的に再スキャンする。
 
         // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): relink フロー(検索=候補絞り込みに統一)。
         // _folders は候補/missing のサムネイル絶対パス解決用(GF-V4-04)。
