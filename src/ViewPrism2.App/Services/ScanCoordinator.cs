@@ -83,6 +83,64 @@ public sealed class ScanCoordinator
         }
     }
 
+    /// <summary>
+    /// ECO-130/REQ-100: 再スキャンの差分計算。DB 完全無変更のため started/batch/completed は raise しない
+    /// (段階的公開は初回スキャン専用= REQ-086)。二重起動ガードだけ従来経路と共有する。
+    /// </summary>
+    public async Task<Result<ScanStaging>> StageAsync(
+        string folderId, IProgress<int>? processed, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(folderId);
+        lock (_gate)
+        {
+            if (!_scanning.Add(folderId))
+            {
+                return Result<ScanStaging>.Fail(ErrorCode.ScanInProgress, "このフォルダはスキャン実行中です。");
+            }
+        }
+
+        try
+        {
+            return await _scan.StageAsync(folderId, processed, ct).ConfigureAwait(true);
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                _scanning.Remove(folderId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// ECO-130/REQ-100: ステージング適用(一括反映+last_scan 更新)。適用完了後の一覧反映は
+    /// 呼び出し側の DataChanged 経路(フォルダ管理→画像タブ再読込)が担う。
+    /// </summary>
+    public async Task<Result<ScanSummary>> ApplyStagedAsync(
+        ScanStaging staging, IProgress<int>? progress, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(staging);
+        lock (_gate)
+        {
+            if (!_scanning.Add(staging.FolderId))
+            {
+                return Result<ScanSummary>.Fail(ErrorCode.ScanInProgress, "このフォルダはスキャン実行中です。");
+            }
+        }
+
+        try
+        {
+            return await _scan.ApplyStagedAsync(staging, progress, ct).ConfigureAwait(true);
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                _scanning.Remove(staging.FolderId);
+            }
+        }
+    }
+
     private void Raise(CollectionScanUpdate update) => Updated?.Invoke(this, update);
 
     private sealed class ContextProgress<T> : IProgress<T>

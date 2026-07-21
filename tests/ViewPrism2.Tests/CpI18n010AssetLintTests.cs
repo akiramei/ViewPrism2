@@ -177,6 +177,8 @@ public sealed class CpI18n010AssetLintTests
         ["SnapshotViewModel.cs:StatusMessage"] = "スナップショットウィンドウ内(モーダル)",
         ["TagEditorViewModel.cs:ErrorMessage"] = "タグ編集ダイアログ内(モーダル)",
         ["ViewEditDialogViewModel.cs:ErrorMessage"] = "ビュー編集ダイアログ内(モーダル)",
+        ["ScanSummaryViewModel.cs:StatusMessage"] = "スキャン結果確認ダイアログ内(モーダル・ECO-130。設定=言語切替導線へ同時到達不能)",
+        ["ScanSummaryViewModel.cs:Outcome"] = "スキャン結果確認の閉窓時一回性の受け渡し(ECO-130。Error は呼び出し元 row.RowMessage=既層別サイトが即時表示)",
 
         // ---- (b) 開くたび再構築される射影(表示状態を跨いで保持しない) ----
         ["ColumnPickerViewModel.cs:Key"] = "列ピッカー行の射影(開くたび Rebuild・object initializer 検出)",

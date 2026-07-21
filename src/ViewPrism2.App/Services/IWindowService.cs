@@ -51,6 +51,14 @@ public interface IWindowService
     /// <summary>同期フォルダ管理ウィンドウ(モーダル。詳細編集: 除外パターン・サブフォルダ等)。</summary>
     Task ShowFolderManagementAsync();
 
+    /// <summary>
+    /// 二段階スキャン(ECO-130/REQ-100): 再スキャンの差分計算→サマリー確認→適用/破棄をモーダルで実施。
+    /// 戻り値= 結末(適用/破棄/失敗)。破棄・キャンセル・失敗は DB 完全無変更。
+    /// 既定実装=破棄(テスト Stub 追随の負担を避ける。実体は WindowService)。
+    /// </summary>
+    Task<ScanStagingOutcome> ShowScanStagingAsync(SyncFolder folder)
+        => Task.FromResult(ScanStagingOutcome.Discarded);
+
     /// <summary>設定ウィンドウ(モーダル)。</summary>
     Task ShowSettingsAsync();
 

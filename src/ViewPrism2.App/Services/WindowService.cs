@@ -114,7 +114,35 @@ public sealed class WindowService : IWindowService
         var vm = new FolderManagementViewModel(_folders, _scans, _localization, this);
         var window = new FolderManagementWindow { DataContext = vm };
         await vm.LoadAsync();
-        await window.ShowDialog(Owner);
+        _activeFolderManagement = window;
+        try
+        {
+            await window.ShowDialog(Owner);
+        }
+        finally
+        {
+            _activeFolderManagement = null;
+        }
+    }
+
+    /// <summary>スキャン結果確認の親付け先(R8 所見3: sibling 活性の穴を塞ぐ)。</summary>
+    private Window? _activeFolderManagement;
+
+    public async Task<ScanStagingOutcome> ShowScanStagingAsync(SyncFolder folder)
+    {
+        // R8 所見3: Owner(メイン窓)親だとフォルダ管理ウィンドウが sibling として活性のまま=
+        // stage→apply 間の「アプリ内並行変更なし」(REQ-100)が破れる。フォルダ管理へ親付けして塞ぐ
+        var owner = _activeFolderManagement ?? Owner;
+        if (owner is null)
+        {
+            return ScanStagingOutcome.Discarded;
+        }
+
+        // ECO-130/REQ-100: モーダル(差分計算は Window.Opened で開始)
+        var vm = new ScanSummaryViewModel(_scans, _localization, this, folder);
+        var window = new ScanSummaryWindow { DataContext = vm };
+        await window.ShowDialog(owner);
+        return vm.Outcome;
     }
 
     public Task ShowSettingsAsync() => ShowSettingsAsync(SettingsSection.General);

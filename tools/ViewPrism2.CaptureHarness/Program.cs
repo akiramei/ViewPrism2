@@ -218,6 +218,129 @@ internal static class Program
 
         await CaptureFileListSortAsync(outDir, manager, tagRepo, tagService, viewService, locJa);
         await CaptureFileOpsAsync(outDir, manager, tagRepo, viewService, locJa);
+        await CaptureScanSummaryAsync(outDir, locJa);
+    }
+
+    /// <summary>
+    /// ECO-130(scan_summary SC-1〜6): 二段階スキャンの R7 並置用撮影。原器= scan_summary/SC-*.png。
+    /// ステージングは PresentSummary へ直接注入(実スキャンなし=決定論)。数値は原器 mock と同値。
+    /// SC-6 は ConfirmDialog(CMP-011 既存部品)委譲のため scan 文言で撮影する。
+    /// </summary>
+    private static async Task CaptureScanSummaryAsync(string outDir, LocalizationService locJa)
+    {
+        ScanSummaryViewModel NewVm(string name, string path) => new(
+            new ScanCoordinator(null!), locJa, new StubWindows(),
+            new SyncFolder { Id = "scan-demo", Name = name, Path = path });
+
+        async Task ShotAsync(ScanSummaryViewModel vm, string file, bool detail = false)
+        {
+            if (detail)
+            {
+                vm.ShowDetailCommand.Execute(null);
+            }
+
+            var window = new ScanSummaryWindow { DataContext = vm };
+            window.Show();
+            await PumpAsync();
+            await PumpAsync();
+            Capture(window, Path.Combine(outDir, file));
+            window.Close();
+            await PumpAsync();
+        }
+
+        // SC-1 スキャン中(AutoStart=false で表示のみ再現。数値は原器と同値)
+        var scanning = NewVm("メイン写真庫", @"D:\Photos\Main");
+        scanning.AutoStart = false;
+        scanning.ProcessedText = locJa.T("scan.processed", new Dictionary<string, string> { ["count"] = "132,480" });
+        scanning.ElapsedText = locJa.T("scan.elapsed", new Dictionary<string, string> { ["time"] = "01:12" });
+        await ShotAsync(scanning, "impl-scan-SC-1.png");
+
+        // SC-2 小規模(グリーン 0.07%・変更 28)
+        var small = NewVm("スクリーンショット", @"D:\Photos\Shots");
+        small.PresentSummary(new ScanStaging
+        {
+            FolderId = "scan-demo", ManagedTotal = 12400, ScannedFiles = 12391,
+            Unchanged = 12372, MetaUpdated = 3, AddedNormal = 16, AddedPending = 0,
+            MissingFromNormal = 9, PendingRemoved = 0, DeletedUnchanged = 0, ReadFailures = 0,
+            Adds = [], MetaUpdates = [], StatusUpdates = [], Deletes = [], Examples = [],
+        });
+        await ShotAsync(small, "impl-scan-SC-2.png");
+
+        // SC-3 中規模(イエロー 3.8%・変更 10,000)+SC-5 詳細(同一ステージング)
+        ScanSummaryViewModel Medium()
+        {
+            var vm = NewVm("メイン写真庫", @"D:\Photos\Main");
+            vm.PresentSummary(new ScanStaging
+            {
+                FolderId = "scan-demo", ManagedTotal = 259984, ScannedFiles = 250142,
+                Unchanged = 249963, MetaUpdated = 124, AddedNormal = 0, AddedPending = 16,
+                MissingFromNormal = 9842, PendingRemoved = 18, DeletedUnchanged = 37, ReadFailures = 2,
+                Deletes = [],
+                // DeletedExcluded/候補件数は変更案リストから導出されるため件数を実データと同型に埋める
+                MetaUpdates = Enumerable.Range(0, 124)
+                    .Select(i => new ScanFileMetaUpdate($"img-{i:D6}", "hash", 1, "2026-01-01T00:00:00.000Z"))
+                    .ToList(),
+                StatusUpdates = Enumerable.Range(0, 9842)
+                    .Select(i => new ScanStatusUpdate($"mis-{i:D6}", ImageStatus.Missing))
+                    .ToList(),
+                Adds = Enumerable.Range(0, 16)
+                    .Select(i => new ImageRecord
+                    {
+                        Id = $"new-{i:D4}",
+                        SyncFolderId = "scan-demo",
+                        RelativePath = $"2026/スキャン/scan_{i:D4}.jpg",
+                        FileName = $"scan_{i:D4}.jpg",
+                        FileSize = 1,
+                        Hash = "hash",
+                        Status = ImageStatus.Pending,
+                        CandidateLinkId = $"mis-{i:D6}",
+                        CreatedDate = "2026-01-01T00:00:00.000Z",
+                        ModifiedDate = "2026-01-01T00:00:00.000Z",
+                    })
+                    .ToList(),
+                Examples =
+                [
+                    new ScanTransitionExample(ScanTransitionKind.MetaUpdated, "2024/旅行/hakone_0142.jpg"),
+                    new ScanTransitionExample(ScanTransitionKind.MetaUpdated, "2024/旅行/hakone_0198.jpg"),
+                    new ScanTransitionExample(ScanTransitionKind.MissingFromNormal, "2023/家族/album_0004.png"),
+                    new ScanTransitionExample(ScanTransitionKind.MissingFromNormal, "2023/家族/album_0005.png"),
+                    new ScanTransitionExample(ScanTransitionKind.PendingRemoved, "取り込み/dsc_8811.jpg"),
+                    new ScanTransitionExample(ScanTransitionKind.AddedPending, "2026/スキャン/scan_0001.jpg"),
+                ],
+            });
+            return vm;
+        }
+
+        await ShotAsync(Medium(), "impl-scan-SC-3.png");
+        await ShotAsync(Medium(), "impl-scan-SC-5.png", detail: true);
+
+        // SC-4 大規模(レッド 99.0%)— 適用ボタンは有効のまま(REQ-100)
+        var large = NewVm("メイン写真庫", @"D:\Photos\Main");
+        large.PresentSummary(new ScanStaging
+        {
+            FolderId = "scan-demo", ManagedTotal = 260000, ScannedFiles = 2600,
+            Unchanged = 2600, MetaUpdated = 0, AddedNormal = 0, AddedPending = 0,
+            MissingFromNormal = 257400, PendingRemoved = 0, DeletedUnchanged = 0, ReadFailures = 0,
+            Adds = [], MetaUpdates = [], StatusUpdates = [], Deletes = [], Examples = [],
+        });
+        await ShotAsync(large, "impl-scan-SC-4.png");
+
+        // SC-6 適用の確認(CMP-011 ConfirmDialog・primary=物理非破壊)
+        var confirm = new ConfirmDialog(
+            new LocalizationProxy(locJa),
+            locJa.T("scan.applyConfirmTitle"),
+            locJa.T("scan.applyConfirmMessage", new Dictionary<string, string>
+            {
+                ["count"] = "10,000",
+                ["missing"] = "9,842",
+            }),
+            locJa.T("scan.applyConfirmCta", new Dictionary<string, string> { ["count"] = "10,000" }),
+            destructive: false);
+        confirm.Show();
+        await PumpAsync();
+        Capture(confirm, Path.Combine(outDir, "impl-scan-SC-6.png"));
+        confirm.Close();
+        await PumpAsync();
     }
 
     /// <summary>

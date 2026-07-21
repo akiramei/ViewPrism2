@@ -1,0 +1,332 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        x:Class="ViewPrism2.App.Views.ScanSummaryWindow"
+        x:DataType="vm:ScanSummaryViewModel"
+        Width="640" SizeToContent="Height" MaxHeight="780"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Title="{Binding WindowTitle}"
+        Background="{StaticResource AppBackgroundBrush}">
+  <!-- スキャン結果確認(ECO-130/REQ-100・E-UI-SCANSTAGE-048。CAD= ViewPrismUI scan_summary.md SC-1〜6)。
+       面は単一 Window 内の状態切替(Scanning/Summary/Detail/Applying)。フッター= docked・右寄せ+
+       「結果を破棄」左端分離(CMP-011 dlgBtn 委譲=生 Button 禁止)。本体のみスクロール
+       (ScrollViewer.Padding 禁止= CP-AXAML-LINT-117。余白は内容側 Margin)。 -->
+  <Window.Styles>
+    <!-- 遷移別サマリー行(L6: ラベル淡色/値右寄せ太字/行区切り線) -->
+    <Style Selector="Border.sumRow">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="BorderBrush" Value="#EEF0F4" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Border.sumRow.total">
+      <Setter Property="Background" Value="#F7F9FC" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <!-- missing 率カード(L4 callout 3 色)と情報 callout -->
+    <Style Selector="Border.callout">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.callout.green">
+      <Setter Property="Background" Value="#EAFAF0" />
+      <Setter Property="BorderBrush" Value="#C2ECD2" />
+    </Style>
+    <Style Selector="Border.callout.yellow">
+      <Setter Property="Background" Value="#FDF8EF" />
+      <Setter Property="BorderBrush" Value="#E0B36A" />
+    </Style>
+    <Style Selector="Border.callout.red">
+      <Setter Property="Background" Value="#FBECED" />
+      <Setter Property="BorderBrush" Value="#F0C4C6" />
+    </Style>
+    <Style Selector="Border.callout.blue">
+      <Setter Property="Background" Value="#EAF1FE" />
+      <Setter Property="BorderBrush" Value="#CFE0FC" />
+    </Style>
+    <!-- 詳細(SC-5)の遷移チップ: pending 系=琥珀破線(破線は Rectangle overlay=既存様式
+         LabeledChipStrip と同型)/missing 系=赤/新規=青 -->
+    <Style Selector="Border.stateChip">
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.stateChip.amber">
+      <Setter Property="Background" Value="#FDF8EF" />
+    </Style>
+    <Style Selector="Border.stateChip.red">
+      <Setter Property="Background" Value="#FBECED" />
+      <Setter Property="BorderBrush" Value="#F0C4C6" />
+    </Style>
+    <Style Selector="Border.stateChip.blue">
+      <Setter Property="Background" Value="#EAF1FE" />
+      <Setter Property="BorderBrush" Value="#CFE0FC" />
+    </Style>
+    <!-- サマリー行のタイポ(dim/total は行 Border の Classes で切替) -->
+    <Style Selector="Border.sumRow TextBlock.lbl">
+      <Setter Property="Foreground" Value="#5B6473" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Border.sumRow TextBlock.cnt">
+      <Setter Property="Foreground" Value="#2B3340" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Border.sumRow.dim TextBlock.lbl">
+      <Setter Property="Foreground" Value="#AAB1BD" />
+    </Style>
+    <Style Selector="Border.sumRow.dim TextBlock.cnt">
+      <Setter Property="Foreground" Value="#AAB1BD" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="Border.sumRow.total TextBlock.lbl">
+      <Setter Property="Foreground" Value="#2B3340" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Border.sumRow.total TextBlock.cnt">
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+    <!-- フッター(docked・常時可視=layoutInvariant) -->
+    <Border DockPanel.Dock="Bottom" Background="White" BorderBrush="#EEF0F4" BorderThickness="0,1,0,0">
+      <DockPanel Margin="20,14">
+        <!-- 「結果を破棄」は左端へ分離(誤操作防止=CAD) -->
+        <Button DockPanel.Dock="Left" Classes="dlgBtn secondary"
+                IsVisible="{Binding IsSummaryPhase}"
+                Command="{Binding DiscardCommand}"
+                Content="{Binding Loc[scan.discard]}" />
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+          <Button Classes="dlgBtn secondary"
+                  IsVisible="{Binding IsScanningPhase}"
+                  Command="{Binding CancelCommand}"
+                  Content="{Binding Loc[common.cancel]}" />
+          <Button Classes="dlgBtn secondary"
+                  IsVisible="{Binding IsDetailPhase}"
+                  Command="{Binding BackCommand}"
+                  Content="{Binding Loc[scan.back]}" />
+          <Button Classes="dlgBtn secondary" x:Name="DetailButton"
+                  Command="{Binding ShowDetailCommand}"
+                  Content="{Binding Loc[scan.viewChanges]}">
+            <Button.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IsSummaryPhase" />
+                <Binding Path="ShowDetailButton" />
+              </MultiBinding>
+            </Button.IsVisible>
+          </Button>
+          <Button Classes="dlgBtn primary" x:Name="ApplyButton"
+                  IsVisible="{Binding IsSummaryPhase}"
+                  IsEnabled="{Binding CanApply}"
+                  Command="{Binding ApplyCommand}"
+                  Content="{Binding ApplyLabel}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- 本体(唯一のスクロール担当=layoutInvariant) -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="20,18" Spacing="14">
+
+        <!-- ═══ SC-1 スキャン中(差分計算) ═══ -->
+        <StackPanel IsVisible="{Binding IsScanningPhase}" Spacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <!-- スピナー(青リング 18px。静止近似=淡青リング+アクセント弧) -->
+            <Panel Width="18" Height="18" VerticalAlignment="Top" Margin="0,2,0,0">
+              <Border Width="18" Height="18" CornerRadius="9" BorderBrush="#CFE0FC" BorderThickness="2.5" />
+              <Path Data="M 9,1.25 A 7.75,7.75 0 0 1 16.75,9" Stroke="#2F6BED" StrokeThickness="2.5" />
+            </Panel>
+            <StackPanel Spacing="2">
+              <TextBlock FontWeight="Bold" Text="{Binding Loc[scan.calculating]}" />
+              <TextBlock FontSize="12" Foreground="#8A93A2" Text="{Binding ScanPathText}" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Spacing="10">
+            <ProgressBar IsIndeterminate="True" Height="6" CornerRadius="3" />
+            <DockPanel>
+              <TextBlock FontSize="12.5" Foreground="#2B3340" FontWeight="Bold"
+                         Text="{Binding ProcessedText}" />
+              <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" FontSize="12.5"
+                         Foreground="#8A93A2" Text="{Binding ElapsedText}" />
+            </DockPanel>
+          </StackPanel>
+          <TextBlock FontSize="12" Foreground="#8A93A2" TextWrapping="Wrap"
+                     Text="{Binding Loc[scan.stagingNote]}" />
+        </StackPanel>
+
+        <!-- ═══ SC-2〜4 完了サマリー ═══ -->
+        <StackPanel IsVisible="{Binding IsSummaryPhase}" Spacing="14">
+          <!-- 対象ヘッダ(フォルダグリフ+名前太字+副情報淡色) -->
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="34" Height="34" CornerRadius="9" Background="#EEF1F7">
+              <Path Width="18" Height="18" Stretch="Uniform" Stroke="#5B6473" StrokeThickness="1.8"
+                    Data="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            </Border>
+            <StackPanel Spacing="1" VerticalAlignment="Center">
+              <TextBlock FontWeight="Bold" Text="{Binding CollectionName}" />
+              <TextBlock FontSize="12" Foreground="#8A93A2" Text="{Binding HeaderSubText}" />
+            </StackPanel>
+          </StackPanel>
+
+          <!-- missing 率カード(3 色は情報表示のみ=適用はレッドでも有効) -->
+          <Border Classes="callout green" IsVisible="{Binding IsRateGreen}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Path Width="20" Height="20" Stretch="Uniform" Stroke="#0F8A4D" StrokeThickness="2"
+                    VerticalAlignment="Top"
+                    Data="M12 3 A 9 9 0 1 1 11.99 3 M8.5 12.5l2.4 2.4 4.6-5.4" />
+              <StackPanel Spacing="2">
+                <TextBlock FontSize="13" FontWeight="Bold" Foreground="#0F8A4D" Text="{Binding Loc[scan.rateLead]}" />
+                <TextBlock FontSize="12.5" FontWeight="Bold" Foreground="#0F8A4D" Text="{Binding RateValueText}" />
+                <TextBlock FontSize="12" Foreground="#2F7A52" TextWrapping="Wrap" MaxWidth="520"
+                           Text="{Binding RateDescText}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="callout yellow" IsVisible="{Binding IsRateYellow}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Path Width="20" Height="20" Stretch="Uniform" Stroke="#B5670C" StrokeThickness="2"
+                    VerticalAlignment="Top"
+                    Data="M12 3l9.5 17h-19z M12 10v5 M12 17.7v0.6" />
+              <StackPanel Spacing="2">
+                <TextBlock FontSize="13" FontWeight="Bold" Foreground="#8A5A20" Text="{Binding Loc[scan.rateLead]}" />
+                <TextBlock FontSize="12.5" FontWeight="Bold" Foreground="#8A5A20" Text="{Binding RateValueText}" />
+                <TextBlock FontSize="12" Foreground="#8A5A20" TextWrapping="Wrap" MaxWidth="520"
+                           Text="{Binding RateDescText}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="callout red" IsVisible="{Binding IsRateRed}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Path Width="20" Height="20" Stretch="Uniform" Stroke="#C4282D" StrokeThickness="2"
+                    VerticalAlignment="Top"
+                    Data="M12 3 A 9 9 0 1 1 11.99 3 M12 8v5 M12 16.2v0.6" />
+              <StackPanel Spacing="2">
+                <TextBlock FontSize="13" FontWeight="Bold" Foreground="#C4282D" Text="{Binding Loc[scan.rateLead]}" />
+                <TextBlock FontSize="12.5" FontWeight="Bold" Foreground="#C4282D" Text="{Binding RateValueText}" />
+                <TextBlock FontSize="12" Foreground="#B03A3E" TextWrapping="Wrap" MaxWidth="520"
+                           Text="{Binding RateDescText}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 遷移別サマリー(L6) -->
+          <Border BorderBrush="#E3E7EE" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+            <ItemsControl ItemsSource="{Binding SummaryRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScanSummaryRow">
+                  <Border Classes="sumRow" Classes.total="{Binding IsTotal}" Classes.dim="{Binding IsDim}">
+                    <DockPanel VerticalAlignment="Center">
+                      <Ellipse DockPanel.Dock="Left" Width="9" Height="9" Margin="0,0,9,0"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasDot}"
+                               Fill="{Binding DotColor}" />
+                      <TextBlock Classes="cnt" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                 Text="{Binding CountText}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Classes="lbl" Text="{Binding Label}" />
+                        <TextBlock FontSize="12" Foreground="#8A93A2" IsVisible="{Binding HasTrans}"
+                                   VerticalAlignment="Center" Text="{Binding TransLabel}" />
+                      </StackPanel>
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+
+          <!-- 適用後作業量(青 callout・該当時のみ) -->
+          <Border Classes="callout blue" IsVisible="{Binding HasWorkload}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Path Width="20" Height="20" Stretch="Uniform" Stroke="#2459CF" StrokeThickness="2"
+                    VerticalAlignment="Top"
+                    Data="M12 3 A 9 9 0 1 1 11.99 3 M12 11v5 M12 7.4v0.6" />
+              <StackPanel Spacing="2">
+                <TextBlock FontSize="13" FontWeight="Bold" Foreground="#2459CF" TextWrapping="Wrap"
+                           MaxWidth="520" Text="{Binding WorkloadLeadText}" />
+                <TextBlock FontSize="12" Foreground="#3F5F9E" TextWrapping="Wrap" MaxWidth="520"
+                           Text="{Binding WorkloadSubText}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <TextBlock FontSize="12" Foreground="#C4282D" TextWrapping="Wrap"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     Text="{Binding StatusMessage}" />
+        </StackPanel>
+
+        <!-- ═══ 適用中 ═══ -->
+        <StackPanel IsVisible="{Binding IsApplyingPhase}" Spacing="12">
+          <TextBlock FontWeight="Bold" Text="{Binding Loc[scan.applying]}" />
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding ApplyPercent}" Height="6" CornerRadius="3" />
+        </StackPanel>
+
+        <!-- ═══ SC-5 変更内容の詳細 ═══ -->
+        <ItemsControl IsVisible="{Binding IsDetailPhase}" ItemsSource="{Binding DetailGroups}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="12" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ScanDetailGroup">
+              <Border BorderBrush="#E3E7EE" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+                <StackPanel>
+                  <Border Height="38" Padding="14,0" Background="#F7F9FC"
+                          BorderBrush="#EEF0F4" BorderThickness="0,0,0,1">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <TextBlock FontSize="12.5" FontWeight="Bold" Foreground="#2B3340" Text="{Binding Title}" />
+                      <Border Background="#EEF0F4" CornerRadius="6" Padding="7,1" VerticalAlignment="Center">
+                        <TextBlock FontSize="11" FontWeight="Bold" Foreground="#5B6473" Text="{Binding CountText}" />
+                      </Border>
+                    </StackPanel>
+                  </Border>
+                  <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ScanDetailItem">
+                        <Border Height="36" Padding="14,0" BorderBrush="#EEF0F4" BorderThickness="0,0,0,1">
+                          <DockPanel VerticalAlignment="Center">
+                            <Panel DockPanel.Dock="Right" VerticalAlignment="Center">
+                              <Border Classes="stateChip"
+                                      Classes.amber="{Binding IsAmber}"
+                                      Classes.red="{Binding IsRed}"
+                                      Classes.blue="{Binding IsBlue}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                  <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#8A93A2"
+                                             IsVisible="{Binding HasFrom}" Text="{Binding FromLabel}" />
+                                  <TextBlock FontSize="11" Foreground="#AAB1BD" IsVisible="{Binding HasFrom}"
+                                             Text="→" />
+                                  <TextBlock FontSize="11" FontWeight="Bold" Foreground="#2B3340"
+                                             Text="{Binding ToLabel}" />
+                                </StackPanel>
+                              </Border>
+                              <!-- pending 系の破線枠(CMP-005 未定義値チップ同族。Rectangle overlay=既存様式) -->
+                              <Rectangle Stroke="#E0B36A" StrokeThickness="1" StrokeDashArray="3,2"
+                                         RadiusX="6" RadiusY="6" IsHitTestVisible="False"
+                                         IsVisible="{Binding IsAmber}" />
+                            </Panel>
+                            <TextBlock FontSize="12.5" Foreground="#2B3340" TextTrimming="CharacterEllipsis"
+                                       Margin="0,0,10,0" Text="{Binding Path}" />
+                          </DockPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Border Height="34" Padding="14,0" IsVisible="{Binding HasMore}">
+                    <TextBlock FontSize="12" Foreground="#8A93A2" VerticalAlignment="Center"
+                               Text="{Binding MoreText}" />
+                  </Border>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

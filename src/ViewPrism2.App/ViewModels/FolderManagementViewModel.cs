@@ -197,6 +197,14 @@ public sealed partial class FolderManagementViewModel : ObservableObject
 
     public async Task ScanAsync(FolderRowViewModel row)
     {
+        // ECO-130/REQ-100: 再スキャン(last_scan あり)は二段階(差分計算→サマリー→適用/破棄)。
+        // 初回スキャン(last_scan=NULL)は従来の一段階+段階的公開(REQ-086・登録行為=適用の同意)
+        if (row.Folder.LastScan is not null)
+        {
+            await StagedRescanAsync(row);
+            return;
+        }
+
         row.IsScanning = true;
         row.ScanProgress = 0;
         row.RowMessage = _localization.T("folder.scanning");
@@ -232,6 +240,53 @@ public sealed partial class FolderManagementViewModel : ObservableObject
             }
 
             DataChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private async Task StagedRescanAsync(FolderRowViewModel row)
+    {
+        row.IsScanning = true;
+        try
+        {
+            var outcome = await _windows.ShowScanStagingAsync(row.Folder);
+            if (outcome.Error is not null)
+            {
+                row.RowMessage = outcome.Error;
+                return;
+            }
+
+            if (outcome.Applied && outcome.Summary is { } summary)
+            {
+                row.RowMessage = _localization.T("folder.scanSummary", new Dictionary<string, string>
+                {
+                    ["added"] = summary.Added.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["updated"] = summary.Updated.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["missing"] = summary.Missing.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["pending"] = summary.Pending.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["skipped"] = summary.Skipped.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                });
+            }
+            else
+            {
+                // 破棄・キャンセル= DB 完全無変更(REQ-100)
+                row.RowMessage = _localization.T("folder.scanDiscarded");
+            }
+
+            if (outcome.Applied)
+            {
+                var updated = await _folders.GetByIdAsync(row.Folder.Id);
+                if (updated is not null)
+                {
+                    row.Apply(updated);
+                    row.LastScanText = FormatLastScan(updated.LastScan);
+                }
+
+                DataChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        finally
+        {
+            row.IsScanning = false;
         }
     }
 

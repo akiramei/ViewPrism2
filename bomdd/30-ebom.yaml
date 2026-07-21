@@ -69,7 +69,7 @@ ebom:
       name: スキャン判定器+スキャンサービス+ステータス遷移
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016, REQ-086]
+      requirement_refs: [REQ-011, REQ-012, REQ-015, REQ-016, REQ-086, REQ-100]
       kbom_refs: [K-WINFS]
       depends_on: [E-DOMAIN-001, E-HASH-006, E-DB-010]
       invariants:
@@ -80,6 +80,7 @@ ebom:
         - (ECO-059) スキャン中のDB変更は件数上限を持つバッチで明示トランザクション適用し、画像1件ごとの暗黙commitを禁止する。進捗は整数百分率が変化した時だけ通知し、非空入力は100で完了する。列挙時に得たサイズ/日時を再利用してFileInfoの再照会を避け、SHA-256全体読取はHDD向け直列+SequentialScanで維持する
         - (ECO-059/GF-059-01) スキャン本体の列挙・ハッシュ・DBバッチは呼出元UIスレッドから明示分離し、同期完了するrepository awaitに依存しない。進捗だけを呼出元のProgress経由でUI contextへ通知する
         - (ECO-060/REQ-086) 初回対象はstreaming列挙し、fully-hashed normal画像をDB batch commit成功後だけ取込順で公開通知する。commit失敗batchは通知しない
+        - (ECO-130/REQ-100) 再スキャンは差分計算(DB 完全無変更・last_scan も不変)と適用(有界バッチ一括+last_scan 更新)を分離する。判定規則(REQ-012)は両段階で同一=適用後状態は一段階スキャンと同値(パリティ)。キャンセル/破棄/失敗は部分適用ゼロ。読み取り失敗は変更に数えず独立集計。ステージング保持は有界レコード列(母集合規模の VM/文字列を作らない)
       acceptance_refs: [CP-SCAN-004]
 
     - id: E-HASH-006
@@ -755,6 +756,25 @@ ebom:
         - (ECO-019) 完全削除・ゴミ箱を空は**実行前確認**+**INV-009 非破壊明示**「画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。」を必須とする。**モックの『元のファイルも削除され』(物理削除文言)は INV-009 と矛盾するため不採用**(woven 安全制約 > CAD 文言)。物理ファイルは S-26 L3 物理差分で不変を担保
         - (ECO-098) 画像タブのゴミ箱一覧は選択中collection+status=deletedをDB境界で限定し、全status行をmaterializeしてからUIで捨てない。normal 6件に対しhidden missing 262,045件を持つ実profileで全件取得が約1.1秒停止を生んだ潜伏実績をCP-UI-G1で封止する
       acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-DISPLAY-PARITY-022, CP-REPAIR-AUTOALL-023, CP-UI-G1]
+
+    - id: E-UI-SCANSTAGE-048
+      name: "スキャン結果確認 UI(二段階スキャン: 差分計算進捗+遷移別サマリー+missing 率注意表示+詳細+適用確認)— ECO-130 新設"
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-100]
+      external_source_ref: K-DESIGN
+      external_source_note: "CAD= ViewPrismUI docs/screens/scan_summary.md(SC-1〜6・61df950・mock は maintainer 依頼で AI 作成→golden 承認対象)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-SCAN-005, E-UI-SHELL-021]
+      invariants:
+        - 適用/破棄の分岐・missing 率の色段(<1%/<50%/以上)・確認強度の段(100/1,000)・件数入り CTA ラベルは描画から独立した決定論的ロジックとして unit 検査可能にする
+        - missing 率レッドでも適用は有効(色は情報表示のみ=システム判断に使わない・REQ-100)
+        - ウィンドウクローズ(✕)=破棄/キャンセルと同義(適用はしない=安全側)。適用は明示ボタンのみ
+        - 大規模適用(変更合計 1,000 以上)の確認は CMP-011 ConfirmDialog(動詞ラベル・primary=物理非破壊)経由
+        - フッターは docked・右寄せ+「結果を破棄」は左端分離(誤操作防止)。dlgBtn 委譲(生 Button 禁止=CP-REGISTRY-LINT-122 検査C)
+        - 詳細一覧は遷移別グループ+例示上限+「…ほか N 件」(母集合規模の行 VM を作らない=26 万件経路の性能規律)
+        - 進捗は総件数不明の間 percent を捏造しない(処理済み件数+不定形バー=ECO-060 進捗規律)
+      acceptance_refs: [CP-UI-G1]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
 nfr_targets:

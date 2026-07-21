@@ -98,7 +98,9 @@ mbom:
         type: dotnet-classlib
       interface_contract:
         judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。Decision = Skip | UpdateMeta | AddNormal | AddPending(candidateId)"
-        scan: "Task<Result<ScanSummary>> ScanAsync(string folderId, IProgress<int>? progress, CancellationToken ct, IProgress<ScanBatchCommitted>? committed=null)  // 仕様 §2.1 手順 1〜6+ECO-060 commit後公開"
+        scan: "Task<Result<ScanSummary>> ScanAsync(string folderId, IProgress<int>? progress, CancellationToken ct, IProgress<ScanBatchCommitted>? committed=null)  // 仕様 §2.1 手順 1〜6+ECO-060 commit後公開(初回スキャン経路)"
+        scan_stage: "Task<Result<ScanStaging>> StageAsync(string folderId, IProgress<int>? processed, CancellationToken ct)  // ECO-130/REQ-100: 差分計算のみ(DB 完全無変更・last_scan 不変)。processed=処理済み件数通知。ScanStaging=遷移別集計+変更案(有界レコード列)+例示(上限つき)"
+        scan_apply: "Task<Result<ScanSummary>> ApplyStagedAsync(ScanStaging staging, IProgress<int>? progress, CancellationToken ct)  // ECO-130: 変更案を有界バッチで一括適用+last_scan 更新。適用後状態は ScanAsync 直接実行と同値(パリティ)。committed 公開なし(段階的公開は初回専用)"
         scan_batch: "IImageRepository.ApplyScanBatchAsync(ScanMutationBatch batch)  // ECO-059: bounded件数のadd/update-meta/update-status/deleteを単一transactionで適用。ScanServiceはバッチ上限到達ごとにflush"
         relink_candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId)  // relative_path 昇順"
         relink_commit: "Task<Result> CommitRelinkAsync(string missingImageId, string pendingImageId)  // id 不変・pending 行削除"
@@ -714,6 +716,20 @@ mbom:
         location: "ECO-074/案A(仕様 §2.14.7): 管理フォルダ=AppSettings.CollectionPackageDirectory ?? CollectionPackageFormat.DefaultDirectory(<Documents>/ViewPrism2/collections)。書き出し既定出力先=管理フォルダ+既定名(CollectionExportViewModel)。Save/OpenFilePicker の SuggestedStartLocation=管理フォルダ(WindowService・無ければ作成・逸脱先は永続しない)。B-2 は Opened で picker 自動起動+キャンセル残留時プレースホルダ(package.selectFilePrompt)"
       acceptance_refs: [CP-PACKAGE-032, CP-UI-G13]
       acceptance_note: "形式/照合/適用の決定論は CP-PACKAGE-032 unit(VM 配線 pin 含む)。視覚と書き出し→取り込み往復の実機確認は golden(CP-UI-G13)"
+
+    # ---- ECO-130(二段階スキャン: スキャン結果確認 UI) ----
+    - id: M-UI-SCANSTAGE-053
+      ebom_refs: [E-UI-SCANSTAGE-048]
+      artifact:
+        path: src/ViewPrism2.App/Views/ScanSummaryWindow.axaml
+        path_note: "ScanSummaryWindow.axaml(.cs)+ViewModels/ScanSummaryViewModel.cs+WindowService.ShowScanStagingAsync+FolderManagementViewModel.ScanAsync の再スキャン分岐(初回=従来の ScanCoordinator 経路)。SC-6 確認は既存 ConfirmDialog(CMP-011)を再利用"
+        type: avalonia-app
+      interface_contract:
+        entry: "FolderManagementViewModel.ScanAsync: last_scan=NULL → 従来経路(ScanCoordinator+段階的公開)/ NULL でない → WindowService.ShowScanStagingAsync(folder) がモーダルで SC-1(差分計算・キャンセル可)→サマリー(SC-2〜4)→適用/破棄。適用完了時のみ true を返し呼び出し側が row 更新+DataChanged"
+        faces: "単一 Window 内の状態切替(Scanning/Summary/Detail/Applying)。Window.Title は面ごとに切替(L1)。missing 率の色段(<1%/<50%/以上)・確認強度(100=内訳導線/1,000=ConfirmDialog)・件数入り CTA ラベルは VM の決定論ロジック(unit 検査可能)"
+        safety: "✕クローズ=破棄/キャンセルと同義(適用しない)。適用は StageAsync 結果をそのまま ApplyStagedAsync へ(判定の再解釈なし)。モーダル文脈でアプリ内並行変更なし(REQ-100)"
+      acceptance_refs: [CP-UI-G1]
+      acceptance_note: "分岐・色段・件数ラベルの決定論は unit(CpScanStagingTests/GfScanSummaryVisualParityTests)。実機の一連フロー(26 万件差分計算時間・適用/破棄)は golden(CP-UI-G1)"
 
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:

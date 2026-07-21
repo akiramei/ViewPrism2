@@ -101,6 +101,340 @@ public sealed class ScanService
         }
     }
 
+    /// <summary>
+    /// 差分計算(ECO-130/REQ-100・再スキャン用): 手順 1〜5 の判定を DB 完全無変更で実行し、
+    /// 変更案を遷移別に集計して返す。last_scan も更新しない(適用/破棄前の観測のみ)。
+    /// キャンセルは OperationCanceledException(DB 無変更のため任意時点で安全)。
+    /// <paramref name="processed"/> は処理済みファイル件数の通知(percent は捏造しない=ECO-060 規律)。
+    /// </summary>
+    public async Task<Result<ScanStaging>> StageAsync(
+        string folderId, IProgress<int>? processed, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(folderId);
+
+        if (!_inFlight.TryAdd(folderId, 0))
+        {
+            return Result<ScanStaging>.Fail(ErrorCode.ScanInProgress, "このフォルダはスキャン実行中です。");
+        }
+
+        try
+        {
+            var folder = await _folders.GetByIdAsync(folderId).ConfigureAwait(false);
+            if (folder is null)
+            {
+                return Result<ScanStaging>.Fail(ErrorCode.NotFound, "同期フォルダが存在しません。");
+            }
+
+            if (!folder.IsActive)
+            {
+                return Result<ScanStaging>.Fail(ErrorCode.ValidationError, "無効化されたフォルダはスキャンできません。");
+            }
+
+            try
+            {
+                // ECO-059/GF-059-01 と同じ理由で列挙・hash を background へ明示分離する
+                return await Task.Run(() => StageCoreAsync(folder, processed, ct), ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
+            {
+                _logger?.LogWarning(ex, "差分計算が I/O エラーで中断しました: {FolderId}", folderId);
+                return Result<ScanStaging>.Fail(ErrorCode.IoError, ex.Message);
+            }
+
+            // 注: ScanAsync と異なり last_scan は更新しない(REQ-100。破棄で無かったことにできる)
+        }
+        finally
+        {
+            _inFlight.TryRemove(folderId, out _);
+        }
+    }
+
+    private async Task<Result<ScanStaging>> StageCoreAsync(
+        SyncFolder folder, IProgress<int>? processed, CancellationToken ct)
+    {
+        var root = folder.Path;
+        if (!Directory.Exists(root))
+        {
+            return Result<ScanStaging>.Fail(ErrorCode.IoError, $"フォルダ '{root}' にアクセスできません。");
+        }
+
+        var enumerable = CreateEnumerable(folder, root);
+        var existing = await _images.GetByFolderAsync(folder.Id).ConfigureAwait(false);
+        var isInitialScan = folder.LastScan is null;
+
+        var statusUpdates = new List<ScanStatusUpdate>();
+        var deletes = new List<string>();
+        var adds = new List<ImageRecord>();
+        var metaUpdates = new List<ScanFileMetaUpdate>();
+        var examples = new List<ScanTransitionExample>();
+        var exampleCounts = new Dictionary<ScanTransitionKind, int>();
+        void AddExample(ScanTransitionKind kind, string relativePath)
+        {
+            exampleCounts.TryGetValue(kind, out var n);
+            if (n < ScanStaging.ExamplesPerKind)
+            {
+                examples.Add(new ScanTransitionExample(kind, relativePath));
+                exampleCounts[kind] = n + 1;
+            }
+        }
+
+        int missingFromNormal = 0, pendingRemoved = 0;
+        var examined = 0; // 処理済み件数(DB 行の実在確認+ファイル判定の合算。SC-1 の表示単位)
+
+        // 手順 4・5 相当(仕様 §2.1 実行順序): DB へは書かず、変更案とメモリ上の判定用ビューを作る
+        var current = new List<ImageRecord>(existing.Count);
+        foreach (var record in existing)
+        {
+            ct.ThrowIfCancellationRequested();
+            examined++;
+            if (examined % ProcessedReportInterval == 0)
+            {
+                processed?.Report(examined);
+            }
+
+            var fullPath = Path.Combine(root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (record.Status == ImageStatus.Normal && !File.Exists(fullPath))
+            {
+                statusUpdates.Add(new ScanStatusUpdate(record.Id, ImageStatus.Missing));
+                current.Add(record with { Status = ImageStatus.Missing });
+                missingFromNormal++;
+                AddExample(ScanTransitionKind.MissingFromNormal, record.RelativePath);
+            }
+            else if (record.Status == ImageStatus.Pending && !File.Exists(fullPath))
+            {
+                deletes.Add(record.Id);
+                pendingRemoved++;
+                AddExample(ScanTransitionKind.PendingRemoved, record.RelativePath);
+            }
+            else
+            {
+                current.Add(record);
+            }
+        }
+
+        var byPath = current.ToDictionary(i => i.RelativePath, StringComparer.OrdinalIgnoreCase);
+        var missingInFolder = current.Where(i => i.Status == ImageStatus.Missing).ToList();
+
+        int unchanged = 0, metaUpdated = 0, deletedUnchanged = 0, readFailures = 0;
+        int addedNormal = 0, addedPending = 0;
+        var scannedFiles = 0;
+
+        // 手順 2〜3 相当: 判定のみ(OC-5 の器は不変)。DB へは書かない
+        foreach (var file in enumerable)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                var relativePath = PathNormalizer.ToRelative(root, file.FullPath);
+                var facts = new ScanFileFacts(
+                    relativePath,
+                    file.Length,
+                    IsoTimestamp.Format(file.LastWriteTimeUtc),
+                    IsoTimestamp.Format(file.CreationTimeUtc),
+                    () => ComputeHash(file.FullPath));
+                var dbFacts = new ScanDbFacts(
+                    byPath.TryGetValue(relativePath, out var row) ? row : null,
+                    missingInFolder);
+
+                var decision = _judge.Judge(facts, dbFacts, isInitialScan);
+                switch (decision.Kind)
+                {
+                    case ScanDecisionKind.Skip:
+                        // deleted 行への一致は再登録しない(従来どおり)。サマリーでは除外として別計上(REQ-100)
+                        if (row!.Status == ImageStatus.Deleted)
+                        {
+                            deletedUnchanged++;
+                        }
+                        else
+                        {
+                            unchanged++;
+                        }
+
+                        break;
+
+                    case ScanDecisionKind.UpdateMeta:
+                        metaUpdates.Add(new ScanFileMetaUpdate(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate));
+                        if (row.Status != ImageStatus.Deleted)
+                        {
+                            metaUpdated++;
+                            AddExample(ScanTransitionKind.MetaUpdated, relativePath);
+                        }
+
+                        break;
+
+                    case ScanDecisionKind.AddNormal:
+                        adds.Add(NewRecord(folder.Id, facts, decision, ImageStatus.Normal));
+                        addedNormal++;
+                        AddExample(ScanTransitionKind.AddedNormal, relativePath);
+                        break;
+
+                    case ScanDecisionKind.AddPending:
+                    default:
+                        adds.Add(NewRecord(folder.Id, facts, decision, ImageStatus.Pending));
+                        addedPending++;
+                        AddExample(ScanTransitionKind.AddedPending, relativePath);
+                        break;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // 読み取り不能は変更に数えない(REQ-100)。DB 非変更・次回スキャンで再試行
+                readFailures++;
+                _logger?.LogWarning(ex, "読み取り不能ファイルをスキップしました: {Path}", file.FullPath);
+            }
+
+            scannedFiles++;
+            examined++;
+            if (examined % ProcessedReportInterval == 0)
+            {
+                processed?.Report(examined);
+            }
+        }
+
+        processed?.Report(examined);
+
+        return Result<ScanStaging>.Ok(new ScanStaging
+        {
+            FolderId = folder.Id,
+            ManagedTotal = existing.Count,
+            ScannedFiles = scannedFiles,
+            Unchanged = unchanged,
+            MetaUpdated = metaUpdated,
+            AddedNormal = addedNormal,
+            AddedPending = addedPending,
+            MissingFromNormal = missingFromNormal,
+            PendingRemoved = pendingRemoved,
+            DeletedUnchanged = deletedUnchanged,
+            ReadFailures = readFailures,
+            Adds = adds,
+            MetaUpdates = metaUpdates,
+            StatusUpdates = statusUpdates,
+            Deletes = deletes,
+            Examples = examples,
+        });
+    }
+
+    /// <summary>
+    /// ステージング適用(ECO-130/REQ-100): 変更案を有界バッチで一括反映し last_scan を更新する。
+    /// 適用後状態は ScanAsync 直接実行と同値(パリティ=判定を再解釈しない)。
+    /// 段階的公開(committed)は行わない(初回スキャン専用の契約 — REQ-086)。
+    /// 部分適用を作らないため、適用開始後はキャンセルを受け付けない(ct は開始前のみ確認)。
+    /// </summary>
+    public async Task<Result<ScanSummary>> ApplyStagedAsync(
+        ScanStaging staging, IProgress<int>? progress, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(staging);
+        ct.ThrowIfCancellationRequested();
+
+        if (!_inFlight.TryAdd(staging.FolderId, 0))
+        {
+            return Result<ScanSummary>.Fail(ErrorCode.ScanInProgress, "このフォルダはスキャン実行中です。");
+        }
+
+        try
+        {
+            var folder = await _folders.GetByIdAsync(staging.FolderId).ConfigureAwait(false);
+            if (folder is null)
+            {
+                return Result<ScanSummary>.Fail(ErrorCode.NotFound, "同期フォルダが存在しません。");
+            }
+
+            // GF-059-01 と同じ理由で DB バッチ適用を UI thread から明示分離する
+            // (sqlite の async は同期完了し得る=ConfigureAwait(false) だけでは離れない)
+            return await Task.Run(() => ApplyCoreAsync(staging, progress)).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // R8 所見4: 適用中の失敗を throw で漏らさない(VM が失敗理由表示+Summary 復帰できる形で返す)。
+            // バッチは 512 件単位の独立トランザクションのため部分適用があり得る(REQ-100 に明記・
+            // 残余は次回スキャンの差分計算が収束させる)
+            _logger?.LogError(ex, "ステージング適用が失敗しました: {FolderId}", staging.FolderId);
+            return Result<ScanSummary>.Fail(ErrorCode.IoError, ex.Message);
+        }
+        finally
+        {
+            _inFlight.TryRemove(staging.FolderId, out _);
+        }
+    }
+
+    private async Task<Result<ScanSummary>> ApplyCoreAsync(ScanStaging staging, IProgress<int>? progress)
+    {
+        {
+            // 有界バッチで一括適用。順序は一段階スキャンと同じ(手順 4/5 → 手順 3 の変更)
+            var total = staging.StatusUpdates.Count + staging.Deletes.Count
+                + staging.MetaUpdates.Count + staging.Adds.Count;
+            var applied = 0;
+            var lastPercent = -1;
+            void Report(int count)
+            {
+                applied += count;
+                if (progress is null || total == 0)
+                {
+                    return;
+                }
+
+                var percent = (int)(applied * 100L / total);
+                if (percent != lastPercent)
+                {
+                    lastPercent = percent;
+                    progress.Report(percent);
+                }
+            }
+
+            foreach (var chunk in Chunk(staging.StatusUpdates, ScanBatchSize))
+            {
+                await _images.ApplyScanBatchAsync(new ScanMutationBatch([], [], chunk, [])).ConfigureAwait(false);
+                Report(chunk.Length);
+            }
+
+            foreach (var chunk in Chunk(staging.Deletes, ScanBatchSize))
+            {
+                await _images.ApplyScanBatchAsync(new ScanMutationBatch([], [], [], chunk)).ConfigureAwait(false);
+                Report(chunk.Length);
+            }
+
+            foreach (var chunk in Chunk(staging.MetaUpdates, ScanBatchSize))
+            {
+                await _images.ApplyScanBatchAsync(new ScanMutationBatch([], chunk, [], [])).ConfigureAwait(false);
+                Report(chunk.Length);
+            }
+
+            foreach (var chunk in Chunk(staging.Adds, ScanBatchSize))
+            {
+                await _images.ApplyScanBatchAsync(new ScanMutationBatch(chunk, [], [], [])).ConfigureAwait(false);
+                Report(chunk.Length);
+            }
+
+            await _folders.UpdateLastScanAsync(staging.FolderId, _clock.UtcNowIso()).ConfigureAwait(false);
+
+            return Result<ScanSummary>.Ok(new ScanSummary
+            {
+                Added = staging.AddedNormal,
+                Missing = staging.MissingFromNormal,
+                Pending = staging.AddedPending,
+                Updated = staging.MetaUpdates.Count,
+                Skipped = staging.Unchanged + staging.DeletedUnchanged + staging.ReadFailures,
+            });
+        }
+    }
+
+    private const int ProcessedReportInterval = 256;
+
+    private static IEnumerable<T[]> Chunk<T>(IReadOnlyList<T> source, int size)
+    {
+        for (var offset = 0; offset < source.Count; offset += size)
+        {
+            var length = Math.Min(size, source.Count - offset);
+            var chunk = new T[length];
+            for (var i = 0; i < length; i++)
+            {
+                chunk[i] = source[offset + i];
+            }
+
+            yield return chunk;
+        }
+    }
+
     private async Task<Result<ScanSummary>> ScanCoreAsync(
         SyncFolder folder,
         IProgress<int>? progress,
@@ -115,30 +449,7 @@ public sealed class ScanService
         }
 
         // 手順 1: 列挙(K-WINFS 規約: リパースポイントを辿らない・アクセス不能は無視)
-        var options = new EnumerationOptions
-        {
-            RecurseSubdirectories = folder.IncludeSubfolders,
-            IgnoreInaccessible = true,
-            AttributesToSkip = FileAttributes.ReparsePoint,
-        };
-        var excludeNames = new HashSet<string>(folder.ExcludePatterns, StringComparer.OrdinalIgnoreCase);
-        // ECO-059: 列挙時にOSが既に返しているサイズ/日時を保持し、各ファイルのFileInfo再照会を避ける。
-        // ECO-060: 全件ToList後の処理では最初の公開が列挙完了まで遅れるため、列挙結果をそのまま
-        // 直列hash処理へ流す。総件数不明の間はpercentを捏造せず、完了時100だけを通知する。
-        var enumerable = new FileSystemEnumerable<ScanFileEntry>(
-            root,
-            (ref FileSystemEntry entry) => new ScanFileEntry(
-                entry.ToFullPath(),
-                entry.Length,
-                entry.LastWriteTimeUtc.UtcDateTime,
-                entry.CreationTimeUtc.UtcDateTime),
-            options)
-        {
-            ShouldIncludePredicate = (ref FileSystemEntry entry) =>
-                !entry.IsDirectory &&
-                ImageExtensions.Contains(Path.GetExtension(entry.FileName).ToString().ToLowerInvariant()) &&
-                !excludeNames.Contains(entry.FileName.ToString()),
-        };
+        var enumerable = CreateEnumerable(folder, root);
         var existing = await _images.GetByFolderAsync(folder.Id).ConfigureAwait(false);
         var isInitialScan = folder.LastScan is null;
 
@@ -246,6 +557,37 @@ public sealed class ScanService
             Updated = updated,
             Skipped = skipped,
         });
+    }
+
+    /// <summary>
+    /// 手順 1 の列挙(K-WINFS: リパースポイントを辿らない・アクセス不能は無視)。
+    /// ECO-059: 列挙時にOSが既に返しているサイズ/日時を保持し、各ファイルのFileInfo再照会を避ける。
+    /// ECO-060: streaming 列挙(全件 ToList しない)。ECO-130: 一段階(ScanCoreAsync)と差分計算
+    /// (StageCoreAsync)で同一の列挙器を共有する(判定パリティの前提)。
+    /// </summary>
+    private static FileSystemEnumerable<ScanFileEntry> CreateEnumerable(SyncFolder folder, string root)
+    {
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = folder.IncludeSubfolders,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+        var excludeNames = new HashSet<string>(folder.ExcludePatterns, StringComparer.OrdinalIgnoreCase);
+        return new FileSystemEnumerable<ScanFileEntry>(
+            root,
+            (ref FileSystemEntry entry) => new ScanFileEntry(
+                entry.ToFullPath(),
+                entry.Length,
+                entry.LastWriteTimeUtc.UtcDateTime,
+                entry.CreationTimeUtc.UtcDateTime),
+            options)
+        {
+            ShouldIncludePredicate = (ref FileSystemEntry entry) =>
+                !entry.IsDirectory &&
+                ImageExtensions.Contains(Path.GetExtension(entry.FileName).ToString().ToLowerInvariant()) &&
+                !excludeNames.Contains(entry.FileName.ToString()),
+        };
     }
 
     private static ImageRecord NewRecord(
