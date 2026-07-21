@@ -285,6 +285,7 @@
   "scan.applyConfirmMessage": "{count} 件の画像の状態を変更します。適用後、{missing} 件が修復対象になります。画像ファイル本体は変更されません。",
   "scan.applyConfirmTitle": "適用の確認",
   "scan.applyCount": "{count}件の変更を適用",
+  "scan.applyFailedRescan": "適用に失敗しました({reason})。一部だけ適用された可能性があります。もう一度スキャンしてやり直してください。",
   "scan.applying": "変更を適用しています…",
   "scan.back": "戻る",
   "scan.calculating": "差分を計算しています…",

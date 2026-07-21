@@ -58,6 +58,7 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
     private readonly Stopwatch _stopwatch = new();
     private ScanStaging? _staging;
     private bool _closeRequested;
+    private bool _applyFailed; // ECO-133: 適用失敗後の同一 staging 再試行を封鎖(回復は再スキャン)
 
     public ScanSummaryViewModel(
         ScanCoordinator scans,
@@ -223,6 +224,7 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
     public void PresentSummary(ScanStaging staging)
     {
         _staging = staging;
+        _applyFailed = false; // ECO-133: 新しい差分は適用可(前回の適用失敗ガードを解除)
         BuildSummary(staging);
         WindowTitle = T("scan.titleSummary", ("name", _folder.Name));
         Phase = ScanStagePhase.Summary;
@@ -282,7 +284,9 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
     [RelayCommand]
     private async Task ApplyAsync()
     {
-        if (_staging is not { } staging || staging.TotalChanges == 0)
+        // ECO-133: 適用が失敗した staging は再試行しない(部分適用の再 INSERT が UNIQUE 衝突で
+        // 残余へ到達不能=行き詰まり。回復は再スキャン)。CanApply=false だけでなく本ガードで二重に閉じる
+        if (_applyFailed || _staging is not { } staging || staging.TotalChanges == 0)
         {
             return;
         }
@@ -316,7 +320,14 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
         var result = await _scans.ApplyStagedAsync(staging, progress, CancellationToken.None);
         if (!result.IsSuccess)
         {
-            StatusMessage = ErrorMessages.Resolve(_localization, result.Error);
+            // ECO-133(Codex P2): ApplyCoreAsync は 512 件独立トランザクション=部分適用があり得る。
+            // 同一 staging の再試行は既 INSERT 行への再 INSERT が UNIQUE 衝突で残余へ到達できないため禁止し、
+            // 再スキャン(差分再計算=REQ-100 の回復モデル)へ導く。CanApply=false でボタンを無効化+
+            // _applyFailed で ApplyAsync 自体も封鎖(二重ガード)。
+            _applyFailed = true;
+            CanApply = false;
+            StatusMessage = T("scan.applyFailedRescan",
+                ("reason", ErrorMessages.Resolve(_localization, result.Error)));
             Phase = ScanStagePhase.Summary;
             return;
         }

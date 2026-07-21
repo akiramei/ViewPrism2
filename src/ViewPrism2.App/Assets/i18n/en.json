@@ -285,6 +285,7 @@
   "scan.applyConfirmMessage": "This will change the state of {count} images. After applying, {missing} images will need repair. Image files themselves are not modified.",
   "scan.applyConfirmTitle": "Confirm apply",
   "scan.applyCount": "Apply {count} changes",
+  "scan.applyFailedRescan": "Apply failed ({reason}). Some changes may have been applied partially. Please scan again to retry.",
   "scan.applying": "Applying changes…",
   "scan.back": "Back",
   "scan.calculating": "Calculating changes…",
