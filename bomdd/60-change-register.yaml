@@ -1831,3 +1831,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。doc-only につきプローブ非該当(検収=張り替え後の tests 緑+validate 不変)"
     notes: "gate①=不要(REG-C6/C7 は CAD 側で裁定済み)。gate②=n/a(doc-only・視覚/挙動/検査ロジック不変・機械証拠=ECO-111/120 前例)。R7/R8=対象外宣言(doc-only・ECO-111/119 型)。関連=ECO-122(発見元=lint first-run の CAD 申し送り・照合先一元化)・REG-C6/C7(裁定元)・ECO-119(原器裏取り=作話回避)・ECO-121(照合先の昇格は正本の検収イベント=本件は裁定反映で allowlist を「暫定」から確定へ)"
     body: 60-change-order-eco-127.md
+  - id: ECO-128
+    title: "ゴミ箱復元の安全側遷移 — T6(deleted→normal)を「復元後は原則 pending」へ(状態管理モデル改訂 3 分割の a)"
+    type: "仕様改訂候補(状態機械 T6 の意味論変更。実装逸脱ではない)"
+    status: staged
+    golden: "pending(是正後に基準提示=復元→pending の一覧挙動・実機。gate① 裁定が先行)"
+    baseline: "main 390e1f4"
+    findings: "maintainer 設計まとめ(2026-07-21「画像の状態管理・あるべき状態管理」§6)の投入。工程診断=仕様層の設計変更(実装は現仕様に忠実: TrashTransition.cs:15 ResolveRestore(true)=Normal=T6 どおり・逸脱ゼロ)。動機=復元だけで normal に戻すと「未裁定を削除→復元」が自動受入れになる=復元の責務は deleted 解除まで・安全性は状態遷移で確保し負担は修復機能で軽減。確定事実=①S-29 固定オラクル(41-fixed-oracle.yaml:261)が「存在→Normal」を exact pin=R6 と衝突(裁定必要) ②INV-013 は不在時のみの防御=「復元だけで normal 禁止」への強化として書ける ③【起票時診断の重要発見】本 ECO は独立最小ではない=現行 pending 意味論(relink 候補・未タグ前提・INV-010 不可視)のまま先行すると (i)復元画像が全一覧から不可視+裁定 UI 不在=「復元したのに消えた」 (ii)スキャン手順5 がファイル消失 pending を行削除=タグ付き復元画像のタグ損失 (iii)relink 候補プールで untagged 復元画像が消費され行削除され得る→ECO-129 の pending 意味論確立が前提。未検証=trash UI の文言依存・relink 候補列挙での表示(タグ安全ガードの確定拒否は実装確認済み)"
+    impacted_bom: ["src=TrashTransition.cs 1 行+TrashService docstring", "spec=§2.11.3(T6→T6')・遷移表・INV-013 強化", "tests=OC-21 unit 追随+oracle 新規行(S-29 処置は gate① 裁定)", "CAD=trash 面の復元説明文言の確認のみ(視覚変更なし見込み)"]
+    oracle: "S-29 が旧意味論(存在→Normal)を exact pin=「既存固定オラクル行は変更しない」(R6)と正面衝突。処置(skip 化+理由刻印/廃止手続き新設/その他)は gate① で一括裁定(ECO-129 の OC-5 と同一論点)"
+    notes: "gate①=必要(①実施順序の承認=推奨 130→129→128・単独先行は不可視化+タグ損失リスク ②S-29 旧オラクル行の処置=R6 衝突・129 と一括裁定推奨)。gate②=是正後提示(復元→pending の一覧挙動・実機)。関連=ECO-129(依存先=pending 意味論)・ECO-130(同一設計まとめ起点)・v4.0 G2 裁定 B-2(T6 の由来=当時は正)"
+    body: 60-change-order-eco-128.md
