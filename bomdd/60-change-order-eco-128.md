@@ -1,4 +1,4 @@
-# ECO-128 — ゴミ箱復元の安全側遷移 — T6(deleted→normal)を「復元後は原則 pending」へ(implemented)
+# ECO-128 — ゴミ箱復元の安全側遷移 — T6(deleted→normal)を「復元後は原則 pending」へ(applied)
 
 - 起票日: 2026-07-21
 - 報告者: maintainer 設計まとめ(2026-07-21「画像の状態管理・あるべき状態管理」§6)の投入。3 分割の (a)
@@ -140,7 +140,29 @@ diff 規模: src 1 行+docstring・spec 数節・tests(OC-21 unit 追随+oracle 
 合格なら `/eco-accept eco-128` を指示してください(基準 5 の作業タブ挙動差の裁定も添えて)。
 不合格所見(GF-*)は本 ECO の手順 1 から。
 
-## 7. gate① 裁定記録(2026-07-21・maintainer)
+## 10. クローズ(2026-07-22・golden 合格・ECO-131 と合同)
+
+- **実機確認(maintainer・ECO-131 と合同)**: §9 基準 1〜4・6(復元→未裁定バッジ/裁定 4 操作+由来チップ
+  「復元」/不在→missing/タグ保全/回帰)を承認。gate② 中に発見した **GF-128-01(クロスタブで画像タブが
+  古い normal を表示)は ECO-131 で分離是正**し、合同で解消を確認(作業タブ削除/復元→画像タブ即時反映)。
+- **基準 5 の裁定(作業タブ挙動差)**: 作業タブでゴミ箱から復元すると pending 化し作業タブ一覧には現れない
+  (normal 限定・INV-W2)=裁定は画像タブで行う、という挙動を**許容と裁定**(2026-07-22)。作業タブ側 pending
+  導線の要否は別 ECO 判断(51-cheat-log 記帳済み)。
+- **再発防止**: CP-UI-G1 へ T6'(復元→pending・origin=Restored)観点+**「旧意味論を pin する凍結オラクルの
+  棚卸しは全 depth 横断(L3 物理差分も status を incidental に pin し得る)」**を刻印。機械 pin=
+  CpTrash020/CpTrash001(復元→pending+origin)+S-43(unit)+S-44(L3 物理非破壊)。
+- **M4 同期**: 不要 — spec §2.11.3/遷移表 T6'/INV-013 v5.0/OC-21・migration(pending_origin は 129 の
+  migration 010)は fix 時に登記済みで as-built 乖離なし。
+- **凍結 skip の会計**: 既知 skip は **2→4 件**(S-29・S-26 追加)。機械受入の Oracle 期待は「109+4skip」。
+- **教訓**(read-across 明記):
+  1. **旧意味論を exact で pin する凍結オラクルの棚卸しは全 depth を横断する** — gate① は「真の衝突は
+     S-29(unit)のみ」と見積もったが、fix 中に **S-26(L3 物理非破壊)も復元→Normal を incidental に pin**
+     して衝突と判明。物理差分テストのような別目的のオラクルでも、意味論変更の対象値(ここでは復元後 status)を
+     assert していれば衝突する。**凍結オラクルの grep は status enum など変更対象の全登場箇所で行い、
+     depth(unit/L2/L3)で絞らない**(ECO-129 の「凍結オラクル棚卸しは全 depth 横断」の実証例・BomDD 昇格候補)。
+  2. **状態機械の意味論変更は、後続の予約値・UI が既にあれば最小 diff で通る** — `PendingOrigin.Restored` は
+     ECO-129 が予約し裁定 UI/i18n も完備していたため、ECO-128 の src 是正は実質「遷移 1 行+原子更新 API」で済んだ
+     (3 分割設計の依存順=130→129→128 が効いた)。
 
 1. **実施順序= 130→129→128 を承認**。本 ECO は最後尾(ECO-129 の pending 意味論
    〔行削除廃止・可視化+バッジ・裁定導線〕成立後に着手= §3 事実 4 の依存が解消されてから)。
