@@ -1,4 +1,4 @@
-# ECO-132 — pending 裁定ダイアログの一覧が stale 行を保持する — plain List バインドで削除が UI へ伝播しない(staged)
+# ECO-132 — pending 裁定ダイアログの一覧が stale 行を保持する — plain List バインドで削除が UI へ伝播しない(superseded=won't-fix・R5 反証)
 
 - 起票日: 2026-07-21
 - 報告者: Codex review(6fa8834..HEAD・2026-07-21・P1①)
@@ -82,3 +82,23 @@ diff 規模: PendingReviewViewModel の Items 型+通知配線・probe(裁定後
 
 - **P2(ScanSummary の部分適用後 stale 再試行)は別 ECO(ECO-133)で分離起票**(Codex review 同一バッチの別欠陥)。
 - 是正は src のため R8(独立レビュー)必須。視覚不変なら R7 は対象外宣言。
+
+## 8. クローズ(2026-07-22・won't-fix=R5 反証)
+
+- **R5 プローブで症状が再現せず**: `GfPendingReviewVisualParityTests.裁定後の一覧は該当行を残さない_複数件で1件裁定`
+  を追加(headless 実 UI・PendingReviewWindow を実際に開く)。2 件 pending → 1 件裁定後、実現コンテナの
+  **実表示ファイル名**が `b.jpg` のみ(裁定済み `a.jpg` の stale 行なし)。2 通りの検査(コンテナ数・
+  表示ファイル名)で一致=**是正前から緑**。
+- **診断の前提が否定**: §3 の「未検証(疑い)= stale 行の UI 残存」は成立しない。Codex の静的推論
+  (「plain List + 同一インスタンス通知 → ItemsControl が削除行を保持」)は **WPF の挙動**であり、
+  Avalonia 12.0.4 の `ItemsControl` は本経路(`List.Remove`/`Clear`+`OnPropertyChanged(nameof(Items))`)でも
+  表示を正しく更新する。eco-fix の R5 規律「プローブが不合格にならない=診断が誤り。コードに触らない」に従い
+  **src は無変更**。
+- **idiom 逸脱は残置(バグではない)**: `PendingReviewViewModel.Items` が plain List なのは事実だが症状を
+  起こしていない。ObservableCollection 化は品質/一貫性クリーンアップであってバグ修正ではないため、
+  本 ECO では実施しない(必要なら別途 /simplify 等の品質改善で)。
+- **処置= won't-fix でクローズ(maintainer 裁定 2026-07-22)**。追加した回帰ガードは**残す**
+  (裁定後に該当行が UI から消える正しい挙動を pin=将来の通知配線変更に対する保護)。
+- **教訓**: 静的解析由来の UI 所見(特に他フレームワーク〔WPF〕の挙動前提)は、是正前に必ず実 UI probe で
+  再現裏取りする。フレームワーク差(WPF の ItemsControl 短絡 vs Avalonia の再評価)で偽陽性になる。
+  R5 プローブ先行が「診断は正しいが的外れ」を出荷前に止めた実例(BomDD 昇格候補)。

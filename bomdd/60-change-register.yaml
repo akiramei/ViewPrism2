@@ -1878,8 +1878,8 @@ changes:
   - id: ECO-132
     title: "pending 裁定ダイアログの一覧が stale 行を保持 — plain List バインドで削除が UI へ伝播しない"
     type: "不具合(UI/VM 層・可変バインドリストの idiom 逸脱)"
-    status: staged
-    golden: "pending(是正後=2 件以上の pending で 1 件裁定→一覧が即座に 1 件になる・実機)"
+    status: superseded   # 2026-07-22 won't-fix クローズ(R5 反証・maintainer 裁定)。R5 プローブ(GfPendingReviewVisualParityTests・headless 実 UI で PendingReviewWindow を開く)で 2件→1件裁定後の実表示が b.jpg のみ=stale 行なし=是正前から緑。Codex の静的推論(plain List+同一インスタンス通知→ItemsControl が削除行保持)は WPF 挙動で、Avalonia 12.0.4 は本経路でも表示を正しく更新=症状再現せず。src 無変更(R5 規律)。回帰ガードは残置。idiom 逸脱(Items が plain List)は事実だがバグ非該当=ObservableCollection 化は品質改善であってバグ修正ではない。後継 ECO なし(superseded_by 空=偽陽性クローズ)。教訓=静的解析由来の UI 所見は実 UI probe で再現裏取り必須(フレームワーク差=WPF vs Avalonia で偽陽性)。本文 §8
+    golden: "n/a(won't-fix=症状再現せず・src 無変更)"
     baseline: "main 2d71237"
     findings: "Codex review(6fa8834..HEAD・2026-07-21・P1①)。症状=pending 裁定ダイアログ左ペインで 2 件以上表示中に 1 件裁定すると、VM は plain List から Remove するが ItemsControl が削除行(裁定済み)を保持し得る→stale 行を再裁定すると pending 限定ガードで失敗メッセージ(無害だが不可解)。修復から戻った後の LoadAsync も同型。工程診断=UI/VM 実装欠陥(idiom 逸脱)。確定事実=①PendingReviewViewModel.Items(:84)が plain List・PendingReviewWindow.axaml:119 が ItemsControl 直結 ②LoadAsync(:142-167 Clear+Add)/Complete(:307-310 Remove)とも同一 List インスタンス+OnPropertyChanged(nameof(Items))=Avalonia は参照同値で ItemsSource no-op ③コードベース idiom は ObservableCollection(ImageTab.Items:888/TrashPopupItems:71/Seed.Items:285 ほか)=PendingReviewVM.Items だけ逸脱 ④混入=4deebc2(ECO-129 fix)。未検証=stale 行 UI 残存の実測(疑い強・GF-129-01 同型・fix 時 headless probe で確定)・単一件は空状態遷移でマスク(症状は 2 件以上)"
     impacted_bom: ["src=PendingReviewViewModel.cs(Items を ObservableCollection へ+通知配線)", "tests=裁定後の Items 反映(2件→1件)+空状態遷移の VM probe", "CAD=視覚変更なし見込み(ObservableCollection も ItemsSource 互換)"]

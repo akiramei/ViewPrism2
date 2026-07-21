@@ -200,6 +200,47 @@ public sealed class GfPendingReviewVisualParityTests : IDisposable
         }, TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task 裁定後の一覧は該当行を残さない_複数件で1件裁定()
+    {
+        // ECO-132(Codex P1① の R5 反証ガード・won't-fix): Codex は「Items が plain List だと
+        // Remove+同一インスタンス通知で ItemsControl が削除行を保持し得る」(WPF 挙動)と指摘したが、
+        // Avalonia 12.0.4 は本経路でも表示を正しく更新する=症状は再現しない(headless 実 UI で実測)。
+        // 本テストは正しい挙動(裁定後に該当行が UI から消える)の回帰ガードとして残す。
+        await Session.Dispatch(async () =>
+        {
+            var (vm, _) = await BuildVmAsync(
+                ("a.jpg", PendingOrigin.Changed, null),
+                ("b.jpg", PendingOrigin.New, null));
+            var window = Show(vm);
+            try
+            {
+                var list = window.GetLogicalDescendants().OfType<ItemsControl>()
+                    .First(ic => ReferenceEquals(ic.ItemsSource, vm.Items));
+
+                // 実 UI に表示されている行= DataContext が PendingItemVM の実現コンテナのファイル名で数える
+                IReadOnlyList<string> DisplayedNames() => list.GetRealizedContainers()
+                    .Select(c => (c.DataContext as PendingItemVM)?.FileName)
+                    .Where(n => n is not null).Select(n => n!).OrderBy(n => n, StringComparer.Ordinal).ToList();
+
+                Assert.Equal(["a.jpg", "b.jpg"], DisplayedNames()); // 初期 2 行
+
+                var accepted = vm.Items[0]; // a.jpg
+                vm.SelectCommand.Execute(accepted);
+                RunJobs();
+                await vm.AcceptCommand.ExecuteAsync(null); // 受け入れる= Items から 1 件 Remove
+                RunJobs();
+
+                Assert.Single(vm.Items);                        // VM 側は 1 件
+                Assert.Equal(["b.jpg"], DisplayedNames());      // UI も 1 行(裁定済み a.jpg の stale 行を残さない)
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
     private sealed class NullWindows : IWindowService
     {
         public Task<bool> ConfirmAsync(string title, string message, string confirmLabel,
