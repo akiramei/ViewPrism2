@@ -26,6 +26,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool _imagesTabStale;
 
+    // ECO-131: 作業タブ(唯一のクロスタブ status 変更源)を訪問したら画像タブの母集合(_allNormal/
+    // _allPending)は要再取得。訪問時に立て、画像タブ復帰時に RefreshContentAsync で回復する。
+    private bool _imagesContentStale;
+
+    /// <summary>ECO-131: 画像タブ復帰時の母集合再読込タスク(fire-and-forget の観測点)。</summary>
+    public Task? ImagesRefreshInFlight { get; private set; }
+
     public MainWindowViewModel(
         ISyncFolderRepository folders,
         IImageRepository images,
@@ -165,14 +172,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         else if (value == 2)
         {
-            // 作業タブ(ECO-020): 画像タブでの受け渡し(追加)を反映するため毎回再読込(現スペース維持)
+            // 作業タブ(ECO-020): 画像タブでの受け渡し(追加)を反映するため毎回再読込(現スペース維持)。
+            // ECO-131: 作業タブ訪問中は status 変更(削除/復元/裁定/マージ)があり得るため、画像タブの
+            // 母集合を要再取得とマークする(復帰時に回復)。作業タブ=唯一のクロスタブ status 変更源
+            _imagesContentStale = true;
             _ = WorkTab.RefreshAsync();
         }
-        else if (_imagesTabStale)
+        else if (value == 1)
         {
             // タグタブでの永続変更(タグ・ビュー・階層)を画像タブへ反映(台帳再読込・状態保持)
-            _imagesTabStale = false;
-            _ = ImageTab.ReloadTagCatalogAsync();
+            if (_imagesTabStale)
+            {
+                _imagesTabStale = false;
+                _ = ImageTab.ReloadTagCatalogAsync();
+            }
+
+            // ECO-131: 作業タブでの status 変更を画像タブ母集合へ反映(GF-128-01: ReloadTagCatalogAsync は
+            // 母集合を触らないため別経路)。fire-and-forget(タスクは観測用に保持)
+            if (_imagesContentStale)
+            {
+                _imagesContentStale = false;
+                ImagesRefreshInFlight = ImageTab.RefreshContentAsync();
+            }
         }
     }
 }

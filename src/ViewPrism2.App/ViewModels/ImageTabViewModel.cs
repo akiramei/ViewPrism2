@@ -523,6 +523,27 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     /// 出ず、階層設定は旧 _viewRoot のまま残る(private ReloadTagsAsync は画像↔タグ紐付けのみで
     /// 台帳を再取得しないため別物)。
     /// </summary>
+    /// <summary>
+    /// ECO-131: 他タブ(作業タブ)での状態変更(削除/復元/裁定/マージ等)後に画像タブの母集合
+    /// (_allNormal/_allPending)の鮮度を回復する。ReloadTagCatalogAsync はタグ台帳しか触らず
+    /// status 母集合を再取得しないため、クロスタブの status 変更には別経路が要る(GF-128-01)。
+    /// コレクション/ナビ/表示モード/選択は保持(母集合の入れ替え+再計算のみ)。
+    /// シェルのタブ切替フックから呼ぶ。
+    /// </summary>
+    public async Task RefreshContentAsync()
+    {
+        if (!_loaded)
+        {
+            return;
+        }
+
+        // 母集合(_allNormal/_allPending)を再取得し、ゴミ箱件数・件数バッジ・一覧を再計算する
+        // (画像タブ自身の裁定/削除後の再読込 OpenPendingReview と同一経路)。選択・ナビ・モードは保持。
+        await ReloadImagesAsync().ConfigureAwait(true);
+        await Trash.RefreshCountAsync().ConfigureAwait(true);
+        Recompute();
+    }
+
     public async Task ReloadTagCatalogAsync()
     {
         if (!_loaded)
@@ -2898,7 +2919,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         }
     }
 
-    /// <summary>マージ後・scan完了後・裁定/修復閉じ後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
+    /// <summary>マージ後・scan完了後・裁定/修復閉じ後・クロスタブ復帰後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
     private async Task ReloadImagesAsync()
     {
         if (_collectionId is null)
@@ -2906,13 +2927,26 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             ClearContentData();
             return;
         }
-        _allNormal = (await _images.GetNormalByFolderAsync(_collectionId).ConfigureAwait(true)).ToList();
+        // ECO-131: fire-and-forget(RefreshContentAsync=対話中のタブ切替フック)から呼ばれ得るため、
+        // await 中のコレクション切替(SelectCollection が _collectionId を同期更新+LoadContentAsync が
+        // 世代 ++)と競合する。母集合はローカルへ取得し、コレクション/世代が不変のときだけ確定する
+        // (別コレクション母集合での上書き=A-normal/B-pending の torn 代入を防ぐ・LoadContentAsync と同規律)。
+        var collectionId = _collectionId;
+        var generation = Volatile.Read(ref _contentLoadGeneration);
+        var normal = (await _images.GetNormalByFolderAsync(collectionId).ConfigureAwait(true)).ToList();
         // GF-129-01: pending も再取得する(LoadContentAsync と対)。stale な _allPending は
         // ⋯メニュー件数・一覧バッジの残存に加え、裁定済み(normal 化)画像が両母集合へ重複し
         // SortFiles の ToDictionary(ID キー)で duplicate key 例外に至る
-        _allPending = (await _images.GetPendingByFolderAsync(_collectionId).ConfigureAwait(true)).ToList();
+        var pending = (await _images.GetPendingByFolderAsync(collectionId).ConfigureAwait(true)).ToList();
+        if (generation != Volatile.Read(ref _contentLoadGeneration) ||
+            !string.Equals(_collectionId, collectionId, StringComparison.Ordinal))
+        {
+            return; // コレクションが切り替わった=この再読込結果は破棄(新しい LoadContentAsync が権威)
+        }
+        _allNormal = normal;
+        _allPending = pending;
         _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
-        _collectionCounts[_collectionId] = _allNormal.Count;
+        _collectionCounts[collectionId] = _allNormal.Count;
         await RefreshImageTagsAsync().ConfigureAwait(true);
         BuildEntries();
     }

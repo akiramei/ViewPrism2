@@ -76,11 +76,12 @@ public sealed class CpRecomputeCouplingLintTests
     /// </summary>
     private static readonly Dictionary<string, (int Count, string Why)> Ledger = new(StringComparer.Ordinal)
     {
-        // ---- ImageTabViewModel(25)----
+        // ---- ImageTabViewModel(26)----
         ["ImageTabViewModel.cs:ImageTabViewModel"] = (1, "A: 言語切替=焼き込みラベル再解決(ECO-108)"),
         ["ImageTabViewModel.cs:LoadCatalogAsync"] = (1, "A: カタログロード完了"),
         ["ImageTabViewModel.cs:LoadContentAsync"] = (2, "A: ロード開始の空UI整合(_loaded=false=軽量)/完了"),
         ["ImageTabViewModel.cs:ReloadTagCatalogAsync"] = (2, "A: view削除退避/タグカタログ再読=チップ・列変化"),
+        ["ImageTabViewModel.cs:RefreshContentAsync"] = (1, "A: クロスタブ status 変更後の母集合再取得(作業タブ delete/restore/裁定/マージ=normal/pending 母集合が変わる=再解決が意味論上必要・ECO-131/GF-128-01)"),
         ["ImageTabViewModel.cs:ApplyModeTransition"] = (1, "A: 未ロードガード=O(0)(ECO-114)"),
         ["ImageTabViewModel.cs:SelectAxis"] = (1, "A: 軸切替=母集合変化"),
         ["ImageTabViewModel.cs:LoadViewAsync"] = (1, "A: view不在fallback=FS退避"),

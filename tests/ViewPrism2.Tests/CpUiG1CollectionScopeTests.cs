@@ -468,6 +468,45 @@ public sealed class CpUiG1CollectionScopeTests : IDisposable
     }
 
     [Fact]
+    public async Task ECO131_RefreshContentのawait中コレクション切替は別母集合で上書きしない()
+    {
+        // ECO-131 R8 所見1: RefreshContentAsync は対話中シェルから fire-and-forget されるため、
+        // ReloadImagesAsync の await 中にコレクション切替が起きると別コレクション母集合で上書きし得る。
+        // 世代ガード(LoadContentAsync と同規律)でこの上書きを防ぐことを固定する。
+        var (a, b) = await SeedTwoCollectionsAsync();
+        var aImages = await _db.Images.GetNormalByFolderAsync(a.Id, TestContext.Current.CancellationToken);
+        var imageRepo = Spy<IImageRepository>(_db.Images, out var imageSpy);
+        var vm = NewImageTab(new AppSettings(), imageRepo);
+        await vm.InitializeAsync();
+        await vm.SelectCollectionCommand.ExecuteAsync(a.Id);
+        Assert.Equal(a.Id, vm.SelectedCollectionId);
+        Assert.Equal(["a1.jpg", "a2.jpg"], ImageNames(vm));
+
+        // RefreshContentAsync の GetNormalByFolderAsync(A) をゲートして await 中に固定する
+        var delayedA = new TaskCompletionSource<IReadOnlyList<ImageRecord>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        imageSpy.Interceptor = (method, args) =>
+            method.Name == nameof(IImageRepository.GetNormalByFolderAsync) && Equals(args[0], a.Id)
+                ? (true, delayedA.Task) : (false, null);
+        var refresh = vm.RefreshContentAsync();
+        await WaitUntilAsync(() => imageSpy.Arguments(nameof(IImageRepository.GetNormalByFolderAsync))
+            .Any(args => Equals(args[0], a.Id)));
+
+        // await 中に B へ切替(LoadContentAsync(B) 完了=世代 ++・_collectionId=B)
+        imageSpy.Interceptor = null;
+        await vm.SelectCollectionCommand.ExecuteAsync(b.Id);
+        Assert.Equal(b.Id, vm.SelectedCollectionId);
+        Assert.Equal(["b1.jpg"], ImageNames(vm));
+
+        // 古い RefreshContent が resume しても B を A の母集合で上書きしない(世代ガード)
+        delayedA.SetResult(aImages);
+        await refresh;
+
+        Assert.Equal(b.Id, vm.SelectedCollectionId);
+        Assert.Equal(["b1.jpg"], ImageNames(vm)); // A の母集合で上書きされない
+    }
+
+    [Fact]
     public async Task ECO064_遅れて完了した旧collection結果は現在選択を上書きしない()
     {
         var (a, b) = await SeedTwoCollectionsAsync();
