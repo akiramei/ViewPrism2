@@ -1400,7 +1400,11 @@ public sealed partial class WorkTabViewModel : ObservableObject, IChipStripHost
         NotifyTrash();
     }
 
-    /// <summary>選択を復元(deleted→normal/不在 missing・T6/T7)。復元 normal は現スペースへ戻る。</summary>
+    /// <summary>
+    /// 選択を復元(ECO-128 T6'/T7): 物理存在→pending(origin=Restored)/不在→missing。
+    /// 作業タブは normal 限定(INV-W2)のため復元 pending は現スペース一覧に現れない=裁定は画像タブの
+    /// ⋯「未裁定の画像」で(作業タブ側 pending 導線の不在は 51-cheat-log・別 ECO 候補)。所属は不変。
+    /// </summary>
     [RelayCommand]
     private async Task RestoreSelectedTrash()
     {

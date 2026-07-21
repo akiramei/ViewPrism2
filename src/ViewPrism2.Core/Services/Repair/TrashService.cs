@@ -24,10 +24,11 @@ public sealed class TrashService
     }
 
     /// <summary>
-    /// 復元(OC-21 / T6・T7): deleted 限定。記録パス(folder.path + relative_path)に物理ファイルが
-    /// 存在すれば status=normal(T6)、不在なら status=missing(T7・幽霊 normal 防止 — INV-013)。
-    /// status のみ更新し、タグ/ID/特徴量は不変。deleted 以外は <see cref="ErrorCode.ValidationError"/>。
-    /// 戻り値の <see cref="ImageStatus"/> は復元後の status。
+    /// 復元(OC-21 / T6'・T7): deleted 限定。記録パス(folder.path + relative_path)に物理ファイルが
+    /// 存在すれば status=pending(T6'・復元だけで normal に戻さず未裁定へ・origin=Restored — ECO-128)、
+    /// 不在なら status=missing(T7・幽霊 normal 防止 — INV-013 v5.0)。status/origin のみ更新し、
+    /// タグ/ID/特徴量は不変。復元後の pending は §2.11.7 の裁定導線で normal 化する。
+    /// deleted 以外は <see cref="ErrorCode.ValidationError"/>。戻り値の <see cref="ImageStatus"/> は復元後の status。
     /// </summary>
     public async Task<Result<ImageStatus>> RestoreAsync(string imageId)
     {
@@ -58,7 +59,9 @@ public sealed class TrashService
         var fileExists = _probe.Exists(absolutePath);
 
         var newStatus = TrashTransition.ResolveRestore(fileExists);
-        await _images.UpdateStatusAsync(imageId, newStatus).ConfigureAwait(false);
+        // ECO-128 T6': pending 復帰は由来=Restored を刻む(裁定 UI の由来表示)。missing(T7)は origin なし。
+        var origin = newStatus == ImageStatus.Pending ? PendingOrigin.Restored : (PendingOrigin?)null;
+        await _images.RestoreStatusAsync(imageId, newStatus, origin).ConfigureAwait(false);
         return Result<ImageStatus>.Ok(newStatus);
     }
 

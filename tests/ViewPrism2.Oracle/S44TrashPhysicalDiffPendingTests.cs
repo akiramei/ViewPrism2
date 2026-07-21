@@ -8,23 +8,19 @@ using Xunit;
 namespace ViewPrism2.Oracle;
 
 /// <summary>
-/// S-26: 復元・完全削除の物理非破壊(scope=cross-factory・EQ-003・L3、仕様 §2.11.3-4)。工場非開示。
-/// INV-009 第 2 の実アクション。実画像を一時フォルダに置き、deleted を復元(物理存在→Normal)+別の
-/// deleted を完全削除→操作前後でフォルダ内ファイル集合/SHA-256/LastWriteTimeUtc が完全不変であることを
-/// スナップショット比較で実証する。DB 上は復元で status 遷移・完全削除で行消滅(=空振りでない)。
+/// S-44: 復元・完全削除の物理非破壊(新意味論・S-26 後継)。scope=cross-factory・EQ-003・L3、仕様 §2.11.3-4・ECO-128。工場非開示。
+/// INV-009 第 2 の実アクション。実画像を一時フォルダに置き、deleted を復元(物理存在→Pending・origin=Restored・T6')+別の
+/// deleted を完全削除→操作前後でフォルダ内ファイル集合/SHA-256/LastWriteTimeUtc が完全不変であることをスナップショット比較で実証する。
+/// DB 上は復元で status 遷移(→pending)・完全削除で行消滅(=空振りでない)。
 /// </summary>
-[Trait("oracle", "S-26")]
+[Trait("oracle", "S-44")]
 [Trait("scope", "cross-factory")]
-public sealed class S26TrashPhysicalDiffTests
+public sealed class S44TrashPhysicalDiffPendingTests
 {
-    // ECO-128(gate① 見積り不足の顕在化): 本 S-26 も復元→Normal(旧 T6)を pin し、新意味論
-    // (T6'=復元→Pending)と衝突する(gate① は「真の衝突は S-29 のみ」と見積もったが S-26 も同クラス)。
-    // R6 に従い gate① の裁定済み処置(skip 化+理由刻印+新規行)を機械的に適用: 期待値は変更せず skip、
-    // 新意味論の物理非破壊(復元→pending+完全削除)は S-44(S44TrashPhysicalDiffPendingTests)で pin。
-    [Fact(Skip = "ECO-128: 旧 T6(復元→Normal)は T6'(復元→Pending)へ改訂。物理非破壊の新意味論は S-44 で pin(gate① 裁定=skip 化+新規行を S-26 にも機械適用)")]
-    public async Task 復元_完全削除の前後で物理ファイルが完全不変_DBは論理遷移()
+    [Fact]
+    public async Task 復元_完全削除の前後で物理ファイルが完全不変_復元はPending遷移()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "ViewPrism2.S26", Guid.NewGuid().ToString("D"));
+        var dir = Path.Combine(Path.GetTempPath(), "ViewPrism2.S44", Guid.NewGuid().ToString("D"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -37,7 +33,7 @@ public sealed class S26TrashPhysicalDiffTests
             Assert.True((await db.Folders.AddAsync(
                 new SyncFolder { Id = "fld", Name = "c", Path = dir })).IsSuccess);
             await AddImageAsync(db, "keep", "keep.png", ImageStatus.Normal);
-            await AddImageAsync(db, "restore", "restore.png", ImageStatus.Deleted); // 物理存在 → 復元で Normal
+            await AddImageAsync(db, "restore", "restore.png", ImageStatus.Deleted); // 物理存在 → 復元で Pending(T6')
             await AddImageAsync(db, "purge", "purge.png", ImageStatus.Deleted);     // 完全削除対象
 
             var before = Snapshot(dir);
@@ -45,7 +41,7 @@ public sealed class S26TrashPhysicalDiffTests
             var trash = new TrashService(db.Images, db.Folders, new FilePresenceProbe());
             var r = await trash.RestoreAsync("restore");
             Assert.True(r.IsSuccess);
-            Assert.Equal(ImageStatus.Normal, r.Value); // 物理存在するので Normal(T6)
+            Assert.Equal(ImageStatus.Pending, r.Value); // 物理存在するので Pending(T6'・復元だけで normal に戻さない)
             Assert.True((await trash.PermanentDeleteAsync("purge")).IsSuccess);
 
             var after = Snapshot(dir);
@@ -57,8 +53,10 @@ public sealed class S26TrashPhysicalDiffTests
                 Assert.Equal(sig, after[name]); // (SHA-256, mtime ticks)
             }
 
-            // DB は論理遷移している(空振りでない): restore→Normal・purge→行消滅
-            Assert.Equal(ImageStatus.Normal, (await db.Images.GetByIdAsync("restore"))!.Status);
+            // DB は論理遷移している(空振りでない): restore→Pending(origin=Restored)・purge→行消滅
+            var restored = await db.Images.GetByIdAsync("restore");
+            Assert.Equal(ImageStatus.Pending, restored!.Status);
+            Assert.Equal(PendingOrigin.Restored, restored.PendingOrigin);
             Assert.Null(await db.Images.GetByIdAsync("purge"));
         }
         finally

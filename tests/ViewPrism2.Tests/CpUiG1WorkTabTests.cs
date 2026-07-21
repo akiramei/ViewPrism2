@@ -287,7 +287,7 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         Assert.DoesNotContain(vm.Items, i => i.Id == "a"); // normal 一覧から外れる
         Assert.Equal(1, vm.TrashCount);                    // ⋯ゴミ箱バッジ=現スペースの deleted 件数
 
-        // ⋯「ゴミ箱」→ popup で a を選択 → 復元(物理存在→normal)
+        // ⋯「ゴミ箱」→ popup で a を選択 → 復元(物理存在→pending・ECO-128 T6')
         await vm.OpenTrashCommand.ExecuteAsync(null);
         Assert.True(vm.TrashOpen);
         Assert.Equal(new[] { "a" }, vm.TrashPopupItems.Select(i => i.Id).ToArray());
@@ -295,8 +295,15 @@ public sealed class CpUiG1WorkTabTests : IDisposable
         Assert.True(vm.CanRestoreTrash);
         await vm.RestoreSelectedTrashCommand.ExecuteAsync(null);
 
-        Assert.Equal(ImageStatus.Normal, (await _db.Images.GetByIdAsync("a"))!.Status);
+        // ECO-128: 復元は normal へ自動昇格せず pending(origin=Restored)。ゴミ箱からは外れる。
+        var a = await _db.Images.GetByIdAsync("a");
+        Assert.Equal(ImageStatus.Pending, a!.Status);
+        Assert.Equal(PendingOrigin.Restored, a.PendingOrigin);
         Assert.Empty(vm.TrashPopupItems);                  // ゴミ箱から消える
+        // 作業タブは normal 限定(INV-W2/INV-010 v5.0)。pending は作業タブ一覧に現れない
+        // =裁定は画像タブの ⋯「未裁定の画像」で行う(作業タブ側 pending 導線の不在は ECO-128 の
+        // スコープ外所見として 51-cheat-log 記帳=別 ECO 候補)。workspace_images 所属は不変。
+        Assert.DoesNotContain(vm.Items, i => i.Id == "a");
     }
 
     [Fact]

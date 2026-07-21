@@ -194,6 +194,15 @@ public sealed class ImageRepository : IImageRepository
             "UPDATE images SET status = @Status WHERE id = @Id", new { Id = id, Status = status.ToDb() }));
     }
 
+    public Task RestoreStatusAsync(string id, ImageStatus status, PendingOrigin? origin)
+    {
+        // ECO-128 T6'/T7: status と pending_origin を単一 UPDATE で原子適用(deleted→pending は
+        // origin=Restored / deleted→missing は origin=NULL)。candidate_link_id は不変(deleted 行は NULL)。
+        return _db.RunAsync(conn => conn.ExecuteAsync(
+            "UPDATE images SET status = @Status, pending_origin = @Origin WHERE id = @Id",
+            new { Id = id, Status = status.ToDb(), Origin = origin.ToDb() }));
+    }
+
     public Task UpdateNotesAsync(string id, string? notes)
     {
         return _db.RunAsync(conn => conn.ExecuteAsync(

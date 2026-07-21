@@ -59,6 +59,14 @@ public interface IImageRepository
     /// <summary>ステータス遷移の適用(仕様 §2.1 遷移表の範囲のみ)。</summary>
     Task UpdateStatusAsync(string id, ImageStatus status);
 
+    /// <summary>
+    /// ECO-128 T6'/T7: トラッシュ復元の status + pending_origin を原子更新する。
+    /// deleted→pending は origin=Restored(復元だけで normal に戻さない=INV-013 v5.0)、
+    /// deleted→missing は origin=NULL(T12 と同契約)。candidate_link_id には触れない
+    /// (deleted 行は常に candidate_link_id=NULL)。deleted 限定は TrashService が事前検証済み。
+    /// </summary>
+    Task RestoreStatusAsync(string id, ImageStatus status, PendingOrigin? origin);
+
     /// <summary>ノート保存(REQ-043)。</summary>
     Task UpdateNotesAsync(string id, string? notes);
 

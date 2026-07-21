@@ -6,15 +6,16 @@ using Xunit;
 namespace ViewPrism2.Oracle;
 
 /// <summary>
-/// S-29: トラッシュ復元の存在分岐(scope=cross-factory・OC-21・INV-013、仕様 §2.11.3、T6/T7)。工場非開示。
-/// deleted 限定。物理存在(IFilePresenceProbe を注入)→ Normal(T6)/ 不在 → Missing(T7・幽霊 normal 防止)。
+/// S-43: トラッシュ復元の安全側遷移(scope=cross-factory・OC-21・INV-013 v5.0、仕様 §2.11.3、T6'/T7・ECO-128)。
+/// 工場非開示。S-29(旧 T6=存在→Normal)の新意味論後継。deleted 限定。物理存在(IFilePresenceProbe を注入)→
+/// Pending(T6'・origin=Restored・復元だけで normal に戻さない=未裁定へ倒す)/ 不在 → Missing(T7・幽霊 normal 防止・origin=NULL)。
 /// タグ・image_id は不変。normal の復元は ValidationError。純粋関数 TrashTransition.ResolveRestore も検査。
 /// </summary>
-[Trait("oracle", "S-29")]
+[Trait("oracle", "S-43")]
 [Trait("scope", "cross-factory")]
-public sealed class S29TrashRestoreTests
+public sealed class S43TrashRestorePendingTests
 {
-    private const string FolderPath = "C:/oracle-s29";
+    private const string FolderPath = "C:/oracle-s43";
 
     private sealed class FakeProbe(params string[] existing) : IFilePresenceProbe
     {
@@ -25,12 +26,8 @@ public sealed class S29TrashRestoreTests
 
     private static string Abs(string rel) => Path.Combine(FolderPath, rel.Replace('/', Path.DirectorySeparatorChar));
 
-    // ECO-128 gate① 裁定(2026-07-21): 本 S-29 は旧 T6 意味論(存在→Normal)を exact で pin し、
-    // 新意味論(T6'=存在→Pending・origin=Restored)と正面衝突する。R6「既存固定オラクル行は変更しない」
-    // に従い**行の期待値は変更せず skip 化**(理由刻印)、新意味論は S-43(S43TrashRestorePendingTests)で
-    // 新規 pin する。41-fixed-oracle.yaml も S-29=superseded_by ECO-128・新規 S-43 を追加。
-    [Fact(Skip = "ECO-128: 旧 T6(復元→Normal)は T6'(復元→Pending)へ改訂。新意味論は S-43 で pin(gate① 裁定=skip 化+新規行)")]
-    public async Task 物理存在でNormal_不在でMissing_normalは拒否_タグID不変()
+    [Fact]
+    public async Task 物理存在でPending_originRestored_不在でMissing_normalは拒否_タグID不変()
     {
         using var db = new OracleDb();
         Assert.True((await db.Folders.AddAsync(
@@ -44,28 +41,31 @@ public sealed class S29TrashRestoreTests
         // A のみ物理存在
         var trash = new TrashService(db.Images, db.Folders, new FakeProbe(Abs("a.png")));
 
-        // T6: 存在 → Normal
+        // T6': 存在 → Pending(origin=Restored・復元だけで normal に戻さない)
         var rA = await trash.RestoreAsync("A");
         Assert.True(rA.IsSuccess);
-        Assert.Equal(ImageStatus.Normal, rA.Value);
+        Assert.Equal(ImageStatus.Pending, rA.Value);
         var a = await db.Images.GetByIdAsync("A");
-        Assert.Equal(ImageStatus.Normal, a!.Status);
+        Assert.Equal(ImageStatus.Pending, a!.Status);
+        Assert.Equal(PendingOrigin.Restored, a.PendingOrigin);      // 由来=復元
         Assert.Equal("A", a.Id);                                    // image_id 不変
-        Assert.Single(await db.Tags.GetImageTagsAsync("A")); // タグ不変
+        Assert.Single(await db.Tags.GetImageTagsAsync("A"));        // タグ不変(復元 pending はタグを持ち得る)
 
-        // T7: 不在 → Missing(幽霊 normal 防止)
+        // T7: 不在 → Missing(幽霊 normal 防止・origin なし)
         var rB = await trash.RestoreAsync("B");
         Assert.True(rB.IsSuccess);
         Assert.Equal(ImageStatus.Missing, rB.Value);
-        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync("B"))!.Status);
+        var b = await db.Images.GetByIdAsync("B");
+        Assert.Equal(ImageStatus.Missing, b!.Status);
+        Assert.Null(b.PendingOrigin);
 
         // normal の復元は拒否(deleted 限定)
         var rN = await trash.RestoreAsync("N");
         Assert.False(rN.IsSuccess);
         Assert.Equal(ErrorCode.ValidationError, rN.Error);
 
-        // 純粋関数
-        Assert.Equal(ImageStatus.Normal, TrashTransition.ResolveRestore(true));
+        // 純粋関数(T6'=Pending / T7=Missing)
+        Assert.Equal(ImageStatus.Pending, TrashTransition.ResolveRestore(true));
         Assert.Equal(ImageStatus.Missing, TrashTransition.ResolveRestore(false));
     }
 

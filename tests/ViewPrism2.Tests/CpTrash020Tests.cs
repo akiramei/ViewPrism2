@@ -39,8 +39,10 @@ public sealed class CpTrash020Tests
         => await db.Folders.AddAsync(new SyncFolder { Id = Folder, Name = "F", Path = "C:/f" });
 
     [Fact]
-    public async Task 復元_物理存在_deletedからNormal_T6_タグとID不変()
+    public async Task 復元_物理存在_deletedからPending_T6dash_originRestored_タグとID不変()
     {
+        // ECO-128(T6'): 復元の責務は deleted 解除まで。物理存在でも normal へ自動昇格せず
+        // pending(origin='restored')へ倒す(未裁定=INV-013 v5.0)。タグ/ID は不変。
         using var db = new TempDb();
         await SeedFolderAsync(db);
         var image = Image("img-1", ImageStatus.Deleted);
@@ -53,18 +55,20 @@ public sealed class CpTrash020Tests
         var result = await service.RestoreAsync(image.Id);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(ImageStatus.Normal, result.Value);
+        Assert.Equal(ImageStatus.Pending, result.Value);      // T6'(旧 T6=Normal を置換)
 
         var restored = await db.Images.GetByIdAsync(image.Id);
         Assert.Equal("img-1", restored!.Id);                  // ID 不変
-        Assert.Equal(ImageStatus.Normal, restored.Status);
+        Assert.Equal(ImageStatus.Pending, restored.Status);
+        Assert.Equal(PendingOrigin.Restored, restored.PendingOrigin); // 由来=復元
         var tags = await db.Tags.GetImageTagsAsync(image.Id); // タグ不変
         Assert.Contains(tags, t => t.TagId == tag.Id);
     }
 
     [Fact]
-    public async Task 復元_物理不在_deletedからMissing_T7_幽霊normal防止()
+    public async Task 復元_物理不在_deletedからMissing_T7_幽霊normal防止_origin無し()
     {
+        // T7 は不変(不在→missing)。origin は pending でないため NULL(T12 と同契約)。
         using var db = new TempDb();
         await SeedFolderAsync(db);
         var image = Image("img-1", ImageStatus.Deleted);
@@ -75,7 +79,9 @@ public sealed class CpTrash020Tests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(ImageStatus.Missing, result.Value);
-        Assert.Equal(ImageStatus.Missing, (await db.Images.GetByIdAsync(image.Id))!.Status);
+        var restored = await db.Images.GetByIdAsync(image.Id);
+        Assert.Equal(ImageStatus.Missing, restored!.Status);
+        Assert.Null(restored.PendingOrigin);                  // missing は origin を持たない
     }
 
     [Fact]
@@ -149,9 +155,10 @@ public sealed class CpTrash020Tests
     }
 
     [Fact]
-    public void TrashTransition_ResolveRestore_存在Normal_不在Missing_純粋関数ベクタ()
+    public void TrashTransition_ResolveRestore_存在Pending_不在Missing_純粋関数ベクタ()
     {
-        Assert.Equal(ImageStatus.Normal, TrashTransition.ResolveRestore(fileExists: true));
+        // ECO-128(T6'): 存在→Pending(旧 Normal を置換)/ 不在→Missing(T7 不変)
+        Assert.Equal(ImageStatus.Pending, TrashTransition.ResolveRestore(fileExists: true));
         Assert.Equal(ImageStatus.Missing, TrashTransition.ResolveRestore(fileExists: false));
     }
 }

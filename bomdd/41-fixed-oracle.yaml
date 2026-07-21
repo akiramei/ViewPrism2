@@ -236,6 +236,7 @@ fixed_oracle:
     # ---- v4.0(loop-v4-repair-lifecycle)— tag loop-v4-r1 で凍結。全 cross-factory(状態機械・修復規則の横断契約) ----
     - id: S-26
       scope: cross-factory
+      superseded_by: ECO-128   # gate① 見積り不足の顕在化(2026-07-21): S-29 に加え本 S-26 も復元→Normal(旧 T6)を pin し T6'(復元→Pending)と衝突。R6 に従い裁定済み処置(skip 化+理由刻印+新規行)を機械適用=物理非破壊の新意味論は S-44 で pin。テスト側 [Fact(Skip=...)]。
       scenario: "復元・完全削除の物理非破壊(L3): 実画像 3 枚を一時フォルダに置きスキャン→1 枚をマージで deleted 化し復元→別の 1 枚を deleted 化し完全削除→フォルダをスナップショット比較(INV-009 第 2 の実アクション)"
       contract_expectation: "復元・完全削除の前後でフォルダ内全ファイルの SHA-256・LastWriteTimeUtc・ファイル集合が完全一致(削除・移動・新規作成なし)。一方 DB 上は復元で status 遷移・完全削除で images 行消滅(論理操作は起きている=空振りでない)"
       spec_ref: "bomdd/20-spec.md#2.11.3-4(CP-TRASH-001・INV-009/013/014)"
@@ -257,6 +258,7 @@ fixed_oracle:
       depth: unit〜L2
     - id: S-29
       scope: cross-factory
+      superseded_by: ECO-128   # gate① 裁定(2026-07-21): 旧 T6(復元→Normal)は T6'(復元→Pending)へ改訂。R6 に従い本行は skip 化(理由刻印・期待値不変)、新意味論は S-43 で pin。テスト側 [Fact(Skip=...)]。
       scenario: "トラッシュ復元の存在分岐: deleted 画像 2 枚。一方は記録パスに物理ファイル存在・他方は不在(IFilePresenceProbe で注入)。各を復元。さらに normal 画像の復元を試行"
       contract_expectation: "存在→status=Normal(T6)/ 不在→status=Missing(T7・幽霊 normal 防止)。両者ともタグ・image_id・特徴量は不変。normal の復元→ValidationError(deleted 限定)。純粋関数 TrashTransition.ResolveRestore(true)=Normal /(false)=Missing"
       spec_ref: "bomdd/20-spec.md#2.11.3(OC-21・INV-013・REQ-070)"
@@ -368,3 +370,19 @@ fixed_oracle:
       spec_ref: "bomdd/20-spec.md#2.5 REQ-085(ECO-049)"
       equivalence_ref: EQ-002
       depth: unit
+    - id: S-43
+      scope: cross-factory
+      added_by: ECO-128
+      scenario: "トラッシュ復元の安全側遷移(T6'/T7・S-29 の新意味論後継): deleted 画像 2 枚(一方は物理存在・タグ付き/他方は不在。IFilePresenceProbe で注入)を復元。さらに normal 画像の復元を試行。純粋関数 TrashTransition.ResolveRestore も検査"
+      contract_expectation: "存在→status=Pending・pending_origin=Restored(T6'・復元だけで normal に戻さない=未裁定へ倒す)/ 不在→status=Missing・pending_origin=NULL(T7・幽霊 normal 防止)。両者ともタグ・image_id・特徴量は不変(復元後の pending はタグを持ち得る)。normal の復元→ValidationError(deleted 限定)。純粋関数 TrashTransition.ResolveRestore(true)=Pending /(false)=Missing"
+      spec_ref: "bomdd/20-spec.md#2.11.3(OC-21・INV-013 v5.0・REQ-070・ECO-128)"
+      equivalence_ref: EQ-001
+      depth: unit
+    - id: S-44
+      scope: cross-factory
+      added_by: ECO-128
+      scenario: "復元・完全削除の物理非破壊(新意味論・S-26 後継・L3): 実画像 3 枚を一時フォルダに置き、1 枚を deleted 化し復元(物理存在)→別の 1 枚を deleted 化し完全削除→フォルダをスナップショット比較(INV-009 第 2 の実アクション)"
+      contract_expectation: "復元・完全削除の前後でフォルダ内全ファイルの SHA-256・LastWriteTimeUtc・ファイル集合が完全一致(削除・移動・新規作成なし)。一方 DB 上は復元で status 遷移(deleted→Pending・origin=Restored=T6')・完全削除で images 行消滅(論理操作は起きている=空振りでない)"
+      spec_ref: "bomdd/20-spec.md#2.11.3-4(CP-TRASH-001・INV-009/013 v5.0/014・ECO-128)"
+      equivalence_ref: EQ-003
+      depth: L3

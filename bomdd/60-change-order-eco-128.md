@@ -1,4 +1,4 @@
-# ECO-128 — ゴミ箱復元の安全側遷移 — T6(deleted→normal)を「復元後は原則 pending」へ(staged)
+# ECO-128 — ゴミ箱復元の安全側遷移 — T6(deleted→normal)を「復元後は原則 pending」へ(implemented)
 
 - 起票日: 2026-07-21
 - 報告者: maintainer 設計まとめ(2026-07-21「画像の状態管理・あるべき状態管理」§6)の投入。3 分割の (a)
@@ -79,8 +79,66 @@ diff 規模: src 1 行+docstring・spec 数節・tests(OC-21 unit 追随+oracle 
 
 ## 6. 残ゲート
 
-- **gate①(裁定)— 裁定済み(2026-07-21・§7)。残ゲートなし(着手条件= ECO-129 クローズ)**。
-- **gate②(golden)**: 是正後に提示(復元→pending の一覧挙動・実機)。
+- **gate①(裁定)— 裁定済み(2026-07-21・§7)。残ゲートなし(着手条件= ECO-129 クローズ=満了)**。
+- **gate②(golden)**: 是正完了・§9 に合格基準を提示(復元→pending の一覧挙動・実機)。
+
+## 8. 実施記録(2026-07-21 fix)
+
+- **R5(プローブ先行)**: CpTrash020Tests の可変 CP を新意味論へ書き換え=**是正前赤 2 本実測**
+  (①復元 物理存在→Pending+origin=Restored ②純粋関数ベクタ ResolveRestore(true)=Pending)。
+  T7(不在→missing・origin=NULL)は deleted が元々 origin なしのため是正前から緑=非退行を確認。
+- **是正(最小)**: ①`TrashTransition.ResolveRestore(true)` を Normal→**Pending**(1 行・docstring T6→T6')
+  ②`TrashService.RestoreAsync` で origin 導出(Pending→Restored / Missing→null)③`IImageRepository`+
+  `ImageRepository` に **`RestoreStatusAsync(id,status,origin)`** 新設(status+pending_origin を単一 UPDATE で
+  原子適用・candidate_link_id は deleted 行が常に NULL のため不変)。`PendingOrigin.Restored` は ECO-129 が
+  予約済み・裁定 UI(PendingReviewViewModel)と i18n(ja/en の originRestored/whyRestored*)も完備=**追加 UI 不要**
+  (gate① 見込みどおり)。App の 2 復元呼出元(画像タブ ImageTabTrashViewModel・作業タブ WorkTabViewModel)の
+  docstring/コメントを T6' へ追随。
+- **spec/BOM 改訂**: 遷移表 T6→**T6'(deleted→pending・origin='restored')**・§2.11.3 全面改訂(復元の責務=
+  deleted 解除まで/normal へ自動昇格しない)・**INV-013 v5.0 強化**(復元だけで normal に戻さない=幽霊 normal 防止を
+  包含)・OC-21 契約更新・golden G-10 文言(復元→未裁定バッジ)。
+- **凍結オラクル処置(gate① 裁定=skip 化+理由刻印+新規行)**: **S-29**(復元→Normal を exact pin)を
+  `[Fact(Skip=...)]`+41-fixed-oracle.yaml に `superseded_by: ECO-128` 刻印 → **新規 S-43**(復元→Pending+
+  origin=Restored/不在→Missing+origin=NULL/normal 拒否/タグ ID 不変/純粋関数)で新意味論を pin。
+  **【gate① 見積り不足の顕在化】** ECO-129 §8 は「真の衝突は 128 の S-29 のみ」と見積もったが、fix 中に
+  **S-26(復元・完全削除の物理非破壊・L3)も復元→Normal を pin**して衝突と判明。同一衝突クラスのため
+  gate① の裁定済み処置(skip 化+新規行)を**機械適用**: S-26 を skip 化+刻印 → **新規 S-44**(復元→Pending の
+  物理非破壊+完全削除の物理非破壊=S-26 の全カバレッジを新意味論で承継)。**maintainer への申し送り**=
+  gate① の「衝突は S-29 のみ」は不完全だった(S-26 も同処置)。凍結オラクルの既知 skip は **2→4 件**
+  (S-29・S-26 追加)。
+- **機械受入(4 点)**: build 0 error/0 警告・Tests **916/916**・Oracle **109+4skip**(既知 2+S-29+S-26)・
+  validate 0/0。
+- **R7(セルフゴールデン)**: 新規 UI サーフェスなし=**対象外を宣言**。復元 pending のバッジ/裁定 UI は
+  ECO-129 の既存サーフェス(pending_review mock+FS ブラウズの未裁定バッジ)を再利用し、視覚は不変
+  (結果 status が変わるのみ=gate① 見込みどおり)。captures 撮り直し不要。
+- **R8(セルフレビュー・fresh context 独立)**: fix diff を独立 subagent でレビュー。所見 4 件=
+  **スコープ内 1**(ImageTabTrashViewModel:142/149 の復元コメントが旧意味論のまま=diff が 2 呼出元の片方
+  〔WorkTab〕だけ更新した対称漏れ)→**本 ECO 内で是正**(コメントを T6'/pending へ・挙動変更なし)。
+  **スコープ外 3**(①作業タブに pending 導線がない=復元 pending が作業タブから不可視〔別 ECO 候補〕
+  ②RestoreStatusAsync の deleted 限定 WHERE 不在〔防御的・非退行〕③作業タブ復元後のトラッシュバッジ
+  件数未更新の疑い〔先在〕)→**51-cheat-log 記帳**。コア是正の設計健全性(状態機械の閉包=再スキャンで
+  origin=Restored 維持・T12 で missing 化+タグ保全/消費サイト read-across=relink INV-015 ガード・normal 限定
+  集計は事故なし)を独立確認。
+- **diff 規模**: src 4 ファイル(Core 3=TrashTransition/TrashService/IImageRepository・Infra 1=ImageRepository)
+  +App コメント 2 ファイル・spec 数節・oracle 2 skip 化+新規 2 クラス+yaml 2 superseded+2 新規・
+  可変 CP 3 クラス追随(CpTrash020/CpTrash001/CpUiG1TrashPopup/CpUiG1WorkTab)+デコレータ 2 追随。
+
+## 9. 停止点= golden 合格基準(gate②・実機)
+
+1. **復元→未裁定(核)**: ゴミ箱で deleted 画像(記録パスに物理ファイルあり)を選び「復元」→
+   一覧に **normal ではなく未裁定バッジ付き(pending)で現れる**。⋯メニュー「未裁定の画像… N」件数が増える。
+2. **復元 pending の裁定**: ⋯「未裁定の画像」→裁定ダイアログで由来チップ「**復元**」(灰)・
+   「ゴミ箱から復元された画像です」。受け入れる→normal 化(タグ保持)/削除する→ゴミ箱へ戻る/保留→残る。
+3. **不在は missing(T7 不変)**: 物理ファイルが無い deleted を復元→missing として扱われる旨(normal に戻らない)。
+4. **タグ保全**: タグ付き画像を削除→復元→pending でもタグが保持され、受け入れ後も残る。
+5. **作業タブ復元の挙動差**(申し送り): 作業タブでゴミ箱から復元すると pending 化し、**作業タブ一覧には
+   現れない**(normal 限定)。裁定は画像タブで行う。これを許容とするか=作業タブ pending 導線の要否は
+   別 ECO 判断(cheat-log 記帳済み)。
+6. **回帰**: 完全削除(物理非破壊・確認)・除外(missing→deleted)・二段階スキャン・pending 裁定 4 操作・
+   26 万件ブラウズ体感。
+
+合格なら `/eco-accept eco-128` を指示してください(基準 5 の作業タブ挙動差の裁定も添えて)。
+不合格所見(GF-*)は本 ECO の手順 1 から。
 
 ## 7. gate① 裁定記録(2026-07-21・maintainer)
 

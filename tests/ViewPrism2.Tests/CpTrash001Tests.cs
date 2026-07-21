@@ -90,13 +90,13 @@ public sealed class CpTrash001Tests : IDisposable
         var service = new TrashService(db.Images, db.Folders, new FilePresenceProbe());
         var result = await service.RestoreAsync(image.Id);
         Assert.True(result.IsSuccess);
-        Assert.Equal(ImageStatus.Normal, result.Value); // 物理存在 → Normal(T6)
+        Assert.Equal(ImageStatus.Pending, result.Value); // 物理存在 → Pending(T6'・ECO-128)
 
         var after = Snapshot(_imageDir);
         AssertSnapshotsEqual(before, after);
 
-        // DB 上は status 遷移している(空振りでない)
-        Assert.Equal(ImageStatus.Normal, (await db.Images.GetByIdAsync(image.Id))!.Status);
+        // DB 上は status 遷移している(空振りでない)。物理非破壊は上の集合一致で担保
+        Assert.Equal(ImageStatus.Pending, (await db.Images.GetByIdAsync(image.Id))!.Status);
     }
 
     [Fact]

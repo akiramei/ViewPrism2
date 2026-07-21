@@ -806,6 +806,9 @@ public sealed class CpScan004Tests : IDisposable
 
         public Task UpdateStatusAsync(string id, ImageStatus status) => _inner.UpdateStatusAsync(id, status);
 
+        public Task RestoreStatusAsync(string id, ImageStatus status, PendingOrigin? origin)
+            => _inner.RestoreStatusAsync(id, status, origin);
+
         public Task UpdateNotesAsync(string id, string? notes) => _inner.UpdateNotesAsync(id, notes);
 
         public Task DeleteAsync(string id) => _inner.DeleteAsync(id);

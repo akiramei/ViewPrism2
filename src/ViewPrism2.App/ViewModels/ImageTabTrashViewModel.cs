@@ -139,14 +139,16 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         OnPropertyChanged(string.Empty);
     }
 
-    /// <summary>選択を復元(T6/T7・物理存在→normal/不在→missing)。復元分は一覧と母集合へ反映。</summary>
+    /// <summary>選択を復元(ECO-128 T6'/T7・物理存在→pending〔origin=Restored〕/不在→missing)。復元分は一覧と母集合へ反映。</summary>
     [RelayCommand]
     private async Task RestoreSelectedTrash()
     {
         if (_trashSel.Count == 0) return;
         foreach (var id in _trashSel.ToList())
             await _trash.RestoreAsync(id).ConfigureAwait(true);
-        await _reloadImagesAsync().ConfigureAwait(true); // 復元 normal はグリッドへ戻る
+        // 復元 pending は無絞り込み FS ブラウズにバッジ付きで並置(INV-010 v5.0)=一覧へ戻る。
+        // ReloadImagesAsync は _allPending も再取得する(GF-129-01)ため件数バッジ・一覧バッジが追随する
+        await _reloadImagesAsync().ConfigureAwait(true);
         await LoadTrashItemsAsync().ConfigureAwait(true);
         await RefreshCountAsync().ConfigureAwait(true);
         _recompute();

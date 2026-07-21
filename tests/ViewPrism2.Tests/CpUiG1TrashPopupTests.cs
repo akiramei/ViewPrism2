@@ -198,19 +198,25 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
     }
 
     [Fact]
-    public async Task 復元は選択をnormalへ戻しグリッド母集合へ復帰させる()
+    public async Task 復元は選択をpending化しゴミ箱から外しFSブラウズへバッジ付きで戻す()
     {
+        // ECO-128(T6'): 復元は物理存在でも normal へ自動昇格せず pending(origin=Restored)。
+        // pending は無絞り込み FS ブラウズにバッジ付きで並置される(INV-010 v5.0)=一覧へは戻る。
         var vm = await NewAsync(["a.jpg"], ["x.jpg", "y.jpg"], new FakeProbe(exists: true));
         await vm.OpenTrashCommand.ExecuteAsync(null);
         vm.ToggleTrashItemCommand.Execute(vm.TrashPopupItems.Single(i => i.Name == "x.jpg"));
 
         await vm.RestoreSelectedTrashCommand.ExecuteAsync(null);
 
-        // x は復元(物理存在 → normal)、ゴミ箱からは消える
+        // x は復元(物理存在 → pending・origin=Restored)、ゴミ箱からは消える
         Assert.Equal(["y.jpg"], vm.TrashPopupItems.Select(i => i.Name));
         Assert.Equal(1, vm.TrashCount);
         var x = await _db.Images.GetByIdAsync("x.jpg");
-        Assert.Equal(ImageStatus.Normal, x!.Status);
+        Assert.Equal(ImageStatus.Pending, x!.Status);
+        Assert.Equal(PendingOrigin.Restored, x.PendingOrigin);
+        // FS ブラウズ(無絞り込み)に未裁定バッジ付きで現れる
+        Assert.Contains(vm.Items, i => !i.IsFolder && i.Name == "x.jpg" && i.IsPending);
+        Assert.True(vm.HasPending);
     }
 
     [Fact]
