@@ -1886,3 +1886,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。VM probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当"
     notes: "gate①=不要見込み(実装の idiom 逸脱=CAD 未定義ではない)。着手条件=なし。gate②=是正後提示。関連=ECO-129(pending 裁定 UI 新設元・混入 4deebc2)・GF-129-01(同型=同一インスタンス通知は再評価されない)・ECO-133(Codex 同一バッチの別欠陥 P2)"
     body: 60-change-order-eco-132.md
+  - id: ECO-133
+    title: "二段階スキャン適用の部分失敗後、同一 staging の再試行が UNIQUE 衝突で残余へ到達できない"
+    type: "不具合(UI/VM 層・失敗回復モデルの不整合)"
+    status: staged
+    golden: "pending(是正後=適用途中失敗を注入し Apply 再試行が行き詰まらず再スキャンへ導かれる・実機/probe)"
+    baseline: "main 07e8a0a"
+    findings: "Codex review(6fa8834..HEAD・2026-07-21・P2)。症状=Apply が add バッチ commit 後に失敗すると VM は Summary 面へ戻り同一 stale staging で Apply 再有効化→再試行は先頭 add バッチから再実行し既 INSERT 行に UNIQUE 制約で再失敗=残余未到達。安全な回復は再スキャン(差分再計算)。工程診断=UI/VM 実装欠陥(失敗回復が REQ-100 の回復モデルと不整合)。確定事実=①ApplyCoreAsync(ScanService.cs:398-442)は 512 件独立 Tx で StatusUpdates→Deletes→MetaUpdates→Adds を適用・コメント自身が『部分適用があり得る・残余は次回スキャンが収束』と明記=回復は再スキャン ②Adds は INSERT(images PK+UNIQUE(sync_folder_id,relative_path))=既適用行の再 INSERT は throw ③ScanSummaryViewModel:317-321 が失敗時 Phase=Summary+CanApply(:403)真のまま=同一 staging で再 Apply 可能・staging 再計算なし ④混入=ECO-130(ScanSummaryViewModel 新設・R8 所見4 で例外→Result は処置したが同一 staging 再試行禁止は未処置)。未検証=Status/Delete/Meta は冪等で破綻は Adds 再実行に限る(失敗フェーズ依存で間欠的に見える)・適用失敗自体は稀"
+    impacted_bom: ["src=ScanSummaryViewModel.cs(失敗回復の遷移=CanApply/Phase/文言)+必要なら i18n(再スキャン誘導)", "tests=部分適用失敗注入→再試行が UNIQUE で残余を潰さない VM probe", "CAD=失敗回復文言を scan_summary.md へ(乖離あれば ViewPrismUI 申し送り)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。VM probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当"
+    notes: "gate①=案A(再スキャン誘導=REQ-100 回復モデル整合)推奨。CAD 文言追加が要るなら軽微裁定・基本は実装追随=裁定不要見込み。gate②=是正後提示。関連=ECO-130(混入元・二段階スキャン)・ECO-059/060(512 件バッチ)・ECO-132(Codex 同一バッチの別欠陥 P1①)"
+    body: 60-change-order-eco-133.md
