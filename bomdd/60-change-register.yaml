@@ -1897,3 +1897,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。VM probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当"
     notes: "gate①=案A(再スキャン誘導=REQ-100 回復モデル整合)推奨。CAD 文言追加が要るなら軽微裁定・基本は実装追随=裁定不要見込み。gate②=是正後提示。関連=ECO-130(混入元・二段階スキャン)・ECO-059/060(512 件バッチ)・ECO-132(Codex 同一バッチの別欠陥 P1①)"
     body: 60-change-order-eco-133.md
+  - id: ECO-134
+    title: "再スキャンの再リンク候補照合が二乗スケール — 新規ファイルごとに missing 行全体を線形走査(O(missing × new))"
+    type: "不具合(実装層・性能欠陥。挙動は仕様どおりでアルゴリズムのみ二乗)"
+    status: staged
+    golden: "n/a 見込み(挙動 bit 一致+視覚変更なし=機械受入〔スケールプローブ緑+挙動同値プローブ緑+既存 921 緑維持〕が納品条件。gate② は是正後に最終確認)"
+    baseline: "main 0947d0e"
+    findings: "maintainer スキャン処理調査(2026-07-22)。症状=再スキャンの新規判定で missing 行と新規ファイルの候補照合が O(missing × new)。wrong-drive・大量移動の 26 万件級では SHA-256 とは別に大きな CPU 時間が加算。合成計測(Release・I/O・SQLite 除外)= 1k×1k:11.8ms / 2k×2k:46.7ms / 4k×4k:269.1ms / 16k×16k:2.18s(倍増で ~4 倍=二乗確認)。工程診断=実装層の性能欠陥(挙動は規則 3a〔同ハッシュ missing・id 昇順先頭〕に忠実・逸脱はアルゴリズム計算量のみ=CAD/仕様の意味論変更不要=gate① 不要)。確定事実=①ScanService.cs:223 が missingInFolder を List 化し全新規ファイルへ同一リストを ScanDbFacts で渡す(:243-245) ②ScanJudge.cs:102-106 が新規 1 件ごとに Where(hash 一致)→OrderBy(id)→FirstOrDefault=各回 O(missing)→O(M×N) ③結果を変えず hash→最小 id 辞書を一度構築すれば O(M+N) ④混入=初回製造 b1f13ec(Phase 4 Run2)以来・二段階化(ECO-129 4deebc2/ECO-130 7900c8b)も走査形を温存 ⑤潜伏マスキング=中規模は HDD の SHA-256/メタ I/O 支配で二乗項が埋没・mass-missing×mass-new 同時成立でのみ CPU 項顕在化 ⑥現状 Release Tests 921/921 緑=機能契約は緑だが性能特性はテスト対象外。未検証=実 HDD 26 万件級の候補照合 CPU 絶対値(/eco-fix のスケールプローブで裏取り)"
+    impacted_bom: ["src=ScanService.cs(missingInFolder の写像化・StageCore で hash→最小id 辞書を1回構築)+ScanJudge.cs(候補 lookup 化)+ScanDbFacts(候補提供口の型変更)", "spec=候補照合の計算量特性(O(M+N))を挙動契約近傍へ明文化(立地は fix 時判断)", "tests=mass-missing×mass-new スケールプローブ(是正前赤)+挙動同値プローブ(同ハッシュ複数一致→id 昇順先頭で結果不変)", "bomdd/33-control-plan.yaml=スキャン CP へ候補照合計算量の再発防止観点を追加", "CAD=視覚・挙動変更なし(該当なし)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。候補照合の計算量+挙動同値は tests/ViewPrism2.Tests のプローブで pin=凍結オラクル非該当"
+    notes: "gate①=不要(実装層の性能欠陥・CAD/仕様の意味論変更なし)。着手条件=なし(/eco-fix eco-134 で着手可)。プローブ先行必須=mass-missing×mass-new スケールプローブで二乗を実測裏取り→是正後 O(M+N)。gate②=不要見込み(挙動 bit 一致+視覚変更なし・機械受入が納品条件)。念のため維持者へ relink 候補ヒント従来動作の実機一瞥は推奨(必須でない)。スコープ外所見(本 ECO に混ぜない)=所見2(ステージングのピークメモリ・ScanService.cs:165/ScanStaging.cs:76)・所見3(File.Exists+ディレクトリ再列挙の二重メタデータ走査・ScanService.cs:196/:231)・所見4残り(33-control-plan のピークメモリ/区間別 throughput 未封止)=いずれも後続別 ECO 候補。関連=ECO-129/130(候補照合を温存した二段階化)・b1f13ec(混入=初回製造)"
+    body: 60-change-order-eco-134.md
