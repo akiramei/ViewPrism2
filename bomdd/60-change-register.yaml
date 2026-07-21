@@ -1864,3 +1864,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。スキャン系旧行の処置は ECO-128/129 と一括裁定。確認ダイアログは CMP-011/ECO-126 様式"
     notes: "gate①=一部裁定済み(2026-07-21 本文 §7: ①順序 130→129→128 承認=本 ECO 単独先行・二段階の器を現行判定で golden 確認後に 129〔golden 2 回〕②オラクル旧行=skip 化+刻印+新規行〔3 ECO 一括〕)。**残 gate①=CAD mock 作成(ViewPrismUI 側=サマリー面・missing 率表示)+確認強度の閾値(mock で具体化)=維持者作業・受領後 /eco-fix eco-130 が全体の起点**。gate②=是正後提示。関連=ECO-129(前提を提供)・ECO-128(同一設計まとめ起点)・ECO-059/060(増分公開の再設計対象)・ECO-126(確認ダイアログ様式)"
     body: 60-change-order-eco-130.md
+  - id: ECO-131
+    title: "クロスタブ状態不整合 — 作業タブの状態変更が画像タブ母集合(_allNormal/_allPending)を無効化しない"
+    type: "不具合(UI/VM 層のクロスタブ・キャッシュ不整合。構造欠陥)"
+    status: staged
+    golden: "pending(是正後・ECO-128 と合同で提示=クロスタブ delete/restore の画像タブ即時反映・実機)"
+    baseline: "main cefa69c"
+    findings: "maintainer 実機(ECO-128 gate② 中に発見・GF-128-01 由来)。症状=作業タブで削除→画像タブが normal のまま表示(タグ編集可)/作業タブで復元→pending なのに画像タブグリッドは normal・⋯ダイアログは pending(同一画面で食い違い)。工程診断=DB は健全(images.status 単一列=二重管理ではない・⋯ダイアログの DB 直読みが単一真実の証拠)。欠陥=UI/VM 層のクロスタブ・キャッシュ不整合。確定事実=①画像タブ切替の再読込は _imagesTabStale が真のときだけ(立てるのは TagsTab.DataChanged のみ・作業タブ変更では立たない=WorkTabVM に DataChanged 不在) ②発火しても ReloadTagCatalogAsync は _allNormal/_allPending を再取得しない(母集合は LoadContentAsync/ReloadImagesAsync のみ更新) ③非対称=作業タブ切替(value==2)は無条件 WorkTab.RefreshAsync(f211fa9 以来)だが画像タブ側に対応する無効化なし ④単一タブ内は鮮度保持(画像タブ自身のゴミ箱経路=ReloadImagesAsync+GF-129-01) ⑤先在欠陥・ECO-128 の復元→pending が顕在化(旧 T6=normal が古い normal と偶然一致してマスク=ECO-087 型)。未検証=影響は復元に限らず delete/exclude/merge/完全削除/裁定の全状態変更(疑い強・症状 2 が復元非依存で成立)"
+    impacted_bom: ["src=MainWindowViewModel(切替フック)+ImageTabViewModel(母集合再読込の公開/接続)+必要なら WorkTabViewModel(DataChanged 新設)", "spec=クロスタブ鮮度の挙動契約明文化(立地は fix 時判断)", "tests=クロスタブ mutation→画像タブ母集合反映の VM 統合プローブ(delete/restore/裁定の各経路)", "CAD=視覚変更なし見込み"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。本件は VM 統合プローブ(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当"
+    notes: "gate①=不要見込み(実装の構造欠陥=CAD 未定義ではない)。着手条件=なし(ECO-128 と並行可)。gate②=ECO-128 と合同 golden(maintainer 裁定 2026-07-21=復元→pending がクロスタブでも正しく見える状態で両 ECO を同時検収・ECO-128 accept は本 ECO クローズまで保留)。関連=ECO-128(顕在化元・合同 golden)・GF-129-01(同経路の母集合鮮度=単一タブ内は是正済み)・ECO-087(マスクされた欠陥の顕在化=教訓同型)"
+    body: 60-change-order-eco-131.md
