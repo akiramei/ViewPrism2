@@ -1875,3 +1875,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。本件は VM 統合プローブ(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当"
     notes: "gate①=不要見込み(実装の構造欠陥=CAD 未定義ではない)。着手条件=なし(ECO-128 と並行可)。gate②=ECO-128 と合同 golden(maintainer 裁定 2026-07-21=復元→pending がクロスタブでも正しく見える状態で両 ECO を同時検収・ECO-128 accept は本 ECO クローズまで保留)。関連=ECO-128(顕在化元・合同 golden)・GF-129-01(同経路の母集合鮮度=単一タブ内は是正済み)・ECO-087(マスクされた欠陥の顕在化=教訓同型)"
     body: 60-change-order-eco-131.md
+  - id: ECO-132
+    title: "pending 裁定ダイアログの一覧が stale 行を保持 — plain List バインドで削除が UI へ伝播しない"
+    type: "不具合(UI/VM 層・可変バインドリストの idiom 逸脱)"
+    status: staged
+    golden: "pending(是正後=2 件以上の pending で 1 件裁定→一覧が即座に 1 件になる・実機)"
+    baseline: "main 2d71237"
+    findings: "Codex review(6fa8834..HEAD・2026-07-21・P1①)。症状=pending 裁定ダイアログ左ペインで 2 件以上表示中に 1 件裁定すると、VM は plain List から Remove するが ItemsControl が削除行(裁定済み)を保持し得る→stale 行を再裁定すると pending 限定ガードで失敗メッセージ(無害だが不可解)。修復から戻った後の LoadAsync も同型。工程診断=UI/VM 実装欠陥(idiom 逸脱)。確定事実=①PendingReviewViewModel.Items(:84)が plain List・PendingReviewWindow.axaml:119 が ItemsControl 直結 ②LoadAsync(:142-167 Clear+Add)/Complete(:307-310 Remove)とも同一 List インスタンス+OnPropertyChanged(nameof(Items))=Avalonia は参照同値で ItemsSource no-op ③コードベース idiom は ObservableCollection(ImageTab.Items:888/TrashPopupItems:71/Seed.Items:285 ほか)=PendingReviewVM.Items だけ逸脱 ④混入=4deebc2(ECO-129 fix)。未検証=stale 行 UI 残存の実測(疑い強・GF-129-01 同型・fix 時 headless probe で確定)・単一件は空状態遷移でマスク(症状は 2 件以上)"
+    impacted_bom: ["src=PendingReviewViewModel.cs(Items を ObservableCollection へ+通知配線)", "tests=裁定後の Items 反映(2件→1件)+空状態遷移の VM probe", "CAD=視覚変更なし見込み(ObservableCollection も ItemsSource 互換)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。VM probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当"
+    notes: "gate①=不要見込み(実装の idiom 逸脱=CAD 未定義ではない)。着手条件=なし。gate②=是正後提示。関連=ECO-129(pending 裁定 UI 新設元・混入 4deebc2)・GF-129-01(同型=同一インスタンス通知は再評価されない)・ECO-133(Codex 同一バッチの別欠陥 P2)"
+    body: 60-change-order-eco-132.md
