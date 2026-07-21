@@ -17,10 +17,14 @@ public sealed record ScanFileFacts(
 
 /// <summary>スキャン判定の入力: DB 状態(OC-5)。</summary>
 /// <param name="ExistingAtPath">同一相対パス(case-insensitive)の既存行。無ければ null。</param>
-/// <param name="MissingInFolder">同一フォルダ内の status=missing の行(規則 3a の照合対象)。</param>
+/// <param name="MissingCandidateByHash">
+/// 規則 3a の候補写像: hash → 再リンク候補の missing 行 id(同ハッシュ複数一致は id 序数昇順の先頭)。
+/// <see cref="ScanJudge.BuildMissingCandidateIndex"/> で一度だけ構築する
+/// (ECO-134: 旧・新規ファイルごとの線形走査 O(missing × new) を排し O(missing + new))。
+/// </param>
 public sealed record ScanDbFacts(
     ImageRecord? ExistingAtPath,
-    IReadOnlyList<ImageRecord> MissingInFolder);
+    IReadOnlyDictionary<string, string> MissingCandidateByHash);
 
 /// <summary>スキャン判定の結果種別(v5.0=ECO-129/REQ-101。仕様 §2.1 規則 1/2/3 に対応)。</summary>
 public enum ScanDecisionKind
@@ -98,13 +102,40 @@ public sealed class ScanJudge
         }
 
         // (3-再) 再スキャンの新規はすべて pending('new')。同一フォルダ内の同ハッシュ missing は
-        // candidate_link_id ヒント(複数一致時は id 昇順の先頭=旧規則 3a の包含)
-        var candidate = db.MissingInFolder
-            .Where(m => m.Status == ImageStatus.Missing &&
-                        string.Equals(m.Hash, hash, StringComparison.Ordinal))
-            .OrderBy(m => m.Id, StringComparer.Ordinal)
-            .FirstOrDefault();
+        // candidate_link_id ヒント(複数一致時は id 昇順の先頭=旧規則 3a の包含)。
+        // 候補写像は BuildMissingCandidateIndex で構築済み(ECO-134: 判定は O(1) lookup)
+        var candidateId = db.MissingCandidateByHash.TryGetValue(hash, out var id) ? id : null;
         return new ScanDecision(
-            ScanDecisionKind.AddPending, hash, candidate?.Id, Models.PendingOrigin.New);
+            ScanDecisionKind.AddPending, hash, candidateId, Models.PendingOrigin.New);
+    }
+
+    /// <summary>
+    /// 規則 3a の候補写像を一度だけ構築する(ECO-134)。hash → 候補 missing 行 id(同ハッシュ複数一致は
+    /// id の序数昇順の先頭=旧・per-file の <c>OrderBy(Id).FirstOrDefault()</c> と同値)。
+    /// 構築は O(missing)・判定は O(1) lookup となり、再スキャン全体で O(missing + new)。
+    /// missing 以外の行は無視する(呼び出し側は missing 行だけを渡すが防御的に再確認)。
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> BuildMissingCandidateIndex(
+        IReadOnlyList<ImageRecord> missingInFolder)
+    {
+        ArgumentNullException.ThrowIfNull(missingInFolder);
+
+        var index = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var m in missingInFolder)
+        {
+            if (m.Status != ImageStatus.Missing)
+            {
+                continue;
+            }
+
+            // 同ハッシュ既登録があれば id 序数が小さい方を残す(= OrderBy(Id).First の同値)
+            if (!index.TryGetValue(m.Hash, out var currentId) ||
+                string.CompareOrdinal(m.Id, currentId) < 0)
+            {
+                index[m.Hash] = m.Id;
+            }
+        }
+
+        return index;
     }
 }

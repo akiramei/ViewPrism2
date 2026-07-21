@@ -122,7 +122,7 @@ public sealed class CpScan004Tests : IDisposable
         var decision = judge.Judge(
             new ScanFileFacts("a.jpg", 10, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z",
                 () => { hashCalled = true; return new string('0', 64); }),
-            new ScanDbFacts(existing, []),
+            new ScanDbFacts(existing, NoCandidates),
             isInitialScan: false);
 
         Assert.Equal(ScanDecisionKind.Skip, decision.Kind);
@@ -138,25 +138,25 @@ public sealed class CpScan004Tests : IDisposable
 
         var bySize = judge.Judge(
             new ScanFileFacts("a.jpg", 20, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h1"),
-            new ScanDbFacts(existing, []), isInitialScan: false);
+            new ScanDbFacts(existing, NoCandidates), isInitialScan: false);
         Assert.Equal(ScanDecisionKind.UpdateMetaAndPend, bySize.Kind);
         Assert.Equal("h1", bySize.Hash);
         Assert.Equal(PendingOrigin.Changed, bySize.PendingOrigin);
 
         var byDate = judge.Judge(
             new ScanFileFacts("a.jpg", 10, "2026-01-02T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h2"),
-            new ScanDbFacts(existing, []), isInitialScan: false);
+            new ScanDbFacts(existing, NoCandidates), isInitialScan: false);
         Assert.Equal(ScanDecisionKind.UpdateMetaAndPend, byDate.Kind);
 
         // pending 起点= メタ追随のみ(origin 維持)/deleted 起点= 除外(メタ更新のみ・status 不変)
         var pendingRow = NewRecord("img-2", "b.jpg", 10, "2026-01-01T00:00:00.000Z", ImageStatus.Pending);
         Assert.Equal(ScanDecisionKind.UpdateMeta, judge.Judge(
             new ScanFileFacts("b.jpg", 20, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h3"),
-            new ScanDbFacts(pendingRow, []), isInitialScan: false).Kind);
+            new ScanDbFacts(pendingRow, NoCandidates), isInitialScan: false).Kind);
         var deletedRow = NewRecord("img-3", "c.jpg", 10, "2026-01-01T00:00:00.000Z", ImageStatus.Deleted);
         Assert.Equal(ScanDecisionKind.UpdateMeta, judge.Judge(
             new ScanFileFacts("c.jpg", 20, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => "h4"),
-            new ScanDbFacts(deletedRow, []), isInitialScan: false).Kind);
+            new ScanDbFacts(deletedRow, NoCandidates), isInitialScan: false).Kind);
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public sealed class CpScan004Tests : IDisposable
 
         var decision = judge.Judge(
             new ScanFileFacts("new.jpg", 1, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => hash),
-            new ScanDbFacts(null, [missingB, missingA]),
+            new ScanDbFacts(null, ScanJudge.BuildMissingCandidateIndex([missingB, missingA])),
             isInitialScan: false);
 
         Assert.Equal(ScanDecisionKind.AddPending, decision.Kind);
@@ -185,11 +185,15 @@ public sealed class CpScan004Tests : IDisposable
 
         var decision = judge.Judge(
             new ScanFileFacts("new.jpg", 1, "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z", () => hash),
-            new ScanDbFacts(null, [missing]),
+            new ScanDbFacts(null, ScanJudge.BuildMissingCandidateIndex([missing])),
             isInitialScan: true);
 
         Assert.Equal(ScanDecisionKind.AddNormal, decision.Kind);
     }
+
+    // ECO-134: missing 候補が無いケースの空写像(旧 API の空リスト [] に相当)。
+    private static readonly IReadOnlyDictionary<string, string> NoCandidates =
+        new Dictionary<string, string>();
 
     private static ImageRecord NewRecord(
         string id, string relativePath, long size, string modified,

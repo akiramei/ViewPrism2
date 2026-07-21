@@ -220,7 +220,9 @@ public sealed class ScanService
         }
 
         var byPath = current.ToDictionary(i => i.RelativePath, StringComparer.OrdinalIgnoreCase);
-        var missingInFolder = current.Where(i => i.Status == ImageStatus.Missing).ToList();
+        // ECO-134: 候補写像を一度だけ構築(O(missing))。判定は O(1) lookup で全体 O(missing + new)
+        var missingCandidateByHash = ScanJudge.BuildMissingCandidateIndex(
+            current.Where(i => i.Status == ImageStatus.Missing).ToList());
 
         int unchanged = 0, contentChanged = 0, reappeared = 0, readFailures = 0;
         int deletedUnchanged = 0, deletedMetaRefreshed = 0, pendedWithoutMeta = 0;
@@ -242,7 +244,7 @@ public sealed class ScanService
                     () => ComputeHash(file.FullPath));
                 var dbFacts = new ScanDbFacts(
                     byPath.TryGetValue(relativePath, out var row) ? row : null,
-                    missingInFolder);
+                    missingCandidateByHash);
 
                 var decision = _judge.Judge(facts, dbFacts, isInitialScan);
                 switch (decision.Kind)
@@ -529,7 +531,9 @@ public sealed class ScanService
         await batch.FlushAsync().ConfigureAwait(false);
 
         var byPath = current.ToDictionary(i => i.RelativePath, StringComparer.OrdinalIgnoreCase);
-        var missingInFolder = current.Where(i => i.Status == ImageStatus.Missing).ToList();
+        // ECO-134: 候補写像を一度だけ構築(O(missing))。判定は O(1) lookup で全体 O(missing + new)
+        var missingCandidateByHash = ScanJudge.BuildMissingCandidateIndex(
+            current.Where(i => i.Status == ImageStatus.Missing).ToList());
 
         // 手順 2〜3: 相対パス算出と優先順判定(OC-5)
         var processed = 0;
@@ -547,7 +551,7 @@ public sealed class ScanService
                     () => ComputeHash(file.FullPath));
                 var dbFacts = new ScanDbFacts(
                     byPath.TryGetValue(relativePath, out var row) ? row : null,
-                    missingInFolder);
+                    missingCandidateByHash);
 
                 var decision = _judge.Judge(facts, dbFacts, isInitialScan);
                 switch (decision.Kind)
