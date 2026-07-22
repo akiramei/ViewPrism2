@@ -155,7 +155,8 @@ public sealed class ScanService
         var root = folder.Path;
         if (!Directory.Exists(root))
         {
-            return Result<ScanStaging>.Fail(ErrorCode.IoError, $"フォルダ '{root}' にアクセスできません。");
+            // ECO-135: ルート失効(移動/改名/ドライブ未接続)は汎用 IoError と区別し専用コードで返す
+            return Result<ScanStaging>.Fail(ErrorCode.ScanRootMissing, $"フォルダ '{root}' が見つかりません。");
         }
 
         var enumerable = CreateEnumerable(folder, root);
@@ -486,8 +487,9 @@ public sealed class ScanService
         var root = folder.Path;
         if (!Directory.Exists(root))
         {
-            // ルート消失(ドライブ未接続等)は手順 4 の一括 missing 化をせず中断する(誤判定防止)
-            return Result<ScanSummary>.Fail(ErrorCode.IoError, $"フォルダ '{root}' にアクセスできません。");
+            // ルート消失(ドライブ未接続等)は手順 4 の一括 missing 化をせず中断する(誤判定防止)。
+            // ECO-135: 汎用 IoError と区別し専用コードで返す(改名/移動を示唆できる文言のため)
+            return Result<ScanSummary>.Fail(ErrorCode.ScanRootMissing, $"フォルダ '{root}' が見つかりません。");
         }
 
         // 手順 1: 列挙(K-WINFS 規約: リパースポイントを辿らない・アクセス不能は無視)

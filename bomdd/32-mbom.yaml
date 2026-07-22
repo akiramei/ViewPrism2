@@ -38,7 +38,7 @@ mbom:
         hash: "FileHasher.ComputeSha256(Stream) → 小文字 hex 64 字"
         path: "PathNormalizer.ToRelative(root, fullPath) → 正規形 / PathNormalizer.Equals(a,b) → case-insensitive"
         format: "ByteSizeFormatter.Format(long) → \"1023 B\" / \"1.0 KB\"(1024 進・小数 1 桁・GB 上限)"
-        errors: "Result<T> + ErrorCode(enum: DuplicateTagName, DuplicateFolderPath, ValidationError, NotFound, CircularReference, ScanInProgress, IoError, InvalidRegex)"
+        errors: "Result<T> + ErrorCode(enum: DuplicateTagName, DuplicateFolderPath, ValidationError, NotFound, CircularReference, ScanInProgress, IoError, InvalidRegex, Database, TagInUse, ScanRootMissing)"
       invariants:
         - INV-001 / INV-002 / INV-005 / INV-007(エンティティ生成時に強制)
         - 日時文字列は IClock 経由でのみ生成(DateTime.Now 直呼び禁止)
@@ -815,7 +815,7 @@ fmea:
 
 # 沈黙次元の第2回掃討(第1回 deferred-to-phase3 を全て解消。deferred は使用不可)
 silence_sweep:
-  - { dimension: エラー語彙,                     decision: specified,  where: M-CORE-001 interface_contract.errors, note: "Result<T>+ErrorCode 8 種で全列挙。UI 表示文言は i18n キー error.<code>" }
+  - { dimension: エラー語彙,                     decision: specified,  where: M-CORE-001 interface_contract.errors, note: "Result<T>+ErrorCode 11 種で全列挙(ECO-135 で ScanRootMissing 追加=root 失効の識別)。UI 表示文言は i18n キー error.<code>" }
   - { dimension: 並行実行(スキャン中の UI 操作), decision: specified,  where: M-SCAN-005 / M-DB-007,               note: "スキャンは同時 1 フォルダ(ScanInProgress)。UI 操作は許可され、DB アクセスは単一接続シリアル化で整合" }
   - { dimension: DB 同時アクセス(プロセス内),    decision: specified,  where: M-DB-007,                            note: "単一共有接続+SemaphoreSlim(G2' AUDIT-103 解消)" }
   - { dimension: ログ・診断,                     decision: specified,  where: procurement(Serilog),               note: "%APPDATA%/ViewPrism2/logs/app-.log 日次ローリング 7 世代。レベル: Information 以上、警告系(スキップ・無視条件)は Warning" }

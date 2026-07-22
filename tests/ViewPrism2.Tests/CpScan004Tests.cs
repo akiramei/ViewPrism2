@@ -649,11 +649,11 @@ public sealed class CpScan004Tests : IDisposable
         var afterFirst = (await _db.Folders.GetByIdAsync(folder.Id))!.LastScan;
         Assert.NotNull(afterFirst);
 
-        // 例外パス: ルートディレクトリ消失 → IoError でも last_scan は更新される
+        // 例外パス: ルートディレクトリ消失 → ScanRootMissing(ECO-135・汎用 IoError と区別)でも last_scan は更新される
         Directory.Delete(_root, recursive: true);
         var failed = await _scan.ScanAsync(folder.Id, null, TestContext.Current.CancellationToken);
         Assert.False(failed.IsSuccess);
-        Assert.Equal(ErrorCode.IoError, failed.Error);
+        Assert.Equal(ErrorCode.ScanRootMissing, failed.Error);
         var afterFailed = (await _db.Folders.GetByIdAsync(folder.Id))!.LastScan;
         Assert.NotNull(afterFailed);
         Assert.True(string.CompareOrdinal(afterFailed, afterFirst) >= 0);

@@ -22,6 +22,7 @@ public static class ErrorMessages
         ErrorCode.NotFound => "error.notFound",
         ErrorCode.CircularReference => "error.circularReference",
         ErrorCode.ScanInProgress => "error.scanInProgress",
+        ErrorCode.ScanRootMissing => "error.scanRootMissing",
         ErrorCode.IoError => "error.ioError",
         ErrorCode.InvalidRegex => "error.invalidRegex",
         ErrorCode.Database => "error.database",

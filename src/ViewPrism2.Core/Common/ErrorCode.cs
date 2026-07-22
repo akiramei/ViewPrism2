@@ -17,4 +17,10 @@ public enum ErrorCode
 
     /// <summary>使用中タグ定義の削除拒否(TAG-008 裁定/ECO-045: 付与・配置・条件参照があるタグは削除不可)。</summary>
     TagInUse,
+
+    /// <summary>
+    /// スキャンルートがディスク上に実在しない(フォルダの移動/改名でパスが失効・ドライブ未接続等)。
+    /// 汎用 IoError と区別し、actionable な文言(改名/移動の示唆)を出すための専用コード(ECO-135)。
+    /// </summary>
+    ScanRootMissing,
 }
