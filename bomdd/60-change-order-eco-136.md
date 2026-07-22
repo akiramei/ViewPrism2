@@ -71,8 +71,17 @@
 
 ## §6 残ゲート
 
-- **gate①(裁定)= 必要(軽微)**。率/tier の分子=「適用後の総 missing」(案A)か「delta 維持」か。
-  警告文言・ユーザー期待は案A。CAD prose 明確化を伴う(視覚不変見込み=mock 再描画は不要の見込み)。
+- ~~gate①(裁定)= 必要~~ → **裁定済み(§7)**。
 - **/eco-fix 着手時にプローブで「残り 10 = 既存 missing」を最終確定**。
 - **gate②(golden)**: 是正後、既存 missing 混在の再スキャンで率が総 missing を反映(空フォルダ=100%)+
   全損ケースの回帰(従来どおり)。
+
+## §7 裁定(gate①・2026-07-22 maintainer)
+
+- **案A を採択**: missing 率/tier の分子を **「適用後の総 missing 数」(既存 missing 行数 + 今回 delta)**に
+  変更する。警告文言(現在の健全度)・ユーザー期待と一致し、空フォルダ=100% になる。
+- **CAD prose 明確化を伴う**: [scan_summary.md:127](../../ViewPrismUI/docs/screens/scan_summary.md) の
+  「missing 率 = 見つからない件数 ÷ 管理件数」を「**適用後の総 missing ÷ 管理**」に明確化(ViewPrismUI 申し送り・
+  prose のみ・視覚不変見込み=mock 再描画不要)。遷移サマリー行(normal→missing の delta 件数)は不変。
+- **着手条件**: /eco-fix でまずプローブにて「残り 10 = 既存 missing」を実測確定してから、率/tier の分子を
+  総 missing へ差し替える。
