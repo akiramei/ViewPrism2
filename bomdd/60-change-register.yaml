@@ -1919,3 +1919,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。root 不在→新 ErrorCode/文言は VM probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当見込み"
     notes: "gate①=裁定済み(2026-07-22 maintainer=案A 採択: 専用 ErrorCode ScanRootMissing 追加+actionable i18n 文言〔ja「フォルダが見つかりません。移動または改名された可能性があります」〕・code→i18n モデル維持〔案B 不採用〕・CAD 裁定不要〔語彙追加のみ・案C 導線はスコープ外=必要なら別 ECO〕)。着手条件=/eco-fix でまず H1/H2 をプローブ確定→root 不在(H1)を新コードで返す。H2 が同時に真なら扱いを本 ECO 内でプローブ先行是正(同じ識別性スコープ)。gate②=是正後 golden(リネーム→再スキャンで actionable 文言+回帰)。意図通りの部分=失敗で画像状態不変(REQ-100)。関連=ECO-130(二段階スキャン・Stage 無変更)・M-CORE-001(エラー語彙)・ECO-134(無関係=先在確認)"
     body: 60-change-order-eco-135.md
+  - id: ECO-136
+    title: "スキャン結果サマリーの missing 率が delta/総管理の基準不一致で過小表示(空フォルダで 100% にならない)"
+    type: "不具合(集計の基準不一致。率の意味論=CAD 曖昧+実装が delta を分子に流用)"
+    status: staged
+    golden: "pending(是正後、既存 missing 混在の再スキャンで率が総 missing を反映〔空フォルダ=100%〕+全損ケース回帰=maintainer 実機)"
+    baseline: "main aed9a90"
+    findings: "maintainer 手動テスト(2026-07-22・管理61件のフォルダを空にして再スキャン)。症状=走査0件なのに missing 率カードが『見つからない画像 51/61件(83.6%)』と表示・空フォルダなら100%であるべき・未裁定0・ゴミ箱0。工程診断=率の意味論が未確定(CAD 曖昧: scan_summary.md:127『missing率=見つからない件数÷管理件数』だが見つからない件数が delta/total か未分離・mock 例示 SC-3=3.8%/SC-4=99% は全損=delta≈total 前提)+実装が delta を分子に流用。確定事実=①率=ScanSummaryViewModel.cs:352-353 の MissingTotal*100/ManagedTotal ②MissingTotal=ScanStaging.cs:92 MissingFromNormal+MissingFromPending=今回新規 missing 化(delta)のみ・既存 missing 含まず ③missing 判定は ScanService.cs:196 で Normal/Pending 行だけ missing 化・既存 missing は遷移せず delta 非計上 ④ManagedTotal=existing.Count(全行・既存 missing 含む) ⑤tier も同じ MissingTotal 使用(ScanSummaryViewModel.cs:347)=同様に過小評価 ⑥消去法で残り10(61-51)=既存 missing(未裁定0・ゴミ箱0)→適用後総 missing=51+10=61=100% ⑦警告文言(scan.rateDescRed『大部分の画像が見つかりません…』)は現在の状態を述べる=分子は適用後総 missing であるべき ⑧混入=ECO-130(7900c8b・率カード導入)以来の as-built・mock が全損前提で潜伏・既存 missing 混在の再スキャンでのみ顕在化。未検証=『残り10=既存 missing』は消去法の強い推定→/eco-fix プローブ(既存 missing 仕込み再スキャン)で最終確定。遷移行(51 normal→missing)は delta 表示で正しい=率/tier の分子のみ問題。ECO-134/135 とは無関係(別系統の集計)"
+    impacted_bom: ["CAD=scan_summary.md:127 の率定義を『総 missing÷管理』に明確化(ViewPrismUI 申し送り・prose のみ・視覚不変見込み)", "src=ScanStaging(総 missing 数フィールド)+ScanService(StageCore/ScanCore で既存 missing 数を保持)+ScanSummaryViewModel(率/tier の分子差し替え)", "tests=既存 missing 混在の率/tier probe(空フォルダ=100%)+全損回帰", "spec=率の分子母集合を §2.1 か control-plan に明文化(delta でなく適用後総 missing)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。率/tier は VM/ロジック probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当見込み"
+    notes: "gate①=必要(軽微): 率/tier の分子=『適用後の総 missing』(案A 推奨=警告文言・ユーザー期待と一致)か『delta 維持』か。案A は CAD prose 明確化を伴う(視覚不変見込み=mock 再描画不要見込み)。着手時にプローブで『残り10=既存 missing』を最終確定。gate②=是正後 golden(既存 missing 混在で率が総 missing 反映〔空=100%〕+全損回帰)。関連=ECO-130(率カード導入=混入元)・ECO-129(pending 意味論)・scan_summary SCAN-002(率閾値裁定)"
+    body: 60-change-order-eco-136.md
