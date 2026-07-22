@@ -1,7 +1,7 @@
 # ECO-136 — スキャン結果サマリーの missing 率が delta/総管理の基準不一致で過小表示(空フォルダで 100% にならない)
 
 - 種別: 不具合(集計の基準不一致。率の意味論=CAD 曖昧+実装が delta を分子に流用)
-- status: staged
+- status: applied(2026-07-22 golden 合格→クローズ)
 - baseline: main `aed9a90`
 - 報告者: maintainer(2026-07-22・手動テスト中)
 - 優先度: 中(誤警告=深刻度の過小表示)
@@ -120,3 +120,29 @@
 
 - gate①=裁定済み(§7・案A)。真因確定・是正完了。
 - **gate②(golden)= 是正後提示(下記)**。合格報告を受けたら /eco-accept eco-136。
+
+## §9 クローズ(2026-07-22・golden approved)
+
+- **実機確認(maintainer)**: 既存 missing が残る状態で空フォルダを再スキャン → missing 率カードが
+  総 missing を反映(空=100%・レッド)。旧 delta 過小表示(83.6% など)にならない。遷移サマリー行
+  「見つからない normal→missing」は今回 delta のまま。既存 missing なしの通常/全損スキャンは従来どおり(回帰)。
+- **機械受入**: build 0 / Tests 930/930 / Oracle 109 pass+4 skip+0 fail(凍結オラクル無接触=R6)/ validate 0-0。
+- **再発防止**: CP-UI-G1 へ ECO-136 刻印(率分子=「適用後の総 missing 数」・delta 分子は既存 missing 残存時に
+  過小表示=率カード導入 ECO-130 から潜伏・mock 例示が全損 delta≈total 前提でマスクした実績)。
+  機械 pin= CpScanMissingRateTests(VM 率反転/空フォルダ E2E/再出現差し引き)。
+- **M4 同期**: 不要(率分子の集計是正=VM/モデル内部。surface 新設・仕様値変更なし・as-built 乖離なし)。
+- **CAD 申し送り**(別リポ・ViewPrismUI): scan_summary.md:127 の率定義を「適用後の総 missing ÷ 管理」に
+  prose 明確化(視覚不変)。ViewPrism2 側の受入には非依存。
+
+### 教訓
+
+**「率・割合」の分子と分母は同じ母集合・同じ時制で揃える(delta と累計の混用禁止)。** 本件は
+「今回 missing 化した delta」を分子に、「総管理数」を分母に取り、時制(delta ÷ 累計)がねじれていた。
+警告文言が述べる意味(「大部分の画像が見つかりません」=現在の健全度)と、分子の実体(delta)が
+乖離していたのが本質。UI に「N/M(P%)」形式の比率を出すときは、①N と M が同じ母集合の同じ時点を
+指すか、②文言が主張する意味(現在状態 or 今回の変化)と一致するか、を設計時に確認する。潜伏要因は
+ECO-134(hash→id 写像化で「見える不整合の多くは単一真実+キャッシュ鮮度」)や ECO-128〜131 系の
+「mock 例示が典型ケース(全損=delta≈total)前提で境界(既存 missing 混在)をマスク」と同型で、
+**例示ベースの受入は境界条件(0/1/混在/累積)を別途 probe で突く**という read-across が要る
+([[eco128-image-state-model-overhaul]] の凍結オラクル棚卸し教訓・ECO-130 の「新規モーダルの欠陥は
+UI ライフサイクル境界に集中」と接続)。
