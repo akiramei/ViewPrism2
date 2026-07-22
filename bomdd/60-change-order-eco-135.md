@@ -1,7 +1,7 @@
 # ECO-135 — スキャン失敗の理由が判別できない(root 改名/不在も一律「ファイルの読み書きに失敗しました」)
 
 - 種別: 不具合+仕様改訂候補(エラー語彙の設計上の欠落。実装は現仕様に忠実)
-- status: staged
+- status: applied(2026-07-22 golden 合格・§9)
 - baseline: main `607cfb6`
 - 報告者: maintainer(2026-07-22・手動テスト中)
 - 優先度: 中(手動テストの支障=失敗の切り分け不能)
@@ -142,4 +142,31 @@ UI 文言は `error.<code>`」([32-mbom.yaml:818](32-mbom.yaml#L818) silence_swe
 ## §残ゲート(更新)
 
 - gate①=裁定済み(§7・案A)。H1 確定・H2 不再現(§8)。
-- **gate②(golden)= 是正後提示(下記)**。合格報告を受けたら /eco-accept eco-135。
+- gate②(golden)= **合格(§9)**。
+
+## §9 クローズ(applied・2026-07-22 golden 合格)
+
+- **golden(maintainer 実機)**: フォルダをディスク上でリネーム→スキャンで、行下メッセージが
+  「フォルダが見つかりません。移動または改名された可能性があります」に変わる(旧「ファイルの読み書きに
+  失敗しました」ではない)・画像状態は不変(missing にならない)・正常フォルダのスキャン回帰・
+  en ロケール対応文言。→ **合格・クローズ**。
+- **コミット**: 起票 `e3889bc` → 裁定 `ed6ea5e` → fix `124340e` → accept(本コミット)。
+- **再発防止**: [33-control-plan.yaml](33-control-plan.yaml) CP-SCAN-004 に ECO-135 vector を刻印
+  (root 失効=ScanRootMissing・両経路 pin・一括 missing 化しない安全契約と last_scan 更新は不変・
+  潜伏実績=一律 IoError で切り分け不能)。機械 pin=CpScanRootMissingTests。cheat-log F-3 を refine。
+- **M4**: 不要。エラー語彙の権威は M-BOM([20-spec.md:1394](20-spec.md#L1394) が deferred-to-M-BOM)で、
+  [32-mbom.yaml:41](32-mbom.yaml#L41) は fix で同期済み。spec §2.6 / E-BOM / 35-dsbom の追加乖離なし。
+
+### 教訓
+
+**「code→i18n だけのエラー表示」は、失敗理由の識別性をエラー語彙の粒度に完全従属させる。**
+本件は ErrorMessages が ErrorCode のみで文言を解決し `Result.Message` を捨てる設計(silence_sweep
+decision)が健全に機能していたが、語彙側に「root 失効」の粒度が無かったため、切り分け可能な失敗
+(フォルダ改名)が汎用 IoError に潰れて手動テストを阻害した。**是正は「文言を足す」ではなく「語彙を
+足す」= 識別したい失敗クラスは ErrorCode 次元で分岐可能にしておく**のが code→i18n モデルとの整合解。
+併せて、**エラー語彙の全列挙台帳(M-CORE-001/32-mbom)は code 追加 ECO ごとに as-built 同期が要る**
+(ECO-002 Database・ECO-045 TagInUse が列挙漏れのまま stale=「8 種」表記が実態 10 種と乖離していた実績。
+本件で 11 種へ全同期)。read-across: 表示文言のロケール鮮度(ECO-104/106)と対をなす「表示文言の
+**語彙粒度**」の欠落=同じ「code→i18n 表示」機構の別次元の脆弱性。プローブ設計の再利用形として、
+**新 ErrorCode 追加は enum 値を先に足してプローブをコンパイル可能にし、Actual=旧コードで不合格を
+実測してから返却サイトを是正する**(ECO-134 の「不変条件を先に固定」と同型の R5 運用)。

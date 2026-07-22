@@ -125,6 +125,7 @@ control_plan:
         - "(ECO-059 潜伏実績/2026-07-11 golden) 実HDD約26万件で35分完了したが初回fixは全時間UI操作不能。GF-059-01後はmaintainer実機でスキャン中のUI操作可能を確認。総時間とcaller占有を別特性として検査する"
         - "(ECO-060/REQ-086) 初回列挙はstreamingで全件列挙完了前に最初のbatchをcommit可能。fully-hashed normal追加はApplyScanBatchAsync成功後だけbatch通知され、通知順=取込順。失敗batchは非通知"
         - "(ECO-134) 再スキャンの再リンク候補照合は O(missing + new)。missing 候補写像を一度だけ構築し、判定は写像 lookup。missing 行は新規件数 N に依らず合計 M 回だけ走査される(旧・per-file 線形走査 O(missing × new) を封止=CountingReadOnlyList で走査回数==M を pin/CpScanCandidateIndexTests)。挙動同値=同ハッシュ複数一致は id 序数昇順の先頭で不変"
+        - "(ECO-135) スキャンルート失効(フォルダの移動/改名でパス不在=Directory.Exists=false)は汎用 IoError ではなく専用 ErrorCode.ScanRootMissing を返し、失敗理由を識別できる。二段階 StageAsync・一段階 ScanAsync の両経路で pin(CpScanRootMissingTests)。一括 missing 化しない安全契約(誤 missing 防止)と last_scan 更新は不変。潜伏実績=root 失効も一律 IoError→UI で『ファイルの読み書きに失敗しました』に潰れ手動テストで切り分け不能だった実績(エラー語彙 8→11 種・cheat-log F-3 の refine)。UI 文言=error.scanRootMissing(ja/en・CpI18n010 lint)"
 
     - id: CP-TAG-011
       characteristic: タグ管理(検証・UPSERT・バッチ原子性・カスケード・使用中削除ガード=ECO-045)が仕様 §2.2 と一致する
