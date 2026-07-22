@@ -336,6 +336,7 @@ public sealed class ScanService
         {
             FolderId = folder.Id,
             ManagedTotal = existing.Count,
+            PreexistingMissing = existing.Count(r => r.Status == ImageStatus.Missing), // ECO-136: 総 missing 率の分子
             ScannedFiles = scannedFiles,
             Unchanged = unchanged,
             ContentChanged = contentChanged,

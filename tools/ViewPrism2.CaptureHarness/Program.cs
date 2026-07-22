@@ -369,7 +369,7 @@ internal static class Program
         {
             FolderId = "scan-demo", ManagedTotal = 12400, ScannedFiles = 12391,
             Unchanged = 12372, ContentChanged = 3, AddedPending = 16, Reappeared = 0,
-            MissingFromNormal = 9, MissingFromPending = 0,
+            MissingFromNormal = 9, MissingFromPending = 0, PreexistingMissing = 0,
             DeletedUnchanged = 0, DeletedMetaRefreshed = 0, PendedWithoutMeta = 0, ReadFailures = 0,
             Adds = [], MetaUpdates = [], StatusUpdates = [], Deletes = [], Examples = [],
         });
@@ -383,7 +383,7 @@ internal static class Program
             {
                 FolderId = "scan-demo", ManagedTotal = 259984, ScannedFiles = 250142,
                 Unchanged = 249963, ContentChanged = 124, AddedPending = 16, Reappeared = 0,
-                MissingFromNormal = 9842, MissingFromPending = 18,
+                MissingFromNormal = 9842, MissingFromPending = 18, PreexistingMissing = 0,
                 DeletedUnchanged = 0, DeletedMetaRefreshed = 37, PendedWithoutMeta = 0, ReadFailures = 2,
                 Deletes = [],
                 // 候補件数(裁定対象の内数)は変更案リストから導出されるため件数を実データと同型に埋める
@@ -430,7 +430,7 @@ internal static class Program
         {
             FolderId = "scan-demo", ManagedTotal = 260000, ScannedFiles = 2600,
             Unchanged = 2600, ContentChanged = 0, AddedPending = 0, Reappeared = 0,
-            MissingFromNormal = 257400, MissingFromPending = 0,
+            MissingFromNormal = 257400, MissingFromPending = 0, PreexistingMissing = 0,
             DeletedUnchanged = 0, DeletedMetaRefreshed = 0, PendedWithoutMeta = 0, ReadFailures = 0,
             Adds = [], MetaUpdates = [], StatusUpdates = [], Deletes = [], Examples = [],
         });

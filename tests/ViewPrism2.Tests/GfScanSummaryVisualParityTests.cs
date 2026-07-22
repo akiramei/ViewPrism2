@@ -51,6 +51,7 @@ public sealed class GfScanSummaryVisualParityTests
             Reappeared = 0,
             MissingFromNormal = missing,
             MissingFromPending = missingFromPending,
+            PreexistingMissing = 0,
             DeletedUnchanged = 0,
             DeletedMetaRefreshed = 0,
             PendedWithoutMeta = 0,

@@ -33,6 +33,7 @@ public sealed class CpScanApplyRetryGuardTests : IDisposable
         Reappeared = 0,
         MissingFromNormal = 0,
         MissingFromPending = 0,
+        PreexistingMissing = 0,
         DeletedUnchanged = 0,
         DeletedMetaRefreshed = 0,
         PendedWithoutMeta = 0,

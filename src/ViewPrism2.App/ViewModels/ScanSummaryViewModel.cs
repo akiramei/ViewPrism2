@@ -343,17 +343,20 @@ public sealed partial class ScanSummaryViewModel : ObservableObject
             ("scanned", N0(s.ScannedFiles)),
             ("completed", DateTime.Now.ToString("yyyy/MM/dd HH:mm", CultureInfo.InvariantCulture)));
 
-        // missing 率カード(色は情報表示のみ=適用可否に影響させない・REQ-100)
-        var tier = ScanSummaryLogic.RateTier(s.MissingTotal, s.ManagedTotal);
+        // missing 率カード(色は情報表示のみ=適用可否に影響させない・REQ-100)。
+        // ECO-136: 分子は「適用後の総 missing 数」(既存 missing を含む=現在の健全度)。今回 delta の
+        // MissingTotal ではない(既存 missing が残ると過小表示する)。遷移サマリー行は delta のまま。
+        var totalMissing = s.TotalMissingAfterApply;
+        var tier = ScanSummaryLogic.RateTier(totalMissing, s.ManagedTotal);
         IsRateGreen = tier == MissingRateTier.Green;
         IsRateYellow = tier == MissingRateTier.Yellow;
         IsRateRed = tier == MissingRateTier.Red;
         // 表示は小数 1 桁へ最近接丸め(9/12,400=0.07%→0.1%。閾値判定は RateTier の整数演算が正)
         var rate = s.ManagedTotal > 0
-            ? (s.MissingTotal * 100.0 / s.ManagedTotal).ToString("0.0", CultureInfo.InvariantCulture)
+            ? (totalMissing * 100.0 / s.ManagedTotal).ToString("0.0", CultureInfo.InvariantCulture)
             : "0.0";
         RateValueText = T("scan.rateValue",
-            ("missing", N0(s.MissingTotal)), ("managed", N0(s.ManagedTotal)), ("rate", rate));
+            ("missing", N0(totalMissing)), ("managed", N0(s.ManagedTotal)), ("rate", rate));
         RateDescText = tier switch
         {
             MissingRateTier.Red => T("scan.rateDescRed"),

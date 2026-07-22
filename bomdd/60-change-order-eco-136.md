@@ -85,3 +85,38 @@
   prose のみ・視覚不変見込み=mock 再描画不要)。遷移サマリー行(normal→missing の delta 件数)は不変。
 - **着手条件**: /eco-fix でまずプローブにて「残り 10 = 既存 missing」を実測確定してから、率/tier の分子を
   総 missing へ差し替える。
+
+## §8 実施記録(fix)
+
+- **プローブ先行(R5)+真因確定**: `CpScanMissingRateTests` 新設(4 本)。主プローブ= VM に既存 missing 混在の
+  staging(normal→missing 3=delta 30%=Yellow / 既存 missing 5 → 総 missing 8=80%=Red)を与え、
+  `IsRateRed` と率表示を検査。**是正前=`IsRateRed` が False(VM が delta を分子=Yellow)で不合格**を実測
+  → 「率の分子=delta」を確定。副プローブ= 実 StageAsync で空フォルダ(既存 missing 2+normal 3・走査 0)を
+  ステージし `TotalMissingAfterApply == ManagedTotal`(=100%)を確認(ScanService の PreexistingMissing 採取を裏取り)。
+- **是正(案A)**: `ScanStaging` に `PreexistingMissing`(scan 開始時 status=missing 行数)を追加し、
+  算出プロパティ `TotalMissingAfterApply = PreexistingMissing − Reappeared + MissingFromNormal + MissingFromPending`
+  を新設。`StageCoreAsync` で `existing.Count(Status==Missing)` を採取。`ScanSummaryViewModel.BuildSummary` の
+  率/tier/表示件数の 3 箇所を `MissingTotal`(delta)→ `TotalMissingAfterApply`(総 missing)へ差し替え。
+  **遷移サマリー行(normal→missing の delta)は不変**。`MissingTotal` は遷移行・TotalChanges・確認ダイアログ等の
+  delta 用途で継続使用(R8 で網羅確認)。
+- **後方互換**: `PreexistingMissing=0 かつ Reappeared=0` のとき `TotalMissingAfterApply == MissingTotal`。
+  既存 golden capture(CaptureHarness 3 サイト=PreexistingMissing=0)・GfScanSummaryVisualParity は不変。
+- **diff 規模**: src 3 ファイル(ScanStaging +12・ScanService +1・ScanSummaryViewModel +7/-4)、
+  tools/CaptureHarness 3 サイト・tests(CpScanMissingRateTests 新設 4 本+既存 helper 3 サイトに PreexistingMissing=0)。
+- **機械受入(4 点・全緑)**: `dotnet build` 0 error ・`ViewPrism2.Tests` **930/930**(プローブ 4 本合格)・
+  `ViewPrism2.Oracle` 109 pass/4 skip/0 fail=**凍結オラクル無接触(R6)** ・`validate_bom` 0-0。
+- **R7(セルフゴールデン)= 実質対象外**: 率カードの視覚レイアウト・外観は不変(既存 capture は機械検証で不変)。
+  変わるのは既存 missing 混在時の表示数値のみで対応 CAD capture は不在(新シナリオ)。CAD prose
+  ([scan_summary.md:127](../../ViewPrismUI/docs/screens/scan_summary.md) を「総 missing ÷ 管理」へ明確化)は
+  **ViewPrismUI 申し送り**(別リポ・視覚不変見込み)。
+- **R8(セルフレビュー)= 実施・所見1(処置済み)**: fix diff を fresh-context の独立レビュアーで実コード検証。
+  算術(`Total = P − R + MN + MP` が「適用後 status=missing 行数」と厳密一致・Reappeared⊆PreexistingMissing で
+  非負・二重計上/deleted 母集合の整合)・網羅(delta 分子は 3 箇所のみで全置換・残る MissingTotal は delta 用途で正当)・
+  後方互換・リグレッション・一段階経路(率カードは二段階のみ=片手落ちなし)を全て正当と確認。
+  スコープ内欠陥 0。**指摘 1 件(低・test-coverage: プローブが Reappeared>0 を未行使=`−Reappeared` 項が
+  直接未検証)→ 本 ECO 内で是正**(`再出現分は適用後の総missingから差し引かれる` を追加=P5/R2/MN3→total6 を pin)。
+
+## §残ゲート(更新)
+
+- gate①=裁定済み(§7・案A)。真因確定・是正完了。
+- **gate②(golden)= 是正後提示(下記)**。合格報告を受けたら /eco-accept eco-136。

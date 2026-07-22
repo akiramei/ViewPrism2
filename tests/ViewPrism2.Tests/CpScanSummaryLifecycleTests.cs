@@ -41,6 +41,7 @@ public sealed class CpScanSummaryLifecycleTests
             Reappeared = 0,
             MissingFromNormal = missing,
             MissingFromPending = 0,
+            PreexistingMissing = 0,
             DeletedUnchanged = 0,
             DeletedMetaRefreshed = 0,
             PendedWithoutMeta = 0,

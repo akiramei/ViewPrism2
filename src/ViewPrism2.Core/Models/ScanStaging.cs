@@ -73,6 +73,12 @@ public sealed class ScanStaging
     /// <summary>読み取り失敗(変更に数えない・DB 非変更・次回再試行=REQ-100)。</summary>
     public required int ReadFailures { get; init; }
 
+    /// <summary>
+    /// スキャン開始時点で既に status=missing だった行数(ECO-136)。適用後の総 missing 率の分子に必要。
+    /// 既存 missing のうち再出現(missing→pending)しなかった分は適用後も missing に残る。
+    /// </summary>
+    public required int PreexistingMissing { get; init; }
+
     /// <summary>変更案: 新規登録行(3a/3b)。</summary>
     public required IReadOnlyList<ImageRecord> Adds { get; init; }
 
@@ -88,8 +94,16 @@ public sealed class ScanStaging
     /// <summary>詳細表示の例示(遷移別に <see cref="ExamplesPerKind"/> 件まで)。</summary>
     public required IReadOnlyList<ScanTransitionExample> Examples { get; init; }
 
-    /// <summary>見つからない合計(normal→missing+pending→missing=v5.0)。missing 率の分子。</summary>
+    /// <summary>見つからない合計(normal→missing+pending→missing=v5.0)。今回スキャンの delta(遷移サマリー行用)。</summary>
     public int MissingTotal => MissingFromNormal + MissingFromPending;
+
+    /// <summary>
+    /// 適用後の総 missing 数(ECO-136): 既存 missing のうち再出現しなかった分 + 今回 missing 化した分。
+    /// = PreexistingMissing − Reappeared(missing→pending)+ MissingFromNormal + MissingFromPending。
+    /// missing 率カード/tier の分子=「現在どれだけ見つからないか」。delta(<see cref="MissingTotal"/>)とは別。
+    /// </summary>
+    public int TotalMissingAfterApply =>
+        PreexistingMissing - Reappeared + MissingFromNormal + MissingFromPending;
 
     /// <summary>裁定対象の合計(新規+内容変更+再出現=適用後に pending になる件数)。</summary>
     public int PendingTotal => AddedPending + ContentChanged + Reappeared;
