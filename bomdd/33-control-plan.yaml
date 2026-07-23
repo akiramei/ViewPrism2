@@ -794,6 +794,7 @@ control_plan:
         - "可逆性: 一括再リンク後に再移動しても既存スキャン候補から同じ元 image_id へ再リンクし直せる"
         - "件数パリティ: PD-5 callout N=対象先頭グループ N=PD-6 確認一覧 N=実適用 N。キャンセルは無変更"
         - "0 件: PD-5 callout/対象グループ非表示。N>0 は full-width 青 callout+自動チップ、PD-6 は対象一覧 max-height 176px+secondary/primary"
+        - "(GF-139-01 golden 観点/2026-07-23 maintainer 実機)自動裁定の動作は relink(受け入れでない)= 実機で『同フォルダ内リネーム→再スキャン→新規+candidate を自動裁定』後に、新パスが元 image_id/タグで通常表示に戻り**元の missing(リンク切れ)が消える**ことを確認する。潜伏実績= 初版は『受け入れ(→新規 normal)』で CAD mock golden(設計)を通過したが、**実機 gate② golden で一致 missing がリンク切れのまま残る問題が顕在化**(承認モックに忠実な実装でも承認動作自体が実機 golden で覆る=CAD 設計 golden と実機 golden の谷間)。設計/実機の 2 段 golden を持つ機能は、実機 golden で『データ後始末(残存 missing/孤立タグ)』まで見る"
 
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     # CP-UI-G3 は ECO-023(2026-07-01)で撤回。REQ-043/E-UI-DETAIL-023 リバース誤りに伴い golden 対象から除外。

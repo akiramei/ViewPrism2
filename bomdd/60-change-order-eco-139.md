@@ -1,7 +1,7 @@
 # ECO-139 — 未裁定(PendingReview)の高信頼同一候補を一括自動裁定する機能(PEND-003 再裁定+CAD モック)
 
 - 種別: 機能拡張(UI/UX)。CAD 先行(既存裁定 PEND-003 に反するため gate① 必須)
-- status: staged(2026-07-23 起票。報告=maintainer 手動運用)
+- status: applied(2026-07-23 gate② 実機 golden 合格でクローズ)
 - baseline: main `4efc32e`
 - 優先度: 中〜高(1 万件規模の実運用で裁定操作が線形に膨らむ体験問題)
 
@@ -197,3 +197,31 @@ REQ-017)。元画像の image_id/タグを保持し新パスへ付け替え、pe
 - R8(fresh context 独立): 8 観点合格・**スコープ内欠陥 0**・出荷可。軽微 3(①曖昧片方裁定後の次選択位置の視覚微差=
   golden で目視 ②バッチが pending_origin も明示 NULL クリア=防御的 ③サービス層 freshness は repo 境界が担保)。
 - ConfirmDialog は今回未変更=直近 F-1 スコープ限定を維持。
+
+## §11 クローズ(2026-07-23・gate② 実機 golden 合格)
+
+### 実機確認内容(maintainer)
+同フォルダ内リネーム → 再スキャン → 新規+candidate を自動裁定(**再リンク**)後に、新パスが**元 image_id/タグで
+通常表示**へ戻り、**元の missing(リンク切れ)が消える**ことを確認。件数パリティ・曖昧ケース(1 missing に複数新規)の
+手動回避・可逆(再移動→再スキャンで戻せる)・**既存確認ダイアログ(削除等)の見た目不変**(F-1)も確認。
+
+### 再発防止
+CP-PENDING-AUTO-035 に GF-139-01 golden 観点(relink=missing 解消・CAD 設計 golden と実機 golden の谷間)を刻印。
+spec §2.11.7・E-UI-PENDING-049 invariant(PEND-003 例外)・i18n を relink 意味論で as-built 同期。
+
+### 教訓
+- **「承認モックに忠実な実装」でも「承認した動作そのもの」が実機 golden で覆り得る**(GF-139-01: accept は CAD 設計
+  golden を通過したが、実機で移動画像の**リンク切れ missing が残る**副作用が顕在化 → relink へ再裁定)。設計 golden(mock)と
+  実機 golden の 2 段を持つ機能は、実機 golden で**データ後始末(残存 missing・孤立タグ)**まで見る。ECO-128 系「復元→
+  pending の下流波及」read-across=**状態遷移は『戻り先』だけでなく『やり残す副作用』まで設計する**の UI 版。
+- **bdr-01 の境界予測は accept でも relink でも「想定範囲内」を維持**(いずれも既存 candidate_link_id 使用・scan 非接触)。
+  動作の再裁定(accept→relink)が部品境界を動かさなかった=予測の頑健性の一証跡。
+- **外部 AI 工場委譲は設計変更(GF)後の再製造でも機能**(Codex 委譲 3・4 例目で accept→relink 差し替え)。設計者が
+  境界決定/4値照合/R8 を保持し、狭義製造のみ委譲する型が再裁定サイクルでも安定。
+
+### 残(後続)
+- **PEND-005(次版候補)**: reappeared(灰)の自動裁定=旧 hash 再計算+比較を ScanJudge/ScanStaging へ供給する配線が要る
+  (bdr-01 の review_trigger= この時に境界を再裁定)。
+- **F-2(別 ECO 候補)**: pending 一覧の非仮想化(既存構造・1 万行本気運用時に ListBox 仮想化検討)。
+- **軽微 UX**: 曖昧片方裁定後の次選択位置(R8 軽微①・実害なし)。
+- **bdr-01 §42 測定**: BomDD 側で BDR 作成/照合/保守コスト・寄与・形骸化を記帳(方法論リポ・別オーダー)。
