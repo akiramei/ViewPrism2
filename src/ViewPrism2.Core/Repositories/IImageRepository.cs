@@ -71,6 +71,15 @@ public interface IImageRepository
         => throw new NotSupportedException("This repository does not support pending batch adjudication.");
 
     /// <summary>
+    /// ECO-139/GF-139-01: candidate missing と pending の組を単一トランザクションで一括再リンクする。
+    /// 各組は T4/REQ-017 と同じく pending 行を削除し、missing 側の image_id/タグを保持したまま
+    /// pending のファイルメタへ付け替える。1 組でも stale/不正なら全件 rollback して false。
+    /// </summary>
+    Task<bool> ApplyRelinkBatchAsync(
+        IReadOnlyCollection<(string MissingImageId, string PendingImageId)> pairs)
+        => throw new NotSupportedException("This repository does not support batch relinking.");
+
+    /// <summary>
     /// ECO-129 T14(裁定=別画像として扱う・PEND-001): 単一トランザクションの原子的な行置換。
     /// 旧 pending 行を DELETE(タグ/特徴量/類似は FK CASCADE 消滅)し replacement を INSERT する。
     /// false= 対象が pending でなかった(拒否・rollback)。1 パス 1 行の不変を維持する。

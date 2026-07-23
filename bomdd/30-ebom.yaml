@@ -790,8 +790,8 @@ ebom:
         - 裁定 3 遷移(T13/T14/T15)は core サービス(PendingReviewService)経由のみ・pending 以外は拒否。UI 側で状態遷移を再実装しない
         - T14(別画像として扱う=行置換)は単一トランザクションで原子(置換後も 1 パス 1 行・旧タグ/特徴量は CASCADE 消滅=PEND-001 裁定)
         - 未裁定バッジはタイル寸法・グリッド流動へ影響しない重畳描画。pending の表示は無絞り込み FS 軸ブラウズのみ(INV-010 v5.0)
-        - 手動裁定は 1 件ずつ確定・✕クローズはいつでも可(破棄の概念なし)。ECO-139/PEND-003 例外として、pending の new+candidate(hash 一致在庫済み)高信頼サブセットだけは PD-6 確認つき原子一括受入(T13)を許可し、reappeared/changed/candidate なし new と複数選択の手動一括は対象外。一括受入後も通常運用から再裁定可能
-        - 高信頼一括受入は単一トランザクションで全対象の pending 限定 WHERE を強制し、1 件でも拒否なら全 rollback。タグ/image_id を保持し candidate_link_id/pending_origin をクリアする。PD-5 callout・対象グループ・PD-6 確認一覧・実適用の N は常に同一、N=0 では callout/対象グループを非表示
+        - 手動裁定は 1 件ずつ確定・✕クローズはいつでも可(破棄の概念なし)。ECO-139/PEND-003 例外として、pending の new+candidate(hash 一致在庫済み)かつ candidate が現在も同一フォルダの missing で hash 一致し、candidate_link_id が入力内で一意な 1 missing:1 new 組だけは PD-6 確認つきで候補 missing へ原子一括再リンク(T4)を許可する。同じ missing に複数 new が一致する曖昧組は全て個別確認へ回し、個別裁定後は残りを再分類する。reappeared/changed/candidate なし new と複数選択の手動一括も対象外
+        - 高信頼一括再リンクは単一トランザクションで全組の pending/new・candidate 対応・同一フォルダ・hash 一致・missing 限定 WHERE を強制し、1 件でも拒否なら全 rollback。pending 行を削除して missing 行をそのファイルメタへ付け替え、missing 側の元 image_id/タグを保持して status=normal・candidate_link_id/pending_origin=NULL としリンク切れを解消する。PD-5 callout・対象グループ・PD-6 確認一覧・実適用の N=一意に再リンク可能な組数は常に同一、N=0 では callout/対象グループを非表示。再移動時は既存経路で再リンクし直せる
         - 一覧・由来分岐・CTA 出し分けは描画から独立した決定論ロジックとして unit 検査可能にする
         - pending 件数・一覧の取得は DB 境界で status 限定(全行 materialize 禁止=ECO-098 同型・26 万件経路の性能規律)
       acceptance_refs: [CP-UI-G1, CP-PENDING-AUTO-035]

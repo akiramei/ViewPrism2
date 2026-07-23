@@ -42,6 +42,25 @@ public sealed class GfPendingReviewVisualParityTests : IDisposable
     {
         var folder = new SyncFolder { Id = "col-1", Name = "fixture", Path = @"C:\Photos" };
         Assert.True((await _db.Folders.AddAsync(folder)).IsSuccess);
+        foreach (var candidateId in pendings
+                     .Where(item => item.CandidateId is not null)
+                     .Select(item => item.CandidateId!)
+                     .Distinct(StringComparer.Ordinal))
+        {
+            await _db.Images.AddAsync(new ImageRecord
+            {
+                Id = candidateId,
+                SyncFolderId = folder.Id,
+                RelativePath = candidateId + ".jpg",
+                FileName = candidateId + ".jpg",
+                FileSize = 1024,
+                Hash = "h-" + candidateId,
+                Status = ImageStatus.Missing,
+                CreatedDate = "2026-01-01T00:00:00.000Z",
+                ModifiedDate = "2026-01-01T00:00:00.000Z",
+            });
+        }
+
         foreach (var (path, origin, candidate) in pendings)
         {
             await _db.Images.AddAsync(new ImageRecord
@@ -51,7 +70,7 @@ public sealed class GfPendingReviewVisualParityTests : IDisposable
                 RelativePath = path,
                 FileName = path[(path.LastIndexOf('/') + 1)..],
                 FileSize = 1024,
-                Hash = "h-" + path,
+                Hash = candidate is null ? "h-" + path : "h-" + candidate,
                 Status = ImageStatus.Pending,
                 PendingOrigin = origin,
                 CandidateLinkId = candidate,
@@ -262,7 +281,7 @@ public sealed class GfPendingReviewVisualParityTests : IDisposable
                 var autoButton = window.FindControl<Button>("AutoAdjudicateButton")!;
                 Assert.True(autoButton.IsVisible);
                 Assert.Contains("primary", autoButton.Classes);
-                Assert.Contains("1 件を受け入れる", autoButton.Content as string);
+                Assert.Equal("自動裁定（1 件を再リンク）", autoButton.Content as string);
 
                 Assert.Contains(window.GetLogicalDescendants().OfType<TextBlock>(),
                     t => t.IsVisible && t.Text == "自動裁定できる 1 件(ハッシュ一致)");

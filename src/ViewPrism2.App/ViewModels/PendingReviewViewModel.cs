@@ -17,13 +17,15 @@ public sealed partial class PendingItemVM : ObservableObject
         string absolutePath,
         string originLabel,
         string originClass,
-        string? candidateFileName = null)
+        string? candidateFileName = null,
+        bool isHighConfidence = false)
     {
         Record = record;
         AbsolutePath = absolutePath;
         OriginLabel = originLabel;
         OriginClass = originClass;
         CandidateFileName = candidateFileName;
+        IsHighConfidence = isHighConfidence;
     }
 
     /// <summary>左ペインの選択ハイライト(accent.bg)。</summary>
@@ -43,7 +45,8 @@ public sealed partial class PendingItemVM : ObservableObject
 
     public string? CandidateFileName { get; }
 
-    public bool IsHighConfidence => PendingReviewService.IsHighConfidence(Record);
+    [ObservableProperty]
+    private bool _isHighConfidence;
 
     public bool IsOriginAmber => OriginClass == "amber";
 
@@ -54,7 +57,7 @@ public sealed partial class PendingItemVM : ObservableObject
 
 /// <summary>
 /// pending 裁定ダイアログ(ECO-129/139・REQ-101・仕様 §2.11.7・CAD= pending_review.md PD-2〜6)。
-/// 手動裁定は 1 件ずつ確定し、ECO-139 の高信頼サブセットだけ確認つきで原子一括受入する。
+/// 手動裁定は 1 件ずつ確定し、ECO-139 の一意な高信頼サブセットだけ確認つきで原子一括再リンクする。
 /// ✕クローズはいつでも可(破棄の概念なし)。
 /// 遷移は PendingReviewService(T13/T14/T15)経由のみ・「修復で再リンク…」は既存修復フローへ委譲。
 /// </summary>
@@ -67,6 +70,7 @@ public sealed partial class PendingReviewViewModel : ObservableObject
     private readonly IWindowService _windows;
     private readonly SyncFolder _folder;
     private readonly Dictionary<string, int> _tagCounts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ImageRecord> _candidateRows = new(StringComparer.Ordinal);
 
     public PendingReviewViewModel(
         PendingReviewService review,
@@ -184,14 +188,21 @@ public sealed partial class PendingReviewViewModel : ObservableObject
         HighConfidenceItems.Clear();
         IndividualItems.Clear();
         _tagCounts.Clear();
+        _candidateRows.Clear();
         var rows = await _images.GetPendingByFolderAsync(_folder.Id);
         var candidateIds = rows
             .Where(PendingReviewService.IsHighConfidence)
             .Select(record => record.CandidateLinkId!)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        var candidates = (await _images.GetByIdsAsync(candidateIds))
-            .ToDictionary(record => record.Id, StringComparer.Ordinal);
+        foreach (var candidate in await _images.GetByIdsAsync(candidateIds))
+        {
+            _candidateRows[candidate.Id] = candidate;
+        }
+
+        var uniquelyRelinkableIds = PendingReviewService.SelectUniquelyRelinkable(rows, _candidateRows)
+            .Select(record => record.Id)
+            .ToHashSet(StringComparer.Ordinal);
         // タグ件数(「受け入れても保持されます」の安心表示)= フォルダ単位 1 クエリ(R8 所見4: N+1 回避)
         foreach (var group in (await _tags.GetImageTagsByFolderAsync(_folder.Id))
                      .GroupBy(it => it.ImageId, StringComparer.Ordinal))
@@ -210,8 +221,10 @@ public sealed partial class PendingReviewViewModel : ObservableObject
                 PendingOrigin.Restored => (T("pending.originRestored"), "gray"),
                 _ => (T("pending.originNew"), "blue"), // origin 不明(移行前データ等)は新規扱い
             };
-            candidates.TryGetValue(record.CandidateLinkId ?? string.Empty, out var candidate);
-            var item = new PendingItemVM(record, abs, label, cls, candidate?.FileName);
+            _candidateRows.TryGetValue(record.CandidateLinkId ?? string.Empty, out var candidate);
+            var item = new PendingItemVM(
+                record, abs, label, cls, candidate?.FileName,
+                uniquelyRelinkableIds.Contains(record.Id));
             if (item.IsHighConfidence)
             {
                 HighConfidenceItems.Add(item);
@@ -373,14 +386,14 @@ public sealed partial class PendingReviewViewModel : ObservableObject
             T("pending.autoConfirmTitle"),
             T("pending.autoConfirmLead", ("count", count)),
             T("pending.autoConfirmSupport", ("count", count)),
-            T("pending.accept"),
+            T("pending.autoConfirmAction"),
             confirmationItems);
         if (!confirmed)
         {
             return;
         }
 
-        var result = await _review.AcceptHighConfidenceAsync(targets.Select(item => item.Record));
+        var result = await _review.RelinkHighConfidenceAsync(targets.Select(item => item.Record));
         if (!result.IsSuccess || result.Value != targets.Count)
         {
             StatusMessage = T("pending.autoFailedStale");
@@ -417,13 +430,32 @@ public sealed partial class PendingReviewViewModel : ObservableObject
         Adjudicated = true;
         var index = Items.IndexOf(item);
         Items.Remove(item);
-        HighConfidenceItems.Remove(item);
-        IndividualItems.Remove(item);
-        OnPropertyChanged(nameof(Items));
+        ReclassifyGroups();
         OnPropertyChanged(nameof(IsEmpty));
-        NotifyGroupState();
         Selected = Items.Count > 0 ? Items[Math.Min(index, Items.Count - 1)] : null;
         RefreshDetail();
+    }
+
+    private void ReclassifyGroups()
+    {
+        var remaining = Items.ToList();
+        var uniquelyRelinkableIds = PendingReviewService
+            .SelectUniquelyRelinkable(remaining.Select(item => item.Record), _candidateRows)
+            .Select(record => record.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        HighConfidenceItems.Clear();
+        IndividualItems.Clear();
+        foreach (var item in remaining)
+        {
+            item.IsHighConfidence = uniquelyRelinkableIds.Contains(item.Record.Id);
+            (item.IsHighConfidence ? HighConfidenceItems : IndividualItems).Add(item);
+        }
+
+        Items.Clear();
+        Items.AddRange(HighConfidenceItems);
+        Items.AddRange(IndividualItems);
+        OnPropertyChanged(nameof(Items));
+        NotifyGroupState();
     }
 
     private void NotifyGroupState()

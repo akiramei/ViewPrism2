@@ -360,6 +360,146 @@ public sealed class ImageRepository : IImageRepository
         });
     }
 
+    public Task<bool> ApplyRelinkBatchAsync(
+        IReadOnlyCollection<(string MissingImageId, string PendingImageId)> pairs)
+    {
+        ArgumentNullException.ThrowIfNull(pairs);
+        if (pairs.Count == 0)
+        {
+            return Task.FromResult(true);
+        }
+
+        var distinctPairs = pairs.Distinct().ToArray();
+        if (distinctPairs.Length != pairs.Count
+            || distinctPairs.Any(pair =>
+                string.IsNullOrEmpty(pair.MissingImageId)
+                || string.IsNullOrEmpty(pair.PendingImageId))
+            || distinctPairs.Select(pair => pair.MissingImageId)
+                .Distinct(StringComparer.Ordinal).Count() != distinctPairs.Length
+            || distinctPairs.Select(pair => pair.PendingImageId)
+                .Distinct(StringComparer.Ordinal).Count() != distinctPairs.Length)
+        {
+            return Task.FromResult(false);
+        }
+
+        // GF-139-01: 全組を単一 transaction で検証後、T4 と同じ DELETE→UPDATE 順に適用する。
+        // 1 万件でも N+1 query にせず、SQLite の変数上限だけ 500 件 chunk で回避する。
+        return _db.RunAsync(async conn =>
+        {
+            using var tx = conn.BeginTransaction();
+            var pendingById = new Dictionary<string, Row>(distinctPairs.Length, StringComparer.Ordinal);
+            foreach (var chunk in distinctPairs.Select(pair => pair.PendingImageId).Chunk(500))
+            {
+                var rows = await conn.QueryAsync<Row>(
+                    $"""
+                    {SelectColumns}
+                    WHERE id IN @Ids
+                      AND status = 'pending'
+                      AND pending_origin = 'new'
+                    """,
+                    new { Ids = chunk }, tx).ConfigureAwait(false);
+                foreach (var row in rows)
+                {
+                    pendingById[row.Id] = row;
+                }
+            }
+
+            var missingById = new Dictionary<string, Row>(distinctPairs.Length, StringComparer.Ordinal);
+            var candidateCounts = new Dictionary<string, long>(distinctPairs.Length, StringComparer.Ordinal);
+            foreach (var chunk in distinctPairs.Select(pair => pair.MissingImageId).Chunk(500))
+            {
+                var missingRows = await conn.QueryAsync<Row>(
+                    $"{SelectColumns} WHERE id IN @Ids AND status = 'missing'",
+                    new { Ids = chunk }, tx).ConfigureAwait(false);
+                foreach (var row in missingRows)
+                {
+                    missingById[row.Id] = row;
+                }
+
+                var counts = await conn.QueryAsync<CandidateCountRow>("""
+                    SELECT candidate_link_id AS CandidateLinkId, COUNT(*) AS CandidateCount
+                    FROM images
+                    WHERE status = 'pending'
+                      AND pending_origin = 'new'
+                      AND candidate_link_id IN @Ids
+                    GROUP BY candidate_link_id
+                    """,
+                    new { Ids = chunk }, tx).ConfigureAwait(false);
+                foreach (var count in counts)
+                {
+                    candidateCounts[count.CandidateLinkId] = count.CandidateCount;
+                }
+            }
+
+            foreach (var (missingImageId, pendingImageId) in distinctPairs)
+            {
+                if (!pendingById.TryGetValue(pendingImageId, out var pending)
+                    || !string.Equals(pending.CandidateLinkId, missingImageId, StringComparison.Ordinal)
+                    || !missingById.TryGetValue(missingImageId, out var missing)
+                    || !string.Equals(pending.SyncFolderId, missing.SyncFolderId, StringComparison.Ordinal)
+                    || !string.Equals(pending.Hash, missing.Hash, StringComparison.Ordinal)
+                    || candidateCounts.GetValueOrDefault(missingImageId) != 1)
+                {
+                    tx.Rollback();
+                    return false;
+                }
+            }
+
+            var deleteParameters = distinctPairs.Select(pair => new
+            {
+                pair.MissingImageId,
+                pair.PendingImageId,
+            });
+            var deleted = await conn.ExecuteAsync("""
+                DELETE FROM images
+                WHERE id = @PendingImageId
+                  AND status = 'pending'
+                  AND pending_origin = 'new'
+                  AND candidate_link_id = @MissingImageId
+                """,
+                deleteParameters, tx).ConfigureAwait(false);
+            if (deleted != distinctPairs.Length)
+            {
+                tx.Rollback();
+                return false;
+            }
+
+            var updateParameters = distinctPairs.Select(pair =>
+            {
+                var pending = pendingById[pair.PendingImageId];
+                return new
+                {
+                    pair.MissingImageId,
+                    pending.SyncFolderId,
+                    pending.RelativePath,
+                    pending.FileName,
+                    pending.FileSize,
+                    pending.ModifiedDate,
+                    pending.CreatedDate,
+                    pending.Hash,
+                };
+            });
+            var updated = await conn.ExecuteAsync("""
+                UPDATE images
+                SET relative_path = @RelativePath, file_name = @FileName, file_size = @FileSize,
+                    modified_date = @ModifiedDate, created_date = @CreatedDate, hash = @Hash,
+                    status = 'normal', candidate_link_id = NULL, pending_origin = NULL
+                WHERE id = @MissingImageId
+                  AND sync_folder_id = @SyncFolderId
+                  AND status = 'missing'
+                """,
+                updateParameters, tx).ConfigureAwait(false);
+            if (updated != distinctPairs.Length)
+            {
+                tx.Rollback();
+                return false;
+            }
+
+            tx.Commit();
+            return true;
+        });
+    }
+
     public Task<bool> ReplacePendingAsync(string oldId, ImageRecord replacement)
     {
         ArgumentNullException.ThrowIfNull(replacement);
@@ -390,6 +530,8 @@ public sealed class ImageRepository : IImageRepository
         string Id, string SyncFolderId, string RelativePath, string FileName, long FileSize,
         string Hash, string Status, string? CandidateLinkId, string CreatedDate,
         string ModifiedDate, string? Notes, string? PendingOrigin);
+
+    private sealed record CandidateCountRow(string CandidateLinkId, long CandidateCount);
 
     private static object ToInsertParameters(ImageRecord image)
     {

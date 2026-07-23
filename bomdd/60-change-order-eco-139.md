@@ -183,3 +183,17 @@ REQ-017)。元画像の image_id/タグを保持し新パスへ付け替え、pe
   「missing 解消+image_id/タグ保持+pending 削除」を pin。
 - **bdr-01**: relink も既存 candidate_link_id 使用・scan 非接触=**境界「想定範囲内」維持**(boundary_hypothesis 無変更)。
 - 手順: CAD 再改訂(/cad-mock)→ 再 golden(設計)→ 再実装(/eco-fix)→ 再 gate②。
+
+### §10.1 relink 実施記録(2026-07-23)
+- CAD relink 化(ViewPrismUI `d26c000`・PD-5/PD-6 再リンク文言+captures)。製造= Codex 委譲(/factory-delegate 4 例目)。
+- Core: `PendingReviewService.SelectUniquelyRelinkable`(高信頼を CandidateLinkId でグループ化し**サイズ1のみ**=
+  曖昧除外・candidate が現に missing/同 folder/同 hash かを検証)+`RelinkHighConfidenceAsync`(ペア→`ApplyRelinkBatchAsync`)。
+  Infra: `ImageRepository.ApplyRelinkBatchAsync`(単一トランザクション・組ごと検証+DB 実測の候補カウント==1・
+  DELETE/UPDATE 件数不一致で全 rollback・missing 行に上書き=image_id/タグ保持・missing 解消)。VM: 件数パリティは
+  単一 `HighConfidenceItems` 由来・`ReclassifyGroups` で個別裁定後の再分類。i18n: 「再リンク」系 ja/en。
+- **bdr-01 4 値照合=「想定範囲内」維持**(ScanJudge/ScanStaging 無接触・relink は T4/REQ-017 の repair 経路・
+  boundary_hypothesis 無変更)。
+- 受入: build 0/0・Tests **959/959**・Oracle 109+4skip(無接触)・validate 0/0。
+- R8(fresh context 独立): 8 観点合格・**スコープ内欠陥 0**・出荷可。軽微 3(①曖昧片方裁定後の次選択位置の視覚微差=
+  golden で目視 ②バッチが pending_origin も明示 NULL クリア=防御的 ③サービス層 freshness は repo 境界が担保)。
+- ConfirmDialog は今回未変更=直近 F-1 スコープ限定を維持。
