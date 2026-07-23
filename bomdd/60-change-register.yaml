@@ -1930,3 +1930,25 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。率/tier は VM/ロジック probe(tests/ViewPrism2.Tests)で pin=凍結オラクル非該当見込み"
     notes: "gate①=裁定済み(2026-07-22 maintainer=案A 採択: 率/tier の分子を『適用後の総 missing 数』〔既存 missing 行数+今回 delta〕へ変更・空フォルダ=100%。CAD scan_summary.md:127 の率定義を『総 missing÷管理』に明確化=ViewPrismUI 申し送り・prose のみ・視覚不変見込み。遷移行 delta は不変)。着手条件=/eco-fix でまずプローブにて『残り10=既存 missing』を実測確定→率/tier 分子を総 missing へ差し替え。gate②=是正後 golden(既存 missing 混在で率が総 missing 反映〔空=100%〕+全損回帰)。関連=ECO-130(率カード導入=混入元)・ECO-129(pending 意味論)・scan_summary SCAN-002(率閾値裁定)"
     body: 60-change-order-eco-136.md
+  - id: ECO-137
+    title: "再スキャンが DB 行ごと File.Exists+ディレクトリ全列挙の二重メタデータ走査(HDD でランダム存在確認が支配し得る)"
+    type: "不具合候補(実装層・性能特性・要実測。挙動は仕様どおり)"
+    status: staged   # 2026-07-23 起票(ECO-134 R3 スコープ外所見3 の単独起票=maintainer 裁定)。着手順序=ECO-138 より先(ECO-134 同型の軽量クローズ見込み)
+    golden: "pending(不要見込み: 挙動不変+視覚変更なし=機械受入〔存在確認の計数プローブ+挙動同値プローブ+既存緑維持〕が納品条件の想定。是正後に n/a 裁定を仰ぐ)"
+    baseline: "main f217470"
+    findings: "ECO-134 R3 スコープ外所見3(2026-07-22 スキャン処理調査)。症状=StageCore が①CreateEnumerable(ScanService.cs:162)でディレクトリ全列挙②existing 全行に 1 行ずつ File.Exists(:197・missing 判定)③列挙 walk(:234)=同一フォルダ木への二重メタデータ走査。HDD では②の行ごとランダム存在確認が支配的になり得る(26万件級)。ScanCore 初回経路にも同型(:497/:514)だが existing≈0 で実害小=主対象は再スキャン。確定=走査 2 系統の位置(現 HEAD 実測)・パス照合比較子は OrdinalIgnoreCase(byPath と同一比較子で set 構築可能)・ECO-134 read-across(毎回走査型のインデックス不在の一形態)。未検証=HDD 実測での支配性(要実測・/eco-fix 冒頭で裏取り)・File.Exists と列挙の意味論差(『列挙に現れないが Exists 真』クラス=アクセス権/共有違反/隠し属性。観測時点は現行も二時点で統合は一時点化=単純化方向)"
+    impacted_bom: ["src=ScanService.cs(StageCore の存在確認を列挙集合 lookup へ。ScanCore 同型は実測で要否判断)", "tests=存在確認の計数プローブ(行ごと File.Exists==0 を pin・決定論・固定時間閾値なし)+挙動同値プローブ(missing 判定不変)", "bomdd/33-control-plan.yaml=スキャン CP へ存在確認走査回数の観点(134=計算量に続く走査回数軸)", "CAD=該当なし(視覚・挙動変更なし)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。計数・挙動同値は tests probe で pin=凍結オラクル非該当見込み"
+    notes: "gate①=不要見込み(実装層・意味論変更なし。『列挙に現れない存在』クラスで挙動差が出る場合のみ軽微裁定へ切替)。gate②=不要見込み(ECO-134 と同じく機械受入クローズの想定)。着手条件=なし・プローブ先行必須(①計数②挙動同値)。停止意味論=ct 粒度不変を R5 に含める(control-plan 停止意味論の 2 不変条件・起票時チェック済み)。関連=ECO-134(同型・R3 所見元)・ECO-130(二段階スキャン)・ECO-138(同調査の別軸=ピークメモリ)"
+    body: 60-change-order-eco-137.md
+  - id: ECO-138
+    title: "二段階スキャンのステージングが変更全件をメモリ保持 — 26万件級全面差分のピークメモリ未封止(RSS 上限・計測ガードなし)"
+    type: "不具合候補(実装/設計層・性能特性・要実測。gate① 要否は工程診断で確定)"
+    status: staged   # 2026-07-23 起票(ECO-134 R3 スコープ外所見2+所見4 残りの単独起票=maintainer 裁定)。着手順序=ECO-137 クローズ後・実測先行(実測が許容内なら是正せず封止のみ=案c で閉じる)
+    golden: "pending(案に依存: 案a 軽量化/案c 封止のみ=不要見込み・案b ストリーミング=サマリー/進捗の実機確認)"
+    baseline: "main f217470"
+    findings: "ECO-134 R3 スコープ外所見2+所見4 残り(2026-07-22 スキャン処理調査)。症状=StageCore の statusUpdates/deletes/adds/metaUpdates リスト(ScanService.cs:166-169)+判定用ビュー current(:186・existing 全行の ImageRecord)+ScanStaging.Adds=完全 ImageRecord 群(ScanStaging.cs:83)をサマリー提示〜適用まで全件保持。26万件級全面差分(wrong-drive・大量移動)でピークメモリ大・RSS 上限/計測ガードなし。既往同族=ECO-062(6,698MiB・26万件全走査)=メモリ×スケール検査盲点クラスの 2 例目。確定=保持箇所(現 HEAD 実測)。未検証=26万件級全面差分の実ピーク(合成 staging の allocation 計測=I/O・SQLite 除外で下限を先に取得)。工程診断は本 ECO の第 1 作業=staging 全件保持と二段階スキャン意味論の結合深度を確定(①適用アトミック性/部分失敗回復=ECO-133 の回復モデルはバッチ前提 ②サマリー集計=ECO-136 TotalMissingAfterApply は staging 由来 ③キャンセル・進捗の Phase 境界)"
+    impacted_bom: ["src=ScanService.cs / ScanStaging.cs(方針確定後に確定: 案a=staging 行の軽量化/案b=バッチ・ストリーミング化=gate① 必要/案c=封止のみ)", "tests=件数比例 allocation 上限プローブ(GC.GetAllocatedBytesForCurrentThread 等・固定時間閾値を置かないメモリ版)", "bomdd/33-control-plan.yaml=スキャン CP へピークメモリ特性+区間別 throughput(134=計算量・137=走査回数に続く残り 2 軸の併修=所見4 完了)", "CAD=なし見込み(進捗・サマリー表示が変わる案のみ申し送り)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。メモリ特性は tests probe で pin=凍結オラクル非該当見込み"
+    notes: "gate①=工程診断後に判定(案b=必要・案a/c=不要見込み)。着手条件=ECO-137 クローズ後+実測先行。停止意味論の 2 不変条件(token/generation)=staging を触るため起票時から R5 対象(ECO-075 昇格規則・control-plan)。関連=ECO-134(R3 所見元)・ECO-062(既往同族)・ECO-129/130(二段階スキャン)・ECO-133(部分失敗回復)・ECO-136(サマリー集計が staging 由来)・ECO-137(同調査の別軸=走査回数)"
+    body: 60-change-order-eco-138.md
