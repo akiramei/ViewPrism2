@@ -1952,3 +1952,15 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。メモリ特性は tests probe で pin=凍結オラクル非該当見込み"
     notes: "gate①=工程診断後に判定(案b=必要・案a/c=不要見込み)。着手条件=ECO-137 クローズ後+実測先行。停止意味論の 2 不変条件(token/generation)=staging を触るため起票時から R5 対象(ECO-075 昇格規則・control-plan)。関連=ECO-134(R3 所見元)・ECO-062(既往同族)・ECO-129/130(二段階スキャン)・ECO-133(部分失敗回復)・ECO-136(サマリー集計が staging 由来)・ECO-137(同調査の別軸=走査回数)"
     body: 60-change-order-eco-138.md
+
+  - id: ECO-139
+    title: "未裁定(PendingReview)の高信頼同一候補を一括自動裁定する機能 — PEND-003 再裁定+CAD モック"
+    type: "機能拡張(UI/UX)。CAD 先行(既存裁定 PEND-003 に反するため gate① 必須)"
+    status: staged   # 2026-07-23 起票(maintainer 手動運用報告)。工程診断=実装バグでなく CAD 先行の機能拡張。PEND-003「一括なし」明示裁定に反する→CAD 再裁定必須。高信頼シグナル在庫は origin 差(new+candidate=hash 一致済み/reappeared=size+mtime のみ hash 未比較/changed=非同一)。着手条件=gate①(ViewPrismUI で PEND-003 再裁定+基準案A/B+モック確定)後に /eco-fix
+    golden: "pending(UI 新設=maintainer 実機で基準・バッチ提示・可逆性を確認。基準確定後・gate① 後)"
+    baseline: "main 4efc32e"
+    findings: "PendingReview は 1 画像ずつ裁定(PEND-003 準拠・src 逸脱なし)。1 万件規模で操作が線形膨張。要求=高信頼(同一極めて濃厚)候補を自動判定→バッチ化→『自動裁定』ボタンで一括。確定=(1)高信頼シグナル在庫は origin 差: new+candidate(青)は hash 一致で candidate_link_id 付与済み=在庫あり/reappeared(灰)は size+mtime 一致でも ScanJudge PendInPlace で hash 未計算・未比較(バナー『判定できません』の理由)=在庫なし/changed(琥珀)は定義上非同一。(2)CAD PEND-003=一括なしを明示裁定・PEND-002=要望が出たら mock 改版の入口を前置き。未検証=拡張子+サイズ一致のみで同一とみなす誤裁定リスク(hash まで求めるかは裁定)・1 万件自動裁定 UX(可逆性/性能)"
+    impacted_bom: ["CAD(ViewPrismUI)=pending_review.md 改訂(PEND-003 再裁定・自動裁定ボタン・バッチ提示・信頼度表示)+mock/captures=先行必須", "spec=bomdd/20-spec.md §2.11.7 に高信頼基準(案A/B)+バッチ裁定意味論(遷移・原子性・可逆性)", "REQ/E-BOM/M-BOM=PendingReview surface へバッチ裁定 unit+確認ダイアログ CMP-011", "src=PendingReviewService バッチ API+高信頼判定算出(案A なら reappeared の hash 比較配線=ScanJudge/ScanStaging へ old-hash 供給)", "control-plan=バッチ裁定の原子性・可逆性・大量件数受入観点", "制約=報告添付のゲーム画像はソース管理対象外(captures 含め非保存)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。バッチ裁定意味論は新規受入行で追加"
+    notes: "gate①=必須・先行(ViewPrismUI で PEND-003 再裁定+基準案A/B+モック確定=CAD が正)。gate②=要(UI 新設 golden)。関連=ECO-129/REQ-101(pending 意味論)・PEND-001〜004(CAD 裁定履歴)・CMP-011(確認ダイアログ)・ECO-128〜130(二段階スキャン・pending)"
+    body: 60-change-order-eco-139.md
