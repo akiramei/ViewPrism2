@@ -6,6 +6,8 @@ using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
 using ViewPrism2.Core.Services;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ViewPrism2.Tests")]
+
 namespace ViewPrism2.Infrastructure.Scanning;
 
 /// <summary>
@@ -32,6 +34,7 @@ public sealed class ScanService
     private readonly IImageRepository _images;
     private readonly IClock _clock;
     private readonly ILogger<ScanService>? _logger;
+    private readonly Func<string, bool> _fileExists;
     private readonly ScanJudge _judge = new();
     private readonly ConcurrentDictionary<string, byte> _inFlight = new(StringComparer.Ordinal);
 
@@ -40,10 +43,21 @@ public sealed class ScanService
         IImageRepository images,
         IClock clock,
         ILogger<ScanService>? logger = null)
+        : this(folders, images, clock, File.Exists, logger)
+    {
+    }
+
+    internal ScanService(
+        ISyncFolderRepository folders,
+        IImageRepository images,
+        IClock clock,
+        Func<string, bool> fileExists,
+        ILogger<ScanService>? logger = null)
     {
         _folders = folders;
         _images = images;
         _clock = clock;
+        _fileExists = fileExists;
         _logger = logger;
     }
 
@@ -159,9 +173,28 @@ public sealed class ScanService
             return Result<ScanStaging>.Fail(ErrorCode.ScanRootMissing, $"フォルダ '{root}' が見つかりません。");
         }
 
-        var enumerable = CreateEnumerable(folder, root);
         var existing = await _images.GetByFolderAsync(folder.Id).ConfigureAwait(false);
         var isInitialScan = folder.LastScan is null;
+        var presenceDirectories = folder.IncludeSubfolders
+            ? null
+            : BuildPresenceDirectories(existing, ct);
+        var enumerable = CreateEnumerable(
+            folder, root, includeNonCandidates: true, presenceDirectories);
+
+        // ECO-137: 物理存在と後段のスキャン候補を一度のディレクトリ列挙から作る。
+        // missing 判定は全ファイル集合を使い、拡張子/除外名/リパースポイントで候補外の
+        // 既存行も従来の File.Exists と同じく present と扱う。
+        var presentPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var scanFiles = new List<ScanFileEntry>();
+        foreach (var file in enumerable)
+        {
+            ct.ThrowIfCancellationRequested();
+            presentPaths.Add(PathNormalizer.ToRelative(root, file.FullPath));
+            if (file.IsScanCandidate)
+            {
+                scanFiles.Add(file);
+            }
+        }
 
         var statusUpdates = new List<ScanStatusUpdate>();
         var deletes = new List<string>();
@@ -193,8 +226,8 @@ public sealed class ScanService
                 processed?.Report(examined);
             }
 
-            var fullPath = Path.Combine(root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (record.Status is ImageStatus.Normal or ImageStatus.Pending && !File.Exists(fullPath))
+            if (record.Status is ImageStatus.Normal or ImageStatus.Pending &&
+                !presentPaths.Contains(record.RelativePath))
             {
                 statusUpdates.Add(new ScanStatusUpdate(record.Id, ImageStatus.Missing));
                 current.Add(record with
@@ -231,7 +264,7 @@ public sealed class ScanService
         var scannedFiles = 0;
 
         // 手順 2〜3 相当: 判定のみ(OC-5 の器は不変)。DB へは書かない
-        foreach (var file in enumerable)
+        foreach (var file in scanFiles)
         {
             ct.ThrowIfCancellationRequested();
             try
@@ -511,7 +544,7 @@ public sealed class ScanService
         {
             ct.ThrowIfCancellationRequested();
             var fullPath = Path.Combine(root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (record.Status is ImageStatus.Normal or ImageStatus.Pending && !File.Exists(fullPath))
+            if (record.Status is ImageStatus.Normal or ImageStatus.Pending && !_fileExists(fullPath))
             {
                 batch.AddStatus(record.Id, ImageStatus.Missing);
                 current.Add(record with
@@ -624,32 +657,80 @@ public sealed class ScanService
     /// <summary>
     /// 手順 1 の列挙(K-WINFS: リパースポイントを辿らない・アクセス不能は無視)。
     /// ECO-059: 列挙時にOSが既に返しているサイズ/日時を保持し、各ファイルのFileInfo再照会を避ける。
-    /// ECO-060: streaming 列挙(全件 ToList しない)。ECO-130: 一段階(ScanCoreAsync)と差分計算
-    /// (StageCoreAsync)で同一の列挙器を共有する(判定パリティの前提)。
+    /// ECO-060: 一段階 ScanCoreAsync は streaming 列挙(全件 ToList しない)。ECO-130: 一段階と
+    /// 差分計算(StageCoreAsync)で同一の列挙器を共有する(判定パリティの前提)。ECO-137: StageCoreAsync
+    /// は全ファイルの存在集合とスキャン候補をこの列挙 1 回から構築する。
     /// </summary>
-    private static FileSystemEnumerable<ScanFileEntry> CreateEnumerable(SyncFolder folder, string root)
+    private static FileSystemEnumerable<ScanFileEntry> CreateEnumerable(
+        SyncFolder folder,
+        string root,
+        bool includeNonCandidates = false,
+        IReadOnlySet<string>? presenceDirectories = null)
     {
+        var recurseAll = folder.IncludeSubfolders;
         var options = new EnumerationOptions
         {
-            RecurseSubdirectories = folder.IncludeSubfolders,
+            RecurseSubdirectories = recurseAll || presenceDirectories is { Count: > 0 },
             IgnoreInaccessible = true,
-            AttributesToSkip = FileAttributes.ReparsePoint,
+            AttributesToSkip = 0,
         };
         var excludeNames = new HashSet<string>(folder.ExcludePatterns, StringComparer.OrdinalIgnoreCase);
-        return new FileSystemEnumerable<ScanFileEntry>(
+        var enumerable = new FileSystemEnumerable<ScanFileEntry>(
             root,
-            (ref FileSystemEntry entry) => new ScanFileEntry(
-                entry.ToFullPath(),
-                entry.Length,
-                entry.LastWriteTimeUtc.UtcDateTime,
-                entry.CreationTimeUtc.UtcDateTime),
+            (ref FileSystemEntry entry) =>
+            {
+                var fileName = entry.FileName.ToString();
+                var relativePath = PathNormalizer.ToRelative(root, entry.ToFullPath());
+                var isScanCandidate =
+                    (recurseAll || !relativePath.Contains('/')) &&
+                    !entry.Attributes.HasFlag(FileAttributes.ReparsePoint) &&
+                    ImageExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant()) &&
+                    !excludeNames.Contains(fileName);
+                return new ScanFileEntry(
+                    entry.ToFullPath(),
+                    entry.Length,
+                    entry.LastWriteTimeUtc.UtcDateTime,
+                    entry.CreationTimeUtc.UtcDateTime,
+                    isScanCandidate);
+            },
             options)
         {
             ShouldIncludePredicate = (ref FileSystemEntry entry) =>
                 !entry.IsDirectory &&
-                ImageExtensions.Contains(Path.GetExtension(entry.FileName).ToString().ToLowerInvariant()) &&
-                !excludeNames.Contains(entry.FileName.ToString()),
+                (includeNonCandidates ||
+                 (!entry.Attributes.HasFlag(FileAttributes.ReparsePoint) &&
+                  ImageExtensions.Contains(Path.GetExtension(entry.FileName).ToString().ToLowerInvariant()) &&
+                  !excludeNames.Contains(entry.FileName.ToString()))),
         };
+        enumerable.ShouldRecursePredicate = (ref FileSystemEntry entry) =>
+            !entry.Attributes.HasFlag(FileAttributes.ReparsePoint) &&
+            (recurseAll ||
+             presenceDirectories?.Contains(PathNormalizer.ToRelative(root, entry.ToFullPath())) == true);
+        return enumerable;
+    }
+
+    internal static HashSet<string> BuildPresenceDirectories(
+        IReadOnlyList<ImageRecord> existing, CancellationToken ct)
+    {
+        var directories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var record in existing)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (record.Status is not (ImageStatus.Normal or ImageStatus.Pending))
+            {
+                continue;
+            }
+
+            var slash = record.RelativePath.LastIndexOf('/');
+            while (slash > 0)
+            {
+                var directory = record.RelativePath[..slash];
+                directories.Add(directory);
+                slash = directory.LastIndexOf('/');
+            }
+        }
+
+        return directories;
     }
 
     private static ImageRecord NewRecord(
@@ -690,7 +771,8 @@ public sealed class ScanService
         string FullPath,
         long Length,
         DateTime LastWriteTimeUtc,
-        DateTime CreationTimeUtc);
+        DateTime CreationTimeUtc,
+        bool IsScanCandidate);
 
     /// <summary>ECO-059: ScanService内だけで使う有界ミューテーションバッファ。</summary>
     private sealed class ScanBatchBuffer

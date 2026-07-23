@@ -1933,13 +1933,13 @@ changes:
   - id: ECO-137
     title: "再スキャンが DB 行ごと File.Exists+ディレクトリ全列挙の二重メタデータ走査(HDD でランダム存在確認が支配し得る)"
     type: "不具合候補(実装層・性能特性・要実測。挙動は仕様どおり)"
-    status: staged   # 2026-07-23 起票(ECO-134 R3 スコープ外所見3 の単独起票=maintainer 裁定)。着手順序=ECO-138 より先(ECO-134 同型の軽量クローズ見込み)
-    golden: "pending(不要見込み: 挙動不変+視覚変更なし=機械受入〔存在確認の計数プローブ+挙動同値プローブ+既存緑維持〕が納品条件の想定。是正後に n/a 裁定を仰ぐ)"
+    status: implemented   # 2026-07-23 fix(Codex 製造・Claude 独立レビュー)。案A=一度の FileSystemEnumerable 走査から presentPaths(OrdinalIgnoreCase HashSet)を構築し行ごと missing 判定を set lookup へ統合・direct File.Exists( 0 件を source lint(CpScanFilePresenceTests test6)で pin・red-first 実測(是正前 Actual 4→0)。false-missing クラス(IncludeSubfolders=false でサブフォルダ配下既存行)は BuildPresenceDirectories(親 prefix 限定再帰)で解消・cancel 到達 pin。ScanCore は seam 化のみ(existing≈0 の呼出し側実測)。機械受入=build 0-0/Tests 936-936/Oracle 109pass+4skip+0fail(凍結無接触=R6)/validate 0-0
+    golden: "n/a(挙動 bit 一致=missing 判定の存在/不在・大小文字・hidden・除外/対象外拡張子・非再帰変更後の既存配下行をプローブで pin+視覚変更なし=機械受入がクローズ条件。2026-07-23 maintainer が実機不要でクローズと裁定)"
     baseline: "main f217470"
     findings: "ECO-134 R3 スコープ外所見3(2026-07-22 スキャン処理調査)。症状=StageCore が①CreateEnumerable(ScanService.cs:162)でディレクトリ全列挙②existing 全行に 1 行ずつ File.Exists(:197・missing 判定)③列挙 walk(:234)=同一フォルダ木への二重メタデータ走査。HDD では②の行ごとランダム存在確認が支配的になり得る(26万件級)。ScanCore 初回経路にも同型(:497/:514)だが existing≈0 で実害小=主対象は再スキャン。確定=走査 2 系統の位置(現 HEAD 実測)・パス照合比較子は OrdinalIgnoreCase(byPath と同一比較子で set 構築可能)・ECO-134 read-across(毎回走査型のインデックス不在の一形態)。未検証=HDD 実測での支配性(要実測・/eco-fix 冒頭で裏取り)・File.Exists と列挙の意味論差(『列挙に現れないが Exists 真』クラス=アクセス権/共有違反/隠し属性。観測時点は現行も二時点で統合は一時点化=単純化方向)"
     impacted_bom: ["src=ScanService.cs(StageCore の存在確認を列挙集合 lookup へ。ScanCore 同型は実測で要否判断)", "tests=存在確認の計数プローブ(行ごと File.Exists==0 を pin・決定論・固定時間閾値なし)+挙動同値プローブ(missing 判定不変)", "bomdd/33-control-plan.yaml=スキャン CP へ存在確認走査回数の観点(134=計算量に続く走査回数軸)", "CAD=該当なし(視覚・挙動変更なし)"]
     oracle: "既存固定 Oracle 行は変更しない(R6)。計数・挙動同値は tests probe で pin=凍結オラクル非該当見込み"
-    notes: "gate①=不要見込み(実装層・意味論変更なし。『列挙に現れない存在』クラスで挙動差が出る場合のみ軽微裁定へ切替)。gate②=不要見込み(ECO-134 と同じく機械受入クローズの想定)。着手条件=なし・プローブ先行必須(①計数②挙動同値)。停止意味論=ct 粒度不変を R5 に含める(control-plan 停止意味論の 2 不変条件・起票時チェック済み)。関連=ECO-134(同型・R3 所見元)・ECO-130(二段階スキャン)・ECO-138(同調査の別軸=ピークメモリ)"
+    notes: "gate①=軽微裁定済み(2026-07-23 maintainer 受理)。是正が §4 案A を超え共有 CreateEnumerable の reparse 扱いを predicate 化+BuildPresenceDirectories を新設(false-missing クラス解消に必要)=§6 escalation 条項どおり独立レビューが上申→受理。ScanCore パリティは変更保存で 936+109 全緑が裏付け。独立レビュー註記=初回は Codex 書き込み途中版(4 テスト)を読み lint 不在・テスト数を誤検出→安定版で全件 refute(direct-call lint 実在・936 確定)=教訓候補『異系統独立検査は製造完了確認後に開始』(製造と検査の時間的重なりが偽陽性 race)。gate②=n/a(挙動 bit 一致+視覚変更なし=機械受入クローズ・ECO-134 先例)。関連=ECO-134(同型・R3 所見元)・ECO-130(二段階スキャン)・ECO-138(同調査の別軸=ピークメモリ)"
     body: 60-change-order-eco-137.md
   - id: ECO-138
     title: "二段階スキャンのステージングが変更全件をメモリ保持 — 26万件級全面差分のピークメモリ未封止(RSS 上限・計測ガードなし)"
