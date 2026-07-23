@@ -794,6 +794,24 @@ ebom:
         - 一覧・由来分岐・CTA 出し分けは描画から独立した決定論ロジックとして unit 検査可能にする
         - pending 件数・一覧の取得は DB 境界で status 限定(全行 materialize 禁止=ECO-098 同型・26 万件経路の性能規律)
       acceptance_refs: [CP-UI-G1]
+      # bdr-01(EXP-20260723-01)予測凍結の転記。ECO-139 §7 で /eco-fix 前に固定した予測を書き換えず転記(採点対象)。
+      # 記録先=案a(複合 unit の owner 品目=本 surface)。凍結証明=BomDD loops/bdr-01 protocol 凍結コミット。
+      boundary_hypothesis:   # 対象条件②分割案と結合案の双方に合理性+④見直し可能性の認識 — 高信頼バッチ自動裁定の部品境界(ECO-139)
+        premise: >
+          初版(new+candidate 限定)の高信頼バッチ自動裁定は、独立の「同一性判定」ドメイン部品ではなく、
+          PendingReview クラスタ(PendingReviewService+VM)内の受入(T13: pending→normal)の一括適用+
+          既存 candidate_link_id への単純フィルタとして宿る。高信頼シグナル(hash 一致)は既に scan が
+          candidate_link_id として在庫化済みで、新たな判定ロジックも scan との結合も要さない。よって
+          結合案(PendingReviewService 拡張)で受け止め、新規ドメイン部品は作らない。
+        expected_change: >
+          new+candidate 限定の要求変更・是正は PendingReview クラスタ内の diff で完結する想定
+          (ScanJudge/ScanStaging へ触れない)。切り出す場合の実体は所有の移転でなく、選別フィルタ+
+          一括受入 API の追加=unit 粒度規準に照らし複合 unit 化しない。
+        review_trigger: >
+          PEND-005(reappeared の自動裁定)が起票され、旧 hash 再計算+比較を ScanJudge/ScanStaging へ
+          供給する配線が必要になった時=「同一性の確信度」が scan と review を横断する第2消費者を得るため、
+          独立部品への切り出しを再裁定する。または高信頼選別が単純フィルタを超える(閾値設定・複数基準の
+          合成・第3の消費者出現)時。
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
 nfr_targets:
