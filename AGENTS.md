@@ -31,10 +31,13 @@
     trailer(`BomDD-ECO-Fix:` / `BomDD-ECO-Accept:`)を携行する — `bomdd/hooks/commit-msg`
     が強制する。詳細は各 SKILL.md と change-management.md §4。
 
-## human gate(人間の作業はこの 2 つだけ)
+## human gate(人間の作業は 2 種類)
 
-1. **裁定**(gate① — 選択肢から選ぶ)
-2. **golden**(maintainer 実機承認)
+1. **gate① 裁定**(方針・要求・候補の裁定 — 選択肢から選ぶ)
+2. **gate② golden**(成果物の golden 承認)
+
+gate② は**成果物ごとに複数回発生し得る**。UI 変更 ECO では **CAD/mock golden** と
+**実機 golden** を gate② の別インスタンスとして扱う。
 
 gate に到達したら**停止**し、「人間がやること」を明示して待つこと。自然文の了承を
 gate 通過や次工程の実行指示に**昇格させない**(実行は明示のコマンド/指示のみ)。
