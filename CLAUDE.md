@@ -13,8 +13,9 @@ BomDD(BOM 駆動開発)で製造する画像管理デスクトップアプリ(.N
 - **ついで修正禁止**: スコープ外所見は分離起票か 51-cheat-log 記録の二択。
 - **是正はプローブ先行**: 是正前に不合格となる回帰テストで真因を実測裏取りしてから触る。
 - **既存固定オラクル行(tests/ViewPrism2.Oracle)は変更しない**。受入は新規行を追加。
-- **human gate は「裁定」と「golden(maintainer 実機承認)」の 2 つだけ**。それ以外は AI が進め、
-  gate 到達時に「人間がやること」を明示して停止する。
+- **human gate の種類は「gate①=裁定」と「gate②=golden(成果物の承認)」の 2 種類**。gate② は
+  成果物ごとに複数回発生し得る(UI 変更は CAD/mock golden と実機 golden が別インスタンス)。
+  それ以外は AI が進め、gate 到達時に「人間がやること」を明示して停止する。
 
 ### 入口スキル(自由文プロンプトの代わりにこれを使う)
 
@@ -24,6 +25,7 @@ BomDD(BOM 駆動開発)で製造する画像管理デスクトップアプリ(.N
 | `/eco-fix <eco-NNN>` | プローブ先行の是正+機械受入 → golden 基準提示で停止 |
 | `/eco-accept <eco-NNN>` | golden 合格後のクローズ(CP 明記・register applied・教訓) |
 | `/sec-advisory <CVE等>` | OSS 脆弱性の実測逆引き → 処置選択肢提示で停止 |
+| `/cad-mock <eco-NNN 等>` | gate① 裁定済み UI 変更の mock→CAD 化(captures+契約更新)→ CAD golden 提示で停止 |
 
 ## 機械受入(全 ECO 共通・全て緑が納品条件)
 

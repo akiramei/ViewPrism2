@@ -7,8 +7,13 @@ standalone mock HTML の `?face=<ID>` 単面を headless Edge で描画し、PIL
 なぜツール化したか(ハマり所=毎回再導出すると事故る):
   1. msedge の --screenshot は **ファイルが遅延生成**される。起動プロセスは即 exit するが
      子プロセスが後から書き込むため、直後に存在確認すると「無い」。→ サイズ安定までポーリング。
+     ポーリングは書込完了の検知であって描画完了の保証ではない → **--virtual-time-budget=30000**
+     で遅延 DOM 描画(非同期 JS)を仮想時間で消化してから撮る(ViewPrismUI CLAUDE.md 手順 3)。
   2. window-size のビューポートを撮るだけなので、余白は autocrop で落とす(閾値/余白を固定)。
+     autocrop の背景基準は BG トークン(左上ピクセル推定はコンテンツが (0,0) に接すると誤る)。
   3. 実寸を既存 captures と揃える(--force-device-scale-factor=1)。
+  4. temp は実行ごとに一意な専用ディレクトリ(固定名の共有 temp は並列実行で競合)。
+     subprocess 失敗は check=True で即 fail(黙殺しない)。失敗時は診断用に temp を残す。
 
 使い方:
   python shoot.py --html "<mock.html>" --faces PD-5,PD-6 --outdir "<captures dir>" \
@@ -16,11 +21,12 @@ standalone mock HTML の `?face=<ID>` 単面を headless Edge で描画し、PIL
 
 出力: <outdir>/<face>.png(タイト切り出し済み)。各面の寸法を stdout に出す。
 """
-import argparse, subprocess, tempfile, pathlib, time, sys
+import argparse, subprocess, tempfile, pathlib, shutil, time, sys
 from PIL import Image, ImageChops
 
 DEFAULT_EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 BG = "eaedf1ff"  # mock sheet 背景(トークン)。autocrop の基準にもなる。
+BG_RGB = tuple(int(BG[i:i + 2], 16) for i in (0, 2, 4))
 
 
 def wait_stable(p, timeout=60):
@@ -46,9 +52,10 @@ def shoot(edge, base_uri, face, win, tmpd):
         tmp.unlink()
     cmd = [edge, "--headless=new", f"--screenshot={tmp}", f"--window-size={win}",
            "--force-device-scale-factor=1", "--hide-scrollbars", "--no-first-run",
-           "--disable-gpu", f"--user-data-dir={tmpd / ('ud_' + face)}",
+           "--disable-gpu", "--virtual-time-budget=30000",
+           f"--user-data-dir={tmpd / ('ud_' + face)}",
            f"--default-background-color={BG}", f"{base_uri}?face={face}"]
-    subprocess.run(cmd, timeout=120)
+    subprocess.run(cmd, timeout=120, check=True)
     if not wait_stable(tmp):
         raise SystemExit(f"screenshot not produced (delayed write timed out): {tmp}")
     return tmp
@@ -56,7 +63,7 @@ def shoot(edge, base_uri, face, win, tmpd):
 
 def autocrop(src, dst, margin=12, thresh=12):
     im = Image.open(src).convert("RGB")
-    bg = Image.new("RGB", im.size, im.getpixel((0, 0)))
+    bg = Image.new("RGB", im.size, BG_RGB)
     diff = ImageChops.difference(im, bg).convert("L").point(lambda p: 255 if p > thresh else 0)
     bbox = diff.getbbox()
     if not bbox:
@@ -85,12 +92,13 @@ def main():
     base_uri = pathlib.Path(a.html).as_uri()
     outdir = pathlib.Path(a.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    tmpd = pathlib.Path(tempfile.gettempdir())
+    tmpd = pathlib.Path(tempfile.mkdtemp(prefix="cad_shoot_"))
 
     for face in [f.strip() for f in a.faces.split(",") if f.strip()]:
         tmp = shoot(a.edge, base_uri, face, per_face.get(face, a.win), tmpd)
         w, h = autocrop(tmp, outdir / f"{face}.png")
         print(f"{face}.png  {w} x {h}")
+    shutil.rmtree(tmpd, ignore_errors=True)  # 成功時のみ掃除(失敗時は診断用に残す)
 
 
 if __name__ == "__main__":

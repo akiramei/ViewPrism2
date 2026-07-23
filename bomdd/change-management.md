@@ -26,9 +26,11 @@
 - **R3 スコープ外所見の「ついで修正」禁止**。工程内で見つけた別問題は
   (a) 51-cheat-log へ記録 (b) 分離起票(ECO-036→ECO-037 が模範) の二択のみ。
   現 ECO の diff に混ぜない(63 diff 監査/R-052 が機械検出)。
-- **R4 human gate は 2 つだけ**: **裁定**(設計判断・選択肢選び)と **golden**(実機承認)。
-  AI は次の gate まで止まらずに進め、gate 到達時は「人間がやることはこれだけ」を明示して
-  停止する。調査・起票・診断・プローブ・実装・機械受入・文書同期・register 更新は AI の作業。
+- **R4 human gate の種類は 2 種類**: **gate①=裁定**(方針・要求・候補の裁定 — 選択肢から選ぶ)と
+  **gate②=golden**(成果物の golden 承認)。gate② は**成果物ごとに複数回発生し得る** —
+  UI 変更 ECO では **CAD/mock golden** と**実機 golden** を gate② の**別インスタンス**として扱う
+  (2026-07-24 裁定)。AI は次の gate まで止まらずに進め、gate 到達時は「人間がやることはこれだけ」を
+  明示して停止する。調査・起票・診断・プローブ・実装・機械受入・文書同期・register 更新は AI の作業。
 - **R5 是正はプローブ先行**。欠陥是正は、是正前に不合格となる回帰テスト(または実測プローブ)で
   真因を裏取りしてからコードに触る(ECO-037/038 の規律)。プローブが不合格にならなければ
   診断が誤り — R2 へ差し戻す。
@@ -72,10 +74,12 @@
 1. 要求を REQ として受理(方法論 Phase 1 の根拠精度 G1)。
 2. **CAD 先行**: ViewPrismUI で mock+`docs/screens/*.md` を原器化し、設計裁定
    (review_points)を maintainer が確定。← gate①裁定
+   mock/captures の成果物承認= **CAD/mock golden**(gate② の第 1 インスタンス。
+   承認記録と Provisional 解除= `/cad-mock` の「golden 承認後の確定処理」)。
 3. 製品側 ECO 起票(`/eco-file`)→ 影響分析(61 相当を ECO 本文へ直書き)→
    BOM 改訂(**オラクル・ファースト**: 受入行を先に追加)。
 4. 製造 → 機械受入(build 0 / Tests / Oracle / validate_bom 0-0)。
-5. golden(maintainer 実機)← gate② → `/eco-accept` でクローズ+M4 同期。
+5. 実機 golden(maintainer)← gate② の別インスタンス → `/eco-accept` でクローズ+M4 同期。
 
 ### 3.2 既存機能拡張 — 新機能+read-across
 
@@ -159,6 +163,7 @@
 | `/eco-fix` | プローブ先行の是正+機械受入 | golden 合格基準の提示(gate②) |
 | `/eco-accept` | golden 合格後のクローズ 3 点セット | 完了報告 |
 | `/sec-advisory` | OSS アドバイザリの逆引き+処置選択肢 | 処置裁定の提示(gate①) |
+| `/cad-mock` | mock→CAD 化(UI 変更の視覚原器+契約更新・§3.1 手順 2) | CAD/mock golden 合格基準の提示(gate②)+承認後の確定処理 |
 
 ## 6. ケーススタディ: ECO-038(2026-07-04・3 コミットで完結)
 
