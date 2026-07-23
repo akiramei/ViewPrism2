@@ -1956,7 +1956,7 @@ changes:
   - id: ECO-139
     title: "未裁定(PendingReview)の高信頼同一候補を一括自動裁定する機能 — PEND-003 再裁定+CAD モック"
     type: "機能拡張(UI/UX)。CAD 先行(既存裁定 PEND-003 に反するため gate① 必須)"
-    status: staged   # 2026-07-23 起票(maintainer 手動運用報告)。工程診断=実装バグでなく CAD 先行の機能拡張。PEND-003「一括なし」明示裁定に反する→CAD 再裁定必須。高信頼シグナル在庫は origin 差(new+candidate=hash 一致済み/reappeared=size+mtime のみ hash 未比較/changed=非同一)。gate① 裁定済み(2026-07-23)=案A(hash 厳格)・初版 new+candidate 限定・一括自動裁定を許可(PEND-003 再裁定)。reappeared の hash 比較配線は次版へ分離。残=ViewPrismUI モック改訂(§4.1 ブリーフ)を先行→承認→/eco-fix
+    status: implemented   # 2026-07-23 是正+機械受入完了・gate② golden 待ち。gate①=案A(hash 厳格)・初版 new+candidate 限定(PEND-003 再裁定)。CAD golden 承認済み(ViewPrismUI e0c3e47・PD-5/6+対象識別)。製造=Codex 委譲(/factory-delegate 3 例目)・設計者保持=境界決定/4値照合/R8。bdr-01=boundary_hypothesis を実装 diff 前に 30-ebom へ固定(2cdf182)・4 値照合=「想定範囲内」(ScanJudge/ScanStaging 無接触・結合案的中)。受入 build 0/0・Tests 948/948・Oracle 109+4skip 無接触・validate 0/0。R8 でスコープ内欠陥0・F-1(ConfirmDialog 視覚波及=案超過)を案①スコープ限定是正。残=gate② 実機 golden→accept+bdr-01 §42 測定
     golden: "pending(UI 新設=maintainer 実機で基準・バッチ提示・可逆性を確認。基準確定後・gate① 後)"
     baseline: "main 4efc32e"
     findings: "PendingReview は 1 画像ずつ裁定(PEND-003 準拠・src 逸脱なし)。1 万件規模で操作が線形膨張。要求=高信頼(同一極めて濃厚)候補を自動判定→バッチ化→『自動裁定』ボタンで一括。確定=(1)高信頼シグナル在庫は origin 差: new+candidate(青)は hash 一致で candidate_link_id 付与済み=在庫あり/reappeared(灰)は size+mtime 一致でも ScanJudge PendInPlace で hash 未計算・未比較(バナー『判定できません』の理由)=在庫なし/changed(琥珀)は定義上非同一。(2)CAD PEND-003=一括なしを明示裁定・PEND-002=要望が出たら mock 改版の入口を前置き。未検証=拡張子+サイズ一致のみで同一とみなす誤裁定リスク(hash まで求めるかは裁定)・1 万件自動裁定 UX(可逆性/性能)"

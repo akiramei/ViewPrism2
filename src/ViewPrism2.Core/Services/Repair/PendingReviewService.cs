@@ -5,8 +5,9 @@ using ViewPrism2.Core.Repositories;
 namespace ViewPrism2.Core.Services.Repair;
 
 /// <summary>
-/// pending 裁定サービス(ECO-129/REQ-101・仕様 §2.11.7・T13/T14/T15)。
-/// 裁定は 1 件ずつ確定・pending 以外は拒否(遷移の強制は repository の WHERE 句=原子)。
+/// pending 裁定サービス(ECO-129/139・REQ-101・仕様 §2.11.7・T13/T14/T15)。
+/// 個別裁定と高信頼サブセットの確認つき一括受入を提供し、pending 以外は拒否する
+/// (遷移の強制は repository の WHERE 句=原子)。
 /// 物理ファイルへは一切触れない(INV-009)。
 /// </summary>
 public sealed class PendingReviewService
@@ -16,6 +17,42 @@ public sealed class PendingReviewService
     public PendingReviewService(IImageRepository images)
     {
         _images = images;
+    }
+
+    /// <summary>
+    /// ECO-139 案Aの高信頼判定。再スキャン新規かつ同一フォルダの同ハッシュ missing を示す
+    /// candidate_link_id 在庫がある pending だけを対象とする。
+    /// </summary>
+    public static bool IsHighConfidence(ImageRecord image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        return image.Status == ImageStatus.Pending
+               && image.PendingOrigin == PendingOrigin.New
+               && image.CandidateLinkId is not null;
+    }
+
+    /// <summary>
+    /// ECO-139: 入力中の高信頼行だけを T13(pending→normal)として原子的に一括受入する。
+    /// 戻り値は UI の提示件数とのパリティに用いる実対象件数。1 件でも stale/非 pending なら全件失敗。
+    /// </summary>
+    public async Task<Result<int>> AcceptHighConfidenceAsync(IEnumerable<ImageRecord> images)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        var ids = images
+            .Where(IsHighConfidence)
+            .Select(image => image.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (ids.Count == 0)
+        {
+            return Result<int>.Ok(0);
+        }
+
+        return await _images.AdjudicatePendingBatchAsync(ids, ImageStatus.Normal).ConfigureAwait(false)
+            ? Result<int>.Ok(ids.Count)
+            : Result<int>.Fail(
+                ErrorCode.ValidationError,
+                "一括裁定の対象が更新されました。未裁定一覧を読み直して確認してください。");
     }
 
     /// <summary>受け入れる(T13): pending→normal。タグ・image_id・特徴量は不変。</summary>

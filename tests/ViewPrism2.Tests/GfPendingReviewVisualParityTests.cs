@@ -15,8 +15,8 @@ using Xunit;
 namespace ViewPrism2.Tests;
 
 /// <summary>
-/// ECO-129: pending 裁定ダイアログ(PendingReviewWindow)の視覚 probe。
-/// CAD 正本= ../ViewPrismUI docs/screens/pending_review.md visualContract(PD-2〜4)+
+/// ECO-129/139: pending 裁定ダイアログ(PendingReviewWindow)の視覚 probe。
+/// CAD 正本= ../ViewPrismUI docs/screens/pending_review.md visualContract(PD-2〜6)+
 /// E-UI-PENDING-049 invariants。CTA の出し分け(§2.11.7)= 別画像は changed/reappeared/restored のみ・
 /// 再リンク導線は candidate つき新規のみ。フッター= CMP-011 dlgBtn 委譲+保留=左端分離。
 /// </summary>
@@ -233,6 +233,64 @@ public sealed class GfPendingReviewVisualParityTests : IDisposable
 
                 Assert.Single(vm.Items);                        // VM 側は 1 件
                 Assert.Equal(["b.jpg"], DisplayedNames());      // UI も 1 行(裁定済み a.jpg の stale 行を残さない)
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    [Trait("cp", "CP-PENDING-AUTO-035")]
+    public async Task PD5_高信頼ありはfullWidthCalloutと先頭グループと自動チップを表示()
+    {
+        await Session.Dispatch(async () =>
+        {
+            var (vm, _) = await BuildVmAsync(
+                ("z-auto.jpg", PendingOrigin.New, "missing-1"),
+                ("a-changed.jpg", PendingOrigin.Changed, null));
+            var window = Show(vm);
+            try
+            {
+                var callout = window.FindControl<Border>("AutoAdjudicateCallout")!;
+                Assert.True(callout.IsVisible);
+                Assert.Equal(2, Grid.GetColumnSpan(callout));
+                Assert.Equal(window.ClientSize.Width, callout.Bounds.Width, precision: 1);
+                Assert.Equal(1, vm.HighConfidenceCount);
+
+                var autoButton = window.FindControl<Button>("AutoAdjudicateButton")!;
+                Assert.True(autoButton.IsVisible);
+                Assert.Contains("primary", autoButton.Classes);
+                Assert.Contains("1 件を受け入れる", autoButton.Content as string);
+
+                Assert.Contains(window.GetLogicalDescendants().OfType<TextBlock>(),
+                    t => t.IsVisible && t.Text == "自動裁定できる 1 件(ハッシュ一致)");
+                Assert.Contains(window.GetLogicalDescendants().OfType<TextBlock>(),
+                    t => t.IsVisible && t.Text == "個別に確認 1 件");
+                Assert.Contains(window.GetLogicalDescendants().OfType<TextBlock>(),
+                    t => t.IsVisible && t.Text == "自動");
+            }
+            finally
+            {
+                window.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    [Trait("cp", "CP-PENDING-AUTO-035")]
+    public async Task PD5_高信頼0件はcalloutと対象グループを表示しない()
+    {
+        await Session.Dispatch(async () =>
+        {
+            var (vm, _) = await BuildVmAsync(("a-new.jpg", PendingOrigin.New, null));
+            var window = Show(vm);
+            try
+            {
+                Assert.False(vm.HasHighConfidence);
+                Assert.False(window.FindControl<Border>("AutoAdjudicateCallout")!.IsVisible);
+                Assert.False(window.FindControl<StackPanel>("AutoAdjudicateGroupHeader")!.IsVisible);
             }
             finally
             {

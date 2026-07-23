@@ -5,6 +5,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ViewPrism2.App.ViewModels;
+using ViewPrism2.App.Services;
 using ViewPrism2.App.Views;
 using Xunit;
 
@@ -150,6 +151,45 @@ public sealed class GfConfirmDialogVisualParityTests
                 // REG-C5: 応答が行為を名指す動詞ラベル(呼び出し側指定)+キャンセル既定は common.cancel
                 Assert.Equal("削除する", confirm.Content as string);
                 Assert.Equal("キャンセル", cancel.Content as string);
+            }
+            finally
+            {
+                dialog.Close();
+            }
+        }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    [Trait("cp", "CP-PENDING-AUTO-035")]
+    public async Task PD6_対象一覧つき確認は480幅_176px以下のscroll_非破壊primary()
+    {
+        await Session.Dispatch(() =>
+        {
+            var items = Enumerable.Range(1, 8)
+                .Select(i => new ConfirmationListItem(
+                    $"scan_{i:0000}.jpg", $"album_{i:0000}.png と一致", $@"C:\Photos\scan_{i:0000}.jpg"))
+                .ToList();
+            var dialog = new ConfirmDialog(
+                new LocalizationProxy(TestLoc.Ja()),
+                "自動裁定の確認",
+                "この 8 件をまとめて受け入れます",
+                "受け入れる",
+                destructive: false,
+                items: items,
+                supportingMessage: "ハッシュが一致し、受け入れると通常表示に戻ります。あとで取り消せます。");
+            dialog.Show();
+            RunJobs();
+            try
+            {
+                Assert.Equal(480, dialog.Width);
+                var listBorder = dialog.FindControl<Border>("ConfirmationItemsBorder")!;
+                Assert.True(listBorder.IsVisible);
+                var list = dialog.FindControl<ListBox>("ConfirmationItems")!;
+                Assert.Equal(176, list.MaxHeight);
+                Assert.Equal(8, list.ItemCount);
+                var buttons = dialog.GetLogicalDescendants().OfType<Button>().ToList();
+                Assert.Contains("secondary", buttons[0].Classes);
+                Assert.Contains("primary", buttons[1].Classes);
             }
             finally
             {

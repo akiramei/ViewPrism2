@@ -277,6 +277,35 @@ public sealed class ImageRepository : IImageRepository
         }, ct);
     }
 
+    public Task<IReadOnlyList<ImageRecord>> GetByIdsAsync(
+        IReadOnlyCollection<string> ids, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        var distinctIds = ids
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (distinctIds.Length == 0)
+        {
+            return Task.FromResult<IReadOnlyList<ImageRecord>>([]);
+        }
+
+        // SQLite のバインド変数上限を越えないよう分割する。PD-6 の 1 万件運用でも N+1 にしない。
+        return _db.RunAsync<IReadOnlyList<ImageRecord>>(async conn =>
+        {
+            var result = new List<ImageRecord>(distinctIds.Length);
+            foreach (var chunk in distinctIds.Chunk(500))
+            {
+                ct.ThrowIfCancellationRequested();
+                var rows = await conn.QueryAsync<Row>(
+                    $"{SelectColumns} WHERE id IN @Ids", new { Ids = chunk }).ConfigureAwait(false);
+                result.AddRange(rows.Select(r => ToEntity(r)!));
+            }
+
+            return result;
+        }, ct);
+    }
+
     public Task<bool> AdjudicatePendingAsync(string id, ImageStatus status)
     {
         // ECO-129 T13/T15: pending 限定を UPDATE の WHERE で原子的に強制(0 行=拒否)。
@@ -290,6 +319,44 @@ public sealed class ImageRepository : IImageRepository
                 """,
                 new { Id = id, Status = status.ToDb() }).ConfigureAwait(false);
             return affected == 1;
+        });
+    }
+
+    public Task<bool> AdjudicatePendingBatchAsync(
+        IReadOnlyCollection<string> ids, ImageStatus status)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        var distinctIds = ids
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (distinctIds.Length == 0)
+        {
+            return Task.FromResult(true);
+        }
+
+        // ECO-139: chunk は SQLite 変数上限対策だけで、トランザクションはバッチ全体で 1 つ。
+        // 各 chunk の affected 数が要求数と違えば、pending 限定拒否としてそれ以前も全 rollback。
+        return _db.RunAsync(async conn =>
+        {
+            using var tx = conn.BeginTransaction();
+            foreach (var chunk in distinctIds.Chunk(500))
+            {
+                var affected = await conn.ExecuteAsync("""
+                    UPDATE images
+                    SET status = @Status, candidate_link_id = NULL, pending_origin = NULL
+                    WHERE id IN @Ids AND status = 'pending'
+                    """,
+                    new { Status = status.ToDb(), Ids = chunk }, tx).ConfigureAwait(false);
+                if (affected != chunk.Length)
+                {
+                    tx.Rollback();
+                    return false;
+                }
+            }
+
+            tx.Commit();
+            return true;
         });
     }
 

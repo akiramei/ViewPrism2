@@ -1,5 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="using:ViewPrism2.App.Services"
+        xmlns:c="using:ViewPrism2.App.Controls"
         x:Class="ViewPrism2.App.Views.ConfirmDialog"
         Width="420" SizeToContent="Height"
         CanResize="False"
@@ -9,8 +11,59 @@
   <!-- 汎用確認ダイアログ(REQ-010 削除確認 / REQ-017 再リンク確認等)。文言はコードビハインドで注入。
        ECO-126: ボタンは CMP-011 DialogActionButton(dlgBtn)へ委譲 — キャンセル=secondary(左)・
        CTA=destructive/primary(右・動詞ラベル= REG-C5「はい/いいえ」禁止)。CTA クラスはコードビハインドで付与 -->
-  <StackPanel Margin="16" Spacing="16">
+  <!-- 既定(汎用確認)は従来の余白/文字太さを維持。PD-6 対象一覧版のみ ConfirmDialog.axaml.cs で
+       Margin/Spacing/FontWeight を上書き(ECO-139: 既存確認面〔削除/再リンク/未保存終了〕の golden 不変)。 -->
+  <StackPanel x:Name="RootPanel" Margin="16" Spacing="16">
     <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
+    <!-- ECO-139/PD-6: 確定前に実セットを検証できる対象一覧(max-height 176px)。 -->
+    <Border x:Name="ConfirmationItemsBorder"
+            IsVisible="False"
+            BorderBrush="#D6E0EE"
+            BorderThickness="1"
+            CornerRadius="10"
+            ClipToBounds="True">
+      <ListBox x:Name="ConfirmationItems"
+               MaxHeight="176"
+               Background="Transparent"
+               BorderThickness="0"
+               Padding="0"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="services:ConfirmationListItem">
+              <Border MinHeight="42"
+                      Padding="10,6"
+                      BorderBrush="#EEF0F4"
+                      BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="34,*,Auto" ColumnSpacing="9">
+                  <Border Width="34" Height="26" CornerRadius="5" ClipToBounds="True"
+                          Background="#EEF1F7" VerticalAlignment="Center">
+                    <c:ThumbnailImage SourcePath="{Binding ImagePath}" Stretch="UniformToFill" />
+                  </Border>
+                  <TextBlock Grid.Column="1"
+                             FontSize="12"
+                             FontWeight="SemiBold"
+                             Foreground="#2B3340"
+                             VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis"
+                             Text="{Binding PrimaryText}" />
+                  <TextBlock Grid.Column="2"
+                             MaxWidth="170"
+                             FontSize="11"
+                             Foreground="#8A93A2"
+                             VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis"
+                             Text="{Binding SecondaryText}" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+    <TextBlock x:Name="SupportingMessageText"
+               IsVisible="False"
+               FontSize="12"
+               Foreground="#5B6473"
+               TextWrapping="Wrap" />
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
       <Button x:Name="CancelButton" Classes="dlgBtn secondary" Click="OnCancelClick" />
       <Button x:Name="ConfirmButton" Classes="dlgBtn" Click="OnConfirmClick" />

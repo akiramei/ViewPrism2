@@ -37,10 +37,38 @@ public interface IImageRepository
     Task<IReadOnlyList<ImageRecord>> GetPendingByFolderAsync(string syncFolderId, CancellationToken ct = default);
 
     /// <summary>
+    /// ECO-139/PD-6: candidate_link_id の一致先を確認一覧へ提示するため、指定 ID だけを一括取得する。
+    /// 既定実装は互換用の逐次取得。Infrastructure 実装は DB の IN 句を分割して取得する。
+    /// </summary>
+    async Task<IReadOnlyList<ImageRecord>> GetByIdsAsync(
+        IReadOnlyCollection<string> ids, CancellationToken ct = default)
+    {
+        var rows = new List<ImageRecord>(ids.Count);
+        foreach (var id in ids.Distinct(StringComparer.Ordinal))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (await GetByIdAsync(id).ConfigureAwait(false) is { } row)
+            {
+                rows.Add(row);
+            }
+        }
+
+        return rows;
+    }
+
+    /// <summary>
     /// ECO-129 T13/T15(裁定=受入れ/削除): pending 限定を UPDATE の WHERE で原子的に強制。
     /// candidate_link_id/pending_origin はクリア。false= 対象が pending でなかった(拒否)。
     /// </summary>
     Task<bool> AdjudicatePendingAsync(string id, ImageStatus status);
+
+    /// <summary>
+    /// ECO-139: 指定 ID 全件を単一トランザクションで裁定する。
+    /// 各 UPDATE は pending 限定を WHERE で強制し、1 件でも対象外なら全件 rollback して false。
+    /// candidate_link_id/pending_origin は全件クリアする。
+    /// </summary>
+    Task<bool> AdjudicatePendingBatchAsync(IReadOnlyCollection<string> ids, ImageStatus status)
+        => throw new NotSupportedException("This repository does not support pending batch adjudication.");
 
     /// <summary>
     /// ECO-129 T14(裁定=別画像として扱う・PEND-001): 単一トランザクションの原子的な行置換。

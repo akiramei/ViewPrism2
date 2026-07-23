@@ -89,6 +89,31 @@ public sealed class WindowService : IWindowService
         return await dialog.ShowDialog<bool?>(Owner) == true;
     }
 
+    public async Task<bool> ConfirmListAsync(
+        string title,
+        string lead,
+        string supportingMessage,
+        string confirmLabel,
+        IReadOnlyList<ConfirmationListItem> items,
+        string? cancelLabel = null)
+    {
+        if (Owner is null)
+        {
+            return false;
+        }
+
+        var dialog = new ConfirmDialog(
+            new LocalizationProxy(_localization),
+            title,
+            lead,
+            confirmLabel,
+            destructive: false,
+            cancelLabel,
+            items,
+            supportingMessage);
+        return await dialog.ShowDialog<bool?>(Owner) == true;
+    }
+
     public async Task<string?> PickFolderAsync(string title)
     {
         if (Owner is null)

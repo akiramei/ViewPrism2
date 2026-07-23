@@ -24,6 +24,14 @@ public sealed record NodeSettingsRequest(
     bool HideEmptyValues,
     bool DefinedValuesAvailable);
 
+/// <summary>
+/// CMP-011 の対象一覧つき確認で表示する 1 行。文言は呼び出し側が LocalizationService で解決済みにする。
+/// </summary>
+public sealed record ConfirmationListItem(
+    string PrimaryText,
+    string SecondaryText,
+    string ImagePath);
+
 /// <summary>設定ウィンドウの節(ECO-077/E-1: 誘導導線が「データとバックアップ」節を直接開くための指定)。</summary>
 public enum SettingsSection
 {
@@ -44,6 +52,20 @@ public interface IWindowService
     /// </summary>
     Task<bool> ConfirmAsync(string title, string message, string confirmLabel,
         bool destructive = false, string? cancelLabel = null);
+
+    /// <summary>
+    /// ECO-139/PD-6: 実対象をサムネイル+主文+副文でスクロール提示する非破壊確認。
+    /// 既定実装は既存 ConfirmAsync へ退化し、既存テストスタブとの互換を保つ。
+    /// </summary>
+    Task<bool> ConfirmListAsync(
+        string title,
+        string lead,
+        string supportingMessage,
+        string confirmLabel,
+        IReadOnlyList<ConfirmationListItem> items,
+        string? cancelLabel = null)
+        => ConfirmAsync(title, $"{lead}{Environment.NewLine}{Environment.NewLine}{supportingMessage}",
+            confirmLabel, destructive: false, cancelLabel);
 
     /// <summary>フォルダ選択(StorageProvider)。キャンセルは null。</summary>
     Task<string?> PickFolderAsync(string title);

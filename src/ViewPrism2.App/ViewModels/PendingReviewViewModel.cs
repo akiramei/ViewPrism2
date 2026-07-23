@@ -12,12 +12,18 @@ namespace ViewPrism2.App.ViewModels;
 /// <summary>pending 一覧の 1 行(PD-2/3 左ペイン)。</summary>
 public sealed partial class PendingItemVM : ObservableObject
 {
-    public PendingItemVM(ImageRecord record, string absolutePath, string originLabel, string originClass)
+    public PendingItemVM(
+        ImageRecord record,
+        string absolutePath,
+        string originLabel,
+        string originClass,
+        string? candidateFileName = null)
     {
         Record = record;
         AbsolutePath = absolutePath;
         OriginLabel = originLabel;
         OriginClass = originClass;
+        CandidateFileName = candidateFileName;
     }
 
     /// <summary>左ペインの選択ハイライト(accent.bg)。</summary>
@@ -35,6 +41,10 @@ public sealed partial class PendingItemVM : ObservableObject
     /// <summary>由来チップの視覚クラス: changed=琥珀/new=青/restored・reappeared=灰。</summary>
     public string OriginClass { get; }
 
+    public string? CandidateFileName { get; }
+
+    public bool IsHighConfidence => PendingReviewService.IsHighConfidence(Record);
+
     public bool IsOriginAmber => OriginClass == "amber";
 
     public bool IsOriginBlue => OriginClass == "blue";
@@ -43,8 +53,9 @@ public sealed partial class PendingItemVM : ObservableObject
 }
 
 /// <summary>
-/// pending 裁定ダイアログ(ECO-129/REQ-101・仕様 §2.11.7・CAD= pending_review.md PD-2〜4)。
-/// 裁定は 1 件ずつ確定(一括なし=PEND-003)。✕クローズはいつでも可(破棄の概念なし)。
+/// pending 裁定ダイアログ(ECO-129/139・REQ-101・仕様 §2.11.7・CAD= pending_review.md PD-2〜6)。
+/// 手動裁定は 1 件ずつ確定し、ECO-139 の高信頼サブセットだけ確認つきで原子一括受入する。
+/// ✕クローズはいつでも可(破棄の概念なし)。
 /// 遷移は PendingReviewService(T13/T14/T15)経由のみ・「修復で再リンク…」は既存修復フローへ委譲。
 /// </summary>
 public sealed partial class PendingReviewViewModel : ObservableObject
@@ -82,6 +93,36 @@ public sealed partial class PendingReviewViewModel : ObservableObject
     public bool Adjudicated { get; private set; }
 
     public List<PendingItemVM> Items { get; } = [];
+
+    public List<PendingItemVM> HighConfidenceItems { get; } = [];
+
+    public List<PendingItemVM> IndividualItems { get; } = [];
+
+    public int HighConfidenceCount => HighConfidenceItems.Count;
+
+    public int IndividualCount => IndividualItems.Count;
+
+    public bool HasHighConfidence => HighConfidenceCount > 0;
+
+    public bool HasIndividualItems => IndividualCount > 0;
+
+    public bool ShowIndividualGroupHeader => HasHighConfidence && HasIndividualItems;
+
+    public string AutoCalloutLead => T(
+        "pending.autoCalloutLead",
+        ("count", HighConfidenceCount.ToString(CultureInfo.InvariantCulture)));
+
+    public string AutoAdjudicateLabel => T(
+        "pending.autoButton",
+        ("count", HighConfidenceCount.ToString(CultureInfo.InvariantCulture)));
+
+    public string HighConfidenceHeader => T(
+        "pending.autoGroupHeader",
+        ("count", HighConfidenceCount.ToString(CultureInfo.InvariantCulture)));
+
+    public string IndividualHeader => T(
+        "pending.individualGroupHeader",
+        ("count", IndividualCount.ToString(CultureInfo.InvariantCulture)));
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -140,8 +181,17 @@ public sealed partial class PendingReviewViewModel : ObservableObject
     public async Task LoadAsync()
     {
         Items.Clear();
+        HighConfidenceItems.Clear();
+        IndividualItems.Clear();
         _tagCounts.Clear();
         var rows = await _images.GetPendingByFolderAsync(_folder.Id);
+        var candidateIds = rows
+            .Where(PendingReviewService.IsHighConfidence)
+            .Select(record => record.CandidateLinkId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var candidates = (await _images.GetByIdsAsync(candidateIds))
+            .ToDictionary(record => record.Id, StringComparer.Ordinal);
         // タグ件数(「受け入れても保持されます」の安心表示)= フォルダ単位 1 クエリ(R8 所見4: N+1 回避)
         foreach (var group in (await _tags.GetImageTagsByFolderAsync(_folder.Id))
                      .GroupBy(it => it.ImageId, StringComparer.Ordinal))
@@ -160,12 +210,24 @@ public sealed partial class PendingReviewViewModel : ObservableObject
                 PendingOrigin.Restored => (T("pending.originRestored"), "gray"),
                 _ => (T("pending.originNew"), "blue"), // origin 不明(移行前データ等)は新規扱い
             };
-            Items.Add(new PendingItemVM(record, abs, label, cls));
+            candidates.TryGetValue(record.CandidateLinkId ?? string.Empty, out var candidate);
+            var item = new PendingItemVM(record, abs, label, cls, candidate?.FileName);
+            if (item.IsHighConfidence)
+            {
+                HighConfidenceItems.Add(item);
+            }
+            else
+            {
+                IndividualItems.Add(item);
+            }
         }
 
+        Items.AddRange(HighConfidenceItems);
+        Items.AddRange(IndividualItems);
         Selected = Items.FirstOrDefault();
         OnPropertyChanged(nameof(Items));
         OnPropertyChanged(nameof(IsEmpty));
+        NotifyGroupState();
         RefreshDetail();
     }
 
@@ -292,6 +354,55 @@ public sealed partial class PendingReviewViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task AutoAdjudicateAsync()
+    {
+        var targets = HighConfidenceItems.ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var count = targets.Count.ToString(CultureInfo.InvariantCulture);
+        var confirmationItems = targets.Select(item => new ConfirmationListItem(
+            item.FileName,
+            T(
+                "pending.autoMatch",
+                ("name", item.CandidateFileName ?? item.Record.CandidateLinkId ?? string.Empty)),
+            item.AbsolutePath)).ToList();
+        var confirmed = await _windows.ConfirmListAsync(
+            T("pending.autoConfirmTitle"),
+            T("pending.autoConfirmLead", ("count", count)),
+            T("pending.autoConfirmSupport", ("count", count)),
+            T("pending.accept"),
+            confirmationItems);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await _review.AcceptHighConfidenceAsync(targets.Select(item => item.Record));
+        if (!result.IsSuccess || result.Value != targets.Count)
+        {
+            StatusMessage = T("pending.autoFailedStale");
+            return;
+        }
+
+        StatusMessage = null;
+        Adjudicated = true;
+        foreach (var item in targets)
+        {
+            Items.Remove(item);
+            HighConfidenceItems.Remove(item);
+        }
+
+        OnPropertyChanged(nameof(Items));
+        OnPropertyChanged(nameof(IsEmpty));
+        NotifyGroupState();
+        Selected = Items.FirstOrDefault();
+        RefreshDetail();
+    }
+
+    [RelayCommand]
     private void CloseWindow() => RequestClose?.Invoke(this, EventArgs.Empty);
 
     private void Complete(PendingItemVM item, bool success, string? message)
@@ -306,10 +417,28 @@ public sealed partial class PendingReviewViewModel : ObservableObject
         Adjudicated = true;
         var index = Items.IndexOf(item);
         Items.Remove(item);
+        HighConfidenceItems.Remove(item);
+        IndividualItems.Remove(item);
         OnPropertyChanged(nameof(Items));
         OnPropertyChanged(nameof(IsEmpty));
+        NotifyGroupState();
         Selected = Items.Count > 0 ? Items[Math.Min(index, Items.Count - 1)] : null;
         RefreshDetail();
+    }
+
+    private void NotifyGroupState()
+    {
+        OnPropertyChanged(nameof(HighConfidenceItems));
+        OnPropertyChanged(nameof(IndividualItems));
+        OnPropertyChanged(nameof(HighConfidenceCount));
+        OnPropertyChanged(nameof(IndividualCount));
+        OnPropertyChanged(nameof(HasHighConfidence));
+        OnPropertyChanged(nameof(HasIndividualItems));
+        OnPropertyChanged(nameof(ShowIndividualGroupHeader));
+        OnPropertyChanged(nameof(AutoCalloutLead));
+        OnPropertyChanged(nameof(AutoAdjudicateLabel));
+        OnPropertyChanged(nameof(HighConfidenceHeader));
+        OnPropertyChanged(nameof(IndividualHeader));
     }
 
     private static string FmtSize(long bytes)

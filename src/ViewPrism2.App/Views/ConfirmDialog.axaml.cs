@@ -1,5 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using ViewPrism2.App.Services;
 using ViewPrism2.App.ViewModels;
 
 namespace ViewPrism2.App.Views;
@@ -18,7 +21,8 @@ public partial class ConfirmDialog : Window
     }
 
     public ConfirmDialog(LocalizationProxy loc, string title, string message,
-        string confirmLabel, bool destructive, string? cancelLabel = null)
+        string confirmLabel, bool destructive, string? cancelLabel = null,
+        IReadOnlyList<ConfirmationListItem>? items = null, string? supportingMessage = null)
     {
         InitializeComponent();
         Title = title;
@@ -26,6 +30,23 @@ public partial class ConfirmDialog : Window
         ConfirmButton.Content = confirmLabel;
         ConfirmButton.Classes.Add(destructive ? "destructive" : "primary");
         CancelButton.Content = cancelLabel ?? loc["common.cancel"];
+        if (items is { Count: > 0 })
+        {
+            // ECO-139/PD-6 対象一覧版のみ mock 準拠の余白/文字太さへ。既存の汎用確認面は XAML 既定
+            // (Margin 16・Spacing 16・通常太さ)のまま=既存 golden 不変(F-1 スコープ限定)。
+            Width = 480;
+            RootPanel.Margin = new Thickness(20);
+            RootPanel.Spacing = 12;
+            MessageText.FontWeight = FontWeight.SemiBold;
+            ConfirmationItems.ItemsSource = items;
+            ConfirmationItemsBorder.IsVisible = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(supportingMessage))
+        {
+            SupportingMessageText.Text = supportingMessage;
+            SupportingMessageText.IsVisible = true;
+        }
     }
 
     private void OnConfirmClick(object? sender, RoutedEventArgs e) => Close(true);
