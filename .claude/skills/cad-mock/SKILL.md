@@ -80,8 +80,11 @@ CAD golden 承認の報告を受けたら、承認記録がないまま Provisio
 1. **承認記録**: 画面正典へ「承認対象(mock 版・captures・正典)・承認者・日付・対象コミット」を明記する。
    CAD/mock golden は実機 golden と別の gate② インスタンスとして記録する。事後追認の場合は
    **追認である旨と確認日**を書く(過去日付への遡及記録はしない)。
-2. **Provisional 残存の全件検査**: `Provisional|Reopened|golden 未承認` を docs/ 全体で grep し、
-   承認範囲の表記を全解除する(画面正典・03_dialog_language・review_points の関連裁定を含む)。
+2. **Provisional 残存の全件検査**: `Provisional|Reopened|golden 未承認|承認待ち|approved` を
+   **リポ全体**(docs/ に限らず README 等の索引も含む)で grep し、承認範囲の表記を全解除する
+   (画面正典・03_dialog_language・review_points・README/00_project_overview 索引を含む。
+   実績: 初回運用で README の「承認待ち/approved <過去日付>」が docs/ 限定+語彙不足の grep を
+   すり抜けた=スコープと語彙を広く取る)。
 3. **コミット**: `docs(<画面>): <ECO> CAD golden 承認記録+Provisional 解除`。これをもって一次資料は凍結
    (以後の改訂は Reopened+理由+対象 ECO が必須)。
 
