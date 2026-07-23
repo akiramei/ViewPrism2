@@ -163,6 +163,7 @@
 | `/eco-fix` | プローブ先行の是正+機械受入 | golden 合格基準の提示(gate②) |
 | `/eco-accept` | golden 合格後のクローズ 3 点セット | 完了報告 |
 | `/sec-advisory` | OSS アドバイザリの逆引き+処置選択肢 | 処置裁定の提示(gate①) |
+| `/cad-mock` | mock→CAD 化(UI 変更の視覚原器+契約更新・§3.1 手順 2) | CAD/mock golden 合格基準の提示(gate②)+承認後の確定処理 |
 
 ## 6. ケーススタディ: ECO-038(2026-07-04・3 コミットで完結)
 

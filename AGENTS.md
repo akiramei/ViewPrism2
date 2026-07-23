@@ -22,6 +22,7 @@
 | プローブ先行の是正+機械受入 | [.claude/skills/eco-fix/SKILL.md](.claude/skills/eco-fix/SKILL.md) |
 | golden 合格後のクローズ | [.claude/skills/eco-accept/SKILL.md](.claude/skills/eco-accept/SKILL.md) |
 | OSS 脆弱性の実測逆引き | [.claude/skills/sec-advisory/SKILL.md](.claude/skills/sec-advisory/SKILL.md) |
+| mock→CAD 化(gate① 裁定済み UI 変更の視覚原器+契約更新) | [.claude/skills/cad-mock/SKILL.md](.claude/skills/cad-mock/SKILL.md) |
 
 ## 台帳と機械検査
 

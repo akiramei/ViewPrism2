@@ -25,6 +25,7 @@ BomDD(BOM 駆動開発)で製造する画像管理デスクトップアプリ(.N
 | `/eco-fix <eco-NNN>` | プローブ先行の是正+機械受入 → golden 基準提示で停止 |
 | `/eco-accept <eco-NNN>` | golden 合格後のクローズ(CP 明記・register applied・教訓) |
 | `/sec-advisory <CVE等>` | OSS 脆弱性の実測逆引き → 処置選択肢提示で停止 |
+| `/cad-mock <eco-NNN 等>` | gate① 裁定済み UI 変更の mock→CAD 化(captures+契約更新)→ CAD golden 提示で停止 |
 
 ## 機械受入(全 ECO 共通・全て緑が納品条件)
 
