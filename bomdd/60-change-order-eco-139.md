@@ -100,3 +100,32 @@
 - 着手条件: **ViewPrismUI モック改訂+承認 → その後 /eco-fix**(製品コードは CAD 反映後)。
 - 関連: ECO-129/REQ-101(pending 意味論)・PEND-001〜004(CAD 裁定履歴)・[[eco128-image-state-model-overhaul]]
   (二段階スキャン・pending)・CMP-011(確認ダイアログ)。
+
+## §7 BDR(bdr-01 予測凍結 — 2026-07-23・/eco-fix 前)
+
+BomDD 実験 bdr-01(EXP-20260723-01)のトリガー ECO。**迷う境界=高信頼バッチ自動裁定+選別ロジックの
+部品境界**(対象条件②分割案と結合案の双方に合理性+④見直し可能性の認識)。凍結証明= BomDD
+`loops/bdr-01/protocol.md` 凍結コミット。**本予測は /eco-fix の影響分析・実装より前に固定**したもので、
+実績(実 diff)を見た後の書き換えは行わない(protocol §事前凍結=予測として採点)。
+
+```yaml
+boundary_hypothesis:   # 対象条件②/④ — 高信頼バッチ自動裁定の部品境界(記録先=案a: PendingReview surface owner 品目/転記先 30-ebom は /eco-fix で成立時)
+  premise: >
+    初版(new+candidate 限定)の高信頼バッチ自動裁定は、独立の「同一性判定」ドメイン部品ではなく、
+    PendingReview クラスタ(PendingReviewService+VM)内の受入(T13: pending→normal)の一括適用+
+    既存 candidate_link_id への単純フィルタとして宿る。高信頼シグナル(hash 一致)は既に scan が
+    candidate_link_id として在庫化済みで、新たな判定ロジックも scan との結合も要さない。よって
+    結合案(PendingReviewService 拡張)で受け止め、新規ドメイン部品は作らない。
+  expected_change: >
+    new+candidate 限定の要求変更・是正は PendingReview クラスタ内の diff で完結する想定
+    (ScanJudge/ScanStaging へ触れない)。切り出す場合の実体は所有の移転でなく、選別フィルタ+
+    一括受入 API の追加=unit 粒度規準に照らし複合 unit 化しない。
+  review_trigger: >
+    PEND-005(reappeared の自動裁定)が起票され、旧 hash 再計算+比較を ScanJudge/ScanStaging へ
+    供給する配線が必要になった時=「同一性の確信度」が scan と review を横断する第2消費者を得るため、
+    独立部品への切り出しを再裁定する。または高信頼選別が単純フィルタを超える(閾値設定・複数基準の
+    合成・第3の消費者出現)時。
+```
+
+**/eco-fix 時の 4 値照合予告**: 実 diff が PendingReview クラスタ内で完結し ScanJudge/ScanStaging へ
+触れなければ「想定範囲内」。scan 側に配線が漏れれば「前提疑義」(premise の結合不要仮説の反証)。
