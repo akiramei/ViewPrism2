@@ -1081,6 +1081,28 @@ public sealed class CpIntegrityReviewTests : IDisposable
     }
 
     /// <summary>
+    /// GF-140-01(実機 golden 1 巡目所見): 移動事象のみのコレクションで、ロード完了後に先頭事象が
+    /// 自動選択されず本体(一覧+個別裁定フッター)が不可視のまま窓が callout 高へ収縮した。
+    /// 機序= LoadAsync が reappeared 0 件でも IsHashChecking=true で開始し、最終 ApplySnapshot が
+    /// checking 中に走るため選択が個別/見つからないグループ限定で null に落ち、finally の解除後も
+    /// 再選択されない。本プローブは「ロード完了後は事象があれば必ず選択がある」を pin する。
+    /// </summary>
+    [Fact]
+    public async Task GF140_01_移動のみでもロード完了後に先頭事象が選択され本体が表示される()
+    {
+        var folder = await AddFolderAsync(@"C:\fixture");
+        var missing = await AddRowAsync(Row(folder.Id, "old.jpg", ImageStatus.Missing));
+        await AddRowAsync(Row(folder.Id, "moved.jpg", ImageStatus.Pending, PendingOrigin.New, missing.Id));
+        var vm = CreateViewModel(folder);
+
+        await vm.LoadAsync();
+
+        Assert.False(vm.IsHashChecking);
+        Assert.True(vm.HasSelection, "GF-140-01: ロード完了後に選択が無く本体(一覧+個別フッター)が不可視");
+        Assert.NotNull(vm.Selected);
+    }
+
+    /// <summary>
     /// ECO-075/GF-075-01 の大量 missing 応答性ガードの新面移植(R8 独立レビュー所見 Med(b))。
     /// 旧 CpUiRepairViewModelTests の O(M×N) 封止プローブを統合裁定面 LoadAsync へ引き継ぐ。
     /// 粗い時間上限は係数爆発(2000×2000)検出用=歴代承認済みの ECO-075 様式(新規閾値ではない)。

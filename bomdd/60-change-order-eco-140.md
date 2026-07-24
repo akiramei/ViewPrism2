@@ -261,3 +261,24 @@ review_trigger 弁別力の反証側データ点を獲得(1 系列目は 3/3 想
 
 build **0 warning/0 error**・Tests **969/969**(工場 967+ECO-075 移植 2)・Oracle **109 pass/4 skip・
 凍結 diff 0**(R6)・validate_bom **0/0**。
+
+## §9 GF-140-01 — 移動のみで本体が不可視・窓が callout 高へ収縮(実機 golden 1 巡目所見・2026-07-24)
+
+**所見**(maintainer 実機・golden step1): リネーム→再スキャン→開扉で callout+「自動裁定(2 件)」
+だけが表示され、一覧・個別裁定フッターが見えない。「自動裁定しない/個別に裁定する/裁定自体をやめる」の
+3 択が提示されず、✕ の意味も読めない。
+
+**機序**(プローブで実測固定): LoadAsync が reappeared 0 件でも IsHashChecking=true で開始し、最終
+ApplySnapshot が checking 解除(finally)前に実行されるため、選択ロジックが「個別 ?? 見つからない」限定で
+null に落ち、解除後も再選択されない → HasSelection=false 恒久 → 本体 Grid(IsVisible=HasSelection)+
+フッター不可視 → SizeToContent="Height" が callout 高へ収縮。CAD IR-2(一覧+詳細+docked フッター常時)
+からの逸脱。R7 headless 並置がこれ（既定選択経路)を素通しした= Gf テストが選択済み状態を前提に
+組んでいた谷間。
+
+**是正**(R5 red→green): プローブ `GF140_01_移動のみでもロード完了後に先頭事象が選択され本体が表示される`
+(是正前 red 実測)→ ApplySnapshot の選択を「checking 中の優先選択 ?? 先頭事象」へフォールバック化。
+機械受入= build 0/0・Tests **970/970**・Oracle 109+4skip 無接触・validate 0/0。
+
+**残(GF-140-02・設計裁定待ち)**: ✕ クローズの意味論(いつでも可・裁定済みのみ確定・破棄なし= spec
+§2.11.8 確定済み)を面が伝えていない件は CAD 改訂の要否を maintainer 裁定(案①文言追記/案②本体表示
+のみで足りる/案③「個別に確認」ボタン追加)。

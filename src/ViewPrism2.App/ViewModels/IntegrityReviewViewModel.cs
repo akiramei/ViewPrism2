@@ -368,9 +368,13 @@ public sealed partial class IntegrityReviewViewModel : ObservableObject
             }
         }
 
-        Selected = IsHashChecking
-            ? IndividualItems.FirstOrDefault() ?? MissingItems.FirstOrDefault()
-            : Items.FirstOrDefault();
+        // GF-140-01: 最終 ApplySnapshot は IsHashChecking 解除前に走る。checking 中の優先選択
+        // (個別/見つからない=確認と無関係に裁定できる行)が空でも、事象があれば必ず先頭を選択する。
+        // 無選択だと本体(一覧+個別フッター)が不可視のまま SizeToContent で窓が callout 高へ収縮する。
+        Selected = (IsHashChecking
+                       ? IndividualItems.FirstOrDefault() ?? MissingItems.FirstOrDefault()
+                       : null)
+                   ?? Items.FirstOrDefault();
         NotifyCounts();
     }
 
