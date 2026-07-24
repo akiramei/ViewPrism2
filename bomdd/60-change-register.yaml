@@ -1964,3 +1964,15 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。バッチ裁定意味論は新規受入行で追加"
     notes: "gate①=必須・先行(ViewPrismUI で PEND-003 再裁定+基準案A/B+モック確定=CAD が正)。gate②=要(UI 新設 golden)。関連=ECO-129/REQ-101(pending 意味論)・PEND-001〜004(CAD 裁定履歴)・CMP-011(確認ダイアログ)・ECO-128〜130(二段階スキャン・pending)"
     body: 60-change-order-eco-139.md
+
+  - id: ECO-140
+    title: "修復と未裁定裁定の役割重複 — 事象中心の統合再設計(PEND-005 reappeared 自動裁定を束ねる)"
+    type: "機能改善(UI/UX 設計再編)+機能拡張(PEND-005)。CAD 先行(gate① 必須)"
+    status: staged
+    golden: "pending(gate② は複数インスタンス想定: CAD/mock golden+実機 golden。実機は GF-139-01 教訓によりデータ後始末〔残存 missing・孤立タグ〕まで確認)"
+    baseline: "main 6866b2f"
+    findings: "maintainer 所見(2026-07-24)=修復と未裁定の役割区別が曖昧・統合検討。実測=同一の移動事象(missing↔pending ハッシュ一致ペア)が両画面の自動機能(すべて自動修復/自動裁定)に同件数で二重提示され取り合う構造。工程診断=CAD 欠陥(GF-139-01 の relink 再裁定で 3 段パイプライン分担〔scan_summary→pending_review→修復委譲・pending_review.md L68/L204〕が面内矛盾のまま併存+修復は画面正典外〔専用 mock なし・component_registry L218 stale〕+PEND-005 面未定義)+BOM 部分欠陥(30-ebom L800-814 境界仮説が PEND-005 到来時の再切り出し再裁定を予告=暫定自認・relink 意味論が 2 surface に分散・reappeared 高信頼基準未規定)+実装は健全(両画面とも承認済み設計に忠実・逸脱なし)。確定=relink 確定 2 系統別実装(修復=逐次単発トランザクション・失敗スキップ・確認なし〔RelinkService:130/215〕vs 未裁定=原子バッチ・stale 全滅・CMP-011 確認〔PendingReviewService:63/ImageRepository:363〕)・ハッシュ一致判定 3 重実装(RelinkService:130-206/RepairViewModel:358/ScanJudge:106-118)・競合時挙動非対称(per-item スキップ vs 全件失敗)・reappeared は hash 未計算=シグナル在庫なし(ECO-139 §3)。未検証=統合 UI の情報設計・relink プリミティブ統一先の UX 差・hash 再計算の性能特性(26万件級 read-across)"
+    impacted_bom: ["CAD(ViewPrismUI)=先行必須: 事象別裁定面の新画面正典+mock/captures(案A)・pending_review.md 分担規定改訂・image_tab §修復出口再定義・component_registry L218 stale 是正・PEND-005 面定義", "spec=§2.11.7 拡張(reappeared 高信頼基準=旧 hash 再計算+比較・事象分類意味論・relink 確定プリミティブ統一)", "REQ/E-BOM/M-BOM=E-UI-REPAIR-039 と E-UI-PENDING-049 の統合/再編+30-ebom L800-814 境界仮説の再裁定(E-RELINK-007 への relink 一本化)", "src=統合 VM/Window(案A)・PendingReviewService/RelinkService 再編・ScanJudge/ScanStaging への旧 hash 供給配線(PEND-005)・WindowService/i18n", "control-plan=事象分類網羅・relink 一本化後の競合時挙動・reappeared 誤裁定防止・hash 再計算の性能封止", "bdr-01(BomDD)=ECO-139 boundary_hypothesis の review_trigger を正式発火(2 系列目測定の起点)・gate① 後に新 boundary_hypothesis を凍結"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。事象分類・relink 統一意味論・reappeared 自動裁定は新規受入行/プローブで追加"
+    notes: "gate①=必須・未(裁定 3 点: ①統合粒度=案A 事象中心統合〔推奨〕/案B サービス一本化+入口温存/案C パイプライン純化復帰〔不採用推奨=GF-139-01 逆行〕 ②PEND-005 高信頼基準=reappeared の旧 hash 再計算+比較〔hash 厳格〕+再計算タイミング ③部品境界再裁定=relink 選別+確定の独立部品化)。着手条件=gate① 裁定 → /cad-mock(CAD 是正が先)→ CAD/mock golden → /eco-fix。個別裁定 4 操作・CMP-011・可逆性・曖昧ケース手動回避はどの案でも維持。R3 分離=PEND-004(消費サイトの pending 扱い)・F-2(pending 一覧非仮想化)は混ぜない。関連=ECO-139/GF-139-01(重複の混入元)・ECO-129/REQ-101・ECO-003/005(修復補完)・PEND-001〜005・CMP-011・INV-001・ECO-134/137/138(性能封止 read-across)"
+    body: 60-change-order-eco-140.md
