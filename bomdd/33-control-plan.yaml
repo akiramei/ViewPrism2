@@ -808,7 +808,8 @@ control_plan:
       approver: automated+maintainer
       test_vectors:
         - "事象分類: pending∪missing → 自動裁定できる(移動一意組+reappeared hash 一致)/個別に確認(changed・candidate なし new・restored・reappeared 不一致/未確認/読み取り失敗)/見つからない(missing 単独)。曖昧組(1 missing:複数 new)は全て個別へ。グループ件数合計= タイトル母数"
-        - "reappeared 裁定時 hash 確認: 記録 hash 一致→自動対象(T13 accept)・不一致→個別(内容変更相当の説明)・読み取り失敗→個別残置。確認は読み取り専用・DB 無変更。確認完了まで自動裁定件数・ボタン非提示(IR-7)。ScanJudge/ScanStaging へ hash 計算を持ち込まない(scan 経路非接触= source/構造 pin)"
+        - "reappeared 裁定時 hash 確認: **裁定基準 hash(pending_baseline_hash ?? 記録 hash)**一致→自動対象(T13 accept)・不一致→個別(内容変更相当の説明)・読み取り失敗→個別残置。確認は読み取り専用・DB 無変更。確認完了まで自動裁定件数・ボタン非提示(IR-7)。ScanJudge/ScanStaging へ hash 計算を持ち込まない(scan 経路非接触= source/構造 pin)"
+        - "(案a 裁定 2026-07-24)baseline 保全: スキャン適用 UpdateMetaAndPend(changed/reappeared)は hash 上書き前の旧 hash を pending_baseline_hash へ一律保全・PendInPlace は保全なし(記録 hash= 元 hash のまま)・裁定確定(T13/T14/T15/relink 消費)で NULL クリア。**スキャンがメタ変化の再出現で hash を上書きした行を、現ファイル hash 同士の空虚比較で誤って自動受け入れしない**(初版仕様欠陥の封止= 工場 R8 検出)。migration 011 の前後互換(既存行= NULL)も pin"
         - "混在一括適用: 移動組= T4(pending 行削除・missing 行へ付け替え・元 image_id/タグ保持・missing 解消)+再出現一致= T13(同一行 normal 化・タグ/ID 不変)を単一トランザクション・1 件でも stale なら全 rollback・非対象不変"
         - "relink 一本化: 選別(auto-repairable=候補ちょうど 1 件/高信頼一意組=曖昧除外)+確定(単発 T4=失敗スキップ継続/原子バッチ=全 rollback)は E-RELINK-007 API のみ。UI・他サービスに hash 一致判定・一意性判定の重複実装なし(旧 3 重実装の解消を構造 pin)"
         - "件数パリティ: callout N= 対象グループ N= 確認一覧 N= 実適用 N。0 件で callout/対象グループ非表示。キャンセルは DB 無変更"

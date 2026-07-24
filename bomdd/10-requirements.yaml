@@ -1461,12 +1461,18 @@ requirements:
       - "missing 単独の除外が missing 以外へ適用される(T9 限定破り)"
 
   - id: REQ-103
-    statement: "再出現(pending_origin='reappeared')の同一性判定は、統合裁定面を開いた時に対象ファイルの hash を on-demand 再計算し、DB 記録 hash と比較して行う(hash 厳格= 一致のみ『同一が戻った』と確定し T13 一括受け入れの自動裁定対象へ。size+mtime のみでは断定しない= ECO-139 案A の系譜)。hash 計算はスキャン経路(ScanJudge/ScanStaging)へ持ち込まない(ECO-134/137/138 の性能封止維持)。物理ファイルへは読み取りアクセスのみ(INV-009)。確認完了まで自動裁定の件数・ボタンを提示しない(未確定件数の提示禁止)。hash 不一致= 個別確認へ(内容変更相当の説明)・読み取り失敗= 個別確認へ残置(誤って自動対象にしない)。クローズで中断し次回開扉時に再確認(確認結果の永続キャッシュは持たない= DB 無変更)"
+    statement: "再出現(pending_origin='reappeared')の同一性判定は、統合裁定面を開いた時に対象ファイルの hash を on-demand 再計算し、**裁定基準 hash(baseline)**と比較して行う(hash 厳格= 一致のみ『同一が戻った』と確定し T13 一括受け入れの自動裁定対象へ。size+mtime のみでは断定しない= ECO-139 案A の系譜)。baseline= スキャン適用の pending 化メタ更新遷移(UpdateMetaAndPend= changed/reappeared)が hash を上書きする前の**旧 hash を images.pending_baseline_hash(migration 011)へ一律保全**した値。保全が無い行(PendInPlace= メタ一致・上書きなし)は記録 hash を用いる。裁定確定(T13/T14/T15/relink 消費)で pending_baseline_hash は NULL クリア。保全は計算済み値の書き込みのみ(スキャンへの追加 I/O・判定変更なし=ScanJudge/ScanStaging 不変)。hash 計算はスキャン経路(ScanJudge/ScanStaging)へ持ち込まない(ECO-134/137/138 の性能封止維持)。物理ファイルへは読み取りアクセスのみ(INV-009)。確認完了まで自動裁定の件数・ボタンを提示しない(未確定件数の提示禁止)。hash 不一致= 個別確認へ(内容変更相当の説明)・読み取り失敗= 個別確認へ残置(誤って自動対象にしない)。クローズで中断し次回開扉時に再確認(確認結果の永続キャッシュは持たない= DB 無変更)"
     rationale: |
       PEND-005(ECO-139 次版候補)の吸収= ECO-140 gate① 裁定②(2026-07-24)。reappeared は ScanJudge
       PendInPlace で hash 未計算のため『同じ画像が戻ったのか判定できません』のまま個別裁定に滞留していた。
       裁定時 on-demand 再計算により、スキャンの性能特性(二重走査封止・ピークメモリ封止)へ波及させずに
       高信頼(反証不能= hash 一致)の一括受け入れを可能にする。
+      【案a 裁定(2026-07-24 maintainer)= baseline 保全】初版仕様「DB 記録 hash と比較」は、スキャン適用
+      UpdateMetaAndPend(ScanService)がメタ変化の再出現で記録 hash を現ファイル hash へ上書きするため
+      比較が空虚化し(別内容でも必ず一致→誤自動受け入れ)、/eco-fix 中の工場 R8 で検出・停止された。
+      旧 hash の保持先が無いスキーマでは健全化できず、pending_baseline_hash 列(migration 011)で
+      上書き前 hash を保全する案a を裁定(案b= メタ一致行限定は上書き済み行と識別不能で不成立・
+      案c= PEND-005 再分離は gate① 束ねの縮小のため不採用)。
       受入: 一致→自動対象/不一致→個別/失敗→個別の分岐・scan 経路非接触・確認完了までの件数非提示・
       DB 無変更(確認自体は遷移しない)を unit exact(CP-INTEGRITY-036)。
     rationale_precision: ok
@@ -1474,6 +1480,7 @@ requirements:
     external_source: "ViewPrismUI docs/screens/integrity_review.md IR-7/ ECO-140 gate① 裁定 2026-07-24"
     counterexamples:
       - "size+mtime 一致だけで『同一が戻った』と自動受け入れする(別画像の誤裁定)"
+      - "スキャンが hash を上書きした再出現行を、現ファイル hash 同士の比較で『同一』と誤判定する(baseline 不在= 初版仕様の欠陥・案a の動機)"
       - "hash 再計算が ScanJudge/ScanStaging へ配線されスキャンが遅くなる(性能封止の破り)"
       - "確認中に暫定件数で自動裁定ボタンが押せる(未確定件数の提示)"
       - "読み取り失敗した reappeared が自動対象に混入する"
