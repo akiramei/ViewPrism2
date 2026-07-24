@@ -122,6 +122,7 @@
   "image.feature.selectImages": "Select images",
   "integrity.accept": "Accept",
   "integrity.acceptNew": "Accept as a new image",
+  "integrity.autoAlternatives": "You can also adjudicate items individually from the list below, or close this window and decide later (closing changes nothing).",
   "integrity.autoButton": "Auto-adjudicate ({count})",
   "integrity.autoChip": "Auto",
   "integrity.autoExclusions": "Review changed images and non-matches individually.",

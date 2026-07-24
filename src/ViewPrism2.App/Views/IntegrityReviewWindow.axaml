@@ -268,6 +268,11 @@
                      Foreground="#5B6473"
                      TextWrapping="Wrap"
                      Text="{Binding Loc[integrity.autoExclusions]}" />
+          <!-- GF-140-02 案①: 3 択(自動/個別/閉じる)と ✕ の安全(裁定済みのみ確定・破棄なし)の明示 -->
+          <TextBlock FontSize="11.5"
+                     Foreground="#7D8AA6"
+                     TextWrapping="Wrap"
+                     Text="{Binding Loc[integrity.autoAlternatives]}" />
         </StackPanel>
       </DockPanel>
     </Border>
