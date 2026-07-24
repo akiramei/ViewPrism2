@@ -1081,6 +1081,30 @@ public sealed class CpIntegrityReviewTests : IDisposable
     }
 
     /// <summary>
+    /// GF-140-03(実機 golden 所見): ⋯メニュー統合行の en ラベル "Images needing attention…" が
+    /// CMP-006 固定幅 208(アイコン+件数バッジ控除後のラベル実効幅 ≈134px ≈ 半角 20 字)を超え
+    /// 語中截断された(GF-084-01「en クリップ」既知クラス)。文字数予算 lint で ja/en とも pin する
+    /// (heuristic: 13px SemiBold で半角 ≈6.7px/字。視覚の最終確認は golden)。
+    /// </summary>
+    [Fact]
+    public void GF140_03_メニュー統合行ラベルはja_enとも幅208の文字数予算に収まる()
+    {
+        foreach (var lang in new[] { "ja", "en" })
+        {
+            var json = File.ReadAllText(Path.Combine(
+                RepoRoot(), "src", "ViewPrism2.App", "Assets", "i18n", $"{lang}.json"));
+            var m = System.Text.RegularExpressions.Regex.Match(
+                json, "\"integrity\\.menuEntry\"\\s*:\\s*\"([^\"]+)\"");
+            Assert.True(m.Success, $"{lang}: integrity.menuEntry が存在しない");
+            var label = m.Groups[1].Value;
+            // 全角=2・半角=1 で数える簡易幅(予算 20 半角相当=134px/6.7px)
+            var units = label.Sum(c => c > 0x7F && c != '…' ? 2 : 1);
+            Assert.True(units <= 20,
+                $"GF-140-03({lang}): メニューラベル『{label}』が幅予算超過({units}/20 半角相当)= CMP-006 幅 208 で語中截断");
+        }
+    }
+
+    /// <summary>
     /// GF-140-01(実機 golden 1 巡目所見): 移動事象のみのコレクションで、ロード完了後に先頭事象が
     /// 自動選択されず本体(一覧+個別裁定フッター)が不可視のまま窓が callout 高へ収縮した。
     /// 機序= LoadAsync が reappeared 0 件でも IsHashChecking=true で開始し、最終 ApplySnapshot が

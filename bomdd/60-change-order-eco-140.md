@@ -294,3 +294,18 @@ null に落ち、解除後も再選択されない → HasSelection=false 恒久
 正典 visualContract 改訂+IR-2.png 再生成(840×770・目視済み)→ **再 golden で再凍結**(実機 golden と
 同便)。実装= i18n `integrity.autoAlternatives`(ja/en)+callout 第 3 補足行(#7D8AA6)。
 機械受入= build 0/0・Tests 970/970・Oracle 109+4skip 無接触・validate 0/0。
+
+## §11 GF-140-03 — ⋯メニュー統合行の en ラベル截断(実機 golden 所見・2026-07-24)
+
+**所見**(maintainer・en 表示確認): "Images needing attention…"(25 半角相当)が CMP-006 幅 208
+(ラベル実効幅 ≈134px ≈ 20 半角相当)を超え「Images needing att…」と語中截断。末尾「…」の
+affordance も喪失= GF-084-01「en クリップ」既知クラスの再現。
+
+**是正**(R5 red→green): 文字数予算 lint `GF140_03_メニュー統合行ラベルはja_enとも幅208の文字数予算に
+収まる`(red 実測= en 25/20)→ en 面名を **"Images to review"** へ短縮統一(menuEntry
+"Images to review…"=17/20・title "Images to review — {name}"。説明文プローズは不変)。
+機械受入= build 0/0・Tests **971/971**・Oracle 109+4skip 無接触・validate 0/0。
+en copy は golden で確認(ECO-103 前例= en copy は golden 承認事項)。
+
+**R3**: 既存行「Backup & transfer in Settings…」の同型截断(ECO-077 期から・本 ECO 無接触)は
+51-cheat-log へ記帳(全メニュー行への予算 lint 水平展開+copy 短縮の別途一括)。
