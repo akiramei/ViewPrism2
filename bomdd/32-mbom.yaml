@@ -743,7 +743,21 @@ mbom:
         adjudicate: "PendingReviewService: AcceptAsync(T13=normal 化・タグ/ID 不変)/ TreatAsNewAsync(T14=原子的行置換・新 ID・CASCADE 消滅)/ DeleteAsync(T15=deleted 化)。全て pending 限定(ValidationError)"
         browse: "無絞り込み FS 軸ブラウズ= normal∪pending(バッジ)・チップ絞り込み/view 軸/集計/検索/エクスポート= normal のみ(INV-010 v5.0)。pending 取得は DB 境界で status 限定"
       acceptance_refs: [CP-UI-G1]
-      acceptance_note: "裁定 3 遷移+拒否+T14 原子性は unit(CpPendingSemanticsTests)。バッジ・入口・ダイアログ視覚は headless probe(GfPendingReviewVisualParityTests)+golden(CP-UI-G1)"
+      acceptance_note: "裁定 3 遷移+拒否+T14 原子性は unit(CpPendingSemanticsTests)。バッジ・入口・ダイアログ視覚は headless probe(GfPendingReviewVisualParityTests)+golden(CP-UI-G1)。(ECO-140)本 surface は E-UI-INTEGRITY-050/M-UI-INTEGRITY-055 へ統合= superseded(実装は IntegrityReview へ置換)"
+
+    - id: M-UI-INTEGRITY-055
+      ebom_refs: [E-UI-INTEGRITY-050]
+      artifact:
+        path: src/ViewPrism2.App/Views/IntegrityReviewWindow.axaml
+        path_note: "IntegrityReviewWindow.axaml(.cs)+ViewModels/IntegrityReviewViewModel.cs+WindowService.ShowIntegrityReviewAsync+ImageTabViewModel(⋯メニュー統合入口 1 行+事象合計件数)+Core 裁定サービス(事象分類+reappeared on-demand hash 確認)+E-RELINK-007 一本化 API(選別+単発/バッチ確定)。**製造時確定**= /eco-fix(ECO-140)の実 diff で path_note を as-built 同期する"
+        type: avalonia-app
+      interface_contract:
+        entry: "画像タブ ⋯メニュー「要確認の画像…」(+CMP-010 事象合計件数)→ 選択コレクションの pending∪missing を事象 3 グループでモーダル裁定(旧 2 入口・旧 2 Window は撤去)"
+        classify: "事象分類= 自動裁定できる(移動一意組+reappeared hash 一致)/個別に確認/見つからない(missing 単独)。DB 境界 status 限定・決定論 unit 検査可能"
+        adjudicate: "一括= 移動 T4 relink+再出現 T13 accept の混在を CMP-011 確認つき単一トランザクション(stale 1 件で全 rollback)。個別= T13/T14/T15/保留+単発 relink(T4)+除外(T9)。選別+確定は E-RELINK-007 API のみ経由"
+        hashcheck: "reappeared の hash 再計算は裁定面 on-demand・読み取り専用・DB 無変更・scan 経路非接触(REQ-103)。完了まで自動裁定件数非提示"
+      acceptance_refs: [CP-UI-G1, CP-INTEGRITY-036]
+      acceptance_note: "事象分類・混在バッチ・hash 確認分岐・一本化・入口統合は unit(CpIntegrityReviewTests)。視覚は headless probe(GfIntegrityReviewVisualParityTests= CAD IR-1〜8 visualContract)+golden(CP-UI-G1・実機はデータ後始末まで)"
 
 # 調達部品表(これ以外のパッケージ採用はずる報告対象)
 procurement:
