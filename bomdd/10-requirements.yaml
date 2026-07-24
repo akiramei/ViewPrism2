@@ -1439,3 +1439,42 @@ requirements:
       - "適用ボタンの件数と実際の変更件数が食い違う"
       - "読み取り失敗が「変更なし」に混ざり、失敗の存在が見えない"
       - "初回スキャンまで二段階になり 26 万件登録に確認が挟まる(SCAN-001 逸脱)"
+
+  - id: REQ-102
+    statement: "missing/pending の正常化裁定は、事象中心の単一面『要確認の画像』(統合裁定面)で提供する: ①入口=画像タブ ⋯メニュー 1 行+事象合計件数(旧『未裁定の画像…』『修復』の 2 行と RepairWindow/PendingReviewWindow を置換・0 件で件数なし) ②母集合= 選択コレクションの pending∪missing(DB 境界で status 限定)・1 事象= 1 行(移動= missing↔pending ハッシュ一致ペアを 1 行に統合) ③事象 3 分類= 自動裁定できる(ハッシュ一致で同一確定: 移動=一意な高信頼組/再出現=裁定時 hash 再計算一致〔REQ-103〕)/個別に確認(changed・candidate なし new・restored・hash 不一致/未確認/読み取り失敗の reappeared)/見つからない(missing 単独) ④一括自動裁定= CMP-011 確認(行ごとに操作明示)つき単一トランザクションで移動組= T4 一括再リンク+再出現一致= T13 一括受け入れの混在適用・1 件でも stale なら全 rollback・件数パリティ(callout=グループ=確認一覧=実適用)・0 件非表示・曖昧組は個別へ ⑤個別裁定= pending 系 4 操作(T13/T14/T15/保留)+移動の単発再リンク(T4)・missing 単独= criteria 検索(§2.11.1)→候補提示(表示パリティ GF-V4-04 継承)→再リンク確定(T4)/ゴミ箱へ移動(T9 除外) ⑥relink の選別(auto-repairable=候補ちょうど 1 件・高信頼一意組)と確定(単発/原子バッチ)は E-RELINK-007 の API に一本化し UI・他サービスで hash 一致判定・一意性判定を再実装しない。core 意味論(§2.11.1〜2.11.4/2.11.6 と T13〜T15・高信頼バッチ)は不変。正本= 20-spec §2.11.8"
+    rationale: |
+      ECO-140(gate① 2026-07-24 案A)。同一の移動事象が旧 2 画面の自動機能(すべて自動修復/自動裁定)に
+      二重提示され取り合う構造(relink 確定 2 系統別実装・ハッシュ一致判定 3 重実装・競合時挙動非対称)を、
+      事象= 1 行の単一裁定面と relink 一本化で解消する。GF-139-01 で崩れた 3 段パイプライン分担
+      (scan_summary 検知→pending_review 裁定→修復実行)の再編。UI 正典= ViewPrismUI
+      docs/screens/integrity_review.md(IR-1〜8・CAD golden 承認 2026-07-24)。
+      受入: 事象分類網羅・混在バッチ原子性・件数パリティ・入口統合(旧 2 行不在)を unit exact
+      (CP-INTEGRITY-036)+視覚は IR visualContract 由来 headless probe+実機 golden。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "ViewPrismUI docs/screens/integrity_review.md(IR-1〜8・3a1bb37/3b4fb54)/ ECO-140 gate① 裁定 2026-07-24"
+    counterexamples:
+      - "同じ移動ペアが『自動裁定(N 件)』と『すべて自動修復(N 件)』の両方に出て取り合う(旧構造の残存)"
+      - "自動裁定と自動修復で確定プリミティブが別実装(逐次 vs 原子)のまま競合時挙動が非対称"
+      - "旧 2 入口(未裁定の画像…/修復)が新入口と併存し導線が 3 つになる"
+      - "callout の件数と実適用件数が食い違う(混在バッチの片系のみ適用)"
+      - "missing 単独の除外が missing 以外へ適用される(T9 限定破り)"
+
+  - id: REQ-103
+    statement: "再出現(pending_origin='reappeared')の同一性判定は、統合裁定面を開いた時に対象ファイルの hash を on-demand 再計算し、DB 記録 hash と比較して行う(hash 厳格= 一致のみ『同一が戻った』と確定し T13 一括受け入れの自動裁定対象へ。size+mtime のみでは断定しない= ECO-139 案A の系譜)。hash 計算はスキャン経路(ScanJudge/ScanStaging)へ持ち込まない(ECO-134/137/138 の性能封止維持)。物理ファイルへは読み取りアクセスのみ(INV-009)。確認完了まで自動裁定の件数・ボタンを提示しない(未確定件数の提示禁止)。hash 不一致= 個別確認へ(内容変更相当の説明)・読み取り失敗= 個別確認へ残置(誤って自動対象にしない)。クローズで中断し次回開扉時に再確認(確認結果の永続キャッシュは持たない= DB 無変更)"
+    rationale: |
+      PEND-005(ECO-139 次版候補)の吸収= ECO-140 gate① 裁定②(2026-07-24)。reappeared は ScanJudge
+      PendInPlace で hash 未計算のため『同じ画像が戻ったのか判定できません』のまま個別裁定に滞留していた。
+      裁定時 on-demand 再計算により、スキャンの性能特性(二重走査封止・ピークメモリ封止)へ波及させずに
+      高信頼(反証不能= hash 一致)の一括受け入れを可能にする。
+      受入: 一致→自動対象/不一致→個別/失敗→個別の分岐・scan 経路非接触・確認完了までの件数非提示・
+      DB 無変更(確認自体は遷移しない)を unit exact(CP-INTEGRITY-036)。
+    rationale_precision: ok
+    classification_hint: core
+    external_source: "ViewPrismUI docs/screens/integrity_review.md IR-7/ ECO-140 gate① 裁定 2026-07-24"
+    counterexamples:
+      - "size+mtime 一致だけで『同一が戻った』と自動受け入れする(別画像の誤裁定)"
+      - "hash 再計算が ScanJudge/ScanStaging へ配線されスキャンが遅くなる(性能封止の破り)"
+      - "確認中に暫定件数で自動裁定ボタンが押せる(未確定件数の提示)"
+      - "読み取り失敗した reappeared が自動対象に混入する"
+      - "hash 確認が images 行を書き換える(確認と裁定の混同)"

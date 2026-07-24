@@ -98,17 +98,38 @@ ebom:
       acceptance_refs: [CP-UTIL-005]
 
     - id: E-RELINK-007
-      name: 再リンク(候補検索+確定処理)— v4.0 で criteria 候補探索+タグ安全ガードへ拡張(REQ-069)
+      name: 再リンク(候補検索+確定処理)— v4.0 で criteria 候補探索+タグ安全ガードへ拡張(REQ-069)。ECO-140 で選別+確定を一本化(auto-repairable/高信頼一意組の選別+単発 T4/原子バッチ確定)
       classification: core
       rationale_type: requirement
-      requirement_refs: [REQ-017, REQ-069]
+      requirement_refs: [REQ-017, REQ-069, REQ-102]
       depends_on: [E-DOMAIN-001, E-DB-010, E-CRITERIA-037, E-TAGSVC-008]
       invariants:
         - INV-001 missing 側 image_id 不変(タグ・関連の保全)
         - INV-015 (v4.0) 置換候補は pending ∪ untagged-normal のみ。タグ付き候補は relink 拒否→マージ案内(タグ損失防止)
         - INV-015 (v4.0) candidate_link_id は候補ヒント(非確定)。確定で候補行を削除し missing 行が当該パスを所有
         - 確定は単一トランザクション・原子(T4)。遷移表外(missing でない/別コレクション/許可外 status)は拒否
-      acceptance_refs: [CP-SCAN-004, CP-RELINK-019]
+        - (ECO-140) relink の「選別」(auto-repairable 判定=候補ちょうど 1 件・高信頼一意組=1 missing:1 new・曖昧除外)と「確定」(単発 T4・原子バッチ)は本品目の API に一本化する。UI(E-UI-INTEGRITY-050)・他サービスは本 API のみ経由し、hash 一致判定・一意性判定を再実装しない(旧: RelinkService 逐次系と PendingReviewService バッチ系の 2 系統+判定 3 重実装の解消= ECO-140 §3)
+        - (ECO-140) バッチ確定= 単一トランザクション・1 組でも stale なら全 rollback(ECO-139 意味論の移管)。単発確定(逐次)= 失敗スキップ継続。両意味論とも本品目が提供し呼び出し側が選ぶ
+      acceptance_refs: [CP-SCAN-004, CP-RELINK-019, CP-INTEGRITY-036]
+      # bdr-01(EXP-20260723-01)2 系列目の予測凍結転記。ECO-140 §7 で /eco-fix 前に固定した予測を書き換えず転記(採点対象)。
+      # 記録先=案a(owner 品目=本品目)。凍結証明= VP2 commit 44ede11+BomDD 37814ea。
+      boundary_hypothesis:   # 対象条件②一本化と並存の双方に合理性+④見直し可能性の認識 — relink 一本化後の部品境界(ECO-140)
+        premise: >
+          relink の「選別(ハッシュ一致・一意性=曖昧除外)」と「確定(原子バッチ・image_id/タグ保持・
+          missing 解消)」は E-RELINK-007 に一本化して宿り、統合裁定 UI(integrity_review クラスタ=
+          新 VM+裁定サービス)はその消費者に徹する。再出現の裁定時 hash 再計算も裁定側 on-demand の
+          入力供給であり、ScanJudge/ScanStaging(scan 経路)は candidate_link_id の在庫化のみを担う
+          現行契約から変わらない。同一性判定の基準は hash 一致のみで、閾値・類似度等の合成判定は持たない。
+        expected_change: >
+          ECO-140 の実装・是正は integrity_review クラスタ(新 VM/裁定サービス+WindowService/i18n)と
+          E-RELINK-007(選別+確定 API の統合)+旧 2 系統(RelinkService 逐次経路/PendingReviewService
+          relink 部分)の E-RELINK-007 への吸収で完結し、ScanJudge/ScanStaging の判定ロジックへ触れない
+          想定(hash 再計算はスキャン経路に持ち込まない= gate① 裁定②)。凍結オラクルにも無接触。
+        review_trigger: >
+          ①relink の第 3 の消費者が現れ、選別基準が消費者ごとに分岐し始めた時(基準の部品化を再裁定)。
+          ②裁定時 on-demand hash 再計算が性能要件(大量 reappeared)でスキャン時計算へ移る要求が出た時
+          (scan との境界を再裁定)。③同一性判定が hash 一致以外(類似度・部分一致等)へ拡張された時
+          (「同一性判定」の独立ドメイン部品化= ECO-139 §7 で見送った分割の再考)。
 
     - id: E-TAGSVC-008
       name: タグ管理サービス(CRUD・UPSERT 付与・バッチ・カスケード・バリデーション・使用中削除ガード)
@@ -756,6 +777,7 @@ ebom:
         - (ECO-019) トラッシュ UI を**画像タブ内ポップアップ(中央オーバーレイ)**へ作り直す(別ウィンドウモーダルを置換)。**複数選択 + すべて選択 + 復元 + 完全削除 + ゴミ箱を空(一括完全削除)**を備える。状態遷移は E-TRASH-038(RestoreAsync/PermanentDeleteAsync)のみ経由(新規 Core なし)。選択・一覧・空状態のロジックは描画から独立して unit 検査可能にする(CP-UI-G1)
         - (ECO-019) 完全削除・ゴミ箱を空は**実行前確認**+**INV-009 非破壊明示**「画像ファイルは削除されません(DB から除去)。この操作は元に戻せません。」を必須とする。**モックの『元のファイルも削除され』(物理削除文言)は INV-009 と矛盾するため不採用**(woven 安全制約 > CAD 文言)。物理ファイルは S-26 L3 物理差分で不変を担保
         - (ECO-098) 画像タブのゴミ箱一覧は選択中collection+status=deletedをDB境界で限定し、全status行をmaterializeしてからUIで捨てない。normal 6件に対しhidden missing 262,045件を持つ実profileで全件取得が約1.1秒停止を生んだ潜伏実績をCP-UI-G1で封止する
+        - "(ECO-140) 本 surface のうち**修復ダイアログ面(criteria 検索フォーム+relink 候補提示/確定+一括自動修復+除外・RepairWindow と ⋯メニュー「修復」行)は E-UI-INTEGRITY-050 へ統合= superseded**(表示パリティ・auto-repairable 判定等の契約は継承)。**トラッシュ(ゴミ箱ポップアップ= ECO-019/098)は image_tab 面として存続**(本統合の対象外)。旧 RelinkWindow(フォルダ管理経由)も対象外・現状維持"
       acceptance_refs: [CP-UI-G10, CP-REPAIR-CARD-021, CP-DISPLAY-PARITY-022, CP-REPAIR-AUTOALL-023, CP-UI-G1]
 
     - id: E-UI-SCANSTAGE-048
@@ -794,6 +816,7 @@ ebom:
         - 高信頼一括再リンクは単一トランザクションで全組の pending/new・candidate 対応・同一フォルダ・hash 一致・missing 限定 WHERE を強制し、1 件でも拒否なら全 rollback。pending 行を削除して missing 行をそのファイルメタへ付け替え、missing 側の元 image_id/タグを保持して status=normal・candidate_link_id/pending_origin=NULL としリンク切れを解消する。PD-5 callout・対象グループ・PD-6 確認一覧・実適用の N=一意に再リンク可能な組数は常に同一、N=0 では callout/対象グループを非表示。再移動時は既存経路で再リンクし直せる
         - 一覧・由来分岐・CTA 出し分けは描画から独立した決定論ロジックとして unit 検査可能にする
         - pending 件数・一覧の取得は DB 境界で status 限定(全行 materialize 禁止=ECO-098 同型・26 万件経路の性能規律)
+        - "(ECO-140) 本 surface(入口行+PendingReviewWindow= PD-1 入口/PD-2〜6)は **E-UI-INTEGRITY-050 へ統合= superseded**(裁定遷移・高信頼バッチ意味論・未裁定バッジ〔INV-010 v5.0〕は不変で新面が消費)。boundary_hypothesis(ECO-139)は歴史記録として残置= review_trigger は ECO-140 で発火済み・2 系列目は E-RELINK-007 側に凍結"
       acceptance_refs: [CP-UI-G1, CP-PENDING-AUTO-035]
       # bdr-01(EXP-20260723-01)予測凍結の転記。ECO-139 §7 で /eco-fix 前に固定した予測を書き換えず転記(採点対象)。
       # 記録先=案a(複合 unit の owner 品目=本 surface)。凍結証明=BomDD loops/bdr-01 protocol 凍結コミット。
@@ -813,6 +836,25 @@ ebom:
           供給する配線が必要になった時=「同一性の確信度」が scan と review を横断する第2消費者を得るため、
           独立部品への切り出しを再裁定する。または高信頼選別が単純フィルタを超える(閾値設定・複数基準の
           合成・第3の消費者出現)時。
+
+    - id: E-UI-INTEGRITY-050
+      name: "統合裁定面『要確認の画像』(事象 3 グループ+一括自動裁定〔移動= T4 relink/再出現= T13 accept の混在〕+裁定時 hash 確認+条件検索+除外)— ECO-140 新設(E-UI-PENDING-049+E-UI-REPAIR-039 修復面の統合後継)"
+      classification: surface
+      rationale_type: external-knowledge
+      requirement_refs: [REQ-102, REQ-103]
+      external_source_ref: K-DESIGN
+      external_source_note: "CAD= ViewPrismUI docs/screens/integrity_review.md(IR-1〜8・CAD golden 承認 2026-07-24= VPUI 3a1bb37/3b4fb54・凍結)"
+      kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+      depends_on: [E-RELINK-007, E-CRITERIA-037, E-TRASH-038, E-THUMB-020, E-SCAN-005, E-UI-BROWSE-022]
+      invariants:
+        - 事象分類(自動裁定できる/個別に確認/見つからない)・グループ件数・由来別 CTA 出し分けは描画から独立した決定論ロジックとして unit 検査可能にする
+        - 一括自動裁定= 移動組 T4 一括 relink+再出現 hash 一致 T13 一括 accept を CMP-011 確認(行ごとに操作明示)つき単一トランザクションで適用・1 件でも stale なら全 rollback。callout・対象グループ・確認一覧・実適用の件数は常に一致・0 件で非表示。曖昧組(1 missing:複数 new)は個別へ
+        - 状態遷移・選別は core API(E-RELINK-007 の選別+確定/T13〜T15 系サービス/E-TRASH-038.ExcludeAsync)経由のみ。UI 側で遷移・hash 一致判定・一意性判定を再実装しない
+        - reappeared の hash 再計算は裁定面の on-demand のみ(ScanJudge/ScanStaging へ持ち込まない= REQ-103)。読み取り専用・DB 無変更。確認完了まで自動裁定の件数・ボタンを提示しない(IR-7)。不一致・読み取り失敗は個別確認へ
+        - 母集合・件数の取得は DB 境界で status ∈ {pending, missing} 限定(全行 materialize 禁止= ECO-098 同型・26 万件経路の性能規律)
+        - 入口は ⋯メニュー 1 行「要確認の画像…」+件数(CMP-010 事象合計・0 件で件数なし)= 旧「未裁定の画像…」「修復」2 行と旧 2 Window を置換(dead 導線を残さない)。未裁定バッジ(INV-010 v5.0)は不変
+        - 見つからない詳細の候補カードは表示パリティ契約(サムネ+名前+パス+サイズ+更新日時= GF-V4-04)を継承。除外= T9(missing 限定)・動詞ラベル「ゴミ箱へ移動」
+      acceptance_refs: [CP-UI-G1, CP-INTEGRITY-036]
 
 # NFR 目標値(三分割: 目標値=E-BOM / 実現=M-BOM / 検証=Control Plan)
 nfr_targets:

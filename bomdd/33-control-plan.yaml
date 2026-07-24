@@ -795,6 +795,26 @@ control_plan:
         - "件数パリティ: PD-5 callout N=対象先頭グループ N=PD-6 確認一覧 N=実適用 N。キャンセルは無変更"
         - "0 件: PD-5 callout/対象グループ非表示。N>0 は full-width 青 callout+自動チップ、PD-6 は対象一覧 max-height 176px+secondary/primary"
         - "(GF-139-01 golden 観点/2026-07-23 maintainer 実機)自動裁定の動作は relink(受け入れでない)= 実機で『同フォルダ内リネーム→再スキャン→新規+candidate を自動裁定』後に、新パスが元 image_id/タグで通常表示に戻り**元の missing(リンク切れ)が消える**ことを確認する。潜伏実績= 初版は『受け入れ(→新規 normal)』で CAD mock golden(設計)を通過したが、**実機 gate② golden で一致 missing がリンク切れのまま残る問題が顕在化**(承認モックに忠実な実装でも承認動作自体が実機 golden で覆る=CAD 設計 golden と実機 golden の谷間)。設計/実機の 2 段 golden を持つ機能は、実機 golden で『データ後始末(残存 missing/孤立タグ)』まで見る"
+        - "(ECO-140)本 CP の検査面(PD-5/PD-6・PendingReviewWindow)は E-UI-INTEGRITY-050(統合裁定面)へ superseded= 検査実体は CP-INTEGRITY-036 へ移管(高信頼バッチ意味論のベクタは同 CP が継承)。本エントリは歴史記録+意味論の典拠として残置"
+
+    - id: CP-INTEGRITY-036
+      characteristic: "ECO-140: 統合裁定面(要確認の画像)= 事象 3 分類・混在一括自動裁定(移動= T4 relink/再出現= T13 accept)・裁定時 hash 再計算(scan 非接触)・relink 選別+確定の E-RELINK-007 一本化・入口統合"
+      classification: core+surface
+      depth: unit+G
+      tolerance: exact
+      fixture: "tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs + GfIntegrityReviewVisualParityTests.cs"
+      fixture_note: "TempDb の事象ベクタ(移動一意組/曖昧組/reappeared 一致・不一致・読み取り失敗/missing 単独/candidate なし new)+実ファイル hash 再計算+Avalonia.Headless 実レイアウト(CAD integrity_review.md IR-1〜8 visualContract)。固定時間閾値なし"
+      oracle: "DB 前後状態・件数パリティの完全一致 + CAD integrity_review.md visualContract"
+      approver: automated+maintainer
+      test_vectors:
+        - "事象分類: pending∪missing → 自動裁定できる(移動一意組+reappeared hash 一致)/個別に確認(changed・candidate なし new・restored・reappeared 不一致/未確認/読み取り失敗)/見つからない(missing 単独)。曖昧組(1 missing:複数 new)は全て個別へ。グループ件数合計= タイトル母数"
+        - "reappeared 裁定時 hash 確認: 記録 hash 一致→自動対象(T13 accept)・不一致→個別(内容変更相当の説明)・読み取り失敗→個別残置。確認は読み取り専用・DB 無変更。確認完了まで自動裁定件数・ボタン非提示(IR-7)。ScanJudge/ScanStaging へ hash 計算を持ち込まない(scan 経路非接触= source/構造 pin)"
+        - "混在一括適用: 移動組= T4(pending 行削除・missing 行へ付け替え・元 image_id/タグ保持・missing 解消)+再出現一致= T13(同一行 normal 化・タグ/ID 不変)を単一トランザクション・1 件でも stale なら全 rollback・非対象不変"
+        - "relink 一本化: 選別(auto-repairable=候補ちょうど 1 件/高信頼一意組=曖昧除外)+確定(単発 T4=失敗スキップ継続/原子バッチ=全 rollback)は E-RELINK-007 API のみ。UI・他サービスに hash 一致判定・一意性判定の重複実装なし(旧 3 重実装の解消を構造 pin)"
+        - "件数パリティ: callout N= 対象グループ N= 確認一覧 N= 実適用 N。0 件で callout/対象グループ非表示。キャンセルは DB 無変更"
+        - "入口統合: ⋯メニューに旧 2 行(未裁定の画像…/修復)が不在・新 1 行「要確認の画像…」+事象合計件数(0 件でバッジなし)。旧 RepairWindow/PendingReviewWindow の導線・型が残存しない(dead 導線 0)"
+        - "個別裁定: pending 系 4 操作(T13/T14/T15/保留)+移動の単発再リンク・missing 単独= criteria 検索(選択中 missing の情報を初期値)→候補(表示パリティ 5 要素)→単発 relink/除外 T9(missing 限定)"
+        - "(golden 観点・実機= gate② 第 2 インスタンス)移動→自動裁定で新パスが元 image_id/タグで通常化+元 missing 解消・再出現一致→そのまま受け入れ・見つからない→条件検索→候補へ再リンク/ゴミ箱へ移動(復元可)・データ後始末(残存 missing/孤立タグ 0)= GF-139-01 教訓の継承"
 
     - { id: CP-UI-G2, characteristic: "リスト表示の列構成・行選択(G-2)",                      classification: surface, depth: G, tolerance: "G-2 チェックリスト全項目", fixture_note: 実アプリ, oracle: 承認者の目視チェック, approver: maintainer }
     # CP-UI-G3 は ECO-023(2026-07-01)で撤回。REQ-043/E-UI-DETAIL-023 リバース誤りに伴い golden 対象から除外。
