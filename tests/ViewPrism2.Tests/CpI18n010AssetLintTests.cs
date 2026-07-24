@@ -172,7 +172,6 @@ public sealed class CpI18n010AssetLintTests
         ["NodeConditionDialogViewModel.cs:ErrorMessage"] = "条件ダイアログ内(モーダル)",
         ["NumericValueDialogViewModel.cs:ErrorMessage"] = "数値入力ダイアログ内(モーダル)",
         ["RelinkViewModel.cs:StatusMessage"] = "リリンクダイアログ内(モーダル)",
-        ["RepairViewModel.cs:StatusMessage"] = "修復ダイアログ内(モーダル)",
         ["SnapshotViewModel.cs:CreatingCountsText"] = "スナップショットウィンドウ内(モーダル)",
         ["SnapshotViewModel.cs:StatusMessage"] = "スナップショットウィンドウ内(モーダル)",
         ["TagEditorViewModel.cs:ErrorMessage"] = "タグ編集ダイアログ内(モーダル)",

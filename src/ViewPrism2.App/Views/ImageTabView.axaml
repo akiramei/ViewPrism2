@@ -953,22 +953,18 @@
                           <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.fileOps]}" FontSize="13.5" FontWeight="Medium" Foreground="{StaticResource TextPrimaryBrush}" />
                         </StackPanel>
                       </Button>
-                      <!-- 未裁定の画像(ECO-129/CAD PD-1): pending 裁定ダイアログ+CMP-010 件数バッジ -->
-                      <Button Classes="menuRow" Command="{Binding OpenPendingReviewCommand}" IsEnabled="{Binding CanOpenMaintenance}">
+                      <!-- ECO-140/CAD IR-1: pending+missing の統合裁定面+CMP-010 事象件数 -->
+                      <Button x:Name="IntegrityReviewMenuItem"
+                              Classes="menuRow"
+                              Command="{Binding OpenIntegrityReviewCommand}"
+                              IsEnabled="{Binding CanOpenMaintenance}">
                         <DockPanel VerticalAlignment="Center">
-                          <PathIcon DockPanel.Dock="Left" Data="{StaticResource ImageIcon}" Width="16" Height="16" Margin="0,0,10,0" Foreground="#B5670C" />
-                          <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding HasPending}">
-                            <TextBlock Text="{Binding PendingCount}" />
+                          <PathIcon DockPanel.Dock="Left" Data="{StaticResource ImageIcon}" Width="16" Height="16" Margin="0,0,10,0" Foreground="#5B6473" />
+                          <Border DockPanel.Dock="Right" Classes="trashCountBadge" IsVisible="{Binding HasIntegrityReview}">
+                            <TextBlock Text="{Binding IntegrityReviewCount}" />
                           </Border>
-                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[pending.menuEntry]}" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[integrity.menuEntry]}" FontSize="13.5" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
                         </DockPanel>
-                      </Button>
-                      <!-- 修復: 既存モーダル(ECO-015・変更なし) -->
-                      <Button Classes="menuRow" Command="{Binding OpenRepairCommand}" IsEnabled="{Binding CanOpenMaintenance}">
-                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                          <PathIcon Data="{StaticResource RepairIcon}" Width="16" Height="16" Foreground="{StaticResource FaintTextBrush}" />
-                          <TextBlock Text="{Binding $parent[UserControl].((vm:ImageTabViewModel)DataContext).Loc[toolbar.repair]}" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" />
-                        </StackPanel>
                       </Button>
                       <!-- 削除: 削除モードに入る(ECO-018・赤) -->
                       <Button Classes="menuRow" Command="{Binding EnterDeleteCommand}" IsEnabled="{Binding CanOpenMaintenance}">

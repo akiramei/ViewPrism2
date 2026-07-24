@@ -188,7 +188,7 @@ public sealed partial class ImageTabTrashViewModel : ObservableObject
         _recompute();
     }
 
-    /// <summary>⋯「ゴミ箱」バッジ用に選択コレクションの deleted 件数を取り直す。ホスト(InitializeAsync/OpenRepair)からも呼ばれる。</summary>
+    /// <summary>⋯「ゴミ箱」バッジ用に選択コレクションの deleted 件数を取り直す。ホスト(InitializeAsync/OpenIntegrityReview)からも呼ばれる。</summary>
     public async Task RefreshCountAsync()
     {
         var collectionId = _getCollectionId();

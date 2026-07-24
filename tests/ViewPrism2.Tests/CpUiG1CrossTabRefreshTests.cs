@@ -79,8 +79,8 @@ public sealed class CpUiG1CrossTabRefreshTests : IDisposable
 
         var tile = Tile(vm, "a.jpg");
         Assert.True(tile.IsPending);
-        Assert.Equal(1, vm.PendingCount);
-        Assert.True(vm.HasPending);
+        Assert.Equal(1, vm.IntegrityReviewCount);
+        Assert.True(vm.HasIntegrityReview);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class CpUiG1CrossTabRefreshTests : IDisposable
 
         var tile = Tile(shell.ImageTab, "a.jpg");
         Assert.True(tile.IsPending);                      // クロスタブでも pending が反映
-        Assert.Equal(1, shell.ImageTab.PendingCount);
+        Assert.Equal(1, shell.ImageTab.IntegrityReviewCount);
     }
 
     private sealed class NullWindows : IWindowService

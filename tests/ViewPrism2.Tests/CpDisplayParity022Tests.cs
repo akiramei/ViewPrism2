@@ -119,7 +119,7 @@ public sealed class CpDisplayParity022Tests
         await vm.LoadAsync();
         vm.SelectedMissing = vm.MissingImages.First();
         // 候補ロードは selection 変更で fire-and-forget 発火するが、unit では awaitable 経路で確実に待つ
-        // (RepairViewModel と同型の RefreshCandidatesAsync)。
+        // (IntegrityReviewViewModel と同型の RefreshCandidatesAsync)。
         await vm.RefreshCandidatesAsync();
 
         var candidate = Assert.Single(vm.Candidates);

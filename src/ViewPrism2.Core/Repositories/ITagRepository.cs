@@ -56,6 +56,13 @@ public interface ITagRepository
     /// </summary>
     Task<IReadOnlyList<ImageTag>> GetImageTagsByFolderAsync(string syncFolderId, CancellationToken ct = default);
 
+    /// <summary>
+    /// ECO-140: 統合裁定の保持タグ件数用。DB 境界で対象を pending∪missing に限定する。
+    /// normal 限定の表示系 API と混用しない。
+    /// </summary>
+    Task<IReadOnlyList<ImageTag>> GetIntegrityReviewImageTagsByFolderAsync(
+        string syncFolderId, CancellationToken ct = default);
+
     /// <summary>タグ id → 使用数(COUNT(DISTINCT image_id)、REQ-029)。</summary>
     Task<IReadOnlyDictionary<string, int>> GetUsageCountsAsync();
 

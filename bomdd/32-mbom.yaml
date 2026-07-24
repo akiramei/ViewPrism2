@@ -94,7 +94,7 @@ mbom:
       ebom_refs: [E-SCAN-005, E-RELINK-007]
       artifact:
         path: src/ViewPrism2.Core/Services/ScanJudge.cs
-        path_note: "+ src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + RelinkService.cs"
+        path_note: "+ src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + RelinkService.cs + IntegrityReviewFileHashProvider.cs"
         type: dotnet-classlib
       interface_contract:
         judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。v5.0(ECO-129/REQ-101): Decision = Skip | UpdateMeta(deleted/pending 起点) | UpdateMetaAndPend(normal→'changed'/missing→'reappeared') | PendInPlace(missing 起点・メタ一致の再出現) | AddNormal(初回のみ) | AddPending(再スキャン新規・candidateId 任意・origin='new')"
@@ -111,6 +111,7 @@ mbom:
         - (ECO-059/FMEA-039) ファイル読取はHDDのランダムseekを増やさない直列+SequentialScan。列挙時のサイズ/日時を保持してFileInfo再照会を行わず、DB変更だけを有界バッチ化し、進捗通知は同じ整数百分率を重複送信しない
         - (ECO-059/GF-059-01) ScanCoreAsyncはTask.Run境界で呼出元UI threadから明示分離する。ConfigureAwait(false)だけに依存しない(同期完了awaitはthreadを切り替えないため)
         - (ECO-060/REQ-086) 初回列挙はstreaming。ApplyScanBatchAsync成功後だけnormal追加行をScanBatchCommittedで通知し、batch内/全体の取込順を保持する
+        - (ECO-140/REQ-103) UpdateMetaAndPend(changed/reappeared)の適用は hash 上書き前の値を pending_baseline_hash へ保全する。PendInPlace は保全しない。ScanJudge/ScanStaging の判定ロジックと I/O は不変
       acceptance_refs: [CP-SCAN-004]
       fmea_refs: [FMEA-004, FMEA-011, FMEA-039]
 
@@ -122,9 +123,9 @@ mbom:
         type: dotnet-classlib
       interface_contract:
         open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
-        schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE"
-        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない。ECO-098 image trash read model=GetDeletedByFolderAsync(collection+deleted predicate・file_name安定順)でhidden normal/missingをmaterializeしない"
-        scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。通常の単行repository APIは非スキャンconsumer向けに維持"
+        schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE。ECO-140 migration 011=images.pending_baseline_hash TEXT NULL(既存行NULL)+事象件数の candidate_link_id 探索用複合index"
+        repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない。ECO-098 image trash read model=GetDeletedByFolderAsync(collection+deleted predicate・file_name安定順)でhidden normal/missingをmaterializeしない。ECO-140 integrity read model=GetIntegrityReviewByFolderAsync/CountIntegrityReviewEventsAsync/GetIntegrityReviewImageTagsByFolderAsync(pending∪missingをDB境界限定)"
+        scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。ECO-140 UpdateMetaAndPend は旧hashをpending_baseline_hashへ同一UPDATEで保全し、T13/T14/T15/relink確定はNULLクリア。通常の単行repository APIは非スキャンconsumer向けに維持"
         cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
       invariants:
         - 接続は単一共有+SemaphoreSlim シリアル化(K-SQLITE)
@@ -749,13 +750,13 @@ mbom:
       ebom_refs: [E-UI-INTEGRITY-050]
       artifact:
         path: src/ViewPrism2.App/Views/IntegrityReviewWindow.axaml
-        path_note: "IntegrityReviewWindow.axaml(.cs)+ViewModels/IntegrityReviewViewModel.cs+WindowService.ShowIntegrityReviewAsync+ImageTabViewModel(⋯メニュー統合入口 1 行+事象合計件数)+Core 裁定サービス(事象分類+reappeared on-demand hash 確認)+E-RELINK-007 一本化 API(選別+単発/バッチ確定)。**製造時確定**= /eco-fix(ECO-140)の実 diff で path_note を as-built 同期する"
+        path_note: "IntegrityReviewWindow.axaml(.cs)+ViewModels/IntegrityReviewViewModel.cs+WindowService.ShowIntegrityReviewAsync+ImageTabViewModel(⋯メニュー統合入口 1 行+事象合計件数)+Core/Services/Repair/IntegrityReviewService.cs(決定論分類+注入 seam 経由 reappeared on-demand hash 確認+混在一括)+Infrastructure/Scanning/IntegrityReviewFileHashProvider.cs+Infrastructure/Scanning/RelinkService.cs(高信頼選別+単発/バッチ確定の一本化)+ImageRepository(status 限定母集合+原子的混在バッチ)。旧 PendingReview/Repair の Window・ViewModel・入口は撤去し、PendingReviewService は個別 T13/T14/T15 のみに縮退"
         type: avalonia-app
       interface_contract:
         entry: "画像タブ ⋯メニュー「要確認の画像…」(+CMP-010 事象合計件数)→ 選択コレクションの pending∪missing を事象 3 グループでモーダル裁定(旧 2 入口・旧 2 Window は撤去)"
         classify: "事象分類= 自動裁定できる(移動一意組+reappeared hash 一致)/個別に確認/見つからない(missing 単独)。DB 境界 status 限定・決定論 unit 検査可能"
         adjudicate: "一括= 移動 T4 relink+再出現 T13 accept の混在を CMP-011 確認つき単一トランザクション(stale 1 件で全 rollback)。個別= T13/T14/T15/保留+単発 relink(T4)+除外(T9)。選別+確定は E-RELINK-007 API のみ経由"
-        hashcheck: "reappeared の hash 再計算は裁定面 on-demand・読み取り専用・DB 無変更・scan 経路非接触(REQ-103)。完了まで自動裁定件数非提示"
+        hashcheck: "reappeared の hash 再計算は裁定面 on-demand・読み取り専用・DB 無変更・scan 経路非接触(REQ-103)。比較基準=pending_baseline_hash??記録hash。完了まで自動裁定CTA非提示だが完了済み自動行は一覧に保持。個別裁定後の再分類は基準/記録hash/path/size/mtime不変の確認済み結果だけ再利用し、逐次裁定のO(N²)再hashを避ける"
       acceptance_refs: [CP-UI-G1, CP-INTEGRITY-036]
       acceptance_note: "事象分類・混在バッチ・hash 確認分岐・一本化・入口統合は unit(CpIntegrityReviewTests)。視覚は headless probe(GfIntegrityReviewVisualParityTests= CAD IR-1〜8 visualContract)+golden(CP-UI-G1・実機はデータ後始末まで)"
 

@@ -19,3 +19,4 @@ logs/
 
 # 設計スクラッチ(コミット対象外)
 work/
+.artifacts/

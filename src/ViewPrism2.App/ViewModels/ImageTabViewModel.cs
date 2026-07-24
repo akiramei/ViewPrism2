@@ -52,8 +52,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     private List<ImageRecord> _allNormal = new();
 
     // ECO-129/REQ-101: 選択コレクションの pending(未裁定)。無絞り込み FS ブラウズへの並置+
-    // ⋯メニュー「未裁定の画像…」の件数に使う(件数は通常小=裁定対象のみ)
+    // ⋯メニュー「要確認の画像…」の事象件数に使う(件数は通常小=裁定対象のみ)
     private List<ImageRecord> _allPending = new();
+    private int _integrityReviewCount;
     private List<ImageEntry> _pendingEntries = new();
     private HashSet<string> _normalIds = new(StringComparer.Ordinal);
     private Dictionary<string, List<ImageTag>> _imageTags = new(StringComparer.Ordinal);
@@ -432,8 +433,11 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
                 var views = await _views.GetAllAsync().ConfigureAwait(false);
                 var trashCount = await _images.CountByFolderAndStatusAsync(
                     collectionId, ImageStatus.Deleted, ct).ConfigureAwait(false);
+                var integrityReviewCount = await _images.CountIntegrityReviewEventsAsync(
+                    collectionId, ct).ConfigureAwait(false);
                 return (Images: images.ToList(), Pendings: pendings.ToList(), ImageTags: imageTags.ToList(),
-                    Tags: tags.ToList(), Views: views.ToList(), TrashCount: trashCount);
+                    Tags: tags.ToList(), Views: views.ToList(), TrashCount: trashCount,
+                    IntegrityReviewCount: integrityReviewCount);
             }, ct).ConfigureAwait(true);
 
             if (_loadingStopped || generation != _contentLoadGeneration || ct.IsCancellationRequested ||
@@ -442,6 +446,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
 
             _allNormal = content.Images;
             _allPending = content.Pendings; // ECO-129
+            _integrityReviewCount = content.IntegrityReviewCount;
             _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
             _imageTags = content.ImageTags.GroupBy(it => it.ImageId, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
@@ -477,6 +482,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     {
         _allNormal = [];
         _allPending = [];
+        _integrityReviewCount = 0;
         _pendingEntries = [];
         _normalIds = new HashSet<string>(StringComparer.Ordinal);
         _imageTags = new Dictionary<string, List<ImageTag>>(StringComparer.Ordinal);
@@ -538,7 +544,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         }
 
         // 母集合(_allNormal/_allPending)を再取得し、ゴミ箱件数・件数バッジ・一覧を再計算する
-        // (画像タブ自身の裁定/削除後の再読込 OpenPendingReview と同一経路)。選択・ナビ・モードは保持。
+        // (画像タブ自身の統合裁定/削除後の再読込 OpenIntegrityReview と同一経路)。選択・ナビ・モードは保持。
         await ReloadImagesAsync().ConfigureAwait(true);
         await Trash.RefreshCountAsync().ConfigureAwait(true);
         Recompute();
@@ -1979,21 +1985,21 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
     //      RestoreSelectedTrash/PurgeSelectedTrash/EmptyTrash)は Trash 子 VM へ移送(ECO-036 第1段)。
     //      XAML は Trash.OpenTrashCommand 等へバインド。
 
-    // ---- 未裁定(pending)裁定の入口(ECO-129/E-UI-PENDING-049・CAD PD-1) ----
+    // ---- 統合裁定の入口(ECO-140/E-UI-INTEGRITY-050・CAD IR-1) ----
 
-    /// <summary>選択コレクションの未裁定件数(⋯メニューの CMP-010 表示系バッジ。0 件では出さない)。</summary>
-    public int PendingCount => _allPending.Count;
+    /// <summary>pending+missing を事象へ統合した件数(CMP-010。0 件では badge なし)。</summary>
+    public int IntegrityReviewCount => _integrityReviewCount;
 
-    public bool HasPending => _allPending.Count > 0;
+    public bool HasIntegrityReview => _integrityReviewCount > 0;
 
-    /// <summary>⋯ メニュー: 未裁定の画像(pending)裁定ダイアログを開く(ECO-129/§2.11.7)。閉じ後に再読込。</summary>
+    /// <summary>⋯ メニュー: 「要確認の画像」統合裁定面を開く。閉じ後に母集合を再読込。</summary>
     [RelayCommand]
-    private async Task OpenPendingReview()
+    private async Task OpenIntegrityReview()
     {
         MoreMenuOpen = false;
         if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
         OnPropertyChanged(string.Empty);
-        var adjudicated = await _windows.ShowPendingReviewAsync(_collectionId).ConfigureAwait(true);
+        var adjudicated = await _windows.ShowIntegrityReviewAsync(_collectionId).ConfigureAwait(true);
         if (adjudicated)
         {
             // 裁定は normal 化/行置換/deleted 化を含む= 母集合・件数・ゴミ箱件数が変わる
@@ -2001,18 +2007,6 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
             await Trash.RefreshCountAsync().ConfigureAwait(true);
             Recompute();
         }
-    }
-
-    /// <summary>⋯ メニュー: 修復ライフサイクル(criteria/relink/復元)を既存モーダルで開く(ECO-015)。閉じ後にデータ再読込。</summary>
-    [RelayCommand]
-    private async Task OpenRepair()
-    {
-        MoreMenuOpen = false;
-        if (_collectionId is null) { OnPropertyChanged(string.Empty); return; }
-        await _windows.ShowRepairAsync(_collectionId).ConfigureAwait(true);
-        await ReloadImagesAsync().ConfigureAwait(true);
-        await Trash.RefreshCountAsync().ConfigureAwait(true); // 修復の除外(missing→deleted)で件数が変わる
-        Recompute();
     }
 
     /// <summary>
@@ -2919,7 +2913,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         }
     }
 
-    /// <summary>マージ後・scan完了後・裁定/修復閉じ後・クロスタブ復帰後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
+    /// <summary>マージ後・scan完了後・統合裁定閉じ後・クロスタブ復帰後のデータ再読込(source は deleted 化=母集合から外れる)。</summary>
     private async Task ReloadImagesAsync()
     {
         if (_collectionId is null)
@@ -2938,6 +2932,9 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         // ⋯メニュー件数・一覧バッジの残存に加え、裁定済み(normal 化)画像が両母集合へ重複し
         // SortFiles の ToDictionary(ID キー)で duplicate key 例外に至る
         var pending = (await _images.GetPendingByFolderAsync(collectionId).ConfigureAwait(true)).ToList();
+        var integrityReviewCount = await _images
+            .CountIntegrityReviewEventsAsync(collectionId)
+            .ConfigureAwait(true);
         if (generation != Volatile.Read(ref _contentLoadGeneration) ||
             !string.Equals(_collectionId, collectionId, StringComparison.Ordinal))
         {
@@ -2945,6 +2942,7 @@ public sealed partial class ImageTabViewModel : ObservableObject, IChipStripHost
         }
         _allNormal = normal;
         _allPending = pending;
+        _integrityReviewCount = integrityReviewCount;
         _normalIds = _allNormal.Select(image => image.Id).ToHashSet(StringComparer.Ordinal);
         _collectionCounts[collectionId] = _allNormal.Count;
         await RefreshImageTagsAsync().ConfigureAwait(true);

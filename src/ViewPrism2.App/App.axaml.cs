@@ -259,6 +259,12 @@ public partial class App : Application
         services.AddSingleton(sp => new RelinkService(
             sp.GetRequiredService<IImageRepository>(),
             sp.GetRequiredService<ITagRepository>()));
+        services.AddSingleton<IRelinkService>(sp => sp.GetRequiredService<RelinkService>());
+        services.AddSingleton<IIntegrityReviewHashProvider, IntegrityReviewFileHashProvider>();
+        services.AddSingleton(sp => new IntegrityReviewService(
+            sp.GetRequiredService<IImageRepository>(),
+            sp.GetRequiredService<IRelinkService>(),
+            sp.GetRequiredService<IIntegrityReviewHashProvider>()));
         services.AddSingleton(sp => new ThumbnailService(
             Path.Combine(appDataDir, "thumbnails"),
             sp.GetRequiredService<ILogger<ThumbnailService>>()));

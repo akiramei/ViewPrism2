@@ -12,10 +12,8 @@ using Xunit;
 namespace ViewPrism2.Tests;
 
 /// <summary>
-/// CP-UI-G1(unit 部分・ECO-015): 画像タブツールバー「その他(⋯)」メンテナンスメニュー。
-/// トラッシュ/修復を既存モーダル(IWindowService.ShowTrashAsync/ShowRepairAsync)へ当該コレクション ID で
-/// 配線すること、コレクション未選択時は開かない(REQ-053 スコープ)こと、軸/ソートメニューと排他に開閉することを検査。
-/// 既存モーダル本体の挙動(復元/完全削除/relink)は E-TRASH-038/E-UI-REPAIR-039 の各 CP・golden。
+/// ECO-140/CP-INTEGRITY-036: ⋯ メニューの裁定入口を「要確認の画像」1 本へ統合し、
+/// 選択 collection ID で開くことを固定する。
 /// </summary>
 [Trait("cp", "CP-UI-G1")]
 public sealed class CpUiG1MaintenanceMenuTests : IDisposable
@@ -26,7 +24,7 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
     private sealed class CapturingWindowService : IWindowService
     {
         public List<string> TrashCalls { get; } = new();
-        public List<string> RepairCalls { get; } = new();
+        public List<string> IntegrityReviewCalls { get; } = new();
         public Task<bool> ConfirmAsync(string title, string message, string confirmLabel, bool destructive = false, string? cancelLabel = null) => Task.FromResult(true);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
         public Task ShowFolderManagementAsync() => Task.CompletedTask;
@@ -48,7 +46,11 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
         public Task ShowSimilarSearchAsync(ImageEntry baseImage, IReadOnlyList<ImageEntry> collectionEntries) => Task.CompletedTask;
         public Task<bool> ShowMergeAsync(ImageEntry target, IReadOnlyList<ImageEntry> sources) => Task.FromResult(false);
         public Task ShowTrashAsync(string collectionId) { TrashCalls.Add(collectionId); return Task.CompletedTask; }
-        public Task ShowRepairAsync(string collectionId) { RepairCalls.Add(collectionId); return Task.CompletedTask; }
+        public Task<bool> ShowIntegrityReviewAsync(string collectionId)
+        {
+            IntegrityReviewCalls.Add(collectionId);
+            return Task.FromResult(false);
+        }
     }
 
     private ImageTabViewModel NewVm(CapturingWindowService win)
@@ -81,7 +83,7 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
     }
 
     [Fact]
-    public async Task コレクション選択時はゴミ箱を画像タブ内ポップアップで開き修復は既存モーダルで開く()
+    public async Task コレクション選択時はゴミ箱をinPaneで開き統合裁定面を単一入口で開く()
     {
         var col = await SeedCollectionAsync();
         var win = new CapturingWindowService();
@@ -90,11 +92,11 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
 
         Assert.True(vm.CanOpenMaintenance);
         await vm.OpenTrashCommand.ExecuteAsync(null);
-        await vm.OpenRepairCommand.ExecuteAsync(null);
+        await vm.OpenIntegrityReviewCommand.ExecuteAsync(null);
 
         Assert.True(vm.TrashOpen);               // ゴミ箱=画像タブ内ポップアップ(ECO-019・モーダルは呼ばない)
         Assert.Empty(win.TrashCalls);            // 既存トラッシュモーダルは開かない
-        Assert.Equal([col.Id], win.RepairCalls); // 修復=既存モーダル(ECO-015・変更なし)
+        Assert.Equal([col.Id], win.IntegrityReviewCalls);
         Assert.False(vm.MoreMenuOpen);           // 起動でメニューは閉じる
     }
 
@@ -110,11 +112,11 @@ public sealed class CpUiG1MaintenanceMenuTests : IDisposable
         Assert.False(vm.CanOpenMaintenance);
 
         await vm.OpenTrashCommand.ExecuteAsync(null);
-        await vm.OpenRepairCommand.ExecuteAsync(null);
+        await vm.OpenIntegrityReviewCommand.ExecuteAsync(null);
 
         Assert.False(vm.TrashOpen);     // ゴミ箱ポップアップも開かない
         Assert.Empty(win.TrashCalls);
-        Assert.Empty(win.RepairCalls);
+        Assert.Empty(win.IntegrityReviewCalls);
     }
 
     [Fact]

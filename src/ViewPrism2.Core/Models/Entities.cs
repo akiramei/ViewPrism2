@@ -44,6 +44,12 @@ public sealed record ImageRecord
     /// <summary>pending の由来(REQ-101/ECO-129)。pending 以外へ遷移時に NULL クリア。</summary>
     public PendingOrigin? PendingOrigin { get; init; }
 
+    /// <summary>
+    /// ECO-140/REQ-103: UpdateMetaAndPend が hash を上書きする前の裁定基準。
+    /// migration 前の既存行と PendInPlace は NULL のまま記録 hash を基準にする。
+    /// </summary>
+    public string? PendingBaselineHash { get; init; }
+
     /// <summary>ISO 8601 UTC 文字列(INV-002)。</summary>
     public required string CreatedDate { get; init; }
 

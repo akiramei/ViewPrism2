@@ -48,7 +48,7 @@
           <ListBox ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:RelinkCandidateViewModel">
-                <!-- DC-RELINK-001(A-1・ECO-004): 候補カードは RepairWindow と同型 —
+                <!-- DC-RELINK-001(A-1・ECO-004): 候補カードは IntegrityReviewWindow と同型 —
                      サムネイル+ファイル名+パス+サイズ+更新日時で再リンク可否を判断できる情報を提示する。 -->
                 <Grid ColumnDefinitions="56,8,*" Margin="0,2">
                   <Border Grid.Column="0" Width="56" Height="56" CornerRadius="4" ClipToBounds="True"

@@ -27,8 +27,8 @@ public sealed class WindowService : IWindowService
     private readonly ViewService _viewService;
     private readonly ScanCoordinator _scans;
     private readonly RelinkService _relink;
+    private readonly IntegrityReviewService _integrityReview;
     private readonly ImageMemoryCache _imageCache;
-    private readonly CriteriaSearchService _criteriaSearch;
     private readonly TrashService _trashService;
     private readonly LocalizationService _localization;
     private readonly AppSettings _settings;
@@ -45,8 +45,8 @@ public sealed class WindowService : IWindowService
         ViewService viewService,
         ScanCoordinator scans,
         RelinkService relink,
+        IntegrityReviewService integrityReview,
         ImageMemoryCache imageCache,
-        CriteriaSearchService criteriaSearch,
         TrashService trashService,
         LocalizationService localization,
         AppSettings settings,
@@ -62,8 +62,8 @@ public sealed class WindowService : IWindowService
         _viewService = viewService;
         _scans = scans;
         _relink = relink;
+        _integrityReview = integrityReview;
         _imageCache = imageCache;
-        _criteriaSearch = criteriaSearch;
         _trashService = trashService;
         _localization = localization;
         _settings = settings;
@@ -153,7 +153,7 @@ public sealed class WindowService : IWindowService
     /// <summary>スキャン結果確認の親付け先(R8 所見3: sibling 活性の穴を塞ぐ)。</summary>
     private Window? _activeFolderManagement;
 
-    public async Task<bool> ShowPendingReviewAsync(string collectionId)
+    public async Task<bool> ShowIntegrityReviewAsync(string collectionId)
     {
         if (Owner is null)
         {
@@ -166,11 +166,17 @@ public sealed class WindowService : IWindowService
             return false;
         }
 
-        // ECO-129/§2.11.7: 裁定は 1 件ずつ確定・遷移は PendingReviewService(T13/T14/T15)経由のみ
-        var vm = new PendingReviewViewModel(
-            new PendingReviewService(_images), _images, _tags, _localization, this, folder);
-        var window = new PendingReviewWindow { DataContext = vm };
-        await vm.LoadAsync();
+        var vm = new IntegrityReviewViewModel(
+            _integrityReview,
+            new PendingReviewService(_images),
+            _images,
+            _tags,
+            _relink,
+            _trashService,
+            _localization,
+            this,
+            folder);
+        var window = new IntegrityReviewWindow { DataContext = vm };
         await window.ShowDialog(Owner);
         return vm.Adjudicated;
     }
@@ -452,7 +458,7 @@ public sealed class WindowService : IWindowService
             return;
         }
 
-        // _folders は候補/missing 行のサムネイル絶対パス解決用(DC-RELINK-001/ECO-004。RepairViewModel と同型)。
+        // _folders は候補/missing 行のサムネイル絶対パス解決用(DC-RELINK-001/ECO-004。IntegrityReviewViewModel と同型)。
         var vm = new RelinkViewModel(folderId, _images, _folders, _relink, _localization, this);
         var window = new RelinkWindow { DataContext = vm };
         await vm.LoadAsync();
@@ -501,23 +507,4 @@ public sealed class WindowService : IWindowService
 
     // ECO-051: ShowSimilarSearchAsync / ShowMergeAsync / ShowTrashAsync(V3 旧モーダル一式)は撤去(残骸)。
 
-    public async Task ShowRepairAsync(string collectionId)
-    {
-        if (Owner is null)
-        {
-            return;
-        }
-
-        // ECO-129 R8 所見1: 旧 GF-V4-02 の「修復を開く前の暗黙一段階スキャン」は撤去。
-        // v5.0(REQ-100/REQ-101)では再スキャン=二段階(サマリー+適用同意)が正であり、
-        // 暗黙スキャンは同意なく DB を変更し(内容変更の pending 化を含む)REQ-100 を迂回する。
-        // 修復は「開いた時点の DB 状態」を表示し、鮮度が必要ならユーザーが明示的に再スキャンする。
-
-        // 修復ライフサイクル UI(M-UI-REPAIR-027 / §2.11.5): relink フロー(検索=候補絞り込みに統一)。
-        // _folders は候補/missing のサムネイル絶対パス解決用(GF-V4-04)。
-        var vm = new RepairViewModel(collectionId, _images, _folders, _relink, _trashService, _localization, this);
-        var window = new RepairWindow { DataContext = vm };
-        await vm.LoadAsync();
-        await window.ShowDialog(Owner);
-    }
 }

@@ -5,7 +5,8 @@ public sealed record ScanFileMetaUpdate(
     string Id,
     string Hash,
     long FileSize,
-    string ModifiedDate);
+    string ModifiedDate,
+    bool PreservePendingBaselineHash = false);
 
 /// <summary>
 /// スキャン手順 4/5・規則 1/2 で適用するステータス変更(v5.0=ECO-129: pending 化に由来を添える)。

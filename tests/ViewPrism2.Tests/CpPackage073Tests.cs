@@ -419,7 +419,6 @@ public sealed class CpPackage073Tests : IDisposable
         public Task ShowRelinkAsync(string folderId) => Task.CompletedTask;
         public void ShowViewer(IReadOnlyList<App.ViewModels.ImageEntry> ordered, int startIndex) { }
         public Task ShowTrashAsync(string collectionId) => Task.CompletedTask;
-        public Task ShowRepairAsync(string collectionId) => Task.CompletedTask;
     }
 
     [Fact]

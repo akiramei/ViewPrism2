@@ -24,6 +24,7 @@ using ViewPrism2.Core.Services.Similarity;
 using ViewPrism2.Infrastructure.Database;
 using ViewPrism2.Infrastructure.I18n;
 using ViewPrism2.Infrastructure.Imaging;
+using ViewPrism2.Infrastructure.Scanning;
 
 internal static class Program
 {
@@ -219,14 +220,14 @@ internal static class Program
         await CaptureFileListSortAsync(outDir, manager, tagRepo, tagService, viewService, locJa);
         await CaptureFileOpsAsync(outDir, manager, tagRepo, viewService, locJa);
         await CaptureScanSummaryAsync(outDir, locJa);
-        await CapturePendingReviewAsync(outDir, manager, tagRepo, viewService, locJa);
+        await CaptureIntegrityReviewAsync(outDir, manager, tagRepo, viewService, locJa);
     }
 
     /// <summary>
-    /// ECO-129(pending_review PD-1〜4): 未裁定バッジ+裁定ダイアログの R7 並置用撮影。
-    /// 原器= pending_review/PD-*.png。pending 行を直接シード(実ファイルなし=クローム比較・ECO-109 同様式)。
+    /// ECO-140(integrity_review IR-1〜8): 統合入口+事象 3 グループ+各詳細/一時/空状態の R7 撮影。
+    /// 原器= integrity_review/IR-*.png。行を直接シード(実ファイルなし=クローム比較・ECO-109 同様式)。
     /// </summary>
-    private static async Task CapturePendingReviewAsync(
+    private static async Task CaptureIntegrityReviewAsync(
         string outDir, DatabaseManager manager, TagRepository tagRepo,
         ViewService viewService, LocalizationService locJa)
     {
@@ -234,8 +235,11 @@ internal static class Program
         var images = new ImageRepository(manager);
         var col = (await folders.GetAllAsync()).First(f => f.Id == "col-eco109");
 
-        // pending 3 種をシード(PD-1 バッジ+PD-2/3 一覧の由来チップ)
-        async Task<ImageRecord> SeedPendingAsync(string path, PendingOrigin origin, string? candidate = null)
+        async Task<ImageRecord> SeedPendingAsync(
+            string path,
+            PendingOrigin origin,
+            string? candidate = null,
+            string? hash = null)
         {
             var record = new ImageRecord
             {
@@ -244,7 +248,7 @@ internal static class Program
                 RelativePath = path,
                 FileName = path[(path.LastIndexOf('/') + 1)..],
                 FileSize = 2_516_582, // 2.4 MB(PD-2 の比較行)
-                Hash = "pending-" + path,
+                Hash = hash ?? "pending-" + path,
                 Status = ImageStatus.Pending,
                 PendingOrigin = origin,
                 CandidateLinkId = candidate,
@@ -257,18 +261,35 @@ internal static class Program
 
         var changed = await SeedPendingAsync("hakone_0142.jpg", PendingOrigin.Changed);
         await SeedPendingAsync("hakone_0198.jpg", PendingOrigin.Changed);
-        var missing = new ImageRecord
+        var movedMissing = new ImageRecord
         {
             Id = IdGenerator.NewId(), SyncFolderId = col.Id, RelativePath = "album_0004.png",
             FileName = "album_0004.png", FileSize = 1, Hash = "same-content",
             Status = ImageStatus.Missing,
             CreatedDate = "2026-01-01T00:00:00.000Z", ModifiedDate = "2026-01-01T00:00:00.000Z",
         };
-        await images.AddAsync(missing);
-        await SeedPendingAsync("scan_0001.jpg", PendingOrigin.New, missing.Id);
+        await images.AddAsync(movedMissing);
+        var moved = await SeedPendingAsync(
+            "scan_0001.jpg", PendingOrigin.New, movedMissing.Id, movedMissing.Hash);
+        var newImage = await SeedPendingAsync("dsc_0417.jpg", PendingOrigin.New);
         await SeedPendingAsync("dsc_8820.jpg", PendingOrigin.Restored);
+        var missingOnly = new ImageRecord
+        {
+            Id = IdGenerator.NewId(), SyncFolderId = col.Id, RelativePath = "album_0119.png",
+            FileName = "album_0119.png", FileSize = 1_824_000, Hash = "missing-only",
+            Status = ImageStatus.Missing,
+            CreatedDate = "2025-01-01T00:00:00.000Z", ModifiedDate = "2025-01-01T00:00:00.000Z",
+        };
+        await images.AddAsync(missingOnly);
+        await images.AddAsync(new ImageRecord
+        {
+            Id = IdGenerator.NewId(), SyncFolderId = col.Id,
+            RelativePath = "found/album_0119.png", FileName = "album_0119.png",
+            FileSize = missingOnly.FileSize, Hash = "manual-candidate", Status = ImageStatus.Normal,
+            CreatedDate = "2026-01-01T00:00:00.000Z", ModifiedDate = "2026-01-01T00:00:00.000Z",
+        });
 
-        // ---- PD-1: 画像タブのバッジ+⋯メニュー入口 ----
+        // ---- IR-1: 画像タブの未裁定バッジ+統合 ⋯メニュー入口 ----
         var featureRepo = new ImageFeatureRepository(manager);
         var simRepo = new ImageSimilarityRepository(manager);
         var tab = new ImageTabViewModel(
@@ -286,47 +307,101 @@ internal static class Program
         await PumpAsync();
         tab.ToggleMoreMenuCommand.Execute(null);
         await PumpAsync();
-        Capture(tabWindow, Path.Combine(outDir, "impl-pending-PD-1.png"));   // 原器 PD-1.png(バッジ+メニュー)
+        Capture(tabWindow, Path.Combine(outDir, "impl-integrity-IR-1.png"));
         tabWindow.Close();
         await PumpAsync();
 
-        // ---- PD-2/3/4: 裁定ダイアログ ----
-        var review = new ViewPrism2.Core.Services.Repair.PendingReviewService(images);
-        async Task<PendingReviewViewModel> NewVmAsync()
+        // ---- IR-2〜5/7/8: 統合裁定ダイアログ ----
+        var relink = new RelinkService(images, tagRepo);
+        var review = new IntegrityReviewService(images, relink, new IntegrityReviewFileHashProvider());
+        async Task<IntegrityReviewViewModel> NewVmAsync()
         {
-            var vm = new PendingReviewViewModel(review, images, tagRepo, locJa, new StubWindows(), col);
+            var vm = new IntegrityReviewViewModel(
+                review,
+                new PendingReviewService(images),
+                images,
+                tagRepo,
+                relink,
+                new TrashService(images, folders, new FilePresenceProbe()),
+                locJa,
+                new StubWindows(),
+                col);
             await vm.LoadAsync();
             return vm;
         }
 
-        async Task ShotAsync(PendingReviewViewModel vm, string file)
+        async Task ShotAsync(
+            IntegrityReviewViewModel vm,
+            string file,
+            Action<IntegrityReviewViewModel>? beforeCapture = null)
         {
-            var window = new PendingReviewWindow { DataContext = vm };
+            var window = new IntegrityReviewWindow { DataContext = vm };
             window.Show();
             await PumpAsync();
+            beforeCapture?.Invoke(vm);
             await PumpAsync();
             Capture(window, Path.Combine(outDir, file));
             window.Close();
             await PumpAsync();
         }
 
-        var pd2 = await NewVmAsync();
-        pd2.Selected = pd2.Items.First(i => string.Equals(i.Record.Id, changed.Id, StringComparison.Ordinal));
-        await ShotAsync(pd2, "impl-pending-PD-2.png");                        // 内容変更由来
+        var ir2 = await NewVmAsync();
+        ir2.Selected = ir2.Items.First(i => i.Record.Id == moved.Id);
+        await ShotAsync(ir2, "impl-integrity-IR-2.png");
 
-        var pd3 = await NewVmAsync();
-        pd3.Selected = pd3.Items.First(i => i.Record.CandidateLinkId is not null);
-        await ShotAsync(pd3, "impl-pending-PD-3.png");                        // 新規・候補あり
+        var ir3 = await NewVmAsync();
+        ir3.Selected = ir3.Items.First(i => i.Record.Id == changed.Id);
+        await ShotAsync(ir3, "impl-integrity-IR-3.png");
 
-        // PD-4 空状態: 全件裁定して空へ(受け入れ=T13)
-        var pd4 = await NewVmAsync();
-        while (pd4.Items.Count > 0)
+        var ir4 = await NewVmAsync();
+        ir4.Selected = ir4.Items.First(i => i.Record.Id == newImage.Id);
+        await ShotAsync(ir4, "impl-integrity-IR-4.png");
+
+        var ir5 = await NewVmAsync();
+        ir5.Selected = ir5.Items.First(i => i.Record.Id == missingOnly.Id);
+        await ir5.SearchCandidatesCommand.ExecuteAsync(null);
+        ir5.SelectedCandidate = ir5.Candidates.FirstOrDefault();
+        await ShotAsync(ir5, "impl-integrity-IR-5.png");
+
+        var confirmationItems = ir2.AutomaticItems
+            .Select(item => new ConfirmationListItem(
+                item.FileName,
+                $"{item.Event.Counterpart?.FileName} へ再リンク",
+                item.AbsolutePath))
+            .ToList();
+        var ir6 = new ConfirmDialog(
+            new LocalizationProxy(locJa),
+            locJa.T("integrity.confirmTitle"),
+            locJa.T("integrity.confirmLead", new Dictionary<string, string>
+            {
+                ["count"] = confirmationItems.Count.ToString(),
+            }),
+            locJa.T("integrity.confirmApply"),
+            destructive: false,
+            items: confirmationItems,
+            supportingMessage: locJa.T("integrity.confirmSupport"));
+        ir6.Show();
+        await PumpAsync();
+        Capture(ir6, Path.Combine(outDir, "impl-integrity-IR-6.png"));
+        ir6.Close();
+        await PumpAsync();
+
+        var ir7 = await NewVmAsync();
+        await ShotAsync(ir7, "impl-integrity-IR-7.png", vm =>
         {
-            pd4.Selected = pd4.Items[0];
-            await pd4.AcceptCommand.ExecuteAsync(null);
+            vm.HashCompleted = 1;
+            vm.HashTotal = 3;
+            vm.IsHashChecking = true;
+            vm.Selected = vm.IndividualItems.FirstOrDefault();
+        });
+
+        foreach (var row in await images.GetIntegrityReviewByFolderAsync(col.Id))
+        {
+            await images.DeleteAsync(row.Id);
         }
 
-        await ShotAsync(pd4, "impl-pending-PD-4.png");
+        var ir8 = await NewVmAsync();
+        await ShotAsync(ir8, "impl-integrity-IR-8.png");
     }
 
     /// <summary>

@@ -34,7 +34,8 @@ public partial class ConfirmDialog : Window
         {
             // ECO-139/PD-6 対象一覧版のみ mock 準拠の余白/文字太さへ。既存の汎用確認面は XAML 既定
             // (Margin 16・Spacing 16・通常太さ)のまま=既存 golden 不変(F-1 スコープ限定)。
-            Width = 480;
+            // ECO-140/IR-6: 対象一覧版だけを幅 500 にする。共有部品の基底スタイルは変更しない。
+            Width = 500;
             RootPanel.Margin = new Thickness(20);
             RootPanel.Spacing = 12;
             MessageText.FontWeight = FontWeight.SemiBold;

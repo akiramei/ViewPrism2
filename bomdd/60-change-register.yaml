@@ -1968,7 +1968,7 @@ changes:
   - id: ECO-140
     title: "修復と未裁定裁定の役割重複 — 事象中心の統合再設計(PEND-005 reappeared 自動裁定を束ねる)"
     type: "機能改善(UI/UX 設計再編)+機能拡張(PEND-005)。CAD 先行(gate① 必須)"
-    status: staged
+    status: implemented   # 2026-07-24 /eco-fix 完了(製造=Codex 委譲 5・6 例目〔停止条項発動→案a 裁定→再開の 2 巡〕・設計者保持=境界決定/R5/4値照合/R8)。機械受入=build 0/0・Tests 969/969・Oracle 109+4skip 無接触(R6)・validate 0/0。R7=CAD IR-1〜8 captures 並置(工場実施・是正3件)+Gf 視覚パリティ緑。R8=独立レビュー(fresh context)所見 Med2/Low5 全処置(§8.6)・未処置スコープ内所見 0。bdr-01 4値照合=前提疑義(scan apply の baseline 保全が予測外・判定/オラクル無接触は予測どおり=§8.3/§8.6)。残=実機 golden(gate② 第 2 インスタンス・IR-7 動的挙動の明示確認込み)
     golden: "pending(実機 golden=/eco-fix 後の別インスタンス。GF-139-01 教訓によりデータ後始末〔残存 missing・孤立タグ〕まで確認)。CAD/mock golden は approved 済み(2026-07-24 maintainer・VPUI 3a1bb37 対象・承認記録+Provisional 解除=3b4fb54・gate② 第 1 インスタンス)"
     baseline: "main 6866b2f"
     findings: "maintainer 所見(2026-07-24)=修復と未裁定の役割区別が曖昧・統合検討。実測=同一の移動事象(missing↔pending ハッシュ一致ペア)が両画面の自動機能(すべて自動修復/自動裁定)に同件数で二重提示され取り合う構造。工程診断=CAD 欠陥(GF-139-01 の relink 再裁定で 3 段パイプライン分担〔scan_summary→pending_review→修復委譲・pending_review.md L68/L204〕が面内矛盾のまま併存+修復は画面正典外〔専用 mock なし・component_registry L218 stale〕+PEND-005 面未定義)+BOM 部分欠陥(30-ebom L800-814 境界仮説が PEND-005 到来時の再切り出し再裁定を予告=暫定自認・relink 意味論が 2 surface に分散・reappeared 高信頼基準未規定)+実装は健全(両画面とも承認済み設計に忠実・逸脱なし)。確定=relink 確定 2 系統別実装(修復=逐次単発トランザクション・失敗スキップ・確認なし〔RelinkService:130/215〕vs 未裁定=原子バッチ・stale 全滅・CMP-011 確認〔PendingReviewService:63/ImageRepository:363〕)・ハッシュ一致判定 3 重実装(RelinkService:130-206/RepairViewModel:358/ScanJudge:106-118)・競合時挙動非対称(per-item スキップ vs 全件失敗)・reappeared は hash 未計算=シグナル在庫なし(ECO-139 §3)。未検証=統合 UI の情報設計・relink プリミティブ統一先の UX 差・hash 再計算の性能特性(26万件級 read-across)"

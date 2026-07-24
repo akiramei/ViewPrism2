@@ -14,10 +14,7 @@ namespace ViewPrism2.Infrastructure.Scanning;
 /// untagged-normal)に限る。タグ付き候補を消費するとそのタグが失われるため relink を拒否し、
 /// マージ(§2.10.5)を案内する。
 /// </summary>
-/// <summary>自動修復ペア(GF-075-01: missing とその一意候補。単一パスで確定する)。</summary>
-public sealed record AutoRepairPair(string MissingImageId, string CandidateImageId);
-
-public sealed class RelinkService
+public sealed class RelinkService : IRelinkService
 {
     private readonly IImageRepository _images;
     private readonly ITagRepository? _tags;
@@ -33,6 +30,102 @@ public sealed class RelinkService
     {
         _images = images;
         _tags = tags;
+    }
+
+    /// <summary>
+    /// ECO-140: 高信頼候補の入口判定。new+candidate 在庫だけを対象にする。
+    /// </summary>
+    public static bool IsHighConfidence(ImageRecord image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        return image.Status == ImageStatus.Pending
+               && image.PendingOrigin == PendingOrigin.New
+               && image.CandidateLinkId is not null;
+    }
+
+    /// <summary>
+    /// ECO-140/GF-139-01: candidate missing が一意な 1:1 組だけを返す。
+    /// hash/folder/status の再検証をここへ一本化し、曖昧組は全て除外する。
+    /// </summary>
+    public static IReadOnlyList<ImageRecord> SelectUniquelyRelinkable(
+        IEnumerable<ImageRecord> images,
+        IReadOnlyDictionary<string, ImageRecord>? candidateRows = null)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        return SelectRelinkable(images, candidateRows)
+            .GroupBy(image => image.CandidateLinkId!, StringComparer.Ordinal)
+            .Where(group => group.Count() == 1)
+            .Select(group => group.Single())
+            .ToList();
+    }
+
+    private static IReadOnlyList<ImageRecord> SelectRelinkable(
+        IEnumerable<ImageRecord> images,
+        IReadOnlyDictionary<string, ImageRecord>? candidateRows)
+        => images
+            .Where(IsHighConfidence)
+            .DistinctBy(image => image.Id, StringComparer.Ordinal)
+            .Where(image =>
+                candidateRows is null
+                || (candidateRows.TryGetValue(image.CandidateLinkId!, out var candidate)
+                    && candidate.Status == ImageStatus.Missing
+                    && string.Equals(candidate.SyncFolderId, image.SyncFolderId, StringComparison.Ordinal)
+                    && string.Equals(candidate.Hash, image.Hash, StringComparison.Ordinal)))
+            .ToList();
+
+    IReadOnlyList<ImageRecord> IRelinkService.SelectUniquelyRelinkable(
+        IEnumerable<ImageRecord> images,
+        IReadOnlyDictionary<string, ImageRecord>? candidateRows)
+        => SelectUniquelyRelinkable(images, candidateRows);
+
+    /// <summary>
+    /// E-RELINK-007/INV-015: 高信頼一意組からタグ付き replacement を除外する完全な選別 API。
+    /// </summary>
+    public async Task<IReadOnlyList<ImageRecord>> GetUniquelyRelinkableAsync(
+        IEnumerable<ImageRecord> images,
+        IReadOnlyDictionary<string, ImageRecord>? candidateRows = null,
+        CancellationToken ct = default)
+    {
+        var rows = images.ToList();
+        var selection = await GetRelinkSelectionAsync(rows, candidateRows, ct).ConfigureAwait(false);
+        return rows.Where(row => selection.UniquelyRelinkablePendingIds.Contains(row.Id)).ToList();
+    }
+
+    public async Task<RelinkSelection> GetRelinkSelectionAsync(
+        IEnumerable<ImageRecord> images,
+        IReadOnlyDictionary<string, ImageRecord>? candidateRows = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        var rows = images.ToList();
+        var matched = SelectRelinkable(rows, candidateRows);
+        var uniqueIds = matched
+            .GroupBy(image => image.CandidateLinkId!, StringComparer.Ordinal)
+            .Where(group => group.Count() == 1)
+            .Select(group => group.Single().Id)
+            .ToHashSet(StringComparer.Ordinal);
+        var safeIds = matched.Select(candidate => candidate.Id).ToHashSet(StringComparer.Ordinal);
+        if (_tags is not null)
+        {
+            var taggedIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var folderId in matched
+                         .Select(candidate => candidate.SyncFolderId)
+                         .Distinct(StringComparer.Ordinal))
+            {
+                var tags = await _tags
+                    .GetIntegrityReviewImageTagsByFolderAsync(folderId, ct)
+                    .ConfigureAwait(false);
+                taggedIds.UnionWith(tags.Select(tag => tag.ImageId));
+            }
+
+            foreach (var taggedId in taggedIds)
+            {
+                safeIds.Remove(taggedId);
+                uniqueIds.Remove(taggedId);
+            }
+        }
+
+        return new RelinkSelection(safeIds, uniqueIds);
     }
 
     /// <summary>
@@ -112,15 +205,6 @@ public sealed class RelinkService
             })
             .ToList();
     }
-
-    /// <summary>
-    /// ECO-075: フォルダ内 missing 全件の「自動修復可能」数(hash+拡張子+サイズで候補がちょうど 1 件)を
-    /// **単一ロードの集合演算**で数える。missing ごとの GetCandidatesAsync(毎回フォルダ全行×2 ロード=
-    /// O(M×N))を置き換える。判定意味論は GetCandidatesAsync+自動修復 criteria と同一:
-    /// exact-hash pending ∪ criteria(hash+拡張子+サイズ・Pending∪Normal)− 自身 − タグ付き(INV-015)。
-    /// </summary>
-    public async Task<int> CountAutoRepairableAsync(string folderId)
-        => (await GetAutoRepairablePairsAsync(folderId).ConfigureAwait(false)).Count;
 
     /// <summary>
     /// GF-075-01: 自動修復ペア(missing → 一意候補)を単一パスで確定する。「すべて自動修復」が
@@ -258,5 +342,50 @@ public sealed class RelinkService
 
         await _images.ApplyRelinkAsync(missingImageId, replacementImageId).ConfigureAwait(false);
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// E-RELINK-007 原子バッチ: 一意な高信頼組を再選別し、stale 1 件なら全 rollback。
+    /// </summary>
+    public async Task<Result<int>> ApplyRelinkBatchAsync(IEnumerable<ImageRecord> images)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        var targets = await GetUniquelyRelinkableAsync(images).ConfigureAwait(false);
+        if (targets.Count == 0)
+        {
+            return Result<int>.Ok(0);
+        }
+
+        var pairs = targets
+            .Select(image => (
+                MissingImageId: image.CandidateLinkId!,
+                PendingImageId: image.Id))
+            .ToList();
+        return await _images.ApplyRelinkBatchAsync(pairs).ConfigureAwait(false)
+            ? Result<int>.Ok(pairs.Count)
+            : Result<int>.Fail(
+                ErrorCode.ValidationError,
+                "一括再リンクの対象が更新されました。要確認の画像を読み直してください。");
+    }
+
+    /// <summary>
+    /// ECO-140: 移動 T4+再出現 T13 の混在バッチを repository の単一 transaction へ委譲する。
+    /// </summary>
+    public async Task<Result<int>> ApplyIntegrityReviewBatchAsync(
+        IReadOnlyCollection<AutoRepairPair> relinks,
+        IReadOnlyCollection<IntegrityReviewAcceptTarget> accepts)
+    {
+        ArgumentNullException.ThrowIfNull(relinks);
+        ArgumentNullException.ThrowIfNull(accepts);
+        var pairs = relinks
+            .Select(pair => (
+                MissingImageId: pair.MissingImageId,
+                PendingImageId: pair.CandidateImageId))
+            .ToList();
+        return await _images.ApplyIntegrityReviewBatchAsync(pairs, accepts).ConfigureAwait(false)
+            ? Result<int>.Ok(pairs.Count + accepts.Count)
+            : Result<int>.Fail(
+                ErrorCode.ValidationError,
+                "対象が更新されたため一括裁定しませんでした。要確認の画像を読み直してください。");
     }
 }

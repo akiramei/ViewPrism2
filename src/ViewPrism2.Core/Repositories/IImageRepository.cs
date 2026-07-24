@@ -1,4 +1,5 @@
 using ViewPrism2.Core.Models;
+using ViewPrism2.Core.Services.Repair;
 
 namespace ViewPrism2.Core.Repositories;
 
@@ -35,6 +36,43 @@ public interface IImageRepository
 
     /// <summary>ECO-129/E-UI-PENDING-049: 選択 collection の status=pending だけをファイル名順で読む(DB 境界限定)。</summary>
     Task<IReadOnlyList<ImageRecord>> GetPendingByFolderAsync(string syncFolderId, CancellationToken ct = default);
+
+    /// <summary>
+    /// ECO-140: 統合裁定の母集合。DB 境界で status∈{pending,missing} に限定する。
+    /// 既定実装はテスト用 repository 互換。Infrastructure 実装は限定 WHERE を持つ。
+    /// </summary>
+    async Task<IReadOnlyList<ImageRecord>> GetIntegrityReviewByFolderAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        var rows = await GetByFolderAsync(syncFolderId).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        return rows.Where(r => r.Status is ImageStatus.Pending or ImageStatus.Missing).ToList();
+    }
+
+    /// <summary>
+    /// ECO-140/CMP-010: 事象合計件数。pending は各 1 件、対応 pending が無い missing は各 1 件。
+    /// 注意(R8 所見): 既定実装はタグ有無を参照できないため、タグ付き pending でも missing を
+    /// 遮蔽する(production SQL はタグ付き pending の missing を遮蔽しない=1 件差が出得る)。
+    /// 件数パリティの検査は production 実装(ImageRepository)で行うこと(stub 素通し防止)。
+    /// </summary>
+    async Task<int> CountIntegrityReviewEventsAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        var rows = await GetIntegrityReviewByFolderAsync(syncFolderId, ct).ConfigureAwait(false);
+        var byId = rows.ToDictionary(r => r.Id, StringComparer.Ordinal);
+        var referencedMissing = rows
+            .Where(r => r.Status == ImageStatus.Pending
+                        && r.PendingOrigin == PendingOrigin.New
+                        && r.CandidateLinkId is not null
+                        && byId.TryGetValue(r.CandidateLinkId, out var missing)
+                        && missing.Status == ImageStatus.Missing
+                        && string.Equals(missing.SyncFolderId, r.SyncFolderId, StringComparison.Ordinal)
+                        && string.Equals(missing.Hash, r.Hash, StringComparison.Ordinal))
+            .Select(r => r.CandidateLinkId!)
+            .ToHashSet(StringComparer.Ordinal);
+        return rows.Count(r => r.Status == ImageStatus.Pending)
+               + rows.Count(r => r.Status == ImageStatus.Missing && !referencedMissing.Contains(r.Id));
+    }
 
     /// <summary>
     /// ECO-139/PD-6: candidate_link_id の一致先を確認一覧へ提示するため、指定 ID だけを一括取得する。
@@ -78,6 +116,15 @@ public interface IImageRepository
     Task<bool> ApplyRelinkBatchAsync(
         IReadOnlyCollection<(string MissingImageId, string PendingImageId)> pairs)
         => throw new NotSupportedException("This repository does not support batch relinking.");
+
+    /// <summary>
+    /// ECO-140: 移動 T4 relink と reappeared T13 accept の混在を 1 transaction で適用する。
+    /// 1 件でも stale/不正なら全 rollback。
+    /// </summary>
+    Task<bool> ApplyIntegrityReviewBatchAsync(
+        IReadOnlyCollection<(string MissingImageId, string PendingImageId)> relinks,
+        IReadOnlyCollection<IntegrityReviewAcceptTarget> accepts)
+        => throw new NotSupportedException("This repository does not support integrity-review batches.");
 
     /// <summary>
     /// ECO-129 T14(裁定=別画像として扱う・PEND-001): 単一トランザクションの原子的な行置換。

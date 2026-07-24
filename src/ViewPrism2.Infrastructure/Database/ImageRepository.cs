@@ -1,6 +1,7 @@
 using Dapper;
 using ViewPrism2.Core.Models;
 using ViewPrism2.Core.Repositories;
+using ViewPrism2.Core.Services.Repair;
 
 namespace ViewPrism2.Infrastructure.Database;
 
@@ -9,16 +10,19 @@ public sealed class ImageRepository : IImageRepository
 {
     private const string InsertSql = """
         INSERT INTO images (id, sync_folder_id, relative_path, file_name, file_size, hash,
-                            status, candidate_link_id, created_date, modified_date, notes, pending_origin)
+                            status, candidate_link_id, created_date, modified_date, notes, pending_origin,
+                            pending_baseline_hash)
         VALUES (@Id, @SyncFolderId, @RelativePath, @FileName, @FileSize, @Hash,
-                @Status, @CandidateLinkId, @CreatedDate, @ModifiedDate, @Notes, @PendingOrigin)
+                @Status, @CandidateLinkId, @CreatedDate, @ModifiedDate, @Notes, @PendingOrigin,
+                @PendingBaselineHash)
         """;
 
     private const string SelectColumns = """
         SELECT id AS Id, sync_folder_id AS SyncFolderId, relative_path AS RelativePath,
                file_name AS FileName, file_size AS FileSize, hash AS Hash, status AS Status,
                candidate_link_id AS CandidateLinkId, created_date AS CreatedDate,
-               modified_date AS ModifiedDate, notes AS Notes, pending_origin AS PendingOrigin
+               modified_date AS ModifiedDate, notes AS Notes, pending_origin AS PendingOrigin,
+               pending_baseline_hash AS PendingBaselineHash
         FROM images
         """;
 
@@ -74,8 +78,15 @@ public sealed class ImageRepository : IImageRepository
 
             if (batch.FileMetaUpdates.Count > 0)
             {
-                await conn.ExecuteAsync(
-                    "UPDATE images SET hash = @Hash, file_size = @FileSize, modified_date = @ModifiedDate WHERE id = @Id",
+                await conn.ExecuteAsync("""
+                    UPDATE images
+                    SET pending_baseline_hash =
+                            CASE WHEN @PreservePendingBaselineHash THEN hash ELSE pending_baseline_hash END,
+                        hash = @Hash,
+                        file_size = @FileSize,
+                        modified_date = @ModifiedDate
+                    WHERE id = @Id
+                    """,
                     batch.FileMetaUpdates, tx).ConfigureAwait(false);
             }
 
@@ -230,7 +241,8 @@ public sealed class ImageRepository : IImageRepository
                 UPDATE images
                 SET relative_path = @RelativePath, file_name = @FileName, file_size = @FileSize,
                     modified_date = @ModifiedDate, created_date = @CreatedDate, hash = @Hash,
-                    status = 'normal', candidate_link_id = NULL
+                    status = 'normal', candidate_link_id = NULL, pending_origin = NULL,
+                    pending_baseline_hash = NULL
                 WHERE id = @Id
                 """,
                 new
@@ -277,6 +289,59 @@ public sealed class ImageRepository : IImageRepository
         }, ct);
     }
 
+    public Task<IReadOnlyList<ImageRecord>> GetIntegrityReviewByFolderAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        // ECO-140/REQ-102: 統合裁定の母集合を DB 境界で pending∪missing に限定する。
+        return _db.RunAsync<IReadOnlyList<ImageRecord>>(async conn =>
+        {
+            var rows = await conn.QueryAsync<Row>(new CommandDefinition(
+                $"{SelectColumns} WHERE sync_folder_id = @SyncFolderId " +
+                "AND status IN ('pending','missing') ORDER BY file_name COLLATE NOCASE, id",
+                new { SyncFolderId = syncFolderId },
+                cancellationToken: ct)).ConfigureAwait(false);
+            return rows.Select(r => ToEntity(r)!).ToList();
+        }, ct);
+    }
+
+    public Task<int> CountIntegrityReviewEventsAsync(
+        string syncFolderId, CancellationToken ct = default)
+    {
+        // pending は 1 行=1 事象。missing は同一 hash/folder の candidate new が無い単独行だけを数える。
+        // 画像行を materialize せず CMP-010 の事象合計を返す。
+        return _db.RunAsync(async conn =>
+        {
+            var count = await conn.ExecuteScalarAsync<long>(new CommandDefinition(
+                """
+                SELECT
+                  (SELECT COUNT(*)
+                   FROM images p
+                   WHERE p.sync_folder_id = @SyncFolderId
+                     AND p.status = 'pending')
+                  +
+                  (SELECT COUNT(*)
+                   FROM images m
+                   WHERE m.sync_folder_id = @SyncFolderId
+                     AND m.status = 'missing'
+                     AND NOT EXISTS (
+                       SELECT 1
+                       FROM images p
+                       WHERE p.sync_folder_id = m.sync_folder_id
+                         AND p.status = 'pending'
+                         AND p.pending_origin = 'new'
+                         AND p.candidate_link_id = m.id
+                         AND p.hash = m.hash
+                         AND NOT EXISTS (
+                           SELECT 1
+                           FROM image_tags it
+                           WHERE it.image_id = p.id)))
+                """,
+                new { SyncFolderId = syncFolderId },
+                cancellationToken: ct)).ConfigureAwait(false);
+            return checked((int)count);
+        }, ct);
+    }
+
     public Task<IReadOnlyList<ImageRecord>> GetByIdsAsync(
         IReadOnlyCollection<string> ids, CancellationToken ct = default)
     {
@@ -314,7 +379,8 @@ public sealed class ImageRepository : IImageRepository
         {
             var affected = await conn.ExecuteAsync("""
                 UPDATE images
-                SET status = @Status, candidate_link_id = NULL, pending_origin = NULL
+                SET status = @Status, candidate_link_id = NULL, pending_origin = NULL,
+                    pending_baseline_hash = NULL
                 WHERE id = @Id AND status = 'pending'
                 """,
                 new { Id = id, Status = status.ToDb() }).ConfigureAwait(false);
@@ -344,7 +410,8 @@ public sealed class ImageRepository : IImageRepository
             {
                 var affected = await conn.ExecuteAsync("""
                     UPDATE images
-                    SET status = @Status, candidate_link_id = NULL, pending_origin = NULL
+                    SET status = @Status, candidate_link_id = NULL, pending_origin = NULL,
+                        pending_baseline_hash = NULL
                     WHERE id IN @Ids AND status = 'pending'
                     """,
                     new { Status = status.ToDb(), Ids = chunk }, tx).ConfigureAwait(false);
@@ -362,28 +429,43 @@ public sealed class ImageRepository : IImageRepository
 
     public Task<bool> ApplyRelinkBatchAsync(
         IReadOnlyCollection<(string MissingImageId, string PendingImageId)> pairs)
+        => ApplyIntegrityReviewBatchAsync(pairs, []);
+
+    public Task<bool> ApplyIntegrityReviewBatchAsync(
+        IReadOnlyCollection<(string MissingImageId, string PendingImageId)> relinks,
+        IReadOnlyCollection<IntegrityReviewAcceptTarget> accepts)
     {
-        ArgumentNullException.ThrowIfNull(pairs);
-        if (pairs.Count == 0)
+        ArgumentNullException.ThrowIfNull(relinks);
+        ArgumentNullException.ThrowIfNull(accepts);
+        if (relinks.Count == 0 && accepts.Count == 0)
         {
             return Task.FromResult(true);
         }
 
-        var distinctPairs = pairs.Distinct().ToArray();
-        if (distinctPairs.Length != pairs.Count
+        var distinctPairs = relinks.Distinct().ToArray();
+        var distinctAccepts = accepts
+            .Where(target => !string.IsNullOrEmpty(target.ImageId))
+            .DistinctBy(target => target.ImageId, StringComparer.Ordinal)
+            .ToArray();
+        if (distinctPairs.Length != relinks.Count
+            || distinctAccepts.Length != accepts.Count
             || distinctPairs.Any(pair =>
                 string.IsNullOrEmpty(pair.MissingImageId)
                 || string.IsNullOrEmpty(pair.PendingImageId))
+            || distinctAccepts.Any(target => string.IsNullOrEmpty(target.ExpectedHash))
             || distinctPairs.Select(pair => pair.MissingImageId)
                 .Distinct(StringComparer.Ordinal).Count() != distinctPairs.Length
             || distinctPairs.Select(pair => pair.PendingImageId)
-                .Distinct(StringComparer.Ordinal).Count() != distinctPairs.Length)
+                .Distinct(StringComparer.Ordinal).Count() != distinctPairs.Length
+            || distinctPairs.Select(pair => pair.PendingImageId)
+                .Intersect(distinctAccepts.Select(target => target.ImageId), StringComparer.Ordinal)
+                .Any())
         {
             return Task.FromResult(false);
         }
 
-        // GF-139-01: 全組を単一 transaction で検証後、T4 と同じ DELETE→UPDATE 順に適用する。
-        // 1 万件でも N+1 query にせず、SQLite の変数上限だけ 500 件 chunk で回避する。
+        // ECO-140: T4 relink と T13 accept を全件検証してから同じ transaction で適用する。
+        // SQLite の変数上限だけ 500 件 chunk で回避する。
         return _db.RunAsync(async conn =>
         {
             using var tx = conn.BeginTransaction();
@@ -396,6 +478,9 @@ public sealed class ImageRepository : IImageRepository
                     WHERE id IN @Ids
                       AND status = 'pending'
                       AND pending_origin = 'new'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM image_tags it WHERE it.image_id = images.id
+                      )
                     """,
                     new { Ids = chunk }, tx).ConfigureAwait(false);
                 foreach (var row in rows)
@@ -431,6 +516,23 @@ public sealed class ImageRepository : IImageRepository
                 }
             }
 
+            var reappearedById = new Dictionary<string, Row>(distinctAccepts.Length, StringComparer.Ordinal);
+            foreach (var chunk in distinctAccepts.Select(target => target.ImageId).Chunk(500))
+            {
+                var rows = await conn.QueryAsync<Row>(
+                    $"""
+                    {SelectColumns}
+                    WHERE id IN @Ids
+                      AND status = 'pending'
+                      AND pending_origin = 'reappeared'
+                    """,
+                    new { Ids = chunk }, tx).ConfigureAwait(false);
+                foreach (var row in rows)
+                {
+                    reappearedById[row.Id] = row;
+                }
+            }
+
             foreach (var (missingImageId, pendingImageId) in distinctPairs)
             {
                 if (!pendingById.TryGetValue(pendingImageId, out var pending)
@@ -445,54 +547,90 @@ public sealed class ImageRepository : IImageRepository
                 }
             }
 
-            var deleteParameters = distinctPairs.Select(pair => new
+            foreach (var accept in distinctAccepts)
             {
-                pair.MissingImageId,
-                pair.PendingImageId,
-            });
-            var deleted = await conn.ExecuteAsync("""
-                DELETE FROM images
-                WHERE id = @PendingImageId
-                  AND status = 'pending'
-                  AND pending_origin = 'new'
-                  AND candidate_link_id = @MissingImageId
-                """,
-                deleteParameters, tx).ConfigureAwait(false);
-            if (deleted != distinctPairs.Length)
-            {
-                tx.Rollback();
-                return false;
+                if (!reappearedById.TryGetValue(accept.ImageId, out var row)
+                    || !string.Equals(
+                        row.PendingBaselineHash ?? row.Hash,
+                        accept.ExpectedHash,
+                        StringComparison.Ordinal))
+                {
+                    tx.Rollback();
+                    return false;
+                }
             }
 
-            var updateParameters = distinctPairs.Select(pair =>
+            if (distinctPairs.Length > 0)
             {
-                var pending = pendingById[pair.PendingImageId];
-                return new
+                var deleteParameters = distinctPairs.Select(pair => new
                 {
                     pair.MissingImageId,
-                    pending.SyncFolderId,
-                    pending.RelativePath,
-                    pending.FileName,
-                    pending.FileSize,
-                    pending.ModifiedDate,
-                    pending.CreatedDate,
-                    pending.Hash,
-                };
-            });
-            var updated = await conn.ExecuteAsync("""
-                UPDATE images
-                SET relative_path = @RelativePath, file_name = @FileName, file_size = @FileSize,
-                    modified_date = @ModifiedDate, created_date = @CreatedDate, hash = @Hash,
-                    status = 'normal', candidate_link_id = NULL, pending_origin = NULL
-                WHERE id = @MissingImageId
-                  AND sync_folder_id = @SyncFolderId
-                  AND status = 'missing'
-                """,
-                updateParameters, tx).ConfigureAwait(false);
-            if (updated != distinctPairs.Length)
+                    pair.PendingImageId,
+                });
+                var deleted = await conn.ExecuteAsync("""
+                    DELETE FROM images
+                    WHERE id = @PendingImageId
+                      AND status = 'pending'
+                      AND pending_origin = 'new'
+                      AND candidate_link_id = @MissingImageId
+                    """,
+                    deleteParameters, tx).ConfigureAwait(false);
+                if (deleted != distinctPairs.Length)
+                {
+                    tx.Rollback();
+                    return false;
+                }
+
+                var updateParameters = distinctPairs.Select(pair =>
+                {
+                    var pending = pendingById[pair.PendingImageId];
+                    return new
+                    {
+                        pair.MissingImageId,
+                        pending.SyncFolderId,
+                        pending.RelativePath,
+                        pending.FileName,
+                        pending.FileSize,
+                        pending.ModifiedDate,
+                        pending.CreatedDate,
+                        pending.Hash,
+                    };
+                });
+                var updated = await conn.ExecuteAsync("""
+                    UPDATE images
+                    SET relative_path = @RelativePath, file_name = @FileName, file_size = @FileSize,
+                        modified_date = @ModifiedDate, created_date = @CreatedDate, hash = @Hash,
+                        status = 'normal', candidate_link_id = NULL, pending_origin = NULL,
+                        pending_baseline_hash = NULL
+                    WHERE id = @MissingImageId
+                      AND sync_folder_id = @SyncFolderId
+                      AND status = 'missing'
+                    """,
+                    updateParameters, tx).ConfigureAwait(false);
+                if (updated != distinctPairs.Length)
+                {
+                    tx.Rollback();
+                    return false;
+                }
+            }
+
+            if (distinctAccepts.Length > 0)
             {
-                tx.Rollback();
-                return false;
+                var accepted = await conn.ExecuteAsync("""
+                    UPDATE images
+                    SET status = 'normal', candidate_link_id = NULL, pending_origin = NULL,
+                        pending_baseline_hash = NULL
+                    WHERE id = @ImageId
+                      AND status = 'pending'
+                      AND pending_origin = 'reappeared'
+                      AND COALESCE(pending_baseline_hash, hash) = @ExpectedHash
+                    """,
+                    distinctAccepts, tx).ConfigureAwait(false);
+                if (accepted != distinctAccepts.Length)
+                {
+                    tx.Rollback();
+                    return false;
+                }
             }
 
             tx.Commit();
@@ -529,7 +667,7 @@ public sealed class ImageRepository : IImageRepository
     private sealed record Row(
         string Id, string SyncFolderId, string RelativePath, string FileName, long FileSize,
         string Hash, string Status, string? CandidateLinkId, string CreatedDate,
-        string ModifiedDate, string? Notes, string? PendingOrigin);
+        string ModifiedDate, string? Notes, string? PendingOrigin, string? PendingBaselineHash);
 
     private sealed record CandidateCountRow(string CandidateLinkId, long CandidateCount);
 
@@ -549,6 +687,7 @@ public sealed class ImageRepository : IImageRepository
             image.ModifiedDate,
             image.Notes,
             PendingOrigin = image.PendingOrigin.ToDb(),
+            image.PendingBaselineHash,
         };
     }
 
@@ -570,6 +709,7 @@ public sealed class ImageRepository : IImageRepository
                 ModifiedDate = row.ModifiedDate,
                 Notes = row.Notes,
                 PendingOrigin = DbMapping.ToPendingOrigin(row.PendingOrigin),
+                PendingBaselineHash = row.PendingBaselineHash,
             };
     }
 }

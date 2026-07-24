@@ -192,8 +192,8 @@ public sealed class GfEntryE1VisualParityTests : IDisposable
             var menu = view.GetLogicalDescendants().OfType<Popup>()
                 .Select(p => p.Child)
                 .OfType<Control>()
-                .FirstOrDefault(c => c.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "修復"));
-            Assert.True(menu is not null, "VC-8: ⋯ メニュー(修復を含む Popup)が見つからない");
+                .FirstOrDefault(c => c.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "要確認の画像…"));
+            Assert.True(menu is not null, "VC-8: ⋯ メニュー(統合裁定を含む Popup)が見つからない");
 
             var texts = menu!.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
 

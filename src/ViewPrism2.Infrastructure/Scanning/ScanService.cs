@@ -312,7 +312,12 @@ public sealed class ScanService
                         break;
 
                     case ScanDecisionKind.UpdateMetaAndPend:
-                        metaUpdates.Add(new ScanFileMetaUpdate(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate));
+                        metaUpdates.Add(new ScanFileMetaUpdate(
+                            row!.Id,
+                            decision.Hash!,
+                            file.Length,
+                            facts.ModifiedDate,
+                            PreservePendingBaselineHash: true));
                         statusUpdates.Add(new ScanStatusUpdate(row.Id, ImageStatus.Pending, decision.PendingOrigin));
                         if (decision.PendingOrigin == PendingOrigin.Reappeared)
                         {
@@ -603,7 +608,12 @@ public sealed class ScanService
 
                     case ScanDecisionKind.UpdateMetaAndPend:
                         // v5.0: 内容変更(normal 起点)/再出現(missing 起点)= メタ更新+pending 化
-                        batch.AddFileMeta(row!.Id, decision.Hash!, file.Length, facts.ModifiedDate);
+                        batch.AddFileMeta(
+                            row!.Id,
+                            decision.Hash!,
+                            file.Length,
+                            facts.ModifiedDate,
+                            preservePendingBaselineHash: true);
                         batch.AddStatus(row.Id, ImageStatus.Pending, decision.PendingOrigin);
                         updated++;
                         break;
@@ -802,8 +812,14 @@ public sealed class ScanService
 
         public void Add(ImageRecord image) => _adds.Add(image);
 
-        public void AddFileMeta(string id, string hash, long fileSize, string modifiedDate)
-            => _fileMetaUpdates.Add(new ScanFileMetaUpdate(id, hash, fileSize, modifiedDate));
+        public void AddFileMeta(
+            string id,
+            string hash,
+            long fileSize,
+            string modifiedDate,
+            bool preservePendingBaselineHash = false)
+            => _fileMetaUpdates.Add(new ScanFileMetaUpdate(
+                id, hash, fileSize, modifiedDate, preservePendingBaselineHash));
 
         public void AddStatus(string id, ImageStatus status, PendingOrigin? origin = null)
             => _statusUpdates.Add(new ScanStatusUpdate(id, status, origin));

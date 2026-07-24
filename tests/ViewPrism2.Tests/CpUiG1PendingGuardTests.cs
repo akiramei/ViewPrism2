@@ -69,8 +69,8 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
         var pending = Item(vm, "p.jpg");
         Assert.True(pending.IsPending);
         Assert.False(Item(vm, "a.jpg").IsPending);
-        Assert.Equal(1, vm.PendingCount);
-        Assert.True(vm.HasPending);
+        Assert.Equal(1, vm.IntegrityReviewCount);
+        Assert.True(vm.HasIntegrityReview);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
         // 裁定済み画像が normal(fresh)と pending(stale)の二重タイルで並ぶ。
         var windows = new NullWindows
         {
-            PendingReview = async collectionId =>
+            IntegrityReview = async collectionId =>
             {
                 // 実機 PD-2 相当: 未裁定を全件「受け入れる」(T13)で裁定し、1 件以上裁定した= true
                 var review = new PendingReviewService(_db.Images);
@@ -129,12 +129,12 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
             },
         };
         var vm = await NewAsync(windows);
-        Assert.Equal(1, vm.PendingCount);
+        Assert.Equal(1, vm.IntegrityReviewCount);
 
-        await vm.OpenPendingReviewCommand.ExecuteAsync(null);
+        await vm.OpenIntegrityReviewCommand.ExecuteAsync(null);
 
-        Assert.Equal(0, vm.PendingCount);                  // ⋯メニューの件数バッジが消える
-        Assert.False(vm.HasPending);
+        Assert.Equal(0, vm.IntegrityReviewCount);          // ⋯メニューの件数バッジが消える
+        Assert.False(vm.HasIntegrityReview);
         var tile = Assert.Single(vm.Items, i => !i.IsFolder && i.Name == "p.jpg");
         Assert.False(tile.IsPending);                      // 一覧の未裁定バッジが消える(normal の 1 枚のみ)
     }
@@ -152,10 +152,10 @@ public sealed class CpUiG1PendingGuardTests : IDisposable
     private sealed class NullWindows : IWindowService
     {
         /// <summary>GF-129-01 プローブ用: 裁定ダイアログの代役(null なら既定=何もしない/false)。</summary>
-        public Func<string, Task<bool>>? PendingReview { get; init; }
+        public Func<string, Task<bool>>? IntegrityReview { get; init; }
 
-        public Task<bool> ShowPendingReviewAsync(string collectionId)
-            => PendingReview?.Invoke(collectionId) ?? Task.FromResult(false);
+        public Task<bool> ShowIntegrityReviewAsync(string collectionId)
+            => IntegrityReview?.Invoke(collectionId) ?? Task.FromResult(false);
 
         public Task<bool> ConfirmAsync(string title, string message, string confirmLabel,
             bool destructive = false, string? cancelLabel = null) => Task.FromResult(true);

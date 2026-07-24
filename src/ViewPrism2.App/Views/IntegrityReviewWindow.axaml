@@ -1,0 +1,577 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ViewPrism2.App.ViewModels"
+        xmlns:c="using:ViewPrism2.App.Controls"
+        x:Class="ViewPrism2.App.Views.IntegrityReviewWindow"
+        x:DataType="vm:IntegrityReviewViewModel"
+        Width="{Binding WindowWidth}"
+        SizeToContent="Height"
+        MaxHeight="760"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontSize="14"
+        Title="{Binding WindowTitle}"
+        Background="{StaticResource AppBackgroundBrush}">
+  <Window.Resources>
+    <DataTemplate x:Key="IntegrityRowTemplate" x:DataType="vm:IntegrityReviewItemViewModel">
+      <Button Background="Transparent"
+              BorderThickness="0"
+              Padding="0"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Stretch"
+              Command="{Binding $parent[Window].((vm:IntegrityReviewViewModel)DataContext).SelectCommand}"
+              CommandParameter="{Binding}">
+        <Border Classes="integrityRow" Classes.active="{Binding IsSelected}">
+          <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="9">
+            <Border Width="40" Height="30" CornerRadius="6" ClipToBounds="True"
+                    Background="#EEF1F7" VerticalAlignment="Center">
+              <Grid>
+                <c:ThumbnailImage SourcePath="{Binding AbsolutePath}"
+                                  IsVisible="{Binding !IsMissing}"
+                                  Stretch="UniformToFill" />
+                <Path IsVisible="{Binding IsMissing}"
+                      Stretch="Fill"
+                      Stroke="#D6E0EE"
+                      StrokeThickness="1"
+                      Data="M0 10L10 0 M0 20L20 0 M10 30L40 0 M20 30L40 10 M30 30L40 20" />
+              </Grid>
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+              <TextBlock MaxWidth="130"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         Foreground="#2B3340"
+                         TextTrimming="CharacterEllipsis"
+                         Text="{Binding FileName}" />
+              <Border Classes="integrityOrigin"
+                      Classes.amber="{Binding IsOriginAmber}"
+                      Classes.blue="{Binding IsOriginBlue}"
+                      Classes.gray="{Binding IsOriginGray}"
+                      Classes.red="{Binding IsOriginRed}">
+                <TextBlock FontSize="10.5" FontWeight="Bold" Text="{Binding OriginLabel}" />
+              </Border>
+            </StackPanel>
+            <Border Grid.Column="2"
+                    Classes="integrityAutoChip"
+                    IsVisible="{Binding IsAutomatic}"
+                    VerticalAlignment="Center">
+              <TextBlock FontSize="10"
+                         FontWeight="Bold"
+                         Foreground="White"
+                         Text="{Binding $parent[Window].((vm:IntegrityReviewViewModel)DataContext).Loc[integrity.autoChip]}" />
+            </Border>
+          </Grid>
+        </Border>
+      </Button>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="Border.integrityRow">
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="9,7" />
+    </Style>
+    <Style Selector="Border.integrityRow.active">
+      <Setter Property="Background" Value="#EAF1FE" />
+    </Style>
+    <Style Selector="Border.integrityOrigin">
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.amber">
+      <Setter Property="Background" Value="#FDF8EF" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.amber TextBlock">
+      <Setter Property="Foreground" Value="#8A5A20" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.blue">
+      <Setter Property="Background" Value="#EAF1FE" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.blue TextBlock">
+      <Setter Property="Foreground" Value="#2459CF" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.gray">
+      <Setter Property="Background" Value="#F1F3F7" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.gray TextBlock">
+      <Setter Property="Foreground" Value="#5B6473" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.red">
+      <Setter Property="Background" Value="#FBECED" />
+    </Style>
+    <Style Selector="Border.integrityOrigin.red TextBlock">
+      <Setter Property="Foreground" Value="#C4282D" />
+    </Style>
+    <Style Selector="Border.integrityAutoChip">
+      <Setter Property="Background" Value="#2F6BED" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Padding" Value="6,2" />
+    </Style>
+    <Style Selector="Border.integrityWhy">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="#F4F6FA" />
+      <Setter Property="BorderBrush" Value="#D6E0EE" />
+    </Style>
+    <Style Selector="Border.integrityWhy.amber">
+      <Setter Property="Background" Value="#FDF8EF" />
+      <Setter Property="BorderBrush" Value="#E0B36A" />
+    </Style>
+    <Style Selector="Border.integrityWhy.blue">
+      <Setter Property="Background" Value="#EAF1FE" />
+      <Setter Property="BorderBrush" Value="#CFE0FC" />
+    </Style>
+    <Style Selector="Border.integrityWhy TextBlock">
+      <Setter Property="Foreground" Value="#5B6473" />
+    </Style>
+    <Style Selector="Border.integrityWhy.blue TextBlock">
+      <Setter Property="Foreground" Value="#2459CF" />
+    </Style>
+    <Style Selector="Border.integrityWhy.amber TextBlock">
+      <Setter Property="Foreground" Value="#8A5A20" />
+    </Style>
+    <Style Selector="TextBox.integrityField">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="8,3" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+    <!-- CMP-011 docked footer. -->
+    <Border x:Name="IntegrityFooter"
+            DockPanel.Dock="Bottom"
+            Background="White"
+            BorderBrush="#EEF0F4"
+            BorderThickness="0,1,0,0">
+      <DockPanel Margin="20,14">
+        <Button DockPanel.Dock="Left"
+                Classes="dlgBtn secondary"
+                IsVisible="{Binding HasSelection}"
+                Command="{Binding DeferCommand}"
+                Content="{Binding Loc[integrity.defer]}" />
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+          <Button Classes="dlgBtn secondary"
+                  IsVisible="{Binding IsEmpty}"
+                  Command="{Binding CloseWindowCommand}"
+                  Content="{Binding Loc[common.close]}" />
+          <Button x:Name="DeleteButton"
+                  Classes="dlgBtn destructive"
+                  IsVisible="{Binding ShowAccept}"
+                  Command="{Binding DeleteCommand}"
+                  Content="{Binding Loc[integrity.delete]}" />
+          <Button x:Name="TreatAsNewButton"
+                  Classes="dlgBtn secondary"
+                  IsVisible="{Binding ShowTreatAsNew}"
+                  Command="{Binding TreatAsNewCommand}"
+                  Content="{Binding Loc[integrity.treatAsNew]}" />
+          <Button x:Name="AcceptButton"
+                  Classes="dlgBtn primary"
+                  IsVisible="{Binding ShowAccept}"
+                  Command="{Binding AcceptCommand}"
+                  Content="{Binding AcceptLabel}" />
+          <Button x:Name="MovedDeleteButton"
+                  Classes="dlgBtn destructive"
+                  IsVisible="{Binding IsSelectedMoved}"
+                  Command="{Binding DeleteCommand}"
+                  Content="{Binding Loc[integrity.delete]}" />
+          <Button x:Name="MovedAcceptButton"
+                  Classes="dlgBtn secondary"
+                  IsVisible="{Binding IsSelectedMoved}"
+                  Command="{Binding AcceptCommand}"
+                  Content="{Binding Loc[integrity.acceptNew]}" />
+          <Button x:Name="MovedRelinkButton"
+                  Classes="dlgBtn primary"
+                  IsVisible="{Binding IsSelectedMoved}"
+                  Command="{Binding RelinkMovedCommand}"
+                  Content="{Binding Loc[integrity.relink]}" />
+          <Button x:Name="ExcludeMissingButton"
+                  Classes="dlgBtn destructive"
+                  IsVisible="{Binding IsSelectedMissing}"
+                  Command="{Binding ExcludeMissingCommand}"
+                  Content="{Binding Loc[integrity.moveToTrash]}" />
+          <Button x:Name="CommitCandidateButton"
+                  Classes="dlgBtn primary"
+                  IsVisible="{Binding IsSelectedMissing}"
+                  IsEnabled="{Binding CanCommitCandidate}"
+                  Command="{Binding CommitCandidateCommand}"
+                  Content="{Binding Loc[integrity.relinkCandidate]}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- IR-7: hash 確認中は中立 callout。完了まで自動ボタンを出さない。 -->
+    <Border x:Name="HashCheckingCallout"
+            DockPanel.Dock="Top"
+            IsVisible="{Binding IsHashChecking}"
+            Background="#F4F6FA"
+            BorderBrush="#EEF0F4"
+            BorderThickness="0,0,0,1"
+            Padding="20,12">
+      <StackPanel Spacing="3">
+        <StackPanel Orientation="Horizontal" Spacing="9">
+          <Border x:Name="HashSpinner"
+                  Width="14"
+                  Height="14"
+                  VerticalAlignment="Center">
+            <Grid>
+              <Ellipse Stroke="#D6E0EE" StrokeThickness="2" />
+              <Path Width="12"
+                    Height="12"
+                    Stretch="Uniform"
+                    Stroke="#2F6BED"
+                    StrokeThickness="2"
+                    StrokeLineCap="Round"
+                    Data="M6,1 A5,5 0 0 1 11,6" />
+            </Grid>
+          </Border>
+          <TextBlock FontSize="13"
+                     FontWeight="SemiBold"
+                     Foreground="#5B6473"
+                     Text="{Binding HashProgressText}" />
+        </StackPanel>
+        <TextBlock FontSize="11.5"
+                   Foreground="#5B6473"
+                   TextWrapping="Wrap"
+                   Text="{Binding Loc[integrity.hashProgressSupport]}" />
+      </StackPanel>
+    </Border>
+
+    <!-- IR-2: automatic group と同じ N を表示する full-width blue callout. -->
+    <Border x:Name="AutoAdjudicateCallout"
+            DockPanel.Dock="Top"
+            IsVisible="{Binding HasAutomatic}"
+            Background="#EAF1FE"
+            BorderBrush="#CFE0FC"
+            BorderThickness="0,0,0,1"
+            Padding="20,12">
+      <DockPanel LastChildFill="True">
+        <Button x:Name="AutoAdjudicateButton"
+                DockPanel.Dock="Right"
+                Classes="dlgBtn primary"
+                MinHeight="38"
+                Margin="16,0,0,0"
+                Command="{Binding AutoAdjudicateCommand}"
+                Content="{Binding AutoButtonLabel}" />
+        <StackPanel Spacing="2">
+          <TextBlock FontSize="13"
+                     FontWeight="SemiBold"
+                     Foreground="#2459CF"
+                     Text="{Binding AutoCalloutLead}" />
+          <TextBlock FontSize="11.5"
+                     Foreground="#3F5F9E"
+                     TextWrapping="Wrap"
+                     Text="{Binding Loc[integrity.autoSupport]}" />
+          <TextBlock FontSize="11.5"
+                     Foreground="#5B6473"
+                     TextWrapping="Wrap"
+                     Text="{Binding Loc[integrity.autoExclusions]}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <Panel>
+      <!-- IR-8 -->
+      <StackPanel x:Name="EmptyState"
+                  IsVisible="{Binding IsEmpty}"
+                  Margin="20,44"
+                  Spacing="12"
+                  HorizontalAlignment="Center">
+        <Border Width="44" Height="44" CornerRadius="12" Background="#EAFAF0" HorizontalAlignment="Center">
+          <Path Width="22" Height="22" Stretch="Uniform" Stroke="#0F8A4D" StrokeThickness="2"
+                Data="M5 12.5l4.2 4.2L19 7" />
+        </Border>
+        <TextBlock FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Text="{Binding Loc[integrity.emptyTitle]}" />
+        <TextBlock FontSize="12"
+                   Foreground="#8A93A2"
+                   HorizontalAlignment="Center"
+                   Text="{Binding Loc[integrity.emptyDescription]}" />
+      </StackPanel>
+
+      <Grid ColumnDefinitions="264,*" IsVisible="{Binding HasSelection}" MinHeight="430">
+        <!-- 左一覧だけが内部スクロールを持つ。 -->
+        <Border Grid.Column="0" BorderBrush="#EEF0F4" BorderThickness="0,0,1,0">
+          <ScrollViewer x:Name="EventListScroll"
+                        HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="10" Spacing="4">
+              <StackPanel x:Name="AutomaticGroupHeader"
+                          IsVisible="{Binding HasAutomaticItems}"
+                          Orientation="Horizontal"
+                          Spacing="7"
+                          Margin="8,4,8,3">
+                <Ellipse Width="6" Height="6" Fill="#2F6BED" VerticalAlignment="Center" />
+                <TextBlock FontSize="10.5"
+                           FontWeight="Bold"
+                           Foreground="#2459CF"
+                           Text="{Binding AutomaticHeader}" />
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding AutomaticItems}"
+                            IsVisible="{Binding HasAutomaticItems}"
+                            ItemTemplate="{StaticResource IntegrityRowTemplate}" />
+
+              <Border x:Name="IndividualGroupHeader"
+                      IsVisible="{Binding HasIndividual}"
+                      BorderBrush="#EEF0F4"
+                      BorderThickness="0,1,0,0"
+                      Margin="0,7,0,0"
+                      Padding="8,10,8,3">
+                <TextBlock FontSize="10.5"
+                           FontWeight="Bold"
+                           Foreground="#8A93A2"
+                           Text="{Binding IndividualHeader}" />
+              </Border>
+              <ItemsControl ItemsSource="{Binding IndividualItems}"
+                            ItemTemplate="{StaticResource IntegrityRowTemplate}" />
+
+              <Border x:Name="MissingGroupHeader"
+                      IsVisible="{Binding HasMissing}"
+                      BorderBrush="#EEF0F4"
+                      BorderThickness="0,1,0,0"
+                      Margin="0,7,0,0"
+                      Padding="8,10,8,3">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Ellipse Width="6" Height="6" Fill="#C4282D" VerticalAlignment="Center" />
+                  <TextBlock FontSize="10.5"
+                             FontWeight="Bold"
+                             Foreground="#C4282D"
+                             Text="{Binding MissingHeader}" />
+                </StackPanel>
+              </Border>
+              <ItemsControl ItemsSource="{Binding MissingItems}"
+                            ItemTemplate="{StaticResource IntegrityRowTemplate}" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Column="1" Margin="20,16" Spacing="11">
+          <Border Height="190"
+                  CornerRadius="12"
+                  ClipToBounds="True"
+                  Background="#EEF1F7"
+                  BorderBrush="#E3E7EE"
+                  BorderThickness="1">
+            <Grid>
+              <c:ThumbnailImage SourcePath="{Binding PreviewPath}"
+                                IsVisible="{Binding !IsSelectedMissing}"
+                                Stretch="Uniform" />
+              <Panel IsVisible="{Binding !IsSelectedMissing}"
+                     Margin="10"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Bottom">
+                <Border x:Name="PendingPreviewBadge"
+                        Background="#F2FDF8EF"
+                        CornerRadius="6"
+                        Padding="7,2">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Ellipse Width="6" Height="6" Fill="#B5670C" VerticalAlignment="Center" />
+                    <TextBlock FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#8A5A20"
+                               Text="{Binding Loc[pending.badge]}" />
+                  </StackPanel>
+                </Border>
+                <Rectangle Stroke="#E0B36A"
+                           StrokeThickness="1"
+                           StrokeDashArray="3,2"
+                           RadiusX="6"
+                           RadiusY="6"
+                           IsHitTestVisible="False" />
+              </Panel>
+              <StackPanel IsVisible="{Binding IsSelectedMissing}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Spacing="8">
+                <Path Width="44" Height="34" Stretch="Fill" Stroke="#D6E0EE" StrokeThickness="1"
+                      Data="M0 12L12 0 M0 24L24 0 M4 34L38 0 M18 34L44 8 M32 34L44 22" />
+                <TextBlock FontSize="12"
+                           Foreground="#8A93A2"
+                           Text="{Binding Loc[integrity.noPreview]}" />
+                <Border Background="#FBECED"
+                        BorderBrush="#F0C4C6"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="7,2"
+                        HorizontalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Ellipse Width="6" Height="6" Fill="#C4282D" VerticalAlignment="Center" />
+                    <TextBlock FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#C4282D"
+                               Text="{Binding Loc[integrity.originMissing]}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <TextBlock FontSize="12.5"
+                     FontWeight="SemiBold"
+                     Foreground="#2B3340"
+                     TextTrimming="CharacterEllipsis"
+                     Text="{Binding PathLine}" />
+
+          <Border x:Name="WhyCard"
+                  Classes="integrityWhy"
+                  Classes.blue="{Binding WhyIsBlue}"
+                  Classes.amber="{Binding WhyIsAmber}">
+            <StackPanel Spacing="3">
+              <TextBlock FontSize="12.5"
+                         FontWeight="Bold"
+                         TextWrapping="Wrap"
+                         Text="{Binding WhyLead}" />
+              <TextBlock FontSize="11.5"
+                         Foreground="#5B6473"
+                         TextWrapping="Wrap"
+                         Text="{Binding WhyDescription}" />
+            </StackPanel>
+          </Border>
+
+          <!-- IR-5: 4-field compact criteria search. -->
+          <Border x:Name="CriteriaSearchCard"
+                  IsVisible="{Binding IsSelectedMissing}"
+                  BorderBrush="#E3E7EE"
+                  BorderThickness="1"
+                  CornerRadius="10"
+                  Padding="10">
+            <StackPanel Spacing="6">
+              <TextBlock FontSize="12.5"
+                         FontWeight="Bold"
+                         Foreground="#2B3340"
+                         Text="{Binding Loc[integrity.criteriaTitle]}" />
+              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="5">
+                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="3">
+                  <TextBlock FontSize="10.5" Foreground="#8A93A2" Text="{Binding Loc[integrity.criteriaName]}" />
+                  <TextBox Classes="integrityField" Text="{Binding NameContainsInput}" />
+                </StackPanel>
+                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="3">
+                  <TextBlock FontSize="10.5" Foreground="#8A93A2" Text="{Binding Loc[integrity.criteriaExtension]}" />
+                  <TextBox Classes="integrityField" Text="{Binding ExtensionInput}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="3">
+                  <TextBlock FontSize="10.5" Foreground="#8A93A2" Text="{Binding Loc[integrity.criteriaMtimeFrom]}" />
+                  <TextBox Classes="integrityField" Text="{Binding MtimeFromInput}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="3">
+                  <TextBlock FontSize="10.5" Foreground="#8A93A2" Text="{Binding Loc[integrity.criteriaSize]}" />
+                  <TextBox Classes="integrityField" Text="{Binding SizeToleranceInput}" />
+                </StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock FontSize="10.5"
+                           Foreground="#8A93A2"
+                           VerticalAlignment="Center"
+                           Text="{Binding Loc[integrity.criteriaHint]}" />
+                <Button Grid.Column="1"
+                        Classes="dlgBtn secondary"
+                        MinHeight="30"
+                        Padding="12,0"
+                        Command="{Binding SearchCandidatesCommand}"
+                        Content="{Binding Loc[integrity.search]}" />
+              </Grid>
+              <ListBox x:Name="CandidateList"
+                       ItemsSource="{Binding Candidates}"
+                       SelectedItem="{Binding SelectedCandidate}"
+                       MaxHeight="118"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.Styles>
+                  <Style Selector="ListBoxItem">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Padding" Value="0" />
+                  </Style>
+                  <Style Selector="ListBoxItem:selected">
+                    <Setter Property="Background" Value="Transparent" />
+                  </Style>
+                  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                    <Setter Property="Background" Value="Transparent" />
+                  </Style>
+                  <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                    <Setter Property="Background" Value="Transparent" />
+                  </Style>
+                  <Style Selector="ListBoxItem:selected Border.integrityCandidate">
+                    <Setter Property="BorderBrush" Value="#2F6BED" />
+                    <Setter Property="BoxShadow" Value="0 0 0 3 #382F6BED" />
+                  </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:RelinkCandidateViewModel">
+                    <Border Classes="integrityCandidate"
+                            MinHeight="48"
+                            Padding="7"
+                            BorderBrush="#D6E0EE"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Margin="0,2">
+                      <Grid ColumnDefinitions="46,*" ColumnSpacing="9">
+                        <Border Width="46" Height="34" CornerRadius="6" ClipToBounds="True" Background="#EEF1F7">
+                          <c:ThumbnailImage SourcePath="{Binding AbsolutePath}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                          <TextBlock FontSize="12"
+                                     FontWeight="Bold"
+                                     TextTrimming="CharacterEllipsis"
+                                     Text="{Binding FileName}" />
+                          <TextBlock FontSize="10.5"
+                                     Foreground="#8A93A2"
+                                     TextTrimming="CharacterEllipsis"
+                                     Text="{Binding Candidate.RelativePath}" />
+                          <TextBlock FontSize="10.5"
+                                     Foreground="#8A93A2"
+                                     Text="{Binding MetaText}" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock x:Name="NoCandidatesMessage"
+                         IsVisible="{Binding ShowNoCandidates}"
+                         Margin="4,5"
+                         FontSize="11.5"
+                         Foreground="#8A93A2"
+                         Text="{Binding Loc[integrity.noCandidates]}" />
+            </StackPanel>
+          </Border>
+
+          <Border x:Name="MetadataTable"
+                  IsVisible="{Binding !IsSelectedMissing}"
+                  BorderBrush="#E3E7EE"
+                  BorderThickness="1"
+                  CornerRadius="10"
+                  ClipToBounds="True">
+            <StackPanel>
+              <Border Height="32" Padding="12,0" BorderBrush="#EEF0F4" BorderThickness="0,0,0,1">
+                <DockPanel VerticalAlignment="Center">
+                  <TextBlock Width="90" FontSize="12" Foreground="#8A93A2" Text="{Binding Loc[common.size]}" />
+                  <TextBlock FontSize="12" FontWeight="Bold" Foreground="#2B3340" Text="{Binding SizeText}" />
+                </DockPanel>
+              </Border>
+              <Border Height="32" Padding="12,0" BorderBrush="#EEF0F4" BorderThickness="0,0,0,1">
+                <DockPanel VerticalAlignment="Center">
+                  <TextBlock Width="90" FontSize="12" Foreground="#8A93A2" Text="{Binding Loc[common.modifiedDate]}" />
+                  <TextBlock FontSize="12" FontWeight="Bold" Foreground="#2B3340" Text="{Binding DateText}" />
+                </DockPanel>
+              </Border>
+              <Border Height="32" Padding="12,0" IsVisible="{Binding ShowTagRow}">
+                <DockPanel VerticalAlignment="Center">
+                  <TextBlock Width="90" FontSize="12" Foreground="#8A93A2" Text="{Binding Loc[integrity.tagsLabel]}" />
+                  <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#2B3340" Text="{Binding TagCountText}" />
+                </DockPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+          <TextBlock FontSize="12"
+                     Foreground="#C4282D"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     Text="{Binding StatusMessage}" />
+        </StackPanel>
+      </Grid>
+    </Panel>
+  </DockPanel>
+</Window>

@@ -102,7 +102,7 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
     }
 
     [Fact]
-    public async Task VCIMG11_メニューにファイル操作行があり幅208で修復より先に並ぶ()
+    public async Task VCIMG11_メニューにファイル操作行があり幅208で統合裁定より先に並ぶ()
     {
         var vm = await NewVmWithImagesAsync("a.jpg");
         await Session.Dispatch(() =>
@@ -115,25 +115,25 @@ public sealed class GfFileOpsVisualParityTests : IDisposable
                 vm.ToggleMoreMenuCommand.Execute(null);
                 RunJobs();
 
-                // ⋯ メニューの Popup(修復 menuRow を持つ popupMenu)を特定
+                // ⋯ メニューの Popup(統合裁定 menuRow を持つ popupMenu)を特定
                 var menu = window.GetLogicalDescendants().OfType<Popup>()
                     .Select(p => p.Child).OfType<Border>()
-                    .FirstOrDefault(b => FindText(b, "修復") is not null);
+                    .FirstOrDefault(b => FindText(b, "要確認の画像…") is not null);
                 Assert.True(menu is not null, "⋯ メニューの Popup が見つからない");
 
                 // VC-IMG-11①: ポップオーバー幅= CMP-006 インスタンス契約値(ECO-122 で写像参照へ)
                 Assert.True(menu!.Width == RegistryContract.MenuWidthMore,
                     $"VC-IMG-11①: メニュー幅が {menu.Width}(契約 {RegistryContract.MenuWidthMore})");
 
-                // VC-IMG-11②③: 「ファイル操作」行が存在し、修復より先に並ぶ
+                // VC-IMG-11②③: 「ファイル操作」行が存在し、統合裁定より先に並ぶ
                 var fileOpsText = FindText(menu, "ファイル操作");
                 Assert.True(fileOpsText is not null, "VC-IMG-11③: 「ファイル操作」行が無い");
                 var rows = menu.GetLogicalDescendants().OfType<Button>()
                     .Where(b => b.Classes.Contains("menuRow")).ToList();
                 int idxFileOps = rows.FindIndex(r => FindText(r, "ファイル操作") is not null);
-                int idxRepair = rows.FindIndex(r => FindText(r, "修復") is not null);
-                Assert.True(idxFileOps >= 0 && idxRepair >= 0 && idxFileOps < idxRepair,
-                    $"VC-IMG-11②: 項目順が ファイル操作({idxFileOps})→修復({idxRepair}) でない");
+                int idxIntegrity = rows.FindIndex(r => FindText(r, "要確認の画像…") is not null);
+                Assert.True(idxFileOps >= 0 && idxIntegrity >= 0 && idxFileOps < idxIntegrity,
+                    $"VC-IMG-11②: 項目順が ファイル操作({idxFileOps})→統合裁定({idxIntegrity}) でない");
 
                 // VC-IMG-11③: フォルダグリフ(stroke #5b6473)+ラベル 13.5px/500・行高 42
                 var row = rows[idxFileOps];

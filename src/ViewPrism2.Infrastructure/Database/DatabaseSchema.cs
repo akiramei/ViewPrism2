@@ -37,11 +37,13 @@ public static class DatabaseSchema
             created_date      TEXT    NOT NULL,
             modified_date     TEXT    NOT NULL,
             notes             TEXT    NULL,
-            pending_origin    TEXT    NULL
+            pending_origin    TEXT    NULL,
+            pending_baseline_hash TEXT NULL
         );
         CREATE UNIQUE INDEX idx_images_folder_path ON images(sync_folder_id, relative_path);
         CREATE INDEX idx_images_folder_status ON images(sync_folder_id, status);
         CREATE INDEX idx_images_hash ON images(hash);
+        CREATE INDEX idx_images_candidate_link ON images(sync_folder_id, status, candidate_link_id);
 
         CREATE TABLE tags (
             id          TEXT NOT NULL PRIMARY KEY,
@@ -317,6 +319,14 @@ public static class DatabaseSchema
         // ALTER ADD COLUMN は末尾に列を足す。LatestDdl も同じ列順(末尾)で定義しスキーマ同値を保つ(CP-DB-006)。
         new("010-pending-origin", """
             ALTER TABLE images ADD COLUMN pending_origin TEXT NULL;
+            """),
+
+        // ECO-140/REQ-103 案a: スキャンの UpdateMetaAndPend が hash を上書きする前の裁定基準。
+        // 既存行と PendInPlace は NULL のまま記録 hash を基準にする。裁定確定時に NULL クリア。
+        // ALTER ADD COLUMN は末尾に足すため LatestDdl も images 末尾へ同じ列を定義する。
+        new("011-pending-baseline-hash", """
+            ALTER TABLE images ADD COLUMN pending_baseline_hash TEXT NULL;
+            CREATE INDEX idx_images_candidate_link ON images(sync_folder_id, status, candidate_link_id);
             """),
     ];
 }

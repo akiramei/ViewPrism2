@@ -16,13 +16,60 @@ namespace ViewPrism2.App.ViewModels;
 /// AdvancedRepairModal の候補カードは「サムネイル+ファイル名+パス+サイズ+更新日時」でユーザーが再リンク可否を
 /// 判断できる情報を提供する(§2.11.5 表示パリティ契約)。旧 RelinkWindow(サムネイル非表示)は既定 null のまま。
 /// </summary>
-public sealed record RelinkCandidateViewModel(
-    RelinkCandidate Candidate, string SizeText, string ModifiedText, string? AbsolutePath = null)
+public sealed partial class RelinkCandidateViewModel : ObservableObject
 {
+    private readonly LocalizationService? _localization;
+    private readonly string _resolvedModifiedText;
+
+    public RelinkCandidateViewModel(
+        RelinkCandidate candidate,
+        string sizeText,
+        string modifiedText,
+        string? absolutePath = null)
+    {
+        Candidate = candidate;
+        SizeText = sizeText;
+        _resolvedModifiedText = modifiedText;
+        AbsolutePath = absolutePath;
+    }
+
+    /// <summary>
+    /// ECO-140: 候補日時は ISO の権威値を保持し、表示時に現在ロケールで解決する。
+    /// </summary>
+    public RelinkCandidateViewModel(
+        RelinkCandidate candidate,
+        LocalizationService localization,
+        string? absolutePath = null)
+    {
+        Candidate = candidate;
+        SizeText = ByteSizeFormatter.Format(candidate.FileSize);
+        _resolvedModifiedText = string.Empty;
+        _localization = localization;
+        AbsolutePath = absolutePath;
+    }
+
+    public RelinkCandidate Candidate { get; }
+
+    public string SizeText { get; }
+
+    public string ModifiedText => _localization is null
+        ? _resolvedModifiedText
+        : LocaleFormats.FormatTimestamp(Candidate.ModifiedDate, _localization.CurrentLocale);
+
+    public string? AbsolutePath { get; }
+
     public string RelativePath => Candidate.RelativePath;
+
+    public string MetaText => $"{SizeText} · {ModifiedText}";
 
     /// <summary>候補のファイル名(正規形パスの末尾要素。INV-005 によりスラッシュ区切り)。</summary>
     public string FileName => Candidate.RelativePath[(Candidate.RelativePath.LastIndexOf('/') + 1)..];
+
+    internal void NotifyLocalizedProperties()
+    {
+        OnPropertyChanged(nameof(ModifiedText));
+        OnPropertyChanged(nameof(MetaText));
+    }
 }
 
 /// <summary>リンク切れ画像の表示行。<paramref name="AbsolutePath"/> はサムネイル描画用(欠損時は原則プレースホルダ)。</summary>
@@ -46,7 +93,7 @@ public sealed partial class RelinkViewModel : ObservableObject
     private readonly LocalizationService _localization;
     private readonly IWindowService _windows;
 
-    /// <summary>collection の物理ルート(サムネイル絶対パス解決用)。LoadAsync で解決する(RepairViewModel と同パターン)。</summary>
+    /// <summary>collection の物理ルート(サムネイル絶対パス解決用)。LoadAsync で解決する(IntegrityReviewViewModel と同パターン)。</summary>
     private string? _rootPath;
 
     public RelinkViewModel(
@@ -98,7 +145,7 @@ public sealed partial class RelinkViewModel : ObservableObject
         SelectedMissing = null;
         SelectedCandidate = null;
 
-        // collection 物理ルートを解決(候補/missing 行のサムネイル絶対パス用、DC-RELINK-001)。RepairViewModel と同パターン。
+        // collection 物理ルートを解決(候補/missing 行のサムネイル絶対パス用、DC-RELINK-001)。IntegrityReviewViewModel と同パターン。
         var folder = await _folders.GetByIdAsync(_folderId);
         _rootPath = folder?.Path;
 
@@ -156,7 +203,7 @@ public sealed partial class RelinkViewModel : ObservableObject
         {
             // 候補列挙は relative_path 昇順(REQ-017。RelinkService 側で整列済み)。
             // DC-RELINK-001(ECO-004): 候補カードはサムネイル+ファイル名+パス+サイズ+更新日時を提示する
-            // (RepairWindow と同型。AbsolutePath は collection root + relative。物理 I/O なしの文字列結合)。
+            // (IntegrityReviewWindow と同型。AbsolutePath は collection root + relative。物理 I/O なしの文字列結合)。
             foreach (var candidate in await _relink.GetCandidatesAsync(missing.Record.Id))
             {
                 Candidates.Add(new RelinkCandidateViewModel(

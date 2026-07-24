@@ -82,11 +82,9 @@ public interface IWindowService
         => Task.FromResult(ScanStagingOutcome.Discarded);
 
     /// <summary>
-    /// pending 裁定ダイアログ(ECO-129/REQ-101・§2.11.7・CAD PD-1〜4)。選択コレクションの未裁定を
-    /// 1 件ずつ裁定する。戻り値= 1 件以上裁定した(呼び出し側の再読込トリガ)。
-    /// 既定実装=何もしない(テスト Stub 追随の負担を避ける。実体は WindowService)。
+    /// ECO-140: pending/missing を事象中心で裁定する統合面。戻り値= 1 件以上裁定した。
     /// </summary>
-    Task<bool> ShowPendingReviewAsync(string collectionId) => Task.FromResult(false);
+    Task<bool> ShowIntegrityReviewAsync(string collectionId) => Task.FromResult(false);
 
     /// <summary>設定ウィンドウ(モーダル)。</summary>
     Task ShowSettingsAsync();
@@ -148,10 +146,4 @@ public interface IWindowService
     // V3 旧 UI(独立モーダル)は ECO-014 で整理トレイへ置換され、ECO-024 の legacy 撤去で
     // 呼び出し元が消滅した残骸だった(類似検索/マージ=整理トレイ・トラッシュ=インペイン ポップアップが実体)。
 
-    /// <summary>
-    /// 修復ライフサイクル UI(REQ-072、仕様 §2.11.5)。criteria 条件検索フォーム+結果と
-    /// relink フロー(missing への候補提示・選択・確定)を表示する。
-    /// 既定実装は no-op(UI を持たないテストスタブ互換)。View 層 WindowService が上書きする。
-    /// </summary>
-    Task ShowRepairAsync(string collectionId) => Task.CompletedTask;
 }

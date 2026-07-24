@@ -216,7 +216,7 @@ public sealed class CpUiG1TrashPopupTests : IDisposable
         Assert.Equal(PendingOrigin.Restored, x.PendingOrigin);
         // FS ブラウズ(無絞り込み)に未裁定バッジ付きで現れる
         Assert.Contains(vm.Items, i => !i.IsFolder && i.Name == "x.jpg" && i.IsPending);
-        Assert.True(vm.HasPending);
+        Assert.True(vm.HasIntegrityReview);
     }
 
     [Fact]
