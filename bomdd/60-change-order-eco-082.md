@@ -81,3 +81,21 @@ ECO-083(PerAssembly 化)検証のフル run ×12 中、**非ハング fail 2 回
 - **run2(スタック全文採取)**: `CpUiRepairViewModelTests.GF_V4_01` が `NullReferenceException` — `Microsoft.Data.Sqlite.SqliteCommand.DisposePreparedStatements` → `SqliteConnection.Close` → `DatabaseManager.Dispose`(:93)→ `TempDb.Dispose`(テスト末尾)。**接続 Close と prepared statement の並列競合**の形= **テスト内で起動した background タスク(疑い: ECO-075 で Task.Run 化した修復候補探索)がテスト終了後も残存し、TempDb.Dispose(接続破棄)と競合**する構造の直接証拠。
 - run7: 詳細不明(後続 run がログ上書き・非ハングのみ確認=観測手順の教訓を再度踏んだ)。
 - **診断仮説の更新**: 本 ECO の InvalidCast(Dapper multi-map)も「壊れた/破棄中の接続・reader を読んだ」結果である可能性が浮上(NRE と InvalidCast は同じ競合の別の顔)。**発火面はクエリでなく「テスト終了時の background 残タスク×TempDb.Dispose」の可能性が高い** — 再開時はこの線(CpUiRepairViewModelTests/CpWorkspace028Tests のテスト終了時の未 await タスク棚卸し+Dispose を gate 内に入れる是正)から。
+
+## §9 ECO-141(Avalonia 12.1.1)後の再測(2026-07-24・観測のみ・保留静置は維持)
+
+ECO-141 gate① 裁定③に基づき、上流修正取り込み後のフル run で再現有無のみ観測した(束ねない)。
+
+- **観測**: 12.1.1 へ更新後のフル run(設計者 4 回+R8 独立検査者 1 回=計 5 回)で
+  **InvalidCastException・SqliteCommand.DisposePreparedStatements の NRE とも未発火**
+  (Tests 971→972/972・Oracle 109+4skip)。
+- **ただし証拠価値は限定的**: ①本 ECO の症状は元来「35 フル run+単独 1,200 回で再現せず」の
+  低頻度事象であり、5 回の緑は不在の証明にならない ②§8 の NRE を採取した現場
+  `CpUiRepairViewModelTests` は **ECO-140(fix `fb5173c`)で撤去済み**=当該捕捉サイト自体が消滅した。
+- **上流修正との関係**: #21781 は「work item から逃げた例外が consumer loop を殺す」故障増幅の修正で、
+  本 ECO の疑い(テスト終了時の background 残タスク × TempDb.Dispose の競合)とは**別層**。
+  ただし ECO-083 期に本 ECO の証拠が採れたのは FailFast 監視の即時クラッシュ+スタック全文のおかげであり、
+  **ECO-141 でその監視を撤去した**ため、再発時の一次証拠は HangDump の mini ダンプ経由に後退する
+  (診断解像度の低下=再開時に留意)。
+- **裁定は不変**: (a) 保留静置を維持(クローズしない)。再開起点は §8 の線(未 await タスク棚卸し+
+  Dispose の gate 内化)のまま。

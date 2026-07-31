@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- M-UI-013 / M-UI-014: Avalonia シェル+ビューア。
        パッケージは procurement(32-mbom.yaml)の固定バージョンのみ。
-       Avalonia.Diagnostics 12.0.4 は NuGet 未発行のため参照しない(Run 1 CHEAT-002)。 -->
+       Avalonia.Diagnostics は **12 系が NuGet 未発行**(最新 11.3.18)のため参照しない
+       (Run 1 CHEAT-002・ECO-141 で 12.1.1 更新時に再確認)。 -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
     <!-- ECO-026/#1: グリッド仮想化(REQ-041 適合)。ItemsRepeater/UniformGridLayout は本体と別 NuGet。
-         最新 12.0.0(Avalonia >= 12.0.0 依存=本体 12.0.4 と併用可)。procurement は 32-mbom/31-kbom へ M4 同期。 -->
+         最新 12.0.0(Avalonia >= 12.0.0 依存=本体 12.1.1 と併用可・ECO-141 で実測)。procurement は 32-mbom/31-kbom へ M4 同期。 -->
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />

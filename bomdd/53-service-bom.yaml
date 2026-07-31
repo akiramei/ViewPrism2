@@ -33,7 +33,7 @@ service_bom:
   watched_externals:
     - kbom: K-AVALONIA
       dependency: "Avalonia / Avalonia.Desktop / Avalonia.Themes.Fluent / Avalonia.Fonts.Inter"
-      pinned_version: "12.0.4"
+      pinned_version: "12.1.1"   # ECO-141(2026-07-24): 12.0.4→12.1.1(上流 #21781/#21688 取り込み・drift_source 発火の実例)
       pin_status: exact
       drift_source: "Avalonia の minor/major 更新(レンダリング・仮想化・バインディング・入力イベントの挙動変化)"
       reinspect_depth: G   # 描画/バインディング/入力の劣化は unit に出ず golden/L1 で顕在化(ECO-002 実証)
@@ -41,7 +41,7 @@ service_bom:
         - "仮想化は自明でない: ItemsControl 直置き=仮想化なしで 1 万件フリーズ(REQ-041 中核リスク)。グリッドは『1 行=N セル』の行リスト化で VirtualizingStackPanel に載せる方式を維持"
         - "ECO-002 DF-3: CompiledBindings はインデクサ Item[] の PropertyChanged 通知では再評価されない → 文言は名前付きプロパティ経由で公開(ロケール切替時に全ラベル切替を L1 スモークで確認)"
         - "ECO-002 DF-4: ClickCount(ダブルクリック判定)が環境依存 → DoubleClickDetector で補完。Avalonia 更新時はダブルクリック起動(G-4)を要再確認"
-        - "調達制約: Avalonia.Diagnostics 12.0.4 は NuGet 未発行のため参照しない(Run1 CHEAT-002)。更新時に発行状況が変われば再評価"
+        - "調達制約: Avalonia.Diagnostics は **12 系が NuGet 未発行**(ECO-141 実測: 最新 11.3.18)のため参照しない(Run1 CHEAT-002)。12.1.1 更新時にも発行なしを再確認済み=procurement からは行ごと除去(発行されたら再許諾)"
       affected_parts: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-TAGASSIGN-029]
 
     - kbom: K-MVVM
@@ -211,7 +211,7 @@ service_bom:
       part_ref: E-UI-SHELL-021
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G
@@ -226,7 +226,7 @@ service_bom:
       part_ref: E-UI-BROWSE-022
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G   # 選択ロジックは unit・仮想化/描画は golden
@@ -242,7 +242,7 @@ service_bom:
       part_ref: E-UI-AXIS-NAV-040
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G
@@ -256,7 +256,7 @@ service_bom:
       part_ref: E-UI-MODE-041
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G
@@ -275,7 +275,7 @@ service_bom:
       part_ref: E-UI-VIEWER-024
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
       acceptance_depth: G   # ナビゲーション(端停止・現在位置)は unit(VM)・起動経路/背景クリックは golden
       reinspect_on_change:
@@ -287,7 +287,7 @@ service_bom:
       part_ref: E-UI-NODEGRAPH-025
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G
@@ -300,7 +300,7 @@ service_bom:
       part_ref: E-UI-TAGS-026
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G
@@ -313,7 +313,7 @@ service_bom:
       part_ref: E-UI-TAGASSIGN-029
       classification: surface
       external_deps:
-        - { kbom_ref: K-AVALONIA, version: "12.0.4" }
+        - { kbom_ref: K-AVALONIA, version: "12.1.1" }
         - { kbom_ref: K-MVVM, version: "8.4.2" }
         - { kbom_ref: K-DESIGN, version: "ADR-0001" }
       acceptance_depth: G   # 適用対象計算・連番計算は unit(CP-TAGUI-013)・UI 操作は golden

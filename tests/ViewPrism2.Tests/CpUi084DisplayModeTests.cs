@@ -272,7 +272,8 @@ public sealed class CpUi084DisplayModeTests : IDisposable
     {
         // 共有 Headless セッションの先行初期化: プラットフォーム初期化前に VM が Dispatcher.UIThread へ
         // 触れると、初回 EnsureSharedApplication が VerifyAccess で死ぬ(クラス単独実行で実測・
-        // ECO-083 の FailFast 監視が顕在化)。フル run では他クラスが先に温めるため潜伏する —
+        // 当時の ECO-083 FailFast 監視が顕在化。監視は ECO-141 で撤去=現在は SessionInitFixture と
+        // 本 warm-up が順序を担保)。フル run では他クラスが先に温めるため潜伏する —
         // 順序を決定的にするためここで必ずセッションを先に立ち上げる。
         await HeadlessApp.Session.Dispatch(() => true, CancellationToken.None);
         await SeedAsync();

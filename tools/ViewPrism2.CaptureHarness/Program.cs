@@ -706,7 +706,10 @@ internal static class Program
     {
         using var frame = top.CaptureRenderedFrame()
             ?? throw new InvalidOperationException("no frame: " + path);
-        frame.Save(path);
+        // ECO-141(Avalonia 12.1.1): Save(string, int? quality) は廃止(CS0618)。
+        // 本ハーネスの出力は PNG 固定のため、既定設定の PNG エンコーダを明示する
+        // (旧 Save(path) は拡張子から暗黙選択+quality=null=既定と同義)。
+        frame.Save(path, PngBitmapEncoderOptions.Default);
         Console.WriteLine("saved: " + path);
     }
 

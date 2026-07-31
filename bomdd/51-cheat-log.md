@@ -787,3 +787,12 @@ ECO-008(タグ種別は作成後変更不可)が「訂正対象(モック側の�
   「en クリップ」既知クラス・ECO-077 期からの既存事象= ECO-140 無接触)。ECO-140 は新規統合行のみ
   GF-140-03 で是正+文字数予算 lint を導入済み — 既存行への同 lint 水平展開(全メニュー行の ja/en 予算検査)
   と copy 短縮(例 "Backup & transfer…")を別途一括で。
+
+## 2026-07-24(ECO-141 R8 独立レビューのスコープ外所見)
+
+- **【小・doc】CLAUDE.md「Oracle の skip は既知 2 件」が実測 4 件**: 静的 2(ECO-128 の S-26/S-29)+
+  動的 2(`ABDecodeStrategyProbe`/`P07CapabilityProbe` の `Assert.SkipUnless`)。ECO-128 以来の stale で
+  ECO-141 起因ではない。次に CLAUDE.md へ触れる ECO で件数と内訳を同期する。
+- **【小・将来リスク】Headless の poison 経路で `UnobservedTaskException` が 1 件出る**(ECO-141 の
+  再現ハーネス実行で実観測)。現行 xunit v3 設定ではプロセスを落とさないが、将来
+  `ThrowUnobservedTaskExceptions` を有効化するとプロセス毒になり得る。有効化を検討する時に本項を参照。

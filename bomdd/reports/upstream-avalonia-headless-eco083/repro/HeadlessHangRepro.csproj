@@ -5,10 +5,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- ECO-141: 陽性対照(12.1.0=欠陥再現)と検証(12.1.1=解消)を切替可能にする。
+         例: dotnet run -p:AvaloniaHeadlessVersion=12.1.0 -->
+    <AvaloniaHeadlessVersion Condition="'$(AvaloniaHeadlessVersion)' == ''">12.1.1</AvaloniaHeadlessVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Headless" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Headless" Version="$(AvaloniaHeadlessVersion)" />
   </ItemGroup>
 
 </Project>

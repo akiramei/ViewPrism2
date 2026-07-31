@@ -1,3 +1,4 @@
+using System.Reflection;
 using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Threading;
@@ -9,7 +10,10 @@ using Avalonia.Threading;
 var isolation = args.Length > 0 && args[0] == "PerTest"
     ? AvaloniaTestIsolationLevel.PerTest
     : AvaloniaTestIsolationLevel.PerAssembly;
-Console.WriteLine($"Avalonia.Headless 12.1.0 / isolation={isolation}");
+var headlessVersion = typeof(HeadlessUnitTestSession).Assembly
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+    ?? typeof(HeadlessUnitTestSession).Assembly.GetName().Version?.ToString() ?? "unknown";
+Console.WriteLine($"Avalonia.Headless {headlessVersion} / isolation={isolation}");
 
 TaskScheduler.UnobservedTaskException += (_, e) =>
     Console.WriteLine($"[UnobservedTaskException] {e.Exception.GetBaseException().Message}");
@@ -54,6 +58,39 @@ try
 catch (TimeoutException)
 {
     Console.WriteLine($"3) subsequent dispatch: NOT completed after 10s (Task.Status={next.Status}) => permanent hang reproduced");
+}
+
+// 4) (ViewPrism2 ECO-141) Work item callback itself throwing — is it routed to its own
+//    TCS, or does it escape the consumer loop? The loop's only catch is
+//    OperationCanceledException, so this determines whether a fail-fast watchdog on the
+//    dispatch task still has a job after the #21781 cleanup fix.
+// (explicit delegate type: a throw-only lambda is ambiguous between the Func<T>/Func<Task<T>> overloads)
+Func<int> throwing = () => throw new InvalidOperationException("direct: exception thrown by the work item callback itself");
+var direct = session.Dispatch(throwing, CancellationToken.None);
+try
+{
+    await direct.WaitAsync(TimeSpan.FromSeconds(10));
+    Console.WriteLine("4) direct-throw dispatch: completed normally (unexpected)");
+}
+catch (TimeoutException)
+{
+    Console.WriteLine($"4) direct-throw dispatch: NOT completed after 10s (Task.Status={direct.Status})");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"4) direct-throw dispatch: faulted with {ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}");
+}
+
+// 5) Liveness after a direct throw: if the loop died, this never completes.
+var after = session.Dispatch(() => 2, CancellationToken.None);
+try
+{
+    var v = await after.WaitAsync(TimeSpan.FromSeconds(10));
+    Console.WriteLine($"5) dispatch after direct throw: completed ({v}) => loop survived");
+}
+catch (TimeoutException)
+{
+    Console.WriteLine($"5) dispatch after direct throw: NOT completed after 10s (Task.Status={after.Status}) => loop died");
 }
 
 GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
