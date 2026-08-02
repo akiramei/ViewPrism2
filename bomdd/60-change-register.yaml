@@ -1100,7 +1100,7 @@ changes:
   - id: ECO-065
     title: "50-as-built(承認証拠面)が validator 検査外 — 無効記録が無音通過する fail-open"
     type: 検査基盤是正(validator 拡張。ECO-061 スコープ外所見の昇格 — クローズ/監査証拠が未検査面に依存するため候補待ちにしない。gate①でスコープ裁定が先)
-    status: implemented   # 2026-08-03 fix= リポ外チェーン(BomDD ECO-029= ref-v0.10 文書方言宣言/Plm ECO-007= スナップショット同期)。本リポの変更は本記帳のみ
+    status: applied   # 2026-08-03 クローズ(maintainer accept 承認・golden n/a= 機械証拠検収: 同梱経路プローブ= cp_id 改竄 R-003 error 2 件/正常台帳 誤検出 0・ECO-120 前例)。fix= リポ外チェーン(BomDD ECO-029/Plm ECO-007)・本リポの変更は記帳のみ。残存境界= 散文面・presence(verification 欄)
     golden: n/a
     baseline: "main 11efce1"
     findings: "実測2026-07-11: 50-as-built.yamlはvalidate_bom.pyに一切ロードされない(対象=30/32/60/00のみ)。構文パース・E13重複キー・register引用golden_*キーの実在突合・エントリ最小スキーマすべて未検査。注入実験=不正YAML追記→0 error/0 warning・exit 0(復元済み)。依存=registerが32箇所でas-builtを承認記録として引用、ECO-062/063/064のacceptクローズ条件が「50-as-builtへ承認記録」を含む。現状突合はgolden_2026_07_11_eco062/063/064の3/3実在=腐敗未発生(潜在)。E13「全YAML台帳」の文言は50/52/53を含むように読める余地(検査一覧には行なし=文言の曖昧さ)。同族=52-metrics/53-service-bomも非ロード(スコープはgate裁定)。BomDD一般形=対象欠落チャレンジ/silence §16(a)のファイル粒度版"
