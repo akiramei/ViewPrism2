@@ -798,7 +798,7 @@ control_plan:
         - "(ECO-140)本 CP の検査面(PD-5/PD-6・PendingReviewWindow)は E-UI-INTEGRITY-050(統合裁定面)へ superseded= 検査実体は CP-INTEGRITY-036 へ移管(高信頼バッチ意味論のベクタは同 CP が継承)。本エントリは歴史記録+意味論の典拠として残置"
 
     - id: CP-INTEGRITY-036
-      characteristic: "ECO-140: 統合裁定面(要確認の画像)= 事象 3 分類・混在一括自動裁定(移動= T4 relink/再出現= T13 accept)・裁定時 hash 再計算(scan 非接触)・relink 選別+確定の E-RELINK-007 一本化・入口統合"
+      characteristic: "ECO-140: 統合裁定面(要確認の画像)= 事象 3 分類・混在一括自動裁定(移動= T4 relink/再出現= T13 accept)・裁定時 hash 再計算(scan 非接触)・relink 選別+確定の E-RELINK-007 一本化・入口統合。+(ECO-142)事象カウント経路の計算量= missing 母集合規模の相関プローブ×行取得を許さない(潜伏実績: fb5173c から 10 日潜伏。受入 TempDb の小規模母集団では計算量差が観測不能で、実機の 26 万 missing 残留コレクションの切替遅延で顕在= 集計 SQL の受入は駆動側/plan 形状も pin する)"
       classification: core+surface
       depth: unit+G
       tolerance: exact
