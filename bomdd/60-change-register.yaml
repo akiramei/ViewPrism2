@@ -1992,7 +1992,7 @@ changes:
   - id: ECO-142
     title: "コレクション切替が missing 母集合規模で遅延 — CountIntegrityReviewEventsAsync の駆動側選択(NOT EXISTS 相関×missing 側駆動)"
     type: "不具合(実装層・性能特性・実測済み。件数の挙動は仕様どおり)"
-    status: staged   # 2026-08-03 起票(maintainer 報告=6 件の類似コレクションが 3 桁コレクションより表示が遅い)
+    status: implemented   # 2026-08-03 是正+機械受入完了・golden 待ち(gate②=n/a 提案)。fix=駆動側反転(案A)・R5 plan pin 是正前 red 実測→green 反転・計数同値ベクタ 14 件(R8 Med 処置で失格 4 クラス追加)・CP-INTEGRITY-036 計算量観点併修。実 DB 検証=262,045 bit 一致・318ms→30ms(covering 物理下限)。機械受入=build 0/0・Tests 974/974・Oracle 109+4skip 無接触(R6)・validate 0/0。R7 対象外(視覚変更なし)・R8 実施=未処置スコープ内所見 0
     golden: "n/a 見込み(挙動 bit 一致+視覚変更なし= ECO-134/137 先例の機械受入クローズ想定。§6 参照)"
     baseline: "main 79123df"
     findings: "実測(実 DB 366MB・warm)= 類似コレクション(normal 6/missing 262,045)切替で CountIntegrityReviewEventsAsync(ImageRepository.cs:307)が 318ms・他コレクション 2ms。切替経路(LoadContentAsync)の同期 await のため体感遅延に直結。真因= NOT EXISTS 相関サブクエリを missing 側駆動で記述し 262k 行×(相関プローブ+hash 読みの本体ページランダム取得)。確定= ①混入 fb5173c(ECO-140 fix・潜伏 10 日・マスキング=受入 TempDb は小規模母集団で計算量差が観測不能。大規模 missing 残留は実機の類似のみ=過去の登録内容がパス変更で 262,045 行 missing 残留・残留自体はスコープ外) ②物理下限=素の COUNT が covering index 順次 27ms ③意味論等価の駆動側反転(missing 総数−候補有り missing 数=pending 駆動・COUNT(DISTINCT m.id))が 27ms・結果一致(類似 262,045/pending9・missing10 併有の別コレクション非自明ケースで 11=11) ④切替経路の他クエリ・サムネイルはシロ。missing をカウントに含めるのは CMP-010 仕様どおり=除外は是正手段にならない。未検証= cold cache 実測差・アプリ接続(Dapper)での反転版実測とプラン形状"

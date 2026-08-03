@@ -309,6 +309,10 @@ public sealed class ImageRepository : IImageRepository
     {
         // pending は 1 行=1 事象。missing は同一 hash/folder の candidate new が無い単独行だけを数える。
         // 画像行を materialize せず CMP-010 の事象合計を返す。
+        // ECO-142: 駆動側は pending に固定(missing 総数 − 候補有り missing 数)。missing 側駆動の
+        // NOT EXISTS 相関は母集合規模の行ごとプローブ+本体ページ取得になり、コレクション切替
+        // (LoadContentAsync)が missing 残留規模に比例して遅延する(26 万件実測 318ms→27ms)。
+        // COUNT(DISTINCT m.id) は曖昧組(1 missing: 複数 new)の除外を 1 回に保つ(意味論等価)。
         return _db.RunAsync(async conn =>
         {
             var count = await conn.ExecuteScalarAsync<long>(new CommandDefinition(
@@ -322,19 +326,21 @@ public sealed class ImageRepository : IImageRepository
                   (SELECT COUNT(*)
                    FROM images m
                    WHERE m.sync_folder_id = @SyncFolderId
+                     AND m.status = 'missing')
+                  -
+                  (SELECT COUNT(DISTINCT m.id)
+                   FROM images p
+                   JOIN images m ON m.id = p.candidate_link_id
+                   WHERE p.sync_folder_id = @SyncFolderId
+                     AND p.status = 'pending'
+                     AND p.pending_origin = 'new'
+                     AND m.sync_folder_id = @SyncFolderId
                      AND m.status = 'missing'
+                     AND m.hash = p.hash
                      AND NOT EXISTS (
                        SELECT 1
-                       FROM images p
-                       WHERE p.sync_folder_id = m.sync_folder_id
-                         AND p.status = 'pending'
-                         AND p.pending_origin = 'new'
-                         AND p.candidate_link_id = m.id
-                         AND p.hash = m.hash
-                         AND NOT EXISTS (
-                           SELECT 1
-                           FROM image_tags it
-                           WHERE it.image_id = p.id)))
+                       FROM image_tags it
+                       WHERE it.image_id = p.id))
                 """,
                 new { SyncFolderId = syncFolderId },
                 cancellationToken: ct)).ConfigureAwait(false);

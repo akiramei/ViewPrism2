@@ -883,6 +883,96 @@ public sealed class CpIntegrityReviewTests : IDisposable
     }
 
     [Fact]
+    public async Task R5_事象カウントはmissing母集合への相関プローブなしのcoveringカウントで実行される()
+    {
+        // ECO-142: コレクション切替経路(LoadContentAsync)の事象カウントが missing 母集合規模の
+        // 「行ごと相関プローブ+本体ページ取得」にならないことを実行計画で pin(固定時間閾値なし)。
+        // SQL は production 原文から抽出し、production と同一 migration の TempDb でプランを取る。
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(), "src", "ViewPrism2.Infrastructure", "Database", "ImageRepository.cs"));
+        var methodStart = source.IndexOf("CountIntegrityReviewEventsAsync", StringComparison.Ordinal);
+        var methodEnd = source.IndexOf("GetByIdsAsync", methodStart, StringComparison.Ordinal);
+        var method = source[methodStart..methodEnd];
+        var sqlStart = method.IndexOf("\"\"\"", StringComparison.Ordinal) + 3;
+        var sqlEnd = method.IndexOf("\"\"\"", sqlStart, StringComparison.Ordinal);
+        var sql = method[sqlStart..sqlEnd];
+
+        var plan = await _db.Manager.RunAsync(async conn =>
+        {
+            var rows = await conn.QueryAsync<(long Id, long Parent, long NotUsed, string Detail)>(
+                new CommandDefinition(
+                    "EXPLAIN QUERY PLAN " + sql,
+                    new { SyncFolderId = "probe" },
+                    cancellationToken: TestContext.Current.CancellationToken));
+            return string.Join("\n", rows.Select(r => r.Detail));
+        }, TestContext.Current.CancellationToken);
+
+        // 欠陥署名: missing 1 行ごとに候補 pending を探す相関プローブ(candidate_link_id 等値つき SEARCH)。
+        // 駆動側反転(pending 側から missing を PK lookup)ではこの形は現れない。
+        Assert.DoesNotContain(
+            "(sync_folder_id=? AND status=? AND candidate_link_id=?)", plan, StringComparison.Ordinal);
+        // pending 総数・missing 総数の bulk カウント 2 本は index-only(covering)で数える
+        // (missing 側が非 covering だと本体ページのランダム取得が母集合規模で走る)。
+        var coveringCounts = plan.Split("USING COVERING INDEX idx_images_").Length - 1;
+        Assert.True(coveringCounts >= 2, "bulk カウントが covering でない。plan:\n" + plan);
+    }
+
+    [Fact]
+    public async Task 事象カウントは曖昧組を重複計上せず失格候補のmissingを数える()
+    {
+        // ECO-142: 計数意味論の同値ベクタ(是正前後で bit 一致)。曖昧組(1 missing: 複数 new)の
+        // missing 除外は 1 回= DISTINCT 意味論を pin(重複減算の混入を検出する)。
+        var folder = await AddFolderAsync(Path.Combine(
+            Path.GetTempPath(), "ViewPrism2.Tests", "eco142-" + IdGenerator.NewId()));
+        var folderId = folder.Id;
+
+        await AddRowAsync(Row(folderId, "alone-old.jpg", ImageStatus.Missing));
+        var movedMissing = await AddRowAsync(Row(folderId, "moved-old.jpg", ImageStatus.Missing));
+        await AddRowAsync(Row(
+            folderId, "moved-new.jpg", ImageStatus.Pending, PendingOrigin.New, movedMissing.Id));
+        var ambiguousMissing = await AddRowAsync(Row(folderId, "ambiguous-old.jpg", ImageStatus.Missing));
+        await AddRowAsync(Row(
+            folderId, "ambiguous-1.jpg", ImageStatus.Pending, PendingOrigin.New, ambiguousMissing.Id));
+        await AddRowAsync(Row(
+            folderId, "ambiguous-2.jpg", ImageStatus.Pending, PendingOrigin.New, ambiguousMissing.Id));
+        var taggedMissing = await AddRowAsync(Row(folderId, "tagged-old.jpg", ImageStatus.Missing));
+        var tagged = await AddRowAsync(Row(
+            folderId, "tagged-new.jpg", ImageStatus.Pending, PendingOrigin.New, taggedMissing.Id));
+        var tag = new Tag { Id = IdGenerator.NewId(), Name = "eco142", Type = TagType.Simple };
+        await _db.Tags.AddAsync(tag);
+        await _db.Tags.UpsertImageTagAsync(new ImageTag { ImageId = tagged.Id, TagId = tag.Id });
+        var mismatchMissing = await AddRowAsync(Row(folderId, "mismatch-old.jpg", ImageStatus.Missing));
+        await AddRowAsync(Row(
+            folderId, "mismatch-new.jpg", ImageStatus.Pending, PendingOrigin.New, mismatchMissing.Id,
+            hash: new string('b', 64)));
+        var changedMissing = await AddRowAsync(Row(folderId, "changed-old.jpg", ImageStatus.Missing));
+        await AddRowAsync(Row(
+            folderId, "changed-new.jpg", ImageStatus.Pending, PendingOrigin.Changed, changedMissing.Id));
+        // R8 所見(2026-08-03): 駆動側反転で m.sync_folder_id / m.status='missing' が単独 load-bearing 化
+        // したため、候補先が「別フォルダの missing」「同フォルダの normal」「NULL」「不存在 id」の
+        // 失格クラスも pin(条件削除の変異はいずれも減算超過= 14→13 で赤になる)。
+        var otherFolder = await AddFolderAsync(Path.Combine(
+            Path.GetTempPath(), "ViewPrism2.Tests", "eco142-other-" + IdGenerator.NewId()));
+        var otherMissing = await AddRowAsync(Row(otherFolder.Id, "other-old.jpg", ImageStatus.Missing));
+        await AddRowAsync(Row(
+            folderId, "cross-folder.jpg", ImageStatus.Pending, PendingOrigin.New, otherMissing.Id));
+        var normalTarget = await AddRowAsync(Row(folderId, "normal-target.jpg", ImageStatus.Normal));
+        await AddRowAsync(Row(
+            folderId, "to-normal.jpg", ImageStatus.Pending, PendingOrigin.New, normalTarget.Id));
+        await AddRowAsync(Row(folderId, "no-candidate.jpg", ImageStatus.Pending, PendingOrigin.New));
+        await AddRowAsync(Row(
+            folderId, "dangling.jpg", ImageStatus.Pending, PendingOrigin.New, IdGenerator.NewId()));
+
+        // pending 10 + 数える missing 4(単独/タグ付き候補失格/hash 不一致失格/origin!=new 失格)。
+        // 曖昧組 missing(候補あり)と移動一意組 missing は数えない。DISTINCT なしの反転だと 13 になる。
+        Assert.Equal(14, await _db.Images.CountIntegrityReviewEventsAsync(
+            folderId, TestContext.Current.CancellationToken));
+        // 別フォルダ側: 自フォルダの pending は候補にならず missing 単独= 1(フォルダ境界の対称確認)
+        Assert.Equal(1, await _db.Images.CountIntegrityReviewEventsAsync(
+            otherFolder.Id, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task 混在一括適用は移動T4と再出現T13を同時確定しIDタグを保持する()
     {
         var root = Path.Combine(Path.GetTempPath(), "ViewPrism2.Tests", Guid.NewGuid().ToString("D"));

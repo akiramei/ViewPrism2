@@ -98,3 +98,43 @@ warm で 318ms、アプリ起動直後の cold cache ではテーブル本体ペ
   ECO-104/125(26万件経路台帳・N=8 例目候補)・ECO-136(missing 母集合の意味論)。
 - R3 分離= 大規模 missing で「要確認の画像」一覧を開いた場合の全行 materialize
   (`GetIntegrityReviewByFolderAsync`)は本 ECO に混ぜない(51-cheat-log へ記録)。
+
+## §7 実施記録(fix)
+
+- **プローブ先行(R5)**: `CpIntegrityReviewTests` へ 2 本追加。
+  1. **plan 形状 pin**(`R5_事象カウントはmissing母集合への相関プローブなしのcoveringカウントで実行される`):
+     production 原文から SQL を抽出し TempDb で `EXPLAIN QUERY PLAN`。①相関 candidate プローブ署名
+     `(sync_folder_id=? AND status=? AND candidate_link_id=?)` の不在 ②bulk カウント 2 本の
+     covering index 化(`USING COVERING INDEX idx_images_*` ≥ 2)を assert。
+     **是正前は ① が Sub-string found で不合格**(974 中 1 fail)= 真因の実測裏取り。
+     固定時間閾値なし。
+  2. **計数同値ベクタ**(`事象カウントは曖昧組を重複計上せず失格候補のmissingを数える`):
+     missing 単独/移動一意組/曖昧組(1 missing: 2 new= DISTINCT 意味論)/タグ付き候補失格/
+     hash 不一致失格/origin≠new 失格 → 10 件。**是正前から合格**= 意味論を固定してから是正。
+- **是正(案A 採択)**: `CountIntegrityReviewEventsAsync` の SQL を駆動側反転
+  (pending COUNT〔covering〕+ missing COUNT〔covering〕− 候補有り missing COUNT〔pending 駆動
+  JOIN・`COUNT(DISTINCT m.id)`〕)へ置換。旧 `p.sync_folder_id = m.sync_folder_id` は外側
+  `m.sync_folder_id=@F` から確定するため両側 `@SyncFolderId` 明示と等価。シグネチャ・呼び出し側は無変更。
+- **検査封止**: CP-INTEGRITY-036 へ事象カウント経路の計算量観点 1 行(plan pin の 2 条件+同値ベクタ)。
+- **R8(独立セルフレビュー)= 実施・未処置スコープ内所見 0**: fresh-context reviewer の所見=
+  [Med] 1(駆動側反転で `m.sync_folder_id`/`m.status='missing'` が単独 load-bearing 化したのに
+  同値ベクタが検出域外)+[Low] 2(candidate NULL/不存在 id 未被覆・plan pin の index 選択依存)+
+  等価性 5 クラス(hash NULL=スキーマ上不存在・normal/deleted 先・不存在 id・NULL・フォルダ境界)は
+  全一致で所見 0。処置= 失格クラス 4 行(別フォルダ missing 先/normal 先/NULL/不存在 id)+
+  フォルダ境界の対称 assert をベクタへ追加(10→14 件・条件削除変異は 14→13 で赤)。
+  plan pin の index 選択依存は assertion 2(covering ≥2)との二重封止で受理(レビュー判定どおり)。
+- **R7= 対象外**: SQL 内部のみ・UI/視覚変更なし。横断規約(ECO-080)= 文言/表示なしで非該当。
+- **実 DB 検証(read-only)**: production 新 SQL 原文の抽出実行= **262,045(旧実装と bit 一致)・
+  30ms(是正前 318ms・約 10 倍)**。covering index の物理下限(27ms)に一致。
+- **diff 規模**: `ImageRepository.cs` +26/-10(SQL+コメントのみ)・`CpIntegrityReviewTests.cs`
+  +95 行(2 テスト)・`33-control-plan.yaml` +1 行。§5 影響 BOM 内のみ。
+- **機械受入(4 点・全緑)**: `dotnet build` 0 error/0 warning・`ViewPrism2.Tests` **974/974**
+  (plan pin は red→green 反転)・`ViewPrism2.Oracle` **109 pass/4 known skip/0 fail**かつ
+  diff 0= 凍結オラクル無接触(R6)・`validate_bom` 0 error/0 warning。
+
+## §残ゲート(更新)
+
+- **gate①(裁定)= 不要で確定**(実装層・件数 bit 一致を同値ベクタ 14 件+実 DB 262,045 一致で実測。
+  反転版に意味論差なし= R8 等価性レビュー全クラス一致)。
+- **gate②(golden)= n/a 提案**: 挙動 bit 一致+視覚変更なし= ECO-134/137 先例どおり機械受入+
+  同値プローブがクローズ条件。maintainer の受理で /eco-accept へ。
