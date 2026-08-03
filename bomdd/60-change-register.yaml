@@ -1988,3 +1988,15 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6・無接触)。依存更新のため新規受入行は原則不要=挙動同値が受入条件"
     notes: "gate①=裁定済み(2026-07-24 maintainer=案A 採択): ①12.1.1 へ一括更新+段階撤去(ItemsRepeater 12.0.0 据え置き・案B/C 不採用) ②FailFast 監視は pin 緑なら cleanup 例外注入の挙動裏取り(セッション生存+Dispatch task へ surface)を必須とし裏取り不能なら残置(変更ログのみを根拠に防御層を外さない) ③ECO-082 は束ねず再測のみ記録(保留静置は維持)。**撤去範囲の誤解に注意**= 『上流修正で回避策が不要になる』は 4 層のうち 1 層のみに妥当(PerAssembly は未報告の別事象=撤去すると ECO-083 の真因が再発)。R3 分離= CpUiG6SaveBarTests の別失敗モードは本 ECO で解決を約束しない(観測のみ)"
     body: 60-change-order-eco-141.md
+
+  - id: ECO-142
+    title: "コレクション切替が missing 母集合規模で遅延 — CountIntegrityReviewEventsAsync の駆動側選択(NOT EXISTS 相関×missing 側駆動)"
+    type: "不具合(実装層・性能特性・実測済み。件数の挙動は仕様どおり)"
+    status: staged   # 2026-08-03 起票(maintainer 報告=6 件の類似コレクションが 3 桁コレクションより表示が遅い)
+    golden: "n/a 見込み(挙動 bit 一致+視覚変更なし= ECO-134/137 先例の機械受入クローズ想定。§6 参照)"
+    baseline: "main 79123df"
+    findings: "実測(実 DB 366MB・warm)= 類似コレクション(normal 6/missing 262,045)切替で CountIntegrityReviewEventsAsync(ImageRepository.cs:307)が 318ms・他コレクション 2ms。切替経路(LoadContentAsync)の同期 await のため体感遅延に直結。真因= NOT EXISTS 相関サブクエリを missing 側駆動で記述し 262k 行×(相関プローブ+hash 読みの本体ページランダム取得)。確定= ①混入 fb5173c(ECO-140 fix・潜伏 10 日・マスキング=受入 TempDb は小規模母集団で計算量差が観測不能。大規模 missing 残留は実機の類似のみ=過去の登録内容がパス変更で 262,045 行 missing 残留・残留自体はスコープ外) ②物理下限=素の COUNT が covering index 順次 27ms ③意味論等価の駆動側反転(missing 総数−候補有り missing 数=pending 駆動・COUNT(DISTINCT m.id))が 27ms・結果一致(類似 262,045/pending9・missing10 併有の別コレクション非自明ケースで 11=11) ④切替経路の他クエリ・サムネイルはシロ。missing をカウントに含めるのは CMP-010 仕様どおり=除外は是正手段にならない。未検証= cold cache 実測差・アプリ接続(Dapper)での反転版実測とプラン形状"
+    impacted_bom: ["src=ImageRepository.cs(CountIntegrityReviewEventsAsync の SQL のみ・シグネチャ/意味論不変)", "tests=事象カウント同値ベクタ(pending 単独/missing 単独/候補有り一意組/曖昧組/タグ付き候補除外/hash 不一致)+計算量プローブ(固定時間閾値なし=係数反転 ECO-075 型かプラン形状 pin を /eco-fix 冒頭で選定)", "bomdd/33-control-plan.yaml=CP-INTEGRITY-036 へ事象カウント経路の計算量観点(26万件経路 N=8 例目候補)", "CAD=該当なし(視覚・挙動変更なし)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。計数同値・計算量は tests probe で pin=凍結オラクル非該当見込み"
+    notes: "gate①=不要見込み(実装層・件数 bit 一致。反転版に意味論差が見つかれば軽微裁定へ切替)。gate②=不要見込み(ECO-134/137 先例)。R3 分離=大規模 missing で要確認の画像一覧を開いた場合の GetIntegrityReviewByFolderAsync 全行 materialize は混ぜない(51-cheat-log 記録)。関連=ECO-140(混入元・CMP-010 意味論典拠)・ECO-134/137(計算量/走査回数封止の同型)・ECO-104/125(26万件経路台帳)・ECO-136(missing 母集合の意味論)"
+    body: 60-change-order-eco-142.md

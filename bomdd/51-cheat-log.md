@@ -796,3 +796,13 @@ ECO-008(タグ種別は作成後変更不可)が「訂正対象(モック側の�
 - **【小・将来リスク】Headless の poison 経路で `UnobservedTaskException` が 1 件出る**(ECO-141 の
   再現ハーネス実行で実観測)。現行 xunit v3 設定ではプロセスを落とさないが、将来
   `ThrowUnobservedTaskExceptions` を有効化するとプロセス毒になり得る。有効化を検討する時に本項を参照。
+
+## ECO-142 起票時のスコープ外所見(R3 記録)2026-08-03
+
+- **【中・別 ECO 候補】大規模 missing 残留下で「要確認の画像」一覧を開くと
+  `GetIntegrityReviewByFolderAsync`(ImageRepository.cs:292)が事象行を全行 materialize する**:
+  実機の類似コレクションは missing 262,045 行を保持しており、この状態で統合裁定面
+  (E-UI-INTEGRITY-050)を開くと 26 万 ImageRecord のロード+一覧構築が走る
+  (ECO-140 R3 の F-2〔pending 一覧非仮想化〕と同族の DB 境界側)。ECO-142 は切替経路の
+  カウント SQL のみを扱い、一覧側の母集合限定・仮想化は混ぜない。起票要否は
+  maintainer 判断(起票時は一覧側 UI の仮想化状況とページング要否を合わせて診断する)。
