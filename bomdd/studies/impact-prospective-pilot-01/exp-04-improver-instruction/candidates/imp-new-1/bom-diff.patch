@@ -1,0 +1,311 @@
+diff -ru before/30-ebom.yaml after/30-ebom.yaml
+--- before/30-ebom.yaml	2026-09-05 19:36:34.976242700 +0900
++++ after/30-ebom.yaml	2026-09-05 20:17:54.964101400 +0900
+@@ -92,7 +92,7 @@
+       depends_on: []
+       graph_edges:
+         owner: E-HASH-006
+-        consumers: [E-SCAN-005, E-RELINK-007, E-THUMB-020]
++        consumers: [E-SCAN-005, E-RELINK-007, E-THUMB-020, E-UI-INTEGRITY-050]
+       invariants:
+         - INV-005 relative_path は正規形のみ・比較は case-insensitive
+       acceptance_refs: [CP-UTIL-005]
+@@ -103,6 +103,9 @@
+       rationale_type: requirement
+       requirement_refs: [REQ-017, REQ-069, REQ-102]
+       depends_on: [E-DOMAIN-001, E-DB-010, E-CRITERIA-037, E-TAGSVC-008]
++      graph_edges:
++        owner: E-RELINK-007
++        consumers: [E-UI-REPAIR-039, E-UI-INTEGRITY-050]
+       invariants:
+         - INV-001 missing 側 image_id 不変(タグ・関連の保全)
+         - INV-015 (v4.0) 置換候補は pending ∪ untagged-normal のみ。タグ付き候補は relink 拒否→マージ案内(タグ損失防止)
+@@ -171,7 +174,7 @@
+       depends_on: [E-DOMAIN-001]
+       graph_edges:                    # woven: 全サービスの土台
+         owner: E-DB-010
+-        consumers: [E-SCAN-005, E-RELINK-007, E-TAGSVC-008, E-VIEWSVC-009, E-WORKSPACE-042]
++        consumers: [E-SCAN-005, E-RELINK-007, E-TAGSVC-008, E-VIEWSVC-009, E-WORKSPACE-042, E-UI-INTEGRITY-050]
+       invariants:
+         - FK 規則は仕様 §2.0 のとおり(CASCADE/SET NULL)
+         - 新規 DB = 最新スキーマ+全マイグレーション既適用マーク
+@@ -320,7 +323,7 @@
+       depends_on: [E-DOMAIN-001, E-DB-010]
+       graph_edges:
+         owner: E-CRITERIA-037
+-        consumers: [E-RELINK-007, E-UI-REPAIR-039, E-UI-SIMILARITY-035]   # (ECO-014) 整理トレイの条件検索 find
++        consumers: [E-RELINK-007, E-UI-REPAIR-039, E-UI-SIMILARITY-035, E-UI-INTEGRITY-050]   # (ECO-014) 整理トレイの条件検索 find / (ECO-140) 統合裁定面
+       invariants:
+         - 指定条件のみ AND 結合・同一コレクション内。対象 status は呼び出し用途で固定(単体=normal / relink 候補=pending∪normal)
+         - 結果は安定順(relative_path 昇順・同値 id 昇順)。条件が 1 つも未指定なら非実行(全件を返さない)
+@@ -510,7 +513,7 @@
+       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+       supersedes: E-UI-GRID-022
+       split_by: ECO-016
+-      depends_on: [E-UI-BROWSE-022, E-UI-TAGASSIGN-029, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-TRASH-038, E-UI-REPAIR-039]
++      depends_on: [E-UI-BROWSE-022, E-UI-TAGASSIGN-029, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-TRASH-038, E-UI-INTEGRITY-050]
+       interface_contracts:
+         - モードが画像クリックの意味論をディスパッチし、E-UI-BROWSE-022 は描画・母集合・既定選択計算を提供する
+       invariants:
+@@ -521,6 +524,7 @@
+         - since ECO-015: ツールバーの `⋯`(その他)= メンテナンスメニュー。トラッシュ(E-TRASH-038)/修復(E-UI-REPAIR-039)を既存モーダルで開き、閉じ後に画像データを再読込し status/件数変化を反映する。コレクション未選択時は無効・モード中は非表示
+         - since ECO-018: その他メニュー(`⋯`)は **修復 / 削除 / ゴミ箱** の 3 項目。**修復**=既存修復モーダル(ECO-015・変更なし)、**ゴミ箱**=トラッシュ UI で deleted 件数バッジを併記、**削除**=削除モードに入る(下記)。修復/ゴミ箱はモードに入らず開く。コレクション未選択時は無効
+         - since ECO-019: その他メニューの「ゴミ箱」は **画像タブ内ポップアップ**(中央オーバーレイ)を開く(ECO-018 の別ウィンドウモーダルを置換・E-UI-REPAIR-039 のトラッシュ UI 作り直し)。修復は引き続き既存モーダル
++        - "(ECO-140) 上記 ECO-015/018/019 のうち ⋯メニュー『修復』と RepairWindow 導線は superseded。現行メニューは E-UI-INTEGRITY-050 の『要確認の画像…』1 行と、存続する削除/ゴミ箱を持つ"
+         - since ECO-018: 「削除」= タグ編集/整理/作業に並ぶ 4 つ目の排他文脈モード(`⋯` メニューから入りツールバー入口は持たない)。削除中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、「ゴミ箱へ移動」で選択を E-TRASH-038.DeleteToTrashAsync(normal→deleted ソフト削除・物理非破壊 INV-009・復元可)へ送る(選択あり時のみ活性・実行後に選択クリア+normal 母集合から除外+ゴミ箱件数更新)。状態遷移は Core のみ経由(UI で再実装しない)。判定・反復は描画から独立して unit 検査可能にする。排他隠し規律(ECO-014 §8)を削除へ拡張し、削除中はツールバーが他モード入口・`⋯` を隠し「削除を終了」+「ゴミ箱へ移動」+表示軸/ソート/レイアウトのみ残す
+         - since ECO-017: 「作業」= タグ編集(E-UI-TAGASSIGN-029)/整理(E-UI-SIMILARITY-035 + E-UI-MERGE-036)に並ぶ3つ目の排他文脈モード。作業中はグリッドが選択可能(E-UI-BROWSE-022 の選択機構を再利用)になり、選択を `workTargets` 集合へ和集合追加する「追加」アクション(選択あり時のみ活性・追加後に選択クリア)と「作業対象 N 枚」チップを持つ。追加判定・和集合・選択クリア・件数は描画から独立した決定論ロジックとして unit 検査可能にする
+         - since ECO-017: 作業モードは右ペインを開かない(中央フル幅)が、ECO-014 §8 の排他隠し規律を作業へ拡張する(作業中はツールバーが他モード入口・`⋯` を隠し、「作業を終了」+「追加」+「作業対象」チップ+表示軸/ソート/レイアウトのみ残す)。作業対象セル個別の視覚マーク(バッジ)は出さない(描画モック準拠)。`workTargets` はチップ表示用の session 蓄積を継続する
+@@ -711,7 +715,7 @@
+       depends_on: []
+       graph_edges:
+         owner: E-DESIGN-028
+-        consumers: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039]
++        consumers: [E-UI-SHELL-021, E-UI-BROWSE-022, E-UI-AXIS-NAV-040, E-UI-MODE-041, E-UI-VIEWER-024, E-UI-NODEGRAPH-025, E-UI-TAGS-026, E-UI-SIMILARITY-035, E-UI-MERGE-036, E-UI-REPAIR-039, E-UI-INTEGRITY-050]
+       invariants:
+         - (ECO-007/E7) タグ色プリセットは9色: #e5484d/#f2912b/#e8b931/#30a46c/#12a594/#2f6bed/#8b5cf6/#e93d82/#5b6473(Radix 系)。従来の Material-500 18色を置換。色は自由 hex 継続(プリセットは入力ショートカット)
+       acceptance_refs: [CP-UI-G1]
+@@ -756,7 +760,7 @@
+ 
+     # ---------- v4.0 表面(loop-v4-repair-lifecycle) ----------
+     - id: E-UI-REPAIR-039
+-      name: 修復ライフサイクル UI(criteria 検索フォーム+結果・relink 候補提示/確定・トラッシュ復元/完全削除・非破壊明示・候補カード表示パリティ)— v4.0 新設(ECO-003 で表示契約を補完)
++      name: 修復ライフサイクル UI(criteria 検索フォーム+結果・relink 候補提示/確定・トラッシュ復元/完全削除・非破壊明示・候補カード表示パリティ)— v4.0 新設(ECO-003 で表示契約を補完)【ECO-140: 修復ダイアログ面は superseded、トラッシュ面のみ存続】
+       classification: surface
+       rationale_type: external-knowledge
+       requirement_refs: [REQ-072, REQ-068, REQ-069, REQ-070, REQ-071]
+@@ -800,14 +804,14 @@
+       acceptance_refs: [CP-UI-G1]
+ 
+     - id: E-UI-PENDING-049
+-      name: "pending 裁定 UI(未裁定バッジ+入口+個別裁定+高信頼サブセットの一括自動裁定)— ECO-129 新設/ECO-139 拡張"
++      name: "pending 裁定 UI(未裁定バッジ+入口+個別裁定+高信頼サブセットの一括自動裁定)— ECO-129 新設/ECO-139 拡張【ECO-140: 入口+Window は superseded】"
+       classification: surface
+       rationale_type: external-knowledge
+       requirement_refs: [REQ-101]
+       external_source_ref: K-DESIGN
+       external_source_note: "CAD= ViewPrismUI docs/screens/pending_review.md(PD-1〜6。PD-1〜4 承認 2026-07-21、PD-5/6 ECO-139 golden 承認済み 2026-07-23)"
+       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+-      depends_on: [E-SCAN-005, E-UI-BROWSE-022, E-TRASH-038, E-THUMB-020]
++      depends_on: [E-SCAN-005, E-RELINK-007, E-UI-BROWSE-022, E-TRASH-038, E-THUMB-020]
+       invariants:
+         - 裁定 3 遷移(T13/T14/T15)は core サービス(PendingReviewService)経由のみ・pending 以外は拒否。UI 側で状態遷移を再実装しない
+         - T14(別画像として扱う=行置換)は単一トランザクションで原子(置換後も 1 パス 1 行・旧タグ/特徴量は CASCADE 消滅=PEND-001 裁定)
+@@ -845,7 +849,7 @@
+       external_source_ref: K-DESIGN
+       external_source_note: "CAD= ViewPrismUI docs/screens/integrity_review.md(IR-1〜8・CAD golden 承認 2026-07-24= VPUI 3a1bb37/3b4fb54・凍結)"
+       kbom_refs: [K-AVALONIA, K-MVVM, K-DESIGN]
+-      depends_on: [E-RELINK-007, E-CRITERIA-037, E-TRASH-038, E-THUMB-020, E-SCAN-005, E-UI-BROWSE-022]
++      depends_on: [E-RELINK-007, E-CRITERIA-037, E-TRASH-038, E-THUMB-020, E-HASH-006, E-DB-010, E-SCAN-005, E-UI-BROWSE-022]
+       invariants:
+         - 事象分類(自動裁定できる/個別に確認/見つからない)・グループ件数・由来別 CTA 出し分けは描画から独立した決定論ロジックとして unit 検査可能にする
+         - 一括自動裁定= 移動組 T4 一括 relink+再出現 hash 一致 T13 一括 accept を CMP-011 確認(行ごとに操作明示)つき単一トランザクションで適用・1 件でも stale なら全 rollback。callout・対象グループ・確認一覧・実適用の件数は常に一致・0 件で非表示。曖昧組(1 missing:複数 new)は個別へ
+diff -ru before/32-mbom.yaml after/32-mbom.yaml
+--- before/32-mbom.yaml	2026-09-05 19:36:35.186039200 +0900
++++ after/32-mbom.yaml	2026-09-05 20:19:58.481197600 +0900
+@@ -29,7 +29,7 @@
+       ebom_refs: [E-DOMAIN-001, E-HASH-006]
+       artifact:
+         path: src/ViewPrism2.Core
+-        path_note: "Models/, Common/"
++        path_note: "Models/, Common/。ImageRecord.PendingBaselineHash は Models/Entities.cs、ScanFileMetaUpdate.PreservePendingBaselineHash は Models/ScanMutationBatch.cs に所在 (observed@79123df)"
+         type: dotnet-classlib
+       interface_contract:
+         entities: "ImageRecord, Tag, TagType(enum Simple/Textual/Numeric), TextualTagSettings, NumericTagSettings, ImageTag, SyncFolder, View, ViewCondition, ConditionOperator(enum Exists/Equals/Between/Regexp/In), HierarchyNode, NodeGraph 型(GraphNode, NodeKind), ImageStatus(enum Normal/Missing/Deleted/Pending), ScanSummary, AppSettings"
+@@ -39,6 +39,7 @@
+         path: "PathNormalizer.ToRelative(root, fullPath) → 正規形 / PathNormalizer.Equals(a,b) → case-insensitive"
+         format: "ByteSizeFormatter.Format(long) → \"1023 B\" / \"1.0 KB\"(1024 進・小数 1 桁・GB 上限)"
+         errors: "Result<T> + ErrorCode(enum: DuplicateTagName, DuplicateFolderPath, ValidationError, NotFound, CircularReference, ScanInProgress, IoError, InvalidRegex, Database, TagInUse, ScanRootMissing)"
++        pending_baseline: "ImageRecord.PendingBaselineHash と ScanFileMetaUpdate.PreservePendingBaselineHash が、裁定基準 hash の保全有無を ScanService→repository 更新へ伝える (observed@79123df)"
+       invariants:
+         - INV-001 / INV-002 / INV-005 / INV-007(エンティティ生成時に強制)
+         - 日時文字列は IClock 経由でのみ生成(DateTime.Now 直呼び禁止)
+@@ -91,10 +92,10 @@
+       fmea_refs: []
+ 
+     - id: M-SCAN-005
+-      ebom_refs: [E-SCAN-005, E-RELINK-007]
++      ebom_refs: [E-SCAN-005]
+       artifact:
+         path: src/ViewPrism2.Core/Services/ScanJudge.cs
+-        path_note: "+ src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + RelinkService.cs + IntegrityReviewFileHashProvider.cs"
++        path_note: "+ src/ViewPrism2.Infrastructure/Scanning/ScanService.cs + Core/Models/ScanMutationBatch.cs (observed@79123df)。RelinkService.cs は M-RELINK-025、IntegrityReviewFileHashProvider.cs は M-UI-INTEGRITY-055 へ移管済み"
+         type: dotnet-classlib
+       interface_contract:
+         judge: "ScanDecision Judge(FileFacts file, DbFacts db, bool isInitialScan)  // OC-5。純粋関数(I/O なし)。v5.0(ECO-129/REQ-101): Decision = Skip | UpdateMeta(deleted/pending 起点) | UpdateMetaAndPend(normal→'changed'/missing→'reappeared') | PendInPlace(missing 起点・メタ一致の再出現) | AddNormal(初回のみ) | AddPending(再スキャン新規・candidateId 任意・origin='new')"
+@@ -102,8 +103,7 @@
+         scan_stage: "Task<Result<ScanStaging>> StageAsync(string folderId, IProgress<int>? processed, CancellationToken ct)  // ECO-130/REQ-100: 差分計算のみ(DB 完全無変更・last_scan 不変)。processed=処理済み件数通知。ScanStaging=遷移別集計+変更案(有界レコード列)+例示(上限つき)"
+         scan_apply: "Task<Result<ScanSummary>> ApplyStagedAsync(ScanStaging staging, IProgress<int>? progress, CancellationToken ct)  // ECO-130: 変更案を有界バッチで一括適用+last_scan 更新。適用後状態は ScanAsync 直接実行と同値(パリティ)。committed 公開なし(段階的公開は初回専用)"
+         scan_batch: "IImageRepository.ApplyScanBatchAsync(ScanMutationBatch batch)  // ECO-059: bounded件数のadd/update-meta/update-status/deleteを単一transactionで適用。ScanServiceはバッチ上限到達ごとにflush"
+-        relink_candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId)  // relative_path 昇順"
+-        relink_commit: "Task<Result> CommitRelinkAsync(string missingImageId, string pendingImageId)  // id 不変・pending 行削除"
++        baseline_preservation: "ScanService.AddFileMetaMutation(..., bool preservePendingBaselineHash) が UpdateMetaAndPend のみ true を渡し、ScanFileMetaUpdate.PreservePendingBaselineHash を repository へ搬送する (observed@79123df)"
+       invariants:
+         - INV-009 ファイルへ書き込まない
+         - 遷移は仕様 §2.1 遷移表のみ。スキャン二重起動は ErrorCode.ScanInProgress
+@@ -119,13 +119,18 @@
+       ebom_refs: [E-DB-010]
+       artifact:
+         path: src/ViewPrism2.Infrastructure/Database
+-        path_note: "Schema.sql 相当の DDL 定数, MigrationRunner.cs, *Repository.cs"
++        path_note: "DatabaseSchema.cs, ImageRepository.cs, TagRepository.cs。公開境界は Core/Repositories/IImageRepository.cs と ITagRepository.cs (observed@79123df)"
+         type: dotnet-classlib
+       interface_contract:
+         open: "DatabaseManager.Open(dbPath) — ディレクトリ作成→接続→PRAGMA→新規なら最新 DDL+全マイグレーション既適用マーク、既存なら未適用分を ID 昇順で適用(各々 1 トランザクション)"
+         schema: "テーブル: images, tags, textual_tag_settings, numeric_tag_settings, image_tags, views, view_conditions, view_tag_hierarchies, sync_folders, migrations。列・FK・既定値は仕様 §2.0 準拠。path/relative_path は COLLATE NOCASE。sync_folders.path に UNIQUE。ECO-140 migration 011=images.pending_baseline_hash TEXT NULL(既存行NULL)+事象件数の candidate_link_id 探索用複合index"
+         repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない。ECO-098 image trash read model=GetDeletedByFolderAsync(collection+deleted predicate・file_name安定順)でhidden normal/missingをmaterializeしない。ECO-140 integrity read model=GetIntegrityReviewByFolderAsync/CountIntegrityReviewEventsAsync/GetIntegrityReviewImageTagsByFolderAsync(pending∪missingをDB境界限定)"
+         scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。ECO-140 UpdateMetaAndPend は旧hashをpending_baseline_hashへ同一UPDATEで保全し、T13/T14/T15/relink確定はNULLクリア。通常の単行repository APIは非スキャンconsumer向けに維持"
++        integrity_rows: "IImageRepository.GetIntegrityReviewByFolderAsync(string syncFolderId, CancellationToken ct=default) は status IN ('pending','missing') のみを返す (observed@79123df)"
++        integrity_count: "IImageRepository.CountIntegrityReviewEventsAsync(string syncFolderId, CancellationToken ct=default) は pending 件数と、eligible pending new に消費されない missing 件数を DB で集計する (observed@79123df)"
++        integrity_lookup: "IImageRepository.GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken ct=default) は 500 ID ごとの IN 句に分割し、候補解決の N+1 query を避ける (observed@79123df)"
++        integrity_tags: "ITagRepository.GetIntegrityReviewImageTagsByFolderAsync(string syncFolderId, CancellationToken ct=default) は pending/missing の image_tags を folder JOIN で限定取得する (observed@79123df)"
++        integrity_batch: "IImageRepository.ApplyIntegrityReviewBatchAsync(IReadOnlyCollection<(string MissingImageId, string PendingImageId)> relinks, IReadOnlyCollection<IntegrityReviewAcceptTarget> accepts) は T4+T13 の混在を一 transaction で適用し、stale 1 件で全 rollback する (observed@79123df)"
+         cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
+       invariants:
+         - 接続は単一共有+SemaphoreSlim シリアル化(K-SQLITE)
+@@ -497,13 +502,15 @@
+       ebom_refs: [E-RELINK-007]
+       artifact:
+         path: src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs
+-        path_note: "拡張"
++        path_note: "RelinkService.cs + Core/Services/Repair/IntegrityReviewService.cs 内 IRelinkService/RelinkSelection/RelinkBatchPair (observed@79123df)"
+         type: dotnet-classlib
+       interface_contract:
+-        candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId, SearchCriteria? criteria = null)  // 既存 exact-hash pending に加え、criteria 指定時は M-CRITERIA-024 で status∈{Pending,Normal} を候補化。安定順(relative_path 昇順・id 昇順)。**user タグを持つ候補は除外**(タグ損失防止)"
+-        commit: "Task<Result> CommitRelinkAsync(string missingImageId, string replacementImageId)  // 既存を拡張。replacement は pending または untagged-normal。タグ付き replacement は ErrorCode.ValidationError(マージ案内)。missing 行へ replacement のパス/メタ上書き・status=Normal・candidate_link_id=NULL・replacement 行削除。missing 側 image_id 不変。単一トランザクション"
++        selection: "Task<RelinkSelection> GetRelinkSelectionAsync(IEnumerable<ImageRecord> images, IReadOnlyDictionary<string,ImageRecord>? candidateRows=null, CancellationToken ct=default) と SelectUniquelyRelinkable(...) が、高信頼一意組・曖昧除外を一箇所で選別する (observed@79123df)"
++        candidates: "Task<IReadOnlyList<RelinkCandidate>> GetCandidatesAsync(string missingImageId, SearchCriteria? criteria=null)  // exact-hash pending または criteria の Pending/Normal、安定順、user タグ付き除外 (observed@79123df)"
++        auto_pairs: "Task<IReadOnlyList<AutoRepairPair>> GetAutoRepairablePairsAsync(string folderId) は候補ちょうど 1 件の missing のみ返す (observed@79123df)"
++        commit: "Task<Result> CommitRelinkAsync(string missingImageId, string replacementImageId) は T4 単発確定、missing 側 ID/タグを保持し replacement 行を削除する (observed@79123df)"
++        batch_commit: "Task<Result<int>> ApplyRelinkBatchAsync(IEnumerable<ImageRecord> images) と ApplyIntegrityReviewBatchAsync(IReadOnlyCollection<AutoRepairPair> relinks, IReadOnlyCollection<IntegrityReviewAcceptTarget> accepts) は repository の原子バッチへ委譲する (observed@79123df)"
+         tag_check: "replacement の image_tags 行数を ITagRepository(または直接 COUNT)で確認し 1 件以上なら拒否(INV-015)"
+-        auto_count: "Task<int> CountAutoRepairableAsync(string folderId)  // ECO-075: フォルダ単一ロード+hash索引+CriteriaMatcher の集合演算で「自動修復可能(候補ちょうど1件)」数を数える。意味論= GetCandidatesAsync+自動修復criteria(hash+拡張子+サイズ)と同一・タグ除外memo化。missing ごとの全行再ロード(O(M×N))を禁止する"
+       invariants:
+         - INV-001 missing 側 image_id 不変 / INV-015 候補=pending∪untagged-normal・タグ付きは拒否・candidate_link_id は非確定ヒント
+         - 遷移表 T4 のみ。missing でない/別コレクション/許可外 status/タグ付き → 拒否。原子(失敗時ロールバック)
+@@ -533,10 +540,11 @@
+     - id: M-UI-REPAIR-027
+       ebom_refs: [E-UI-REPAIR-039]
+       artifact:
+-        path: src/ViewPrism2.App/Views/RepairWindow.axaml
+-        path_note: "+ ViewModels/{Repair,Trash}ViewModel.cs 拡張"
++        path: "superseded/deleted: src/ViewPrism2.App/Views/RepairWindow.axaml"
++        path_note: "RepairWindow.axaml(.cs) と ViewModels/RepairViewModel.cs は削除され、修復面は M-UI-INTEGRITY-055 へ統合。RelinkCandidateViewModel/MissingImageViewModel は ViewModels/RelinkViewModel.cs へ移動。TrashViewModel と画像タブ内ゴミ箱面は存続 (observed@79123df)"
+         type: avalonia-app
+       interface_contract:
++        status: "superseded: criteria/relink/自動修復 UI 契約は M-UI-INTEGRITY-055 へ移管。trash_ui のみ本 unit の歴史的分割元として存続"
+         criteria_ui: "RepairViewModel: criteria 入力(hash/名前/拡張子/mtime 範囲/サイズ範囲)→ CriteriaSearchService。空条件は検索ボタン非活性。結果一覧(安定順)。ロジックは ViewModel で unit 検査可能に"
+         relink_ui: "missing 画像に対し候補(pending+criteria 結果・安定順)を提示→選択→確定(RelinkService.CommitRelinkAsync のみ経由)。タグ付き候補は選択不可/拒否時に『マージを使う』案内"
+         repair_actions: "(ECO-005) RepairViewModel に TrashService 注入。`Task<int> AutoRepairAllAsync()`=auto-repairable(DeriveAutoCriteria 候補ちょうど1件)な全 missing を CommitRelinkAsync・失敗はスキップ・成功数返す。`Task AutoRepairSingleAsync(MissingImageViewModel)`=その1件。`Task ExcludeAsync(MissingImageViewModel)`=TrashService.ExcludeAsync(missing→deleted)。RepairWindow: 行内『自動修復』(auto-repairable 時)・フッター『すべて自動修復(M件)』(AutoRepairableCount>0 活性)・『除外』(SelectedMissing 活性)。結果文言。i18n repair.autoRepair*/repair.exclude*。選択は単一(マルチ一括除外は golden 改善余地・スコープ外)"
+@@ -736,10 +744,11 @@
+     - id: M-UI-PENDING-054
+       ebom_refs: [E-UI-PENDING-049]
+       artifact:
+-        path: src/ViewPrism2.App/Views/PendingReviewWindow.axaml
+-        path_note: "PendingReviewWindow.axaml(.cs)+ViewModels/PendingReviewViewModel.cs+WindowService.ShowPendingReviewAsync+ImageTabViewModel(⋯メニュー入口+件数+未裁定バッジ=ImageItemVM.IsPending+FS 軸ブラウズへの pending 並置)+Core/Services/Repair/PendingReviewService.cs(T13/T14/T15)+migration 010(images.pending_origin)"
++        path: "superseded/deleted: src/ViewPrism2.App/Views/PendingReviewWindow.axaml"
++        path_note: "PendingReviewWindow.axaml(.cs)・PendingReviewViewModel.cs・WindowService.ShowPendingReviewAsync・旧メニュー入口は削除され、M-UI-INTEGRITY-055 へ統合。Core/Services/Repair/PendingReviewService.cs は個別 T13/T14/T15 の実装として存続し統合面から消費される (observed@79123df)"
+         type: avalonia-app
+       interface_contract:
++        status: "superseded: 入口・Window・一括 relink は M-UI-INTEGRITY-055/M-RELINK-025 へ移管。T13/T14/T15 と未裁定バッジ意味論は存続"
+         entry: "画像タブ ⋯メニュー「未裁定の画像…」(+CMP-010 件数)→ 選択コレクションの pending 一覧をモーダルで裁定。裁定は 1 件ずつ確定・✕はいつでも可"
+         adjudicate: "PendingReviewService: AcceptAsync(T13=normal 化・タグ/ID 不変)/ TreatAsNewAsync(T14=原子的行置換・新 ID・CASCADE 消滅)/ DeleteAsync(T15=deleted 化)。全て pending 限定(ValidationError)"
+         browse: "無絞り込み FS 軸ブラウズ= normal∪pending(バッジ)・チップ絞り込み/view 軸/集計/検索/エクスポート= normal のみ(INV-010 v5.0)。pending 取得は DB 境界で status 限定"
+@@ -750,13 +759,19 @@
+       ebom_refs: [E-UI-INTEGRITY-050]
+       artifact:
+         path: src/ViewPrism2.App/Views/IntegrityReviewWindow.axaml
+-        path_note: "IntegrityReviewWindow.axaml(.cs)+ViewModels/IntegrityReviewViewModel.cs+WindowService.ShowIntegrityReviewAsync+ImageTabViewModel(⋯メニュー統合入口 1 行+事象合計件数)+Core/Services/Repair/IntegrityReviewService.cs(決定論分類+注入 seam 経由 reappeared on-demand hash 確認+混在一括)+Infrastructure/Scanning/IntegrityReviewFileHashProvider.cs+Infrastructure/Scanning/RelinkService.cs(高信頼選別+単発/バッチ確定の一本化)+ImageRepository(status 限定母集合+原子的混在バッチ)。旧 PendingReview/Repair の Window・ViewModel・入口は撤去し、PendingReviewService は個別 T13/T14/T15 のみに縮退"
++        path_note: "IntegrityReviewWindow.axaml(.cs), ViewModels/IntegrityReviewViewModel.cs, ViewModels/RelinkViewModel.cs(共有候補行型), Services/IWindowService.cs, Services/WindowService.cs, App.axaml.cs(DI), Views/ImageTabView.axaml, ViewModels/ImageTabViewModel.cs, Views/ConfirmDialog.axaml(.cs), Assets/i18n/{ja,en}.json, Core/Services/Repair/{IntegrityReviewService,PendingReviewService}.cs, Infrastructure/Scanning/{IntegrityReviewFileHashProvider,RelinkService}.cs, Infrastructure/Database/{DatabaseSchema,ImageRepository,TagRepository}.cs (observed@79123df)。旧 PendingReview/Repair の Window・ViewModel・入口は削除済み"
+         type: avalonia-app
+       interface_contract:
+         entry: "画像タブ ⋯メニュー「要確認の画像…」(+CMP-010 事象合計件数)→ 選択コレクションの pending∪missing を事象 3 グループでモーダル裁定(旧 2 入口・旧 2 Window は撤去)"
+         classify: "事象分類= 自動裁定できる(移動一意組+reappeared hash 一致)/個別に確認/見つからない(missing 単独)。DB 境界 status 限定・決定論 unit 検査可能"
+         adjudicate: "一括= 移動 T4 relink+再出現 T13 accept の混在を CMP-011 確認つき単一トランザクション(stale 1 件で全 rollback)。個別= T13/T14/T15/保留+単発 relink(T4)+除外(T9)。選別+確定は E-RELINK-007 API のみ経由"
+         hashcheck: "reappeared の hash 再計算は裁定面 on-demand・読み取り専用・DB 無変更・scan 経路非接触(REQ-103)。比較基準=pending_baseline_hash??記録hash。完了まで自動裁定CTA非提示だが完了済み自動行は一覧に保持。個別裁定後の再分類は基準/記録hash/path/size/mtime不変の確認済み結果だけ再利用し、逐次裁定のO(N²)再hashを避ける"
++        window_api: "IWindowService.ShowIntegrityReviewAsync(string collectionId) -> Task<bool>。WindowService が dialog/VM を生成し、IntegrityReviewWindow の Loaded handler が vm.LoadAsync() を呼ぶ (observed@79123df)"
++        confirmation_api: "IWindowService.ConfirmListAsync(string title, string lead, string supportingMessage, string confirmLabel, IReadOnlyList<ConfirmationListItem> items, string? cancelLabel=null) -> Task<bool>。ECO-139 の確認一覧 API を統合面 CMP-011 が継続利用する (observed@79123df)"
++        service_api: "IntegrityReviewService.Classify(...), LoadAsync(SyncFolder folder, CancellationToken ct=default, IProgress<IntegrityReviewHashProgress>? progress=null, IProgress<IntegrityReviewSnapshot>? interimSnapshots=null, bool reuseVerifiedHashes=false), ApplyAutomaticAsync(IReadOnlyCollection<IntegrityReviewEvent> events) (observed@79123df)"
++        individual_api: "PendingReviewService.AcceptAsync(string imageId), TreatAsNewAsync(string imageId), DeleteAsync(string imageId) と TrashService.ExcludeAsync(string imageId) を個別 CTA が呼ぶ (observed@79123df)"
++        hash_provider: "IIntegrityReviewHashProvider.ComputeSha256Async(string path, CancellationToken ct) を IntegrityReviewFileHashProvider が FileHasher で実装する (observed@79123df)"
++        viewmodel_api: "IntegrityReviewViewModel.LoadAsync(bool reuseVerifiedHashes=false), AutoAdjudicateAsync, AcceptAsync, TreatAsNewAsync, DeleteAsync, RelinkMovedAsync, SearchCandidatesAsync, CommitCandidateAsync, ExcludeMissingAsync, Defer が各 CTA を core API へ接続する (observed@79123df)"
+       acceptance_refs: [CP-UI-G1, CP-INTEGRITY-036]
+       acceptance_note: "事象分類・混在バッチ・hash 確認分岐・一本化・入口統合は unit(CpIntegrityReviewTests)。視覚は headless probe(GfIntegrityReviewVisualParityTests= CAD IR-1〜8 visualContract)+golden(CP-UI-G1・実機はデータ後始末まで)"
+ 
+diff -ru before/33-control-plan.yaml after/33-control-plan.yaml
+--- before/33-control-plan.yaml	2026-09-05 19:36:35.255979500 +0900
++++ after/33-control-plan.yaml	2026-09-05 20:18:16.804086200 +0900
+@@ -128,7 +128,7 @@
+         - "(ECO-137) 二段階再スキャン StageCore の物理存在確認はディレクトリ列挙 1 回から作る relative_path 集合(StringComparer.OrdinalIgnoreCase)への lookup に統合し、DB 行ごとの File.Exists 呼び出し==0(CpScanFilePresenceTests の計数 seam+direct 呼出し禁止 lint)。missing 判定 bit は存在/不在・大小文字差・hidden・スキャン候補列挙外(除外名/対象外拡張子)・IncludeSubfolders=false 変更後の既存配下行でも不変。親 prefix 構築を含め既存行単位で cancellation 到達。初回 ScanCore は existing=0 のため同 seam 0 回を pin し、同型箇所は温存"
+         - "(ECO-138) 二段階スキャンの worst-case staging ピーク保持形状(existing+adds の List<ImageRecord> と relative_path の HashSet<string>)は件数 N に対して O(N×有界行サイズ)。I/O/SQLite と GC タイミングを除外し、GC.GetAllocatedBytesForCurrentThread で N=4096/2N=8192 の構築 allocation を測定、2N/N 比 1.75〜2.25 かつ 2N の per-row allocation≤2048 B を決定論的に帯域判定(GC 非依存・固定バイト/時間閾値なし=線形性+行サイズ上限。CpScanStagingMemoryTests)。一時的な per-row 全 enumeration 保持で比率/上限が fail する非空虚ガード。既設 ECO-059/060 の streaming・batch・進捗ベクトル(区間別 throughput)と本ピークメモリ特性を合わせ、ECO-134 計算量・ECO-137 走査回数に続く性能多軸封止を完了"
+         - "(ECO-135) スキャンルート失効(フォルダの移動/改名でパス不在=Directory.Exists=false)は汎用 IoError ではなく専用 ErrorCode.ScanRootMissing を返し、失敗理由を識別できる。二段階 StageAsync・一段階 ScanAsync の両経路で pin(CpScanRootMissingTests)。一括 missing 化しない安全契約(誤 missing 防止)と last_scan 更新は不変。潜伏実績=root 失効も一律 IoError→UI で『ファイルの読み書きに失敗しました』に潰れ手動テストで切り分け不能だった実績(エラー語彙 8→11 種・cheat-log F-3 の refine)。UI 文言=error.scanRootMissing(ja/en・CpI18n010 lint)"
+-        - "(ECO-139/GF-139-01) 高信頼は pending+origin=new+candidate_link_id 非NULL(hash 一致在庫済み)かつ 1 missing:1 new の一意組だけ。同じ candidate へ複数 new が一致する曖昧組と reappeared/changed/candidate なし new/normal は個別確認へ除外。RelinkHighConfidenceAsync は全組を単一 transaction で候補 missing へ T4 再リンクし、pending 削除・missing 解消・missing 側の元 image_id/タグ保持・候補/origin クリア・非対象不変。途中に非 pending/new・candidate 不一致・非 missing/stale があれば全 rollback。再移動後も既存候補経路で同じ元 ID へ再リンクし直せる可逆性を CpPendingAutoAdjudicationTests が exact pin"
++        - "(ECO-139/GF-139-01→ECO-140) 高信頼は pending+origin=new+candidate_link_id 非NULL(hash 一致在庫済み)かつ 1 missing:1 new の一意組だけ。同じ candidate へ複数 new が一致する曖昧組と reappeared/changed/candidate なし new/normal は個別確認へ除外。旧 PendingReviewService.RelinkHighConfidenceAsync/CpPendingAutoAdjudicationTests は削除済みで、現契約は RelinkService.GetRelinkSelectionAsync+ApplyIntegrityReviewBatchAsync、検査実体は CpRelinkUnifiedBatchTests+CpIntegrityReviewTests (observed@79123df)。全組を単一 transaction で候補 missing へ T4 再リンクし、stale 1 件で全 rollback、元 ID/タグ保持・missing 解消・可逆性を pin"
+ 
+     - id: CP-TAG-011
+       characteristic: タグ管理(検証・UPSERT・バッチ原子性・カスケード・使用中削除ガード=ECO-045)が仕様 §2.2 と一致する
+@@ -783,8 +783,8 @@
+       classification: core+surface
+       depth: unit+G
+       tolerance: exact
+-      fixture: "tests/ViewPrism2.Tests/CpPendingAutoAdjudicationTests.cs + GfPendingReviewVisualParityTests.cs + GfConfirmDialogVisualParityTests.cs"
+-      fixture_note: "TempDb の high-confidence/非対象/stale ベクタ + Avalonia.Headless 実レイアウト。固定時間閾値なし"
++      fixture: "superseded/deleted: tests/ViewPrism2.Tests/CpPendingAutoAdjudicationTests.cs + tests/ViewPrism2.Tests/GfPendingReviewVisualParityTests.cs; replacement: tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs + tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs + tests/ViewPrism2.Tests/GfIntegrityReviewVisualParityTests.cs"
++      fixture_note: "旧 GfConfirmDialogVisualParityTests.PD6 は削除され、確認リストの共通 probe と統合面 CMP-011 は現行 GfConfirmDialogVisualParityTests/GfIntegrityReviewVisualParityTests へ移管 (observed@79123df)。TempDb の high-confidence/非対象/stale ベクタ + Avalonia.Headless 実レイアウト、固定時間閾値なし"
+       oracle: "DB 前後状態・提示/適用件数の完全一致 + CAD pending_review.md PD-5/PD-6 visualContract"
+       approver: automated+maintainer
+       test_vectors:
+@@ -802,8 +802,8 @@
+       classification: core+surface
+       depth: unit+G
+       tolerance: exact
+-      fixture: "tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs + GfIntegrityReviewVisualParityTests.cs"
+-      fixture_note: "TempDb の事象ベクタ(移動一意組/曖昧組/reappeared 一致・不一致・読み取り失敗/missing 単独/candidate なし new)+実ファイル hash 再計算+Avalonia.Headless 実レイアウト(CAD integrity_review.md IR-1〜8 visualContract)。固定時間閾値なし(例外= ECO-075 移植プローブ 2 本のみ歴代承認済みの粗い上限を維持=係数爆発 O(M×N) 検出用)"
++      fixture: "tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs + tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs + tests/ViewPrism2.Tests/GfIntegrityReviewVisualParityTests.cs"
++      fixture_note: "TempDb の事象ベクタ(移動一意組/曖昧組/reappeared 一致・不一致・読み取り失敗/missing 単独/candidate なし new)+実ファイル hash 再計算+Avalonia.Headless 実レイアウト(CAD integrity_review.md IR-1〜8 visualContract)。ImageRepository/TagRepository の status 限定 read model・候補 ID 一括取得・件数 SQL・混在 transaction も同 fixture が直接検査する (observed@79123df)。固定時間閾値なし(例外= ECO-075 移植プローブ 2 本のみ歴代承認済みの粗い上限を維持=係数爆発 O(M×N) 検出用)"
+       oracle: "DB 前後状態・件数パリティの完全一致 + CAD integrity_review.md visualContract"
+       approver: automated+maintainer
+       test_vectors:
+@@ -816,6 +816,7 @@
+         - "入口統合: ⋯メニューに旧 2 行(未裁定の画像…/修復)が不在・新 1 行「要確認の画像…」+事象合計件数(0 件でバッジなし)。旧 RepairWindow/PendingReviewWindow の導線・型が残存しない(dead 導線 0)"
+         - "個別裁定: pending 系 4 操作(T13/T14/T15/保留)+移動の単発再リンク・missing 単独= criteria 検索(選択中 missing の情報を初期値)→候補(表示パリティ 5 要素)→単発 relink/除外 T9(missing 限定)"
+         - "大量応答性(ECO-075/GF-075-01 移植): 2000 組の移動ペア/1999 missing 単独+一意 1 組でも LoadAsync が単一ロード相当で完了(O(M×N) 封止・旧 CP-UI-G10 封止の新面引き継ぎ)"
++        - "(observed@79123df) データアクセス経路: GetIntegrityReviewByFolderAsync/GetIntegrityReviewImageTagsByFolderAsync は folder+pending/missing を DB 述語で限定、GetByIdsAsync は 500 ID chunk、CountIntegrityReviewEventsAsync は eligible pending new に消費されない missing を相関集計し migration 011 index を使用、ApplyIntegrityReviewBatchAsync は relink+accept を原子適用。UI 側の全行 materialize/N+1/逐次 transaction を許さない"
+         - "(golden 観点・実機= gate② 第 2 インスタンス・**2026-07-24 合格**)移動→自動裁定で新パスが元 image_id/タグで通常化+元 missing 解消・再出現一致→そのまま受け入れ・見つからない→条件検索→候補へ再リンク/ゴミ箱へ移動(復元可)・データ後始末(残存 missing/孤立タグ 0)= GF-139-01 教訓の継承。**IR-7 の動的挙動= 確認完了時の一括反映(途中加算なし)+確認中の自動グループ見出し表示で golden 裁定済み(as-built 正典化)**"
+         - "(GF-140-01 潜伏実績/2026-07-24 golden 1 巡目)一時状態(hash 確認中)専用の選択優先ロジックが『優先グループ空』の枝で null に落ち、本体(一覧+個別フッター)が IsVisible=HasSelection ごと不可視・SizeToContent が callout 高へ収縮= 『自動裁定ボタンしかない』面が出荷寸前まで潜伏(R7 headless 並置は選択済み状態を前提に組まれ既定選択経路が谷間)。**既定選択は常に全体フォールバックを持つ+ロード完了後の無選択を probe で pin(GF140_01)**"
+         - "(GF-140-02/2026-07-24 golden 裁定=案①)自動一括の callout には 3 択(自動/個別/閉じる)と ✕ の安全(裁定済みのみ確定・破棄なし)を面上明示する第 3 補足行を必須とする(高信頼一括 callout 型の面は『やらない/あとで』の出口も文言で示す)"
+@@ -834,11 +835,11 @@
+     - { id: CP-UI-G9, characteristic: "類似検索 UI(閾値・精度モード非表示・結果%降順)+マージ(タグ集約。**ECO-052 裁定 b: 事前プレビュー・非破壊個別明示は非搭載が正 — チェックリストは §2.6 G-9 の v4.1 as-built 版を用いる(旧モーダル手順のまま暗黙スキップされていた実績=ECO-014 M4 漏れ)**)+**マージ完了パネル(統合しました+DoneSummary+続行 — ECO-037 再発防止: 導入後の右ペイン改変で幅自己参照により不可視化した実績)**+トラッシュ(deleted 閲覧)+物理非破壊の目視(G-9・v3.0)+**(ECO-044/IMG-011)タグ統合チェック非搭載=常時 union(見せかけトグル=切替可能だが Core は常に union が導入時から存在した実績・ECO-041『未配線 UI』同族)・「取り消す」=ログに基づく補償 Undo の往復(source 一覧復帰+タグ復元)と条件破れ時の不活性+理由表示。作業タブの整理トレイも同観点(CP-UI-G1 側から参照)**+**(ECO-048/REQ-084)回転・鏡像複製の検出。golden 入力は必ずピクセル実変換の複製で作る(EXIF タグ方式の回転はピクセル不変=検査を無効化した実績・51 R3)・確認閾値は仕様既定 70(scaled-decode の経路系統誤差により回転/異フォーマット複製は 70 台に落ち得る実績・51 R3 #2/#3)**+**(ECO-050)しきい値スライダー初期値=仕様値 70(80=工場仮置きの逸脱が ECO-014 から潜伏・「既定値がどの検査面にもない」様式。機械側は CpUi050 pin テストで恒久封止)**+**(ECO-054)異フォーマット複製(png×jpg)が 90 点台で検出される(scaled-decode の経路系統誤差 -18 点が「仕様どおり」として潜伏し、ユーザーの直感乖離所見で顕在化した実績。機械側は S-42 経路一貫性で恒久封止)**+**(ECO-055)条件検索=マージ先との属性一致トグル 5 種(ハッシュ値/拡張子/サイズ/ファイル名/更新日)の全数表示・マージ先必須∧条件 1 つ以上で「似た画像を探す」が**即**活性=タブ往復不要(①自由入力 2 欄=意味論取り違え+3 条件欠落が ECO-014 から潜伏した実績=『全数がどの検査面にもない』様式・旧コードの「M2 で結線」宣言が未実施のまま残存 ②GF-055-01=ホスト転送セッターの通知漏れ= ECO-038 同型を是正実装自身が再発し、タブ切替の一括通知で直る遅延反映がマスキングした実績。機械側は CpUi055CriteriaTests の写像全数 pin+ホスト通知回帰で恒久封止)**+**(ECO-056)整理トレイの v2 モック並置突合= ①3 ゾーン固定(整理対象を大量に積んでもマージ先と実行ボタンがスクロールアウトしない=内部スクロールは対象リストのみ) ②マージ先解除 ✕(対象保持・実行/検索不活性) ③検索結果ヘッダ「グリッドへ」で戻れる(v1 CAD 定義が 51ad8ee から欠落=戻る手段が整理終了のみだった 18 日超の潜伏実績) ④モック詳細(タブ「条件検索」「類似画像検索」順・「探す」文言・条件 2 列チェック行・タイル=チェック+右上バッジ 宛先=緑/対象=青)の並置突合 — 51ad8ee ロットの逸脱 6 点が「詳細突合が観点に無い」ため歴代 golden を素通しした実績 ⑤タブ切替で検索パネル高さ不変(150px 固定)かつ画像一覧がちらつかない(GF-056-02=SetSearchMethod の Recompute 過剰再構築が潜伏)・checked 行ラベルの視認性(GF-056-02=Fluent :checked のテンプレート内白文字化)。機械側は CpUi056OrganizeV2Tests(導線 3+高さ不変+CollectionChanged 0 回+Foreground 実測)で恒久封止**+**(ECO-060/REQ-086)スキャン中の類似方式は不完全な部分母集合を検索せず「スキャン完了後に利用できます」を表示し、完了後に再活性。条件方式は公開済みnormalへ利用可。機械側はCpUiEco060ProgressiveScanTestsで実行非到達と案内をpin**+**(ECO-062/REQ-087/IMG-018)類似候補は検索実行時の閲覧文脈へ先行限定: FS=マージ先と親relative_path完全一致の直下のみ(subfolder除外・tag chip非影響・現在folder外targetは0)、view=現在node path。26万件collection全走査がECO-060 golden後に顕在化した実績。閾値/結果順/候補追加/merge/Undo/scan gateの裏面も再検査し、機械側はCP-SIM-017のscope外reader/cache非接触で封止**+**(ECO-066/REQ-089/IMG-020)画像タブ整理の類似検索は固定150px設定領域をpreparing/comparing/cancellingの文言+件数+barへ置換し、同位置CTA=探す→停止→停止中。明示停止/整理終了/target・collection・FS folder・view node・mode・new search・window終了で旧結果/検索中表示が復活せず、初回cancel=grid・再検索cancel=直前completed保持、cancelを0件/失敗表示にしない。条件検索と検索パネル非表示の裏面も再検査する。潜伏実績=ImageTab整理初版3176685からCoreのprogress/ct受口がsurface未配線で、ResetStateは表示boolだけを戻し旧Task完了を無条件公開していた。機械側CP-SIMSESSION-029で世代拒否・単調進捗・cache再利用をpin**+**(ECO-067/REQ-090/IMG-021)画像タブの結果badgeは単一の連続一致度N%=min(pHash大局score,detail score)。正規化画素exactだけ100、表情/局所内容差は100禁止だが関係固定帯で49以下へ落とさず70%検索へ複数残り得る。70→80→95で段階的に絞れ、70へ戻せる。内部類似/部分重複は自動削除/投入なし。潜伏実績=pHash距離0の表情差100→語彙のみ→関係+%二重判断→固定帯99/49で70%検索1件、という4回のgolden不合格。機械側CP-DUPQUALITY-030で合成局所差・pHash距離0・v2→v3 cache再検証をpin**", classification: surface, depth: G, tolerance: "G-9 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ画像(重複・類似画像を含むコレクション。マージ前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
+     - { id: CP-TRASH-021, characteristic: "(ECO-005/T9)除外 TrashService.ExcludeAsync は missing→deleted のみ行う: missing を deleted へ(status 更新のみ・物理非破壊)、normal/pending/deleted の除外は ValidationError(missing 限定)", classification: core, depth: unit, tolerance: "missing→deleted・他 status 全拒否・タグ/ID 不変ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpTrash021Tests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact + 固定オラクル S-31(cross-factory)",
+         test_vectors: ["除外: missing→Deleted(T9)・タグ/ID 不変", "missing 以外(normal/pending/deleted)→ ValidationError で対象外", "存在しない画像 ID → NotFound"] }   # ECO-033: CpTrash021Tests から事実転記(fixture 名も実ファイル名へ補正)
+-    - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)。**(ECO-140)superseded — RepairViewModel/CpUiRepairViewModelTests は撤去済み。auto-repairable 判定・失敗スキップ単発・タグ付き除外の意味論は E-RELINK-007(RelinkService 選別+単発確定)へ移管し検査実体は CP-INTEGRITY-036(CpIntegrityReviewTests/CpRelinkUnifiedBatchTests)。本エントリは歴史記録**", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs, fixture_note: "TempDb", oracle: "xunit.v3 exact",
++    - { id: CP-REPAIR-AUTOALL-023, characteristic: "(ECO-005)RepairViewModel.AutoRepairAllAsync は auto-repairable(候補ちょうど1件)な missing のみ relink し、候補2件以上/0件は修復しない・タグ付き拒否はスキップして成功数を返す(一括が1件失敗で止まらない)。**(ECO-140)superseded — RepairViewModel/CpUiRepairViewModelTests は撤去済み。auto-repairable 判定・失敗スキップ単発・タグ付き除外の意味論は E-RELINK-007(RelinkService 選別+単発確定)へ移管し検査実体は CP-INTEGRITY-036(CpIntegrityReviewTests/CpRelinkUnifiedBatchTests)。本エントリは歴史記録**", classification: surface, depth: unit, tolerance: "auto-repairable のみ修復・曖昧/0件スキップ・失敗継続ベクタ全緑", fixture: "superseded/deleted: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs; replacement: tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs + tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs", fixture_note: "旧 RepairViewModel fixture の意味論を統合面/RelinkService fixture へ移管 (observed@79123df)", oracle: "xunit.v3 exact",
+         test_vectors: ["候補ちょうど1件の missing のみ修復し成功数を返す(CP_REPAIR_AUTOALL_023)", "自動修復可能数のカウント=候補1件の missing だけ(GF_V4_02。2件以上/0件は数えない)", "タグ付き候補の拒否はスキップして継続(一括が1件で止まらない)"] }   # ECO-033: CpUiRepairViewModelTests から事実転記
+-    - { id: CP-DISPLAY-PARITY-022, characteristic: "(ECO-004→ECO-007 改訂)表示パリティの VM フィールド公開: RelinkCandidateViewModel.AbsolutePath/FileName(A-1)・グリッド項目 VM の SizeText(A-2)・TrashItemViewModel.SizeText(A-3)。(ECO-007/E1)ViewRowViewModel は TagCount を公開し ★(IsFavorite)を行表示しない・Description は tooltip 用に公開(A-4 改訂)。(ECO-007/E2)タグパレット行 VM は Description を行に出さない(A-5 撤回)。(ECO-007/E5/DC-TAGPREVIEW-001)タグ作成ダイアログの付与プレビュー整形ヘルパ(核側)が種別別の付与表現を返す(視覚描画は各 golden)", classification: surface, depth: unit, tolerance: "各 VM フィールド公開ベクタ全緑(ViewRow=TagCount 公開/★非表示・パレット=説明非表示・プレビュー整形)", fixture: tests/ViewPrism2.Tests/CpDisplayParity022Tests.cs, fixture_note: "TempDb+seed", oracle: "xunit.v3 exact(VM フィールド公開)",
++    - { id: CP-DISPLAY-PARITY-022, characteristic: "(ECO-004→ECO-007 改訂)表示パリティの VM フィールド公開: RelinkCandidateViewModel.AbsolutePath/FileName(A-1)・グリッド項目 VM の SizeText(A-2)・TrashItemViewModel.SizeText(A-3)。(ECO-007/E1)ViewRowViewModel は TagCount を公開し ★(IsFavorite)を行表示しない・Description は tooltip 用に公開(A-4 改訂)。(ECO-007/E2)タグパレット行 VM は Description を行に出さない(A-5 撤回)。(ECO-007/E5/DC-TAGPREVIEW-001)タグ作成ダイアログの付与プレビュー整形ヘルパ(核側)が種別別の付与表現を返す(視覚描画は各 golden)", classification: surface, depth: unit, tolerance: "各 VM フィールド公開ベクタ全緑(ViewRow=TagCount 公開/★非表示・パレット=説明非表示・プレビュー整形)", fixture: tests/ViewPrism2.Tests/CpDisplayParity022Tests.cs, fixture_note: "TempDb+seed。RelinkCandidateViewModel/MissingImageViewModel は RepairViewModel.cs から RelinkViewModel.cs へ移動済み (observed@79123df)", oracle: "xunit.v3 exact(VM フィールド公開)",
+         test_vectors: ["A1: 候補=ファイル名+サムネイル絶対パスを公開", "A2: グリッド項目 VM=サイズ文字列を公開", "A3: トラッシュ項目 VM=サイズ文字列を公開", "A4: ビュー行 VM=タグ数公開・説明は tooltip 用に公開(★は行に出さない)", "A5: タグパレット行 VM=説明を行に公開しない(撤回の固定)", "A6: リンク切れ画像行=ファイル名+絶対パスを公開"] }   # ECO-033: CpDisplayParity022Tests A1〜A6 から事実転記(fixture 名も実ファイル名へ補正)
+-    - { id: CP-REPAIR-CARD-021, characteristic: "(ECO-003)再リンク候補 VM が表示パリティの判断材料を公開する=RelinkCandidateViewModel が FileName・AbsolutePath(collection root+relative)・SizeText・ModifiedText を備える(視覚描画は CP-UI-G10/golden)。**(ECO-140)superseded — 候補カード 5 要素パリティ(GF-V4-04)は統合裁定面の候補提示へ継承し検査実体は CP-INTEGRITY-036。CpUiRepairViewModelTests は撤去済み・本エントリは歴史記録**", classification: surface, depth: unit, tolerance: "GF_V4_04 ベクタ(候補=ファイル名/絶対パス/サイズ/更新時刻を公開・missing 行=ファイル名公開)全緑", fixture: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs, fixture_note: "TempDb+seed folder Path", oracle: "xunit.v3 exact(VM フィールド公開)",
++    - { id: CP-REPAIR-CARD-021, characteristic: "(ECO-003)再リンク候補 VM が表示パリティの判断材料を公開する=RelinkCandidateViewModel が FileName・AbsolutePath(collection root+relative)・SizeText・ModifiedText を備える(視覚描画は CP-UI-G10/golden)。**(ECO-140)superseded — 候補カード 5 要素パリティ(GF-V4-04)は統合裁定面の候補提示へ継承し検査実体は CP-INTEGRITY-036。CpUiRepairViewModelTests は撤去済み・本エントリは歴史記録**", classification: surface, depth: unit, tolerance: "GF_V4_04 ベクタ(候補=ファイル名/絶対パス/サイズ/更新時刻を公開・missing 行=ファイル名公開)全緑", fixture: "superseded/deleted: tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs; replacement: tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs + tests/ViewPrism2.Tests/CpDisplayParity022Tests.cs", fixture_note: "TempDb+seed folder Path。候補行型の現所在は RelinkViewModel.cs (observed@79123df)", oracle: "xunit.v3 exact(VM フィールド公開)",
+         test_vectors: ["候補カード=FileName/AbsolutePath(collection root+relative)/SizeText/ModifiedText の4フィールド公開(GF_V4_04)", "missing 行=ファイル名公開", "relink 確定=missing 側 ID 不変で status Normal(候補提示→確定の一連)"] }   # ECO-033: CpUiRepairViewModelTests から事実転記
+     - { id: CP-UI-G10, characteristic: "修復ライフサイクル UI(criteria 検索・relink 候補提示/確定・**候補カードの表示パリティ=サムネイル+ファイル名+パス+サイズ+更新日時を原典 AdvancedRepairModal とフィールド単位で突合**・トラッシュ復元/完全削除・非破壊明示文言・タグ付き候補のマージ案内・復元の missing 化表示)の目視(G-10・v4.0/ECO-003 で表示パリティ項目を追加)+**(ECO-075/GF-075-01)大量 missing(数十万行=ECO-073 の参照登録規模)でも修復が開けて UI が応答する: Load・missing 選択の候補探索・自動修復・すべて自動修復のいずれも固まらない。潜伏実績=missing ごとの候補探索が毎回フォルダ全行×2 をロード(O(M×N))+26万件逐次 Add+UI スレッド同期完了が、修復導入(ECO-005)から少数 missing 前提のまま潜伏し、ECO-073 の missing 大量登録で顕在化(『スキャン中のまま』に見えたのは UI フリーズで完了バッジが再描画されなかったため)。機械側は CpUiRepairViewModelTests の性能 probe(単一ロード相当時間+非同期ブロック検査)で恒久封止**。**(ECO-140)superseded — 修復ダイアログ面は E-UI-INTEGRITY-050 へ統合(実機 golden の検査面は CP-INTEGRITY-036 側)。ECO-075/GF-075-01 応答性プローブは CpIntegrityReviewTests の ECO075 移植 2 本へ引き継ぎ(R8 独立レビュー所見 Med(b) の是正)。本エントリは歴史記録**", classification: surface, depth: G, tolerance: "G-10 チェックリスト全項目(20-spec.md §2.6)", fixture_note: "実アプリ+フィクスチャ(missing/pending を含むコレクション+deleted 画像。relink・復元・完全削除の前後でファイルをエクスプローラ確認)", oracle: 承認者の目視チェック, approver: maintainer }
+     - { id: CP-UI-G13, characteristic: "コレクション書き出し/取り込み UI(G-13・ECO-073/REQ-093): 設定▸データとバックアップ(E-1)の移送2行カード入口(SS-001再裁定2026-07-13=M5・ECO-077。書き出す=緑上矢印トレイ[選ぶ…]→B-1/取り込む=青下矢印トレイ[ファイルを選ぶ…]→B-2 picker自動起動。**⋯メニューは「設定でバックアップ・移送…」誘導1項目のみ=実体2項目を置かない(VC-8=淡紫ハイライト+太字・区切り線下)・誘導は節選択オープン+閉じ後に表示中コレクション再読込**。コレクション文脈消失の後継=書き出し対象はB-1内選択(既定先頭・既定出力先追随)・取り込み先はB-2内選択(gate①案A・既定未選択・選択までCanProceed不活性=互換OKとAND)。機械側pin=GfEntryE1VisualParityTests VC-8+CpUiEco077EntryTests)→B-1(コレクション選択=カード内名前太字+シェブロン+件数淡色・出力先既定名 <名前>.viewprism2-collection.json・画像非含有callout・実進捗 done/total・キャンセル)→B-2(stepper・取り込み先コレクションカード・互換OK概要=名前/画像数/タグ数/作成日時/app_version・互換NG別面=format_version判定)→B-3(追加型マージバナー・タグ計画件数・競合行4択=中止/スキップ/別名/既存へ割当(型互換のみ)・解決済みバッジ+要約・画像5状態タイル+検算・未解決一覧+missing登録説明・過半警告+確認チェック・未解決競合中は実行不可)→B-4(件数4タイル・missing登録一覧・完了)→取り込み後に画像タブへ missing 行と付与が反映。書き出し→別状態ライブラリへの取り込み往復と、2回目取り込みの冪等表示。CAD=snapshot_export_import B-1〜B-4+captures との視覚並置(GF-072-01 教訓の水平展開)。V1差分=B-3取り込み先ルート変更・場所を指定は非搭載(32-mbom 沈黙次元に裁定記録・maintainer確認対象)+**(GF-073-01〜08 潜伏実績・再発防止)①ダイアログ共通言語(タイトル=Window.Titleのみ/ボタン中央揃え/二次操作=白outline/カード=グリフ+名前太字+副情報淡色の2行構成/callout=グリフ+太字リード)と面別転写(B-2ファイルカード+概要テーブル右寄せ太字+日時整形・stepper=番号バッジで**B-2〜B-4 の全可視面に表示(ECO-076/CAD mock 改版 5fdf4464=旧契約『B-2限定可視』の改訂: 到達済み/現在=青塗り丸+白数字+青ラベル・未到達=灰・接続線は到達区間のみ青・B-4 到達=バッジ4が緑塗り丸+白チェック+緑ラベル。書き出しB-1は単段のためstepperなし。CAD視覚契約チェックリストVC-1〜VC-4と captures 並置で検査・機械側はGfPackageVisualParityTestsのVC probe 4本でpin。潜伏実績2026-07-13=①検査器が旧契約を pin していても CAD 改版で契約ごと反転する — 追随 ECO は pin テスト改訂+VC probe 先行生成を対で行う ②golden 初回所見『B-3/B-4 で stepper 非表示』は fix 未含有の main 旧ビルドで実施された偽不合格(fix は worktree ブランチのみ・B-2 は新旧同一見えで取り違えを隠蔽)— golden はビルド出自(fix コミット含有)を確認してから)**+面別Window.Title・B-3=タグチップ/競合カード状態色+選択ボタン青塗り/タイル配色+検算行/広幅2カラム)は captures 並置で全面突合する — 個別画面検査からの水平展開漏れが4回連鎖した実績(GF-01書き出し→02callout→03取り込みカード→04stepper→07 B-3)。機械側 GfPackageVisualParityTests(headless実レイアウト)で恒久pin ②同一ライブラリ内の別コレクション取込が成功する(GF-05=missing登録のID衝突ガードが取り込み先限定でPKはライブラリ全域・fixture別DB2基の検査面欠落実績)・失敗時に生SQLエラーを見せない ③実行/プレビュー中もUI応答(GF-06=同期処理のUIスレッド到達でB-4が背面落ちした実績) ④項目6(移動検出)は同一コレクション再取込では構造的に発火しない(id一致優先→「一致」+修復導線が正)=旧手順は検査手順の欠陥だった実績(GF-08・挙動固定2本で封止)**+**(ECO-074/案A裁定)置き場所管理: 書き出し既定出力先=<文書>/ViewPrism2/collections+保存/選択 picker とも管理フォルダ起点(逸脱先を覚えない)・取り込みは表示直後に picker 自動起動(未選択は定常状態でない)・キャンセル残留はプレースホルダ(空白カード禁止)。潜伏実績=置き場所が要求の沈黙次元(CAD mock の D:\\export はプレースホルダ・書き出し既定 MyDocuments は実装の発明)で、A層 SS-002 の管理フォルダ概念が B層設計へ read-across されなかった。機械側 CpPackage074Tests で恒久pin**", classification: surface, depth: G, tolerance: "CAD B-1〜B-4+E-1(移送カード・⋯誘導)の状態・文言・操作の全項目+captures との視覚並置(擬似タイトルバー/幅は許容差分。**ECO-077 golden 承認済み許容差分(2026-07-13 maintainer)**: ⋯誘導項目のグリフ=歯車(mock はスパークル様・VC-8 契約=淡紫ハイライト+太字+1項目のみは充足))", fixture_note: "実アプリ+コレクション2つ(片方に別ライブラリ相当の書き出し元を用意し、タグ競合(同名・範囲違い)/移動/変更/未解決の各状態を作る)", oracle: 承認者の目視チェック, approver: maintainer }
+diff -ru before/34-routing.yaml after/34-routing.yaml
+--- before/34-routing.yaml	2026-09-05 19:36:35.336273300 +0900
++++ after/34-routing.yaml	2026-09-05 20:05:03.825826900 +0900
+@@ -135,6 +135,7 @@
+ # ---- v4.0(loop-v4-repair-lifecycle)— 既存コードベースへの増分製造 ----
+ routing_v4:
+   id: ROUTING-V4REPAIR-001
++  superseded_by_eco_140: "ROUTE4-SURFACE の修復ダイアログ成果物は M-UI-INTEGRITY-055 の統合裁定面へ置換。M-UI-REPAIR-027 のトラッシュ面と ROUTE4-TRASH は存続"
+   eco_003: "ECO-003(2026-06-15・候補カード表示パリティ)= クローズ後に発見した**仕様欠陥**(REQ-072 が候補表示契約を脱漏→E-039/M-027/CP-UI-G10 へ伝播)。是正は遡及 BOM 再構築(maintainer 選択 Option B): 仕様(REQ-072 (d)/§2.11.5)→ E-BOM(E-039 invariant)→ M-BOM(M-027 candidate_card+FMEA-031)→ Control Plan(CP-REPAIR-CARD-021 unit 新設+CP-UI-G10 に表示パリティ突合)を正しく作成。**工程逸脱の明示記録**: 製造(コード)は工場隔離エージェントでなく設計者が直接記述したものを保持=工場由来でない。再受入で緑(Tests 381/Oracle 73)を確認。隔離純度を厳密に保つなら次回同種は隔離工場で再製造する(60-change-order-eco-003.md §4)"
+   gate_g3_dryrun: "PASS(2026-06-14)— fresh エージェントに製造パッケージ(20 §2.11/30〜34/40+既存 src)のみ供与(41/42/原典/Oracle 非開示)し着手可否を質問: **4 単位(M-CRITERIA-024/M-RELINK-025/M-TRASH-026/M-UI-REPAIR-027)とも着手可・設計者質問ゼロ・blocker ゼロ**。工場側で実コード確証: ①**スキーマ変更不要**=完全削除は ImageRepository.DeleteAsync(DELETE FROM images 既存)+image_tags/image_features/image_similarity 全て ON DELETE CASCADE+PRAGMA foreign_keys=ON(DatabaseManager 既存)、復元は UpdateStatusAsync 既存 ②層規律 OK=File.Exists は FilePresenceProbe(Infrastructure)に閉じ TrashService(Core)は bool を受けて遷移(IPHashImageReader 手本) ③タグ安全=ITagRepository.GetImageTagsAsync 既存で untagged 判定可。軽微な明確化 4 件(いずれも非 blocker・ずる報告 C 分類想定): (a)RelinkService へ ITagRepository 注入追加+DI 1 行 (b)CommitRelinkAsync 第2引数 pendingImageId→replacementImageId リネーム (c)RepairWindow と既存 RelinkViewModel の責務分担=golden/K-DESIGN 範囲 (d)SearchCriteria.Extension の先頭ドット正規化=実装定数。**V3 で顕在化した層規律ギャップは V4 では BOM に事前内包済み(Factory Loop Capability の uplift)→ 凍結前補正ゼロ**"
+   purpose: ViewPrism2 V4(修復ライフサイクル=criteria 検索+relink 拡張+トラッシュ復元/完全削除)を、V1/V2/V3 完成コードベース+改訂 BOM のみから増分製造する
+@@ -167,7 +168,7 @@
+       id: ROUTE4-SURFACE
+       name: "表面を製造する(K-BOM 参照必須: K-AVALONIA / K-DESIGN)。V3 の TrashViewModel を復元/完全削除へ拡張"
+       input: [M-UI-REPAIR-027]
+-      output: [修復 UI(criteria 検索フォーム・relink 候補/確定・トラッシュ復元/完全削除+非破壊明示文言), Assets/i18n に repair.*/trash.restore.*/trash.purge.* 追加]
++      output: ["superseded/deleted: RepairWindow.axaml(.cs)・RepairViewModel.cs → M-UI-INTEGRITY-055 の IntegrityReviewWindow/IntegrityReviewViewModel へ統合; トラッシュ復元/完全削除面は存続", Assets/i18n の歴史的 repair.*/trash.restore.*/trash.purge.*]
+     - order: 6
+       id: ROUTE4-SELF-ACCEPTANCE
+       name: 自己受入(緑が納品条件。自己受入緑≠合格)
+Only in pkg-bom-A: MANIFEST.sha256

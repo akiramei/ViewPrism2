@@ -1,0 +1,30 @@
+{
+ "commands": [
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg --files .'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -Raw -LiteralPath candidate\\\\bom-diff.patch\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'Get-Content -Raw -LiteralPath REFERENCE.yaml'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -Raw -LiteralPath candidate\\\\CHANGELOG.md\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"''^(diff -ru|@@|[+-]    - id:|[+-]      [a-zA-Z_]+:|[+-]    - '\"\\\\{ id:)\\\" candidate\\\\bom-diff.patch\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content -LiteralPath candidate'\"\\\\CHANGELOG.md | ForEach-Object { \"'$n++; '\"'{0,4}: {1}' -f \"'$n, $_ }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content -LiteralPath candidate'\"\\\\bom-diff.patch | ForEach-Object { \"'$n++; if ($n -ge 1 -and $n -le 74) { '\"'{0,4}: {1}' -f \"'$n, $_ } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content -LiteralPath candidate'\"\\\\bom-diff.patch | ForEach-Object { \"'$n++; if ($n -ge 75 -and $n -le 214) { '\"'{0,4}: {1}' -f \"'$n, $_ } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content -LiteralPath candidate'\"\\\\bom-diff.patch | ForEach-Object { \"'$n++; if ($n -ge 212 -and $n -le 255) { '\"'{0,4}: {1}' -f \"'$n, $_ } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'eco\\\\ECO-140.md','eco\\\\ECO-139.md'); foreach(\"'$f in $files){ Write-Output ('\"'FILE '+\"'$f); $n=0; Get-Content -LiteralPath $f | ForEach-Object{$n++; if(($f -like '\"'*140*' -and ((\"'$n -ge 76 -and $n -le 108) -or ($n -ge 116 -and $n -le 124) -or ($n -ge 132 -and $n -le 159) -or ($n -ge 169 -and $n -le 207) -or ($n -ge 230 -and $n -le 248) -or ($n -ge 265 -and $n -le 331))) -or ($f -like '\"'*139*' -and ((\"'$n -ge 56 -and $n -le 66) -or ($n -ge 170 -and $n -le 210)))) { '\"'{0,4}: {1}' -f \"'$n,$_ }}}'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n -C 2 \\\"ShowIntegrityReviewAsync|ConfirmListAsync|OpenIntegrityReview|ComputeSha256Async|Classify\\\\(|LoadAsync\\\\(|ApplyAutomaticAsync\\\" code\\\\src\\\\ViewPrism2.App code\\\\src\\\\ViewPrism2.Core\\\\Services\\\\Repair code\\\\src\\\\ViewPrism2.Infrastructure\\\\Scanning\\\\IntegrityReviewFileHashProvider.cs\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n -C 3 \\\"interface IRelinkService|SelectUniquelyRelinkable|GetUniquelyRelinkableAsync|GetRelinkSelectionAsync|GetAutoRepairablePairsAsync|CountAutoRepairableAsync|ApplyRelinkBatchAsync|ApplyIntegrityReviewBatchAsync\\\" code\\\\src\\\\ViewPrism2.Core\\\\Services\\\\Repair\\\\IntegrityReviewService.cs code\\\\src\\\\ViewPrism2.Infrastructure\\\\Scanning\\\\RelinkService.cs code\\\\src\\\\ViewPrism2.Core\\\\Repositories\\\\IImageRepository.cs code\\\\src\\\\ViewPrism2.Infrastructure\\\\Database\\\\ImageRepository.cs\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n -C 3 \\\"GetIntegrityReviewByFolderAsync|CountIntegrityReviewEventsAsync|GetIntegrityReviewImageTagsByFolderAsync|pending_baseline_hash|idx_images_candidate_link|PreservePendingBaselineHash|preservePendingBaselineHash\\\" code\\\\src\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content -LiteralPath bom'\"\\\\32-mbom.yaml | ForEach-Object { \"'$n++; if (($n -ge 88 -and $n -le 140) -or ($n -ge 490 -and $n -le 555) -or ($n -ge 730 -and $n -le 765)) { '\"'{0,4}: {1}' -f \"'$n, $_ } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n \\\"IsHighConfidence|CountAutoRepairableAsync|GetAutoRepairablePairsAsync|ApplyIntegrityReviewBatchAsync|ApplyRelinkBatchAsync|RepairIcon|CpRelinkUnifiedBatchTests|CpUiRepairViewModelTests|GfPendingReviewVisualParityTests|CpPendingAutoAdjudicationTests\\\" code eco\\\\ECO-140.diff\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$paths=@('\"'code\\\\src\\\\ViewPrism2.App\\\\Views\\\\RepairWindow.axaml','code\\\\src\\\\ViewPrism2.App\\\\ViewModels\\\\RepairViewModel.cs','code\\\\src\\\\ViewPrism2.App\\\\Views\\\\PendingReviewWindow.axaml','code\\\\src\\\\ViewPrism2.App\\\\ViewModels\\\\PendingReviewViewModel.cs','code\\\\tests\\\\ViewPrism2.Tests\\\\CpUiRepairViewModelTests.cs','code\\\\tests\\\\ViewPrism2.Tests\\\\CpPendingAutoAdjudicationTests.cs','code\\\\tests\\\\ViewPrism2.Tests\\\\GfPendingReviewVisualParityTests.cs','code\\\\tests\\\\ViewPrism2.Tests\\\\CpRelinkUnifiedBatchTests.cs'); foreach(\"'$p in $paths){'\"'{0}: {1}' -f \"'$p,(Test-Path -LiteralPath $p)}'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n \\\"RepairIcon|repair\\\\.\\\" code\\\\src\\\\ViewPrism2.App\\\\App.axaml code\\\\src\\\\ViewPrism2.App\\\\Assets\\\\i18n\\\\ja.json code\\\\src\\\\ViewPrism2.App\\\\Assets\\\\i18n\\\\en.json\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content -LiteralPath bom'\"\\\\30-ebom.yaml | ForEach-Object { \"'$n++; if (($n -ge 75 -and $n -le 135) -or ($n -ge 310 -and $n -le 330) -or ($n -ge 700 -and $n -le 720) -or ($n -ge 755 -and $n -le 860)) { '\"'{0,4}: {1}' -f \"'$n, $_ } }'"
+ ],
+ "file_writes": [],
+ "usage": {
+  "input_tokens": 1167634,
+  "cached_input_tokens": 1062528,
+  "output_tokens": 15032,
+  "reasoning_output_tokens": 7270
+ },
+ "suspicious": []
+}

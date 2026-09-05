@@ -1,0 +1,480 @@
+reference:
+  baseline: "79123df"
+  items:
+    - id: R-001
+      kind: design
+      target: "bom/20-spec.md §2.11.7; bom/30-ebom.yaml E-UI-PENDING-049.invariants"
+      expected: "ECO-139 の高信頼対象を pending/new+candidate の hash 一致かつ一意な 1 missing:1 new 組に限定し、曖昧組・reappeared・changed・candidate なし new は個別裁定へ回す。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-139.md:56-66"
+        - "eco/ECO-139.md:176-184"
+        - "eco/ECO-139.diff:49-97"
+        - "bom/20-spec.md:1144-1179"
+        - "bom/30-ebom.yaml:815-816"
+      confidence: certain
+
+    - id: R-002
+      kind: design
+      target: "bom/20-spec.md §2.11.7; bom/30-ebom.yaml E-UI-PENDING-049.invariants"
+      expected: "ECO-139/GF-139-01 の最終動作は accept ではなく原子一括 relink。pending 行を消費して missing 側 image_id・タグを保持し、リンク切れを解消する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-139.md:170-184"
+        - "eco/ECO-139.md:187-210"
+        - "eco/ECO-139.diff:1850-2071"
+        - "bom/20-spec.md:1159-1165"
+        - "bom/30-ebom.yaml:815-816"
+      confidence: certain
+
+    - id: R-003
+      kind: cp-fixture
+      target: "bom/33-control-plan.yaml CP-PENDING-AUTO-035"
+      expected: "ECO-139 の一意選別、曖昧除外、原子 rollback、missing 解消、ID・タグ保持、件数パリティ、可逆性を歴史 CP として保持する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-139.diff:2698-2708"
+        - "bom/33-control-plan.yaml:781-798"
+        - "code/tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs:33"
+      confidence: certain
+
+    - id: R-004
+      kind: artifact-retirement
+      target: "bom/32-mbom.yaml active contracts for ECO-139 intermediate AcceptHighConfidenceAsync/AdjudicatePendingBatchAsync"
+      expected: "反映不要。ECO-139 初期 hunk の一括 T13 accept は同 ECO の GF-139-01 で一括 relink に覆されたため、現行 M-BOM の能動契約として復活させない。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-139.diff:879-920"
+        - "eco/ECO-139.diff:1863-1922"
+        - "eco/ECO-139.md:170-184"
+        - "bom/33-control-plan.yaml:797-798"
+      confidence: certain
+
+    - id: R-005
+      kind: design
+      target: "bom/10-requirements.yaml REQ-102; bom/20-spec.md §2.11.8"
+      expected: "RepairWindow と PendingReviewWindow を、pending∪missing を事象単位で扱う単一面『要確認の画像』へ統合する。入口も旧 2 行から件数付き 1 行へ置換する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.md:76-96"
+        - "eco/ECO-140.md:116-124"
+        - "eco/ECO-140.diff:26-65"
+        - "bom/10-requirements.yaml:1443-1461"
+        - "bom/20-spec.md:1183-1196"
+      confidence: certain
+
+    - id: R-006
+      kind: design
+      target: "bom/10-requirements.yaml REQ-102; bom/30-ebom.yaml E-UI-INTEGRITY-050.invariants"
+      expected: "事象を『自動裁定できる』『個別に確認』『見つからない』へ分類し、移動 T4 relink と再出現 T13 accept を CMP-011 付き単一トランザクションで混在適用する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.md:78-89"
+        - "eco/ECO-140.md:119-123"
+        - "code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs:37"
+        - "code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs:378"
+        - "bom/30-ebom.yaml:840-857"
+      confidence: certain
+
+    - id: R-007
+      kind: design
+      target: "bom/10-requirements.yaml REQ-103; bom/20-spec.md §2.11.8"
+      expected: "reappeared は裁定面で on-demand SHA-256 を計算し、pending_baseline_hash があればそれを、なければ記録 hash を基準に比較する。一致だけを自動対象とする。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.md:80-85"
+        - "eco/ECO-140.md:169-187"
+        - "eco/ECO-140.diff:219-241"
+        - "bom/10-requirements.yaml:1463-1485"
+        - "bom/20-spec.md:1204-1210"
+      confidence: certain
+
+    - id: R-008
+      kind: artifact-retirement
+      target: "bom/30-ebom.yaml E-UI-PENDING-049 and E-UI-REPAIR-039"
+      expected: "両旧 surface を削除せず superseded と記録し、裁定・候補表示等の契約を E-UI-INTEGRITY-050 が継承する。トラッシュと旧 RelinkWindow は統合対象外として残す。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:113-128"
+        - "eco/ECO-140.md:98-108"
+        - "bom/30-ebom.yaml:758-781"
+        - "bom/30-ebom.yaml:802-839"
+      confidence: certain
+
+    - id: R-009
+      kind: artifact-retirement
+      target: "bom/32-mbom.yaml M-UI-PENDING-054.acceptance_note"
+      expected: "PendingReviewWindow/ViewModel/入口が M-UI-INTEGRITY-055 に置換されたことを明示し、旧写像は履歴として保持する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:1774-2267"
+        - "eco/ECO-140.diff:3484-3808"
+        - "bom/32-mbom.yaml:735-747"
+      confidence: certain
+
+    - id: R-010
+      kind: artifact-retirement
+      target: "bom/32-mbom.yaml M-UI-REPAIR-027"
+      expected: "RepairWindow/RepairViewModel、旧修復入口、一括自動修復部分を superseded と明示し、後継 M-UI-INTEGRITY-055 と移管先 CP-INTEGRITY-036 を記録する。トラッシュ契約は存続部分として切り分ける。"
+      already_reflected: false
+      evidence:
+        - "eco/ECO-140.diff:2362-2804"
+        - "eco/ECO-140.diff:3822-3994"
+        - "eco/ECO-140.md:232-240"
+        - "bom/32-mbom.yaml:533-552"
+        - "code/src/ViewPrism2.App/Views/RepairWindow.axaml: deleted from current code"
+      confidence: certain
+
+    - id: R-011
+      kind: design
+      target: "bom/30-ebom.yaml E-RELINK-007"
+      expected: "relink の選別と確定を E-RELINK-007 に一本化し、統合 UI と他サービスはその API の consumer に限定する。単発は失敗スキップ、原子バッチは stale 1 件で全 rollback とする。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.md:88-90"
+        - "eco/ECO-140.md:134-159"
+        - "eco/ECO-140.diff:71-112"
+        - "bom/30-ebom.yaml:100-132"
+      confidence: certain
+
+    - id: R-012
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-RELINK-025.artifact and interface_contract"
+      expected: "Core の IRelinkService/AutoRepairPair/RelinkSelection と、RelinkService の IsHighConfidence・GetRelinkSelectionAsync・GetUniquelyRelinkableAsync・ApplyRelinkBatchAsync・ApplyIntegrityReviewBatchAsync を本 unit に写像する。"
+      already_reflected: false
+      evidence:
+        - "eco/ECO-140.diff:4175-4228"
+        - "eco/ECO-140.diff:5070-5254"
+        - "code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs:78-108"
+        - "code/src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs:84-116"
+        - "code/src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs:350-385"
+        - "bom/32-mbom.yaml:496-512"
+      confidence: certain
+
+    - id: R-013
+      kind: artifact-retirement
+      target: "bom/32-mbom.yaml M-RELINK-025.interface_contract.auto_count"
+      expected: "削除済み CountAutoRepairableAsync を現行契約から撤去し、存続する GetAutoRepairablePairsAsync と統合面 LoadAsync の応答性契約へ置換する。"
+      already_reflected: false
+      evidence:
+        - "eco/ECO-140.diff:5189-5204"
+        - "eco/ECO-140.md:238-240"
+        - "code/src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs:214"
+        - "bom/32-mbom.yaml:506"
+      confidence: certain
+
+    - id: R-014
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-UI-INTEGRITY-055"
+      expected: "IntegrityReviewWindow/ViewModel、IntegrityReviewService、hash provider、RelinkService、ImageRepository、WindowService、ImageTabViewModel を統合裁定 unit の as-built クラスタとして写像する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:987-1773"
+        - "eco/ECO-140.diff:2856-3483"
+        - "eco/ECO-140.diff:4114-4499"
+        - "bom/32-mbom.yaml:749-761"
+      confidence: certain
+
+    - id: R-015
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-UI-INTEGRITY-055.interface_contract"
+      expected: "Classify/LoadAsync/ApplyAutomaticAsync による決定論分類、on-demand hash 確認、確認済み hash の安全な再利用、混在バッチ、個別 T13/T14/T15/T4/T9 を記録する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:4230-4499"
+        - "code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs:116"
+        - "code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs:239-378"
+        - "bom/32-mbom.yaml:756-759"
+      confidence: certain
+
+    - id: R-016
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-DB-007.interface_contract.repositories"
+      expected: "GetIntegrityReviewByFolderAsync、CountIntegrityReviewEventsAsync、GetIntegrityReviewImageTagsByFolderAsync を pending∪missing 限定 read model として写像する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:4036-4075"
+        - "eco/ECO-140.diff:4096-4109"
+        - "eco/ECO-140.diff:5006-5036"
+        - "code/src/ViewPrism2.Infrastructure/Database/ImageRepository.cs:292-307"
+        - "code/src/ViewPrism2.Infrastructure/Database/TagRepository.cs:288"
+        - "bom/32-mbom.yaml:127"
+      confidence: certain
+
+    - id: R-017
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-DB-007.interface_contract"
+      expected: "IImageRepository/ImageRepository の ApplyRelinkBatchAsync と ApplyIntegrityReviewBatchAsync、および移動 T4+再出現 T13 の単一 transaction SQL、stale 条件、件数不一致 rollback を明示する。"
+      already_reflected: false
+      evidence:
+        - "eco/ECO-140.diff:4080-4091"
+        - "eco/ECO-140.diff:4764-4980"
+        - "code/src/ViewPrism2.Infrastructure/Database/ImageRepository.cs:430-626"
+        - "bom/32-mbom.yaml:124-134"
+      confidence: certain
+
+    - id: R-018
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-DB-007.schema; M-SCAN-005.interface_contract/invariants"
+      expected: "migration 011 の pending_baseline_hash nullable 列と candidate_link 複合 index、ImageRecord.PendingBaselineHash、ScanFileMetaUpdate.PreservePendingBaselineHash を旧 hash 保全経路へ写像する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:3995-4025"
+        - "eco/ECO-140.diff:4588-4620"
+        - "code/src/ViewPrism2.Core/Models/Entities.cs:51"
+        - "code/src/ViewPrism2.Core/Models/ScanMutationBatch.cs:9"
+        - "code/src/ViewPrism2.Infrastructure/Database/DatabaseSchema.cs:328-329"
+        - "bom/32-mbom.yaml:114"
+        - "bom/32-mbom.yaml:126-128"
+      confidence: certain
+
+    - id: R-019
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-SCAN-005.invariants"
+      expected: "ScanService の一段階・二段階双方で UpdateMetaAndPend のみ旧 hash 保全フラグを立てる。PendInPlace、ScanJudge、ScanStaging の判定と追加 I/O は変更しない。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:5255-5303"
+        - "code/src/ViewPrism2.Infrastructure/Scanning/ScanService.cs:320"
+        - "code/src/ViewPrism2.Infrastructure/Scanning/ScanService.cs:616"
+        - "bom/32-mbom.yaml:93-115"
+      confidence: certain
+
+    - id: R-020
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-UI-INTEGRITY-055.artifact; M-SCAN-005.artifact"
+      expected: "IntegrityReviewFileHashProvider.ComputeSha256Async を裁定面専用の読み取り専用・キャンセル可能な SHA-256 provider として写像し、scan 判定の consumer にしない。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:5037-5069"
+        - "code/src/ViewPrism2.Infrastructure/Scanning/IntegrityReviewFileHashProvider.cs:10-24"
+        - "bom/32-mbom.yaml:97"
+        - "bom/32-mbom.yaml:753-759"
+      confidence: certain
+
+    - id: R-021
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-UI-INTEGRITY-055.artifact.path_note"
+      expected: "PendingReviewService は ECO-139 の高信頼選別・一括 relink 所有者ではなく、個別 T13/T14/T15 のみに縮退したことを記録する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:4500-4587"
+        - "code/src/ViewPrism2.Core/Services/Repair/PendingReviewService.cs:19-58"
+        - "bom/32-mbom.yaml:753"
+      confidence: certain
+
+    - id: R-022
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-UI-INTEGRITY-055.entry; bom/30-ebom.yaml E-UI-INTEGRITY-050.invariants"
+      expected: "IWindowService/WindowService.ShowIntegrityReviewAsync、ImageTabViewModel の事象件数・OpenIntegrityReview、ImageTabView の新 1 行入口と裁定後 refresh を写像する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:718-845"
+        - "eco/ECO-140.diff:859-986"
+        - "eco/ECO-140.diff:2819-2855"
+        - "code/src/ViewPrism2.App/Services/WindowService.cs:156"
+        - "code/src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs:436"
+        - "code/src/ViewPrism2.App/ViewModels/ImageTabViewModel.cs:1997-2004"
+        - "bom/32-mbom.yaml:753-756"
+      confidence: certain
+
+    - id: R-023
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-I18N-011; M-UI-INTEGRITY-055"
+      expected: "ja/en の integrity.* 資産、旧 pending/repair 面専用キーの撤去、統合面の確認・事象・条件検索・安全説明文言を既存 i18n unit と統合面 unit に帰属させる。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:392-717"
+        - "code/src/ViewPrism2.App/Assets/i18n/ja.json:123-170"
+        - "code/src/ViewPrism2.App/Views/IntegrityReviewWindow.axaml:238-297"
+        - "bom/32-mbom.yaml:188-198"
+        - "bom/32-mbom.yaml:749-761"
+      confidence: likely
+
+    - id: R-024
+      kind: cp-fixture
+      target: "bom/33-control-plan.yaml CP-INTEGRITY-036"
+      expected: "事象分類、hash 確認、baseline 保全、混在原子バッチ、relink 一本化、入口統合、個別裁定、ECO-075 応答性、IR-1〜8 visual contract を後継 CP に集約する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:155-188"
+        - "eco/ECO-140.diff:323-361"
+        - "bom/33-control-plan.yaml:800-822"
+      confidence: certain
+
+    - id: R-025
+      kind: cp-fixture
+      target: "bom/33-control-plan.yaml CP-INTEGRITY-036.fixture"
+      expected: "fixture に CpRelinkUnifiedBatchTests.cs を追加し、E-RELINK-007 の一意選別・タグ安全・原子 batch・stale rollback・可逆性を担う実検査ファイルを明示する。"
+      already_reflected: false
+      evidence:
+        - "eco/ECO-140.diff:7424-7727"
+        - "code/tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs:33-244"
+        - "bom/33-control-plan.yaml:805"
+        - "bom/33-control-plan.yaml:814"
+      confidence: certain
+
+    - id: R-026
+      kind: cp-fixture
+      target: "bom/32-mbom.yaml M-RELINK-025.acceptance_refs; M-DB-007.acceptance_refs; M-SCAN-005.acceptance_refs"
+      expected: "ECO-140 で変更された relink、DB mixed batch/migration、scan baseline 保全の検査先として CP-INTEGRITY-036 を各実装 unit から参照する。"
+      already_reflected: false
+      evidence:
+        - "bom/32-mbom.yaml:115"
+        - "bom/32-mbom.yaml:134"
+        - "bom/32-mbom.yaml:511"
+        - "bom/33-control-plan.yaml:811-814"
+        - "code/tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs:395-594"
+        - "code/tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs:33-244"
+      confidence: likely
+
+    - id: R-027
+      kind: cp-fixture
+      target: "bom/33-control-plan.yaml CP-PENDING-AUTO-035, CP-REPAIR-AUTOALL-023, CP-REPAIR-CARD-021, CP-UI-G10"
+      expected: "削除された旧テスト/面の CP は消さず、superseded 注記と CP-INTEGRITY-036 への fixture・意味論移管を記録する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.md:230-240"
+        - "eco/ECO-140.diff:323-361"
+        - "eco/ECO-140.diff:6714-7391"
+        - "eco/ECO-140.diff:7896-8455"
+        - "eco/ECO-140.diff:8939-9299"
+        - "bom/33-control-plan.yaml:798"
+        - "bom/33-control-plan.yaml:837-843"
+      confidence: certain
+
+    - id: R-028
+      kind: cp-fixture
+      target: "bom/33-control-plan.yaml CP-INTEGRITY-036.test_vectors"
+      expected: "GF-140-01 の既定選択フォールバック、GF-140-02 の個別/閉じる安全説明、GF-140-03 の ja/en メニュー文字数予算を統合面の再発防止ベクタとして保持する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.md:265-307"
+        - "eco/ECO-140.md:327-331"
+        - "eco/ECO-140.diff:9300-9469"
+        - "bom/33-control-plan.yaml:820-822"
+      confidence: certain
+
+    - id: R-029
+      kind: implementation-mapping
+      target: "bom/30-ebom.yaml E-UI-REPAIR-039; bom/32-mbom.yaml M-UI-INTEGRITY-055"
+      expected: "RelinkViewModel/RelinkWindow の候補表示フィールド調整は統合対象外の既存フォルダ管理 relink を維持する互換 hunk。新規品目化は不要で、旧 RelinkWindow 存続を明示する。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:2268-2361"
+        - "eco/ECO-140.diff:3809-3821"
+        - "bom/30-ebom.yaml:774"
+        - "bom/30-ebom.yaml:780"
+      confidence: certain
+
+    - id: R-030
+      kind: implementation-mapping
+      target: "bom/32-mbom.yaml M-UI-INTEGRITY-055.adjudicate; bom/33-control-plan.yaml CP-INTEGRITY-036"
+      expected: "ConfirmDialog の一覧確認対応と統合面からの利用は CMP-011 再利用として扱う。共有 ConfirmDialog を新しい独立品目へ分割する必要はない。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-139.diff:224-299"
+        - "eco/ECO-139.diff:515-634"
+        - "eco/ECO-140.diff:2805-2818"
+        - "bom/32-mbom.yaml:758"
+        - "bom/33-control-plan.yaml:813-815"
+      confidence: certain
+
+    - id: R-031
+      kind: implementation-mapping
+      target: "bom/33-control-plan.yaml CP-INTEGRITY-036 and existing CP-UI-G1/CP-REGISTRY-LINT-122"
+      expected: "CpDisplayParity022、CpI18n010AssetLint、CpPackage073、CpRecomputeCouplingLint、CpRegistryLint、各 ImageTab/UI/Gf テストの hunk は新しい設計品目ではなく、統合後の入口・死亡型不在・i18n・表示回帰の既存 CP 実装として扱う。"
+      already_reflected: true
+      evidence:
+        - "eco/ECO-140.diff:5304-5328"
+        - "eco/ECO-140.diff:6702-6713"
+        - "eco/ECO-140.diff:7392-7423"
+        - "eco/ECO-140.diff:7728-7895"
+        - "eco/ECO-140.diff:8456-8515"
+        - "bom/33-control-plan.yaml:805-822"
+      confidence: likely
+
+    - id: R-032
+      kind: artifact-retirement
+      target: "bom/32-mbom.yaml M-UI-REPAIR-027.artifact; M-RELINK-025.interface_contract"
+      expected: "App.axaml の RepairIcon と旧 Repair/Pending ViewModel・Window・専用 visual tests の撤去を旧面退役へ束ねる。CountAutoRepairableAsync 以外の存続 relink API やトラッシュ面まで撤去しない。"
+      already_reflected: false
+      evidence:
+        - "eco/ECO-140.diff:363-374"
+        - "eco/ECO-140.diff:1774-2267"
+        - "eco/ECO-140.diff:2362-2804"
+        - "eco/ECO-140.diff:3484-3994"
+        - "eco/ECO-140.md:238-240"
+        - "bom/32-mbom.yaml:496-552"
+      confidence: certain
+
+  must_not_change:
+    - target: "bom/34-routing.yaml ROUTING-V4REPAIR-001 and prior routing records"
+      reason: "ECO-139/140 は過去の製造 routing を再裁定していない。旧ルートは履歴として保持する。"
+      evidence:
+        - "bom/34-routing.yaml:3"
+        - "bom/34-routing.yaml:135-177"
+
+    - target: "bom/30-ebom.yaml E-UI-PENDING-049.boundary_hypothesis"
+      reason: "ECO-139 実装前に凍結された bdr-01 第1系列の予測記録。ECO-140 で review_trigger が発火しても後付け修正・削除しない。"
+      evidence:
+        - "eco/ECO-139.md:104-131"
+        - "eco/ECO-140.md:132-164"
+        - "bom/30-ebom.yaml:821-838"
+
+    - target: "bom/30-ebom.yaml E-RELINK-007.boundary_hypothesis"
+      reason: "ECO-140 実装前に凍結された第2系列の予測。baseline 保全で前提疑義となった結果を理由に予測本文を書き換えない。"
+      evidence:
+        - "eco/ECO-140.md:132-164"
+        - "eco/ECO-140.md:200-207"
+        - "bom/30-ebom.yaml:114-132"
+
+    - target: "bom/33-control-plan.yaml CP-PENDING-AUTO-035"
+      reason: "ECO-139/GF-139-01 の歴史 CP・意味論典拠。fixture ファイルが現行 code から撤去済みでもエントリ自体は削除せず、superseded 注記を維持する。"
+      evidence:
+        - "bom/33-control-plan.yaml:781-798"
+        - "eco/ECO-140.md:232-234"
+
+    - target: "bom/33-control-plan.yaml CP-REPAIR-AUTOALL-023, CP-REPAIR-CARD-021, CP-UI-G10"
+      reason: "旧面の検査履歴として保持し、検査実体の CP-INTEGRITY-036 への移管注記だけを維持・補強する。"
+      evidence:
+        - "bom/33-control-plan.yaml:837-843"
+        - "eco/ECO-140.md:230-240"
+
+    - target: "bom/30-ebom.yaml E-UI-REPAIR-039 non-repair portions"
+      reason: "ECO-140 が撤去したのは修復ダイアログ面。画像タブ内トラッシュとフォルダ管理経由 RelinkWindow は明示的に統合対象外である。"
+      evidence:
+        - "eco/ECO-140.md:76-96"
+        - "bom/30-ebom.yaml:777-780"
+
+    - target: "bom/32-mbom.yaml M-SCAN-005.interface_contract.judge and ScanJudge/ScanStaging mapping"
+      reason: "PEND-005 の hash 計算は裁定時 on-demand。スキャン側は旧 hash の保全書込みだけを担い、判定ロジックや追加 hash I/O を持たせない。"
+      evidence:
+        - "eco/ECO-140.md:80-85"
+        - "eco/ECO-140.md:202-207"
+        - "bom/32-mbom.yaml:100-114"
+
+    - target: "bom/31-kbom.yaml and bom/32-mbom.yaml procurement"
+      reason: "両 ECO は既存 Avalonia、SQLite、暗号 hash API の範囲で実装され、新規調達部品を裁定していない。"
+      evidence:
+        - "eco/ECO-139.md:56-66"
+        - "eco/ECO-140.md:76-96"
+        - "bom/32-mbom.yaml:763-765"
+
+    - target: "bom/30-ebom.yaml E-UI-INTEGRITY-050 scope"
+      reason: "PEND-004 の各 consumer における pending 扱いと、旧 pending 一覧の非仮想化 F-2 は ECO-140 の明示的な分離対象であり、本変更へ混ぜない。"
+      evidence:
+        - "eco/ECO-140.md:127-130"
+
+    - target: "bom/code capture or fixture assets containing the reported game images"
+      reason: "ECO-139 は第三者著作物を含むスクリーンショットを captures・メモ・ソース管理へ保存しないと明示している。"
+      evidence:
+        - "eco/ECO-139.md:21-22"
+        - "eco/ECO-139.md:93"
+
+    - target: "shared ConfirmDialog base styling and unrelated confirmation consumers"
+      reason: "ECO-139 の一覧版だけへ変更を限定し、削除・再リンク・未保存終了など既存確認面の基底外観を変えない裁定が維持されている。"
+      evidence:
+        - "eco/ECO-139.md:159-164"
+        - "eco/ECO-139.md:201-206"
+        - "eco/ECO-140.md:198"

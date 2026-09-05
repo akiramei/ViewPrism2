@@ -1,0 +1,25 @@
+{
+ "commands": [
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'Get-ChildItem -Force; Get-ChildItem -Recurse -File candidate, bom, code, eco | Select-Object FullName, Length'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'Get-Content -Raw REFERENCE.yaml'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"Get-Content -Raw candidate\\\\CHANGELOG.md\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"''^(diff --git|@@)\" candidate/bom-diff.patch; rg -n \"''^[+-].*(id:|status:|artifact:|interface_contract:|invariants:|acceptance_refs:|fixture:|fixture_note:|path_note:|external_source_note:|depends_on:|consumers:|ebom_refs:|experiment:)\" candidate/bom-diff.patch'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$n=0; Get-Content candidate'\"\\\\bom-diff.patch | ForEach-Object { \"'$n++; '\"'{0,4}: {1}' -f \"'$n, $_ }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$lines=Get-Content candidate'\"\\\\bom-diff.patch; for(\"'$i=135;$i -le 218;$i++){ '\"'{0,4}: {1}' -f (\"'$i+1), $lines[$i] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$p='\"'eco/ECO-140.md'; \"'$l=Get-Content $p; foreach($r in @(@(76,109),@(116,130),@(132,160),@(169,207),@(230,248),@(313,331))){ for($i=$r[0]-1;$i -lt $r[1];$i++){ '\"'{0}:{1}' -f (\"'$i+1),$l[$i] }; '\"'' }\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n -C 4 \"E-UI-INTEGRITY-050|E-UI-REPAIR-039|E-UI-PENDING-049|M-UI-INTEGRITY-055|M-UI-REPAIR-027|CountAutoRepairableAsync|CpRelinkUnifiedBatchTests|RepairIcon|RepairWindow.axaml|PendingReviewWindow.axaml|CpUiRepairViewModelTests|GfPendingReviewVisualParityTests\" eco/ECO-140.diff'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files=@('\"'code/src/ViewPrism2.App/Views/RepairWindow.axaml','code/src/ViewPrism2.App/ViewModels/RepairViewModel.cs','code/src/ViewPrism2.App/Views/PendingReviewWindow.axaml','code/src/ViewPrism2.App/ViewModels/PendingReviewViewModel.cs','code/tests/ViewPrism2.Tests/CpUiRepairViewModelTests.cs','code/tests/ViewPrism2.Tests/GfPendingReviewVisualParityTests.cs'); \"'$files | ForEach-Object { \"$_ exists=$(Test-Path $_)\" }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$p='\"'code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs'; \"'$l=Get-Content $p; foreach($r in @(@(1,140),@(231,390))){for($i=$r[0]-1;$i -lt [Math]::Min($r[1],$l.Count);$i++){if($i+1 -in 1..25 -or $l[$i] -match '\"'interface IRelinkService|record AutoRepairPair|record RelinkSelection|IsHighConfidence|GetRelinkSelectionAsync|GetUniquelyRelinkableAsync|ApplyRelinkBatchAsync|ApplyIntegrityReviewBatchAsync|Classify|LoadAsync'){ '{0}:{1}' -f (\"'$i+1),$l[$i] }}}'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"class RelinkService|GetCandidatesAsync|CommitRelinkAsync|GetAutoRepairablePairsAsync|CountAutoRepairableAsync|IsHighConfidence|GetRelinkSelectionAsync|GetUniquelyRelinkableAsync|ApplyRelinkBatchAsync|ApplyIntegrityReviewBatchAsync\" code/src/ViewPrism2.Infrastructure/Scanning/RelinkService.cs code/src/ViewPrism2.Core/Services/Repair/IntegrityReviewService.cs'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"CP-INTEGRITY-036|class CpRelinkUnifiedBatchTests|ApplyRelinkBatch|rollback|reversible|タグ|stale|ambig|一意\" code/tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$p='\"'bom/32-mbom.yaml'; \"'$l=Get-Content $p; foreach($r in @(@(525,565),@(730,765))){for($i=$r[0]-1;$i -lt $r[1];$i++){ '\"'{0}:{1}' -f (\"'$i+1),$l[$i] }; '\"''}\""
+ ],
+ "file_writes": [],
+ "usage": {
+  "input_tokens": 1199876,
+  "cached_input_tokens": 1111040,
+  "output_tokens": 11764,
+  "reasoning_output_tokens": 5665
+ },
+ "suspicious": []
+}

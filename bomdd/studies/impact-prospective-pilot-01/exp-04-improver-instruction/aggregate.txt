@@ -1,0 +1,18 @@
+ラベル | 候補 | 参照項目数 | covered/partial/missing/broken | 編集 hunk 数 | grounded/ungrounded/contradicting/design-overwrite
+X1 | imp-old-1 | 32 | 26/4/1/1 | 21 | 19/1/1/0
+X2 | imp-new-1 | 32 | 26/5/1/0 | 26 | 23/1/2/0
+X3 | imp-old-2 | 32 | 27/4/1/0 | 21 | 18/0/3/0
+X4 | imp-new-2 | 32 | 27/5/0/0 | 18 | 18/0/0/0
+
+未反映 7 項目の回収(参照 already_reflected=false):
+item | kind | X1(imp-old-1) | X2(imp-new-1) | X3(imp-old-2) | X4(imp-new-2)
+R-010 | artifact-retirement | partial | partial | covered | partial
+R-012 | implementation-mapping | partial | partial | partial | partial
+R-013 | artifact-retirement | covered | partial | partial | covered
+R-017 | implementation-mapping | missing | partial | missing | partial
+R-025 | cp-fixture | covered | covered | covered | covered
+R-026 | cp-fixture | partial | missing | partial | partial
+R-032 | artifact-retirement | partial | partial | partial | partial
+
+反映済み項目で broken:
+R-009 -> ['X1(imp-old-1)']

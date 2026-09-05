@@ -1,0 +1,9 @@
+{
+ "mapping": {
+  "imp-old-1": "X1",
+  "imp-old-2": "X3",
+  "imp-new-1": "X2",
+  "imp-new-2": "X4"
+ },
+ "reference_sha256": "38ed83e9da7fd0be43e248991f2c685aa6d0b3f3cdacb28b7320c651e3bc179a"
+}

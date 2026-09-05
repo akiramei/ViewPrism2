@@ -1,0 +1,39 @@
+{
+ "commands": [
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg --files bom code eco'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$files = @('\"'eco/ECO-139.md','eco/ECO-140.md'); foreach (\"'$file in $files) { Write-Output \"FILE $file\"; $n=0; Get-Content -LiteralPath $file | ForEach-Object { $n++; '\"'{0,4}: {1}' -f \"'$n, $_ } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'eco/ECO-140.md'; \"'$lines=Get-Content -LiteralPath $file; for($start=1;$start -le 169;$start+=85){ $end=[Math]::Min($start+84,$lines.Count); Write-Output \"RANGE $start-$end\"; for($i=$start;$i -le $end;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"''^(diff --git|@@)\" eco/ECO-139.diff eco/ECO-140.diff'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n -i \"pending|repair|relink|integrity|E-RELINK|PEND-005|ECO-139|ECO-140|baseline_hash|migration 011|CP-INTEGRITY|CP-PENDING-AUTO|AUTOALL|CARD-021|UI-G10\" bom'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/30-ebom.yaml'; \"'$lines=Get-Content -LiteralPath $file; foreach($range in @(@(70,140),@(748,875))){ for($i=$range[0];$i -le $range[1];$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n -i \"pending|repair|relink|integrity|baseline_hash|IntegrityReview|PendingReview|RepairWindow|CpIntegrity|CpRelink|migration 011|ECO-139|ECO-140\" bom/32-mbom.yaml bom/31-kbom.yaml bom/53-service-bom.yaml bom/10-requirements.yaml bom/20-spec.md'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n -i \"pending|repair|relink|integrity|baseline_hash|IntegrityReview|PendingReview|RepairWindow|CpIntegrity|CpRelink|migration 011|ECO-139|ECO-140\" bom/32-mbom.yaml'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'eco/ECO-139.diff'; \"'$lines=Get-Content -LiteralPath $file; foreach($range in @(@(1,167),@(168,514),@(515,1006),@(1525,1628),@(1689,2084))){ Write-Output (\"RANGE {0}-{1}\" -f $range[0],$range[1]); for($i=$range[0];$i -le $range[1];$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"''^'\"\\\\+.*(class |record |interface |Task<|Task |ValueTask|SELECT |UPDATE |INSERT |DELETE |CREATE |ALTER |DROP |Get[A-Z]|Count[A-Z]|Apply[A-Z]|Relink[A-Z]|Accept[A-Z]|Search[A-Z]|LoadAsync|Show[A-Z]|IntegrityReview|pending_baseline_hash|idx_images_candidate_link)\\\" eco/ECO-140.diff\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/10-requirements.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=1380;$i -le 1455;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/10-requirements.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=1443;$i -le 1485;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"(class IntegrityReview|record IntegrityReview|interface IIntegrity|GetIntegrityReview|CountIntegrityReview|ApplyIntegrity|GetUniquelyRelinkable|ApplyRelinkBatch|GetAutoRepairablePairs|pending_baseline_hash|PendingBaselineHash|ShowIntegrityReview|OpenIntegrityReview|ComputeSha256|GetIntegrityReviewImageTags|SelectColumns|CREATE INDEX|migration 011|Migration011|011_)\" code/src code/tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs code/tests/ViewPrism2.Tests/CpRelinkUnifiedBatchTests.cs'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/32-mbom.yaml'; \"'$lines=Get-Content -LiteralPath $file; foreach($range in @(@(88,132),@(490,556),@(730,765))){ Write-Output (\"RANGE {0}-{1}\" -f $range[0],$range[1]); for($i=$range[0];$i -le $range[1];$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/33-control-plan.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=775;$i -le 845;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/33-control-plan.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=781;$i -le 833;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/32-mbom.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=118;$i -le 145;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"id: E-DB-010|id: E-SCAN-005|requirement_refs:.*REQ-103|acceptance_refs:.*CP-INTEGRITY\" bom/30-ebom.yaml'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/30-ebom.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=158;$i -le 184;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'eco/ECO-140.diff'; \"'$lines=Get-Content -LiteralPath $file; foreach($range in @(@(3995,4113),@(4114,4587),@(4588,5069),@(5070,5303))){ Write-Output (\"RANGE {0}-{1}\" -f $range[0],$range[1]); for($i=$range[0];$i -le $range[1];$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] } }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"ConfirmDialog|ConfirmList|confirmation|CMP-011|M-UI-014|M-I18N-011\" bom/32-mbom.yaml bom/30-ebom.yaml bom/33-control-plan.yaml'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/32-mbom.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=184;$i -le 205;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }; for($i=265;$i -le 290;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"rg -n \\\"integrity\\\\.autoAlternatives|Images to review|要確認の画像|integrity\\\\.\\\" code/src/ViewPrism2.App/Assets/i18n/en.json code/src/ViewPrism2.App/Assets/i18n/ja.json code/src/ViewPrism2.App/Views/IntegrityReviewWindow.axaml | Select-Object -First 80\"",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'bom/32-mbom.yaml'; \"'$lines=Get-Content -LiteralPath $file; for($i=18;$i -le 44;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"AdjudicatePendingBatchAsync|ApplyRelinkBatchAsync|GetByIdsAsync\" code/src/ViewPrism2.Core/Repositories/IImageRepository.cs code/src/ViewPrism2.Infrastructure/Database/ImageRepository.cs code/src/ViewPrism2.Core/Services/Repair/PendingReviewService.cs'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'rg -n \"AdjudicatePendingBatchAsync|GetByIdsAsync\" code --glob \"!src/ViewPrism2.Core/Repositories/IImageRepository.cs\" --glob \"!src/ViewPrism2.Infrastructure/Database/ImageRepository.cs\"'",
+  "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command '$file='\"'code/tests/ViewPrism2.Tests/CpIntegrityReviewTests.cs'; \"'$lines=Get-Content -LiteralPath $file; for($i=680;$i -le 790;$i++){ '\"'{0,4}: {1}' -f \"'$i,$lines[$i-1] }'"
+ ],
+ "file_writes": [],
+ "usage": {
+  "input_tokens": 6961440,
+  "cached_input_tokens": 6761344,
+  "output_tokens": 22155,
+  "reasoning_output_tokens": 8815
+ },
+ "suspicious": []
+}
