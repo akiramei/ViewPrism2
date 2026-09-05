@@ -1,0 +1,43 @@
+run_id: PILOT-A-SM-01
+execution_receipt_hash: 4b3e8457d1c62e7eebe8d160aaf84dde658adb9a51680052fb0f7f5e89f02ddc
+evaluator:
+  id: oracle-script:evaluate.py
+  spec_hash: 0b0f747713a0bcebcb5930ef7234b5d780d01ce38520be841fb846950682f85b
+rubric_hash: b5fb886d0901caf72a7f0312bf344986a3ee0a9e5b1d4581e5cfd55674e49324
+rubric_sealed_before_run: true
+result: fail
+observed_failures:
+- over-change
+- over-scope
+- under-change
+- under-scope
+evaluated_at: '2026-09-05T02:47:14Z'
+evaluator_correct: 1
+evaluator_expected: 3
+evaluator_details:
+  adj_change:
+  - M-DB-007
+  - M-HARNESS-015
+  - M-UI-IMAGETAB-035
+  adj_scope:
+  - M-CORE-001
+  - M-DB-007
+  - M-HARNESS-015
+  - M-UI-IMAGETAB-035
+  pred_change:
+  - M-DB-007
+  - M-UI-TRASH-032
+  pred_scope:
+  - M-DB-007
+  - M-UI-IMAGETAB-035
+  - M-UI-TRASH-032
+  under_change:
+  - M-HARNESS-015
+  - M-UI-IMAGETAB-035
+  over_change:
+  - M-UI-TRASH-032
+  under_scope:
+  - M-CORE-001
+  - M-HARNESS-015
+  over_scope:
+  - M-UI-TRASH-032

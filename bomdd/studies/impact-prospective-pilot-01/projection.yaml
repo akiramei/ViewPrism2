@@ -1,0 +1,66 @@
+tool_hash: a40a78d8dcae13946eca6402b0a181909069f9333dc01af7f86d12d9ad868642
+trials:
+  PILOT-A:
+    repetitions: 2
+    treatments:
+      a2a18bd55a09e9437bd15857a677b2ad3eb349762cbffcc466c4f54a22dd9e28:
+        requested:
+          model: gpt-5.6-sol
+          effort: medium
+          method_stack: []
+          harness:
+            name: codex-cli
+            hash: 0.144.1
+          tool_permissions:
+          - sandbox:read-only
+          runtime_config:
+            prompt_via: stdin
+            output: -o <abs>/RESULT.md
+            flags: --json --skip-git-repo-check
+        n: 2
+        pass: 0
+        unevaluated: 0
+        pass_rate: 0.0
+        mean_tokens: 1323113
+    effort_sensitivity: []
+  PILOT-B:
+    repetitions: 2
+    treatments:
+      a2a18bd55a09e9437bd15857a677b2ad3eb349762cbffcc466c4f54a22dd9e28:
+        requested:
+          model: gpt-5.6-sol
+          effort: medium
+          method_stack: []
+          harness:
+            name: codex-cli
+            hash: 0.144.1
+          tool_permissions:
+          - sandbox:read-only
+          runtime_config:
+            prompt_via: stdin
+            output: -o <abs>/RESULT.md
+            flags: --json --skip-git-repo-check
+        n: 2
+        pass: 0
+        unevaluated: 0
+        pass_rate: 0.0
+        mean_tokens: 604392
+    effort_sensitivity: []
+sources:
+- file: PILOT-A\runs\PILOT-A-SM-01.execution.yaml
+  sha256: 4b3e8457d1c62e7eebe8d160aaf84dde658adb9a51680052fb0f7f5e89f02ddc
+- file: PILOT-A\runs\PILOT-A-SM-01.evaluation.yaml
+  sha256: 41af5fab39119b1cffb29fa065c3b6aae27a4a450eacfca14f1bbda34612e924
+- file: PILOT-A\runs\PILOT-A-SM-02.execution.yaml
+  sha256: c15b5c84fa307246dfd4f124bd8b2aea057dcdf5f724482ceb45008d4bb6225f
+- file: PILOT-A\runs\PILOT-A-SM-02.evaluation.yaml
+  sha256: 1c9762e8672072093f5a8b112e83440ff661e2f8e5d11895389dcda83a651a80
+- file: PILOT-B\runs\PILOT-B-SM-01.execution.yaml
+  sha256: e086bc7d13c83658815ea259cf89051f1d66395369d4116b5cdd394e29135066
+- file: PILOT-B\runs\PILOT-B-SM-01.evaluation.yaml
+  sha256: bbdd7edf0b7d639212c3de71b141ecbd915031614efaca6f0cf112ac5ad2fdfd
+- file: PILOT-B\runs\PILOT-B-SM-02.execution.yaml
+  sha256: 242353340fa03ea29bb84f90523b0f3fb6457a33a20780d00314ca1435ff59f0
+- file: PILOT-B\runs\PILOT-B-SM-02.evaluation.yaml
+  sha256: 64660fde62e8ed92b28ba2aaf887e5c237747ef8908d44b4936e4ec798ce36da
+

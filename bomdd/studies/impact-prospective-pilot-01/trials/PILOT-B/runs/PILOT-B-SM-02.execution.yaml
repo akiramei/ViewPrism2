@@ -1,0 +1,32 @@
+run_id: PILOT-B-SM-02
+trial_id: PILOT-B
+trial_hash: e4827e3997256edf0f95900d7ec3c94c048882825cb71787296fb83585421332
+treatment:
+  requested:
+    model: gpt-5.6-sol
+    effort: medium
+    method_stack: []
+    harness:
+      name: codex-cli
+      hash: 0.144.1
+    tool_permissions:
+    - sandbox:read-only
+    runtime_config:
+      prompt_via: stdin
+      output: -o <abs>/RESULT.md
+      flags: --json --skip-git-repo-check
+  resolved:
+    model: unknown
+    effort: unknown
+treatment_hash: a2a18bd55a09e9437bd15857a677b2ad3eb349762cbffcc466c4f54a22dd9e28
+started_at: '2026-09-05T02:44:56Z'
+completed_at: '2026-09-05T02:47:32Z'
+exit_code: 0
+token_usage:
+  input: 717951
+  output: 5049
+  reasoning_output: 1976
+  cached_input: 615936
+output_hash: aad130aed971b357f4481587b3a90fa8e8da7caf19cc4eaf5a2a286894f986ea
+output_file: outputs/PILOT-B-SM-02.RESULT.md
+prompt_hash: d0a27018613bd2361b34c77c880a885678d9b821da4c66e2a418e029c108c314

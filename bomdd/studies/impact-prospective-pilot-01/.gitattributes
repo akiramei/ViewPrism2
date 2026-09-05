@@ -1,0 +1,2 @@
+# 記録は sha256 で座標結合されている(trial.yaml → execution → evaluation receipt)。改行変換で bytes が変わると整合が壊れるため変換しない。
+* -text

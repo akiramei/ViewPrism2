@@ -1,0 +1,13 @@
+run_id: PILOT-A-SM-02
+execution_receipt_hash: c15b5c84fa307246dfd4f124bd8b2aea057dcdf5f724482ceb45008d4bb6225f
+evaluator:
+  id: oracle-script:evaluate.py
+  spec_hash: 901a64f8c04e17756ec568883c4e82db9e1873ee7c618ccdb7544800e55ee831
+rubric_hash: b5fb886d0901caf72a7f0312bf344986a3ee0a9e5b1d4581e5cfd55674e49324
+rubric_sealed_before_run: true
+result: fail
+observed_failures:
+- missing-verdict
+evaluated_at: '2026-09-05T02:46:11Z'
+evaluator_details:
+  reason: prediction YAML なし

@@ -1,0 +1,4 @@
+arms:
+  - {tag: SM, model: gpt-5.6-sol, effort: medium, converge: false}
+harness: {name: codex-cli, version: "0.144.1"}
+sandbox: read-only

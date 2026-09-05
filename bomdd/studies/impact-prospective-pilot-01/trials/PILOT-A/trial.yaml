@@ -1,0 +1,20 @@
+trial_id: PILOT-A
+input_hash: 0795bb2f0f8b8e27140b098f11bda07937325238f2c60db71c9396a459f5e698
+rubric_hash: b5fb886d0901caf72a7f0312bf344986a3ee0a9e5b1d4581e5cfd55674e49324
+symptom_vocabulary:
+- under-change
+- under-scope
+- over-change
+- over-scope
+- missing-verdict
+- format-violation
+repetitions: 2
+evaluator_policy:
+  blind: true
+  evaluator: oracle-script — treatment を受け取る引数を持たない
+  sealed_at: '2026-09-05T02:41:16Z'
+trial_hash: 047de847bd23743c4b4436f21b676f4520b86e0c7ca1dc136be51cc2fef5b395
+title: 'ECO-142 予備試験 A: 改善前 BOM(79123df)からの M unit 変更予測・調査候補'
+input_file: input/TASK.md
+rubric_file: rubric/rubric.md
+notes: treatment は execution receipt に記録する(trial 定義は treatment を含まない)
