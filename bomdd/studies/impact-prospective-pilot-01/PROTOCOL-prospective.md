@@ -6,14 +6,18 @@
 
 ## 起動条件(トリガー)
 
-- maintainer から変更要求(不具合報告・要求変更)が出た時点で、**ECO 起票より前に**本手順を開始する。
+- 次の**適格な実変更**で実施する。適格= 変更要求の**原文 R**(診断・実測・箇所名を含まない)と **baseline(HEAD sha)** を固定でき、
+  裁定を**実装より前に**封印できること。起票前が望ましいが**必須ではない**(起票後でも、実装前に R と baseline を固定し裁定を封印できれば可)。
+- 開始確認は通常の製品作業(`/eco-file` 手順 2b)に組み込む。**maintainer の事前連絡は不要**。不適格なら order §1 に「非適格・理由」を 1 行残す。
+- 追加の実験(指示比較・BOM 改善の A/B・effort 比較)は行わない。
 - 起動しなかった場合は「機会あり・非起動」として記録する(散文契約の非起動は観測対象)。
 
 ## 手順
 
 1. **固定**: 変更要求 R(maintainer の原文。診断・実測・箇所名を含めない)と baseline(HEAD sha)を `cases/<ECO or CR id>/REQUEST.md` /
    `BASELINE.txt` に書き、sha256 を記録する。以後この 2 つは変えない(追記のみ)。
-2. **予測者パッケージ**(履歴なし・許可ファイル集合): R + baseline 時点の BOM 一式(10/20/30/31/32/33/34/53)。コードは含めない。
+2. **予測者パッケージ**(履歴なし・許可ファイル集合): **予測入力= 変更要求 R + baseline の BOM 一式(10/20/30/31/32/33/34/53)のみ**。
+   コード・order・register・診断結果は含めない。
    様式は `briefs/TASK-PREDICT-v2.md`(製品 unit と検査 unit を分け、**判断ごとに BOM の参照箇所を必須**)。
    実行: Codex Sol medium × 2 反復(pilot-01 と同条件)。effort-trial-runner の `execute --package` で receipt を残す。
 3. **裁定者**(独立・予測を見ない): R + baseline のコード + M-BOM の artifact 表(id/path のみ)。様式は `briefs/TASK-ADJUDICATOR.md`

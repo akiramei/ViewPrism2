@@ -17,6 +17,10 @@ description: ECO 起票+工程診断。症状・要求・所見を受理して�
 
 1. **採番**: `bomdd/60-change-register.yaml` 末尾で次番号を確認(逐次採番)。
 2. **症状/要求の記録**: 再現手順・観測日・報告者。事実と疑いを分離。
+2b. **開始確認(impact-prospective-01・研究)**: 症状/要求の**原文 R**(診断・箇所名を含まない)と baseline(現 HEAD)を固定できる
+   実変更なら適格。適格なら手順 3 の診断より前に、[studies/impact-prospective-pilot-01/PROTOCOL-prospective.md](../../../bomdd/studies/impact-prospective-pilot-01/PROTOCOL-prospective.md)
+   に従い、予測(入力= **R + baseline の BOM のみ**)と独立裁定を封印してから診断へ進む。起票前が望ましいが必須ではない(封印が実装より前なら可)。
+   maintainer への事前連絡は不要。不適格(R を原文で固定できない等)なら「非適格・理由」を order §1 に 1 行残す。
 3. **工程診断(R2)** — 修正対象を決める前に、欠陥(または変更)がどの工程に属すか判定する:
    - **CAD(ViewPrismUI)**: `docs/screens/*.md` と mock に定義があるか。未定義・曖昧なら CAD 欠陥。
    - **BOM(bomdd/30-ebom, 32-mbom)**: surface/unit の宣言と受入観点は健全か。
