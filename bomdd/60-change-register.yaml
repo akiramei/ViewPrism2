@@ -2000,3 +2000,15 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。計数同値・計算量は tests probe で pin=凍結オラクル非該当見込み"
     notes: "gate①=不要見込み(実装層・件数 bit 一致。反転版に意味論差が見つかれば軽微裁定へ切替)。gate②=不要見込み(ECO-134/137 先例)。R3 分離=大規模 missing で要確認の画像一覧を開いた場合の GetIntegrityReviewByFolderAsync 全行 materialize は混ぜない(51-cheat-log 記録)。関連=ECO-140(混入元・CMP-010 意味論典拠)・ECO-134/137(計算量/走査回数封止の同型)・ECO-104/125(26万件経路台帳)・ECO-136(missing 母集合の意味論)"
     body: 60-change-order-eco-142.md
+
+  - id: ECO-143
+    title: "機械受入の結果を Control Plan の行ごとに集計し、承認の場に添える(試行)"
+    type: "工程拡張(検査器/台帳 — 機械受入の出力。src 不変)"
+    status: staged   # 2026-10-01 起票。出典= maintainer 裁定(BomDD の M-BOM/CP 再設計で「ViewPrism2 で試してから文書にする」B を選択)。gate①= order §4.2 の A/B
+    golden: "pending(gate② は n/a を提案予定 — 視覚・挙動の変更なし。機械受入+初回の表がクローズ条件)"
+    baseline: "main e8edbbb"
+    findings: "受入は gate② の maintainer 承認が決め、根拠は件数・R8・lint で、CP の行ごとの結果は出てこない(ECO-142/141/065)。validate_bom は 33 を構文のみ検査(MAIN_LOADED)。テストは trait cp を 59 種持ち 33 の 65 行中 57 行に対応(trait なし 8 行= retired 1・G 3・unit 3・unit+G 1/行なし ID 2)。正規経路 dotnet test に --report-xunit を与えると XML に trait が載る(実測)。呼び出し側の -p:TestingPlatformCommandLineArguments は ECO-081 の HangDump 既定引数を置き換える(Condition 宣言)ため、報告引数は csproj 既定に足す"
+    impacted_bom: ["tests=ViewPrism2.Tests.csproj(既定引数に --report-xunit を追加・HangDump 保持・テストコード不変)", "bomdd/cp_results.py=新規(XML+33 → 4 区分の表・--selftest)", "bomdd/32-mbom.yaml=M-HARNESS-015 interface_contract に結果出力 1 行", "手順書=.claude/skills/eco-fix・eco-accept・CLAUDE.md 機械受入節", "src=変更なし", "CAD=該当なし"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)。Oracle の trait(oracle=S-NN)は CP に結びつかないため対象外"
+    notes: "gate①= 出し方(A 添えるだけ/B 測定不能で停止)。区分は BomDD ECO-089・BomDD-Plm plm-diag/2 の合格/違反/測定不能/適用外に揃える。未実行は「人の承認で検査(depth G のみ)」と「検査なし」に分ける(方法論側に対応区分の無い意図した違い)。試行の評価(order §4.4)は事前登録済み= 初回の表の予測(人の承認 3・検査なし 4・retired 1・台帳外 ID 2)と次の 3 件の承認での処置。R5 対象外(拡張)— selftest の既知不良を陽性対照。impact-prospective-01= 非適格(R が maintainer 原文でない)・機会あり非起動"
+    body: 60-change-order-eco-143.md
