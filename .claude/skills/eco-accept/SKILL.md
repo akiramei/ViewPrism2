@@ -26,6 +26,8 @@ description: golden 合格後の ECO クローズ。クローズ 3 点セット(
    今回の観点を**潜伏実績つきで**追記する(ECO-037 が CP-UI-G9 に完了パネル観点を刻んだ方式)。
 2. **register 更新**: `status: applied`+承認記録(日付・approver・確認内容)を status 注記へ。
    golden フィールドを `approved(日付 maintainer 実機: <確認内容>)` に書き換える。
+   status 注記には、/eco-fix 手順 3.1 の **CP 行ごとの結果の表の区分の件数**(「区分:」の行)を残す(ECO-143)。
+   承認がその表のどの行に触れたか(触れなかったなら「言及なし」)も 1 句で残す — ECO-143 の試行評価の観測点。
 3. **ECO 本文クローズ節**: タイトルの (staged)→(applied)、クローズ節に
    実機確認内容・再発防止・**教訓**(一般化できる形で 1 段落。既存教訓との関係=read-across を明記)。
 4. **検証+コミット**: `python bomdd/validate_bom.py` 0-0 → `accept(eco-NNN): golden 合格 — <要約>`。

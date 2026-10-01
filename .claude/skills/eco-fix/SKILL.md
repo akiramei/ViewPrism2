@@ -35,6 +35,13 @@ description: 起票済み ECO の是正実施。プローブ先行(是正前不�
 3. **機械受入(4 点)**: `dotnet build`(0 error)/ `dotnet test tests/ViewPrism2.Tests`(全緑・
    プローブも合格に転じること)/ `dotnet test tests/ViewPrism2.Oracle` / `python bomdd/validate_bom.py`(0-0)。
    **R6: 既存固定オラクル行は変更しない。** 期待値改訂が必要になったら停止して報告(挙動保存の破れ)。
+3.1 **CP 行ごとの結果の表(ECO-143)**: Tests の実行後に `python bomdd/cp_results.py` を実行し、出力の表を
+   停止点の提示に**そのまま添える**。表は判定ではない(gate① 裁定 A= 添えるだけ・機械では止めない)。
+   - 表の先頭の「実行の素性」(構成・終了日時)が**今回の実行**か、「実行のテスト総数」が**直前の dotnet test の出力の合計**と
+     一致するかを確認する(前回の結果ファイルの残り・フィルタ付きの部分実行の表を添えない)。
+   - 終了コード 2(表を出せない= 結果ファイルが無い/読めない/総数 0・33 が読めない・引数の誤り)なら、その出力を添えて理由を書く。
+   - 結果ファイルは Tests の csproj 既定引数が出す。**呼び出し側で `-p:TestingPlatformCommandLineArguments` を渡さない**
+     (既定引数が丸ごと置き換わり、HangDump〔ECO-081〕もこの報告も外れる)。
 3.5. **セルフゴールデン(R7・UI サーフェスに触れた fix のみ)**: golden 提示の**前**に、
    是正対象の各サーフェスを CAD captures と並置する(headless レンダリング=
    Avalonia.Headless の CaptureRenderedFrame 等、または実機スクリーンショット)。
@@ -65,7 +72,8 @@ description: 起票済み ECO の是正実施。プローブ先行(是正前不�
 
 ## 停止点(human gate② = golden)
 
-**golden 合格基準を操作手順つきの箇条書きで提示して停止する。** 例(ECO-038):
+**golden 合格基準を操作手順つきの箇条書きで提示して停止する。** golden n/a の ECO の accept 依頼も含め、
+手順 3.1 の **CP 行ごとの結果の表**を添える(ECO-143)。例(ECO-038):
 「作業タブで画像のあるスペースを開き、グリッド⇔リスト押下で本体が即時切替(往復)・
 ボタン active 状態と本体表示が常に一致」。
 共有コンテナ/共有 VM を触った場合は**非表示状態(条件付き IsVisible の裏面)の再検査**も

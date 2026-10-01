@@ -1,7 +1,7 @@
 # ECO-143 — 機械受入の結果を Control Plan の行ごとに集計し、承認の場に添える(試行)
 
 - 種別: 工程拡張(検査器/台帳 — 機械受入の出力。製品コード src は不変)
-- status: **staged**(2026-10-01 起票 `e632480` → 同日 gate① 裁定 A)
+- status: **implemented**(2026-10-01 起票 `e632480` → 同日 gate① 裁定 A `8356714` → 2026-10-02 是正+機械受入・golden 待ち)
 - baseline: main `e8edbbb`
 - 出典: maintainer 裁定 2026-10-01(方法論リポ BomDD で M-BOM / Control Plan の再設計を議論した際、
   「方法論の文書を先に改訂する(A)」ではなく「ViewPrism2 で試してから文書にする(B)」を選択)
@@ -130,3 +130,50 @@ gate② の承認(golden n/a の ECO では accept 依頼)に添える。**機�
    R8 は src 非接触だが、新規スクリプトと csproj に独立レビューを任意で実施する。
 3. **gate②**: golden n/a を提案(視覚・挙動の変更なし。機械受入+初回の表がクローズ条件)。
 4. `/eco-accept` → 試行の評価(§4.4)は次の 3 件の ECO の承認後に追記。
+
+## §7 実施記録(/eco-fix・2026-10-02)
+
+**diff**: `tests/ViewPrism2.Tests/ViewPrism2.Tests.csproj`(既定引数 1 行+コメント)・`bomdd/cp_results.py`(新規)・
+`bomdd/32-mbom.yaml`(M-HARNESS-015 の契約 1 行)・`.claude/skills/eco-fix/SKILL.md`(手順 3.1・停止点)・
+`.claude/skills/eco-accept/SKILL.md`(手順 2)・`CLAUDE.md`(機械受入節)。src・テストコード・固定オラクルは無変更(R6)。
+
+**R5 対象外(拡張・§6 で宣言)の代替= 陽性対照**: `python bomdd/cp_results.py --selftest` OK。合成データで各区分
+(違反・合格・測定不能〔全件 Skip/全件 NotRun〕・未実行 2 種)、retired と台帳外 ID の別欄と Fail 件数、複数の cp trait を持つテスト、
+実行の素性、実行単位の測定不能 5 種(無い・XML 不正・総数 0・assembly なし・UTF-8 不正)を確認する。
+**計器の空振り検査**: selftest に変異 5 種(unit+G を人の承認に畳む・retired を外さない・総数 0 を測定不能にしない・Skip を合格扱い・
+台帳外 ID を落とす)を入れ、5/5 で selftest が FAIL することを確認した(作業用スクリプト・リポ外)。途中 1 種が見逃しに見えたのは
+変異スクリプト側の誤り(後続の変異で例外型の参照が差し替わった)で、selftest 側の欠陥ではなかった。
+
+**HangDump の保持(§3 事実 2)**: `dotnet msbuild -getProperty:TestingPlatformCommandLineArguments` の実効値=
+`--hangdump --hangdump-timeout 5m --hangdump-type mini --results-directory "…\tests\ViewPrism2.Tests/TestResults" --report-xunit --report-xunit-filename cp-results.xml`。
+同じ 1 本の引数列から XML が出力されたことで、既定引数が丸ごと渡っていることを確認した。
+
+**機械受入(4 点)**: `dotnet build` 0 error / `dotnet test tests/ViewPrism2.Tests` 974/974 / `dotnet test tests/ViewPrism2.Oracle`
+109 合格+skip 4(ECO-142 の記録と同数)/ `python bomdd/validate_bom.py` 0-0。
+
+**初回の表(§4.4 の予測との突合)**: 予測と**完全一致**。
+
+| 区分 | 予測 | 実測 |
+|---|---|---|
+| 未実行(人の承認で検査) | 3(CP-UI-G5・G7・G10) | 3(同) |
+| 未実行(検査なし) | 4(CP-STARTUP-028・CP-REPAIR-AUTOALL-023・CP-REPAIR-CARD-021・CP-PENDING-AUTO-035) | 4(同) |
+| retired | 1(CP-UI-G3) | 1(同) |
+| 台帳に無い ID | 2(CP-VIEWER-DIMCACHE・CP-VIEWER-IMPROVE) | 2(同・テスト 5・7 件・Fail 0) |
+| 合格 / 違反 / 測定不能 | — | 57 / 0 / 0 |
+
+件数「974/974」からは、行あたりのテスト数の偏り(CP-UI-G1 は 177 件、CP-NFR-001・CP-RELEASE-018 などは 1 件)も、
+上の 7 行と ID 2 つも見えなかった。
+
+**独立レビュー(R8 相当・任意・fresh context の subagent)**: 所見 7 件(High 0・Med 1・Low 6)、全件スコープ内。処置:
+
+| # | 所見 | 処置 |
+|---|---|---|
+| 1 Med | 結果の実行日時・構成が出ないため、前回の結果ファイルの残りを今回の表と取り違えうる | 是正: 表の先頭に「実行の素性」(assembly・Debug/Release・終了日時)を出す。selftest に追加 |
+| 2 Low | 「全件実行の総数か確認」に比較対象が無い | 是正: eco-fix 3.1 を「直前の dotnet test の出力の合計と一致するか」に |
+| 3 Low | 終了コード 2 の原因の列挙に「33 が読めない」が無い/引数の値が無いと IndexError で 1 | 是正: 文書に追記・値の無い `--xml`/`--cp` は終了コード 2 |
+| 4 Low | retired 行・台帳外 ID に Fail があっても表に出ない | 是正: 両欄に Fail 件数を出す。selftest に追加 |
+| 5 Low | `decode(errors="replace")` が復号の失敗を黙って置換する | 是正: バイト列のまま解析し、不正なら実行単位の測定不能。selftest に追加 |
+| 6 Low | Debug と Release が同じ TestResults/ を共有し、同時実行で上書き・ロックしうる | 宣言済みの限界とする: 表に構成を出す(#1)ことで取り違えは見える。同時実行は正規の手順に無い |
+| 7 Low | selftest に複数 trait・全件 NotRun・retired/台帳外の Fail の場合が無い | 是正: selftest に追加 |
+
+是正後に selftest OK・変異 5/5 検出・表の再出力(区分の件数は不変)を確認した。

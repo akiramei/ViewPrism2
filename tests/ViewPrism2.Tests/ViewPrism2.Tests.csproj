@@ -9,8 +9,11 @@
     <!-- ECO-081: 時間上限をハーネス自身の宣言に(fail-closed 化)。テストイベントが 5 分間ゼロ=ハングと
          みなし、残存スレッドのミニダンプ(TestResults/*_hang.dmp + ハング中テスト名の *_hang.log)を
          採取してプロセスを強制終了する。進捗がある限り発火しないため実行時間の増加では誤爆しない。
-         呼び出し側からは -p:TestingPlatformCommandLineArguments で上書き可能。 -->
-    <TestingPlatformCommandLineArguments Condition="'$(TestingPlatformCommandLineArguments)' == ''">--hangdump --hangdump-timeout 5m --hangdump-type mini</TestingPlatformCommandLineArguments>
+         呼び出し側からは -p:TestingPlatformCommandLineArguments で上書き可能。
+         ECO-143: 同じ既定引数に CP 行ごとの結果の元データ(xUnit XML・各テストの trait cp を含む)を足す。
+         出力先は構成(Debug/Release)に依らずプロジェクト直下の TestResults/ に固定し、bomdd/cp_results.py が読む。
+         上書きすると HangDump もこの報告も外れる(既定引数は丸ごと置き換わる)ため、呼び出し側では渡さない。 -->
+    <TestingPlatformCommandLineArguments Condition="'$(TestingPlatformCommandLineArguments)' == ''">--hangdump --hangdump-timeout 5m --hangdump-type mini --results-directory &quot;$(MSBuildProjectDirectory)/TestResults&quot; --report-xunit --report-xunit-filename cp-results.xml</TestingPlatformCommandLineArguments>
     <!-- NU1903(SQLitePCLRaw.lib.e_sqlite3 2.1.11・GHSA-2m69-gcr7-jv3q)は ECO-026 で Infrastructure が
          SQLitePCLRaw.bundle_e_sqlite3 3.0.3 を明示ピンして根本解消したため、暫定の WarningsNotAsErrors 回避は撤去。 -->
   </PropertyGroup>

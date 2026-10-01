@@ -36,6 +36,11 @@ dotnet test tests/ViewPrism2.Oracle          # 全緑(skip は既知 2 件)
 python bomdd/validate_bom.py                 # 0 error / 0 warning(pre-commit でも走る)
 ```
 
+**CP 行ごとの結果の表(ECO-143・判定ではない)**: Tests の実行後に `python bomdd/cp_results.py` を実行し、
+golden 提示/accept 依頼に添える。元データは Tests の csproj 既定引数が出す xUnit XML
+(`tests/ViewPrism2.Tests/TestResults/cp-results.xml`)。呼び出し側で `-p:TestingPlatformCommandLineArguments` を
+渡すと既定引数が丸ごと置き換わり、下の HangDump もこの報告も外れる。
+
 **ハング時 fail-closed 契約(ECO-081・gate② 裁定文面が正本)**: 正本の dotnet test 経路は
 Microsoft.Testing.Extensions.HangDump を使用し、`--hangdump --hangdump-timeout 5m --hangdump-type mini`
 をテストプロジェクト自身の既定引数として宣言する。これは総実行時間上限ではなく、MTP が観測する
