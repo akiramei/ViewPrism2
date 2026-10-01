@@ -2004,8 +2004,8 @@ changes:
   - id: ECO-143
     title: "機械受入の結果を Control Plan の行ごとに集計し、承認の場に添える(試行)"
     type: "工程拡張(検査器/台帳 — 機械受入の出力。src 不変)"
-    status: implemented   # 2026-10-02 是正+機械受入完了・golden 待ち(n/a 提案)。機械受入= build 0 / Tests 974/974 / Oracle 109+skip 4 / validate 0-0。CP 行ごとの表= 違反 0・測定不能 0・未実行(検査なし)4・未実行(人の承認)3・合格 57・retired 1・台帳外 ID 2(事前登録の予測と完全一致)。独立レビュー 7 件(Med 1・Low 6)= 是正 6・宣言済みの限界 1。起票 e632480・gate① 裁定 A 8356714
-    golden: "pending(gate② は n/a を提案予定 — 視覚・挙動の変更なし。機械受入+初回の表がクローズ条件)"
+    status: applied   # 2026-10-02 クローズ(maintainer が gate② golden n/a を受理= 選択肢 A。視覚・挙動変更なし・ECO-134/137/142 同型)。fix 391588d。承認が表の行に触れたか= 言及なし(選択のみ)。再発防止= M-HARNESS-015 契約 cp_results+eco-fix 3.1(CP 行は該当なし・ECO-081 同型)。以下 fix 時点の注記: 是正+機械受入完了。機械受入= build 0 / Tests 974/974 / Oracle 109+skip 4 / validate 0-0。CP 行ごとの表= 違反 0・測定不能 0・未実行(検査なし)4・未実行(人の承認)3・合格 57・retired 1・台帳外 ID 2(事前登録の予測と完全一致)。独立レビュー 7 件(Med 1・Low 6)= 是正 6・宣言済みの限界 1。起票 e632480・gate① 裁定 A 8356714
+    golden: "n/a(2026-10-02 maintainer 受理: 視覚・挙動の変更なし= 機械受入 4 点〔build 0/Tests 974/974/Oracle 109+skip 4/validate 0-0〕+初回の CP 行ごとの表〔予測と完全一致〕がクローズ条件)"
     baseline: "main e8edbbb"
     findings: "受入は gate② の maintainer 承認が決め、根拠は件数・R8・lint で、CP の行ごとの結果は出てこない(ECO-142/141/065)。validate_bom は 33 を構文のみ検査(MAIN_LOADED)。テストは trait cp を 59 種持ち 33 の 65 行中 57 行に対応(trait なし 8 行= retired 1・G 3・unit 3・unit+G 1/行なし ID 2)。正規経路 dotnet test に --report-xunit を与えると XML に trait が載る(実測)。呼び出し側の -p:TestingPlatformCommandLineArguments は ECO-081 の HangDump 既定引数を置き換える(Condition 宣言)ため、報告引数は csproj 既定に足す"
     impacted_bom: ["tests=ViewPrism2.Tests.csproj(既定引数に --report-xunit を追加・HangDump 保持・テストコード不変)", "bomdd/cp_results.py=新規(XML+33 → 4 区分の表・--selftest)", "bomdd/32-mbom.yaml=M-HARNESS-015 interface_contract に結果出力 1 行", "手順書=.claude/skills/eco-fix・eco-accept・CLAUDE.md 機械受入節", "src=変更なし", "CAD=該当なし"]
