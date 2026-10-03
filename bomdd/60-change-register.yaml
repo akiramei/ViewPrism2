@@ -2012,3 +2012,15 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)。Oracle の trait(oracle=S-NN)は CP に結びつかないため対象外"
     notes: "gate①= 出し方(A 添えるだけ/B 測定不能で停止)。区分は BomDD ECO-089・BomDD-Plm plm-diag/2 の合格/違反/測定不能/適用外に揃える。未実行は「人の承認で検査(depth G のみ)」と「検査なし」に分ける(方法論側に対応区分の無い意図した違い)。試行の評価(order §4.4)は事前登録済み= 初回の表の予測(人の承認 3・検査なし 4・retired 1・台帳外 ID 2)と次の 3 件の承認での処置。R5 対象外(拡張)— selftest の既知不良を陽性対照。impact-prospective-01= 非適格(R が maintainer 原文でない)・機会あり非起動"
     body: 60-change-order-eco-143.md
+
+  - id: ECO-144
+    title: "保守上の約束を上流(要求台帳)で裁定し、承認済み E/S 版からサムネイル部品の検査を導出する(方法論 BomDD ECO-094 の試行)"
+    type: "工程拡張(要求台帳・E-BOM・Service BOM・Control Plan の対応付け。src 不変の予定 — gate① ① が B なら別 ECO)"
+    status: staged   # 2026-10-03 起票 → gate① 裁定待ち(① 約束の文言 A/B・②③ の確認)。方法論 BomDD ECO-094(maintainer 裁定 1:A → 対象 A= E-THUMB-020)の製品側
+    golden: "n/a 候補(視覚・挙動の変更なし= 機械受入 4 点+CP 行ごとの表+追跡表〔REQ→E→M→CP→テスト→実行証拠〕がクローズ条件の見込み・ECO-143 同型)"
+    baseline: "main dc722a9"
+    findings: "保守上の約束(交換の方針・キャッシュの継続・壊れた画像での継続)が要求として書かれていない— -v2 の約束は ECO-049(欠陥是正)の中で決まり REQ-040/085 に無い。SkiaSharp は substitutable: false(ADR-0004)・識別子は Core 4/Infra 7/App 3・契約層 10:5/20:5/30:1・41:0 → 宣言された結合(20-spec §2.10 の exact ピン・hash_adapter と一致)。叩き台 ①「交換できる」は現状と食い違う= 人へ戻す判断(BomDD M1 の 1 件目)。validate_bom は 10/53 を意味検査しない"
+    impacted_bom: ["bomdd/10-requirements.yaml=REQ-104〜106 追加(classification_hint: maintainability)", "bomdd/30-ebom.yaml=E-THUMB-020 requirement_refs 追加", "bomdd/53-service-bom.yaml=SB-THUMB-020 に service_requirement_refs・replacement_policy(candidate 欄)", "bomdd/33-control-plan.yaml=CP-THUMB-007 に REQ 対応・① の vector(新規の場合)", "bomdd/00-manifest.yaml=bom_version v4.1(+tag bom-v4.1)", "tests=① の検査が新規なら 1 テスト(trait cp=CP-THUMB-007)", "src=0(① が A の場合)"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)"
+    notes: "gate①= ① の文言(A 宣言された結合〔推奨〕/ B 交換可能性を目標= 機能追加・別 ECO)+②③ の確認。導出で人へ戻すのは新しい機能・新しい約束・導出不能の 3 種だけ。試行の評価= BomDD preregistration(M1〜M4)・ECO-143 §4.4 の 3 件の 1 件目。impact-prospective-01= 非適格(AI 提案への選択)。R3 所見= 00-manifest の eco_range/open_eco が乖離(触れない)"
+    body: 60-change-order-eco-144.md
