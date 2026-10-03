@@ -275,7 +275,7 @@ control_plan:
         - "sync_folders.path UNIQUE(case-insensitive): 'C:/a' と 'c:/A' で 2 件目拒否"
 
     - id: CP-THUMB-007
-      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす。(ECO-144)保守上の約束 REQ-104(宣言された結合= 版の一致)・REQ-105(キャッシュ継続・世代移行)・REQ-106(壊れた画像での継続)を本行の vector で検査する
+      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす。(ECO-144)保守上の約束 REQ-104(宣言された結合= 版の一致)・REQ-105(キャッシュ継続・世代移行)・REQ-106(壊れた画像での継続)を本行の vector で検査する。観点(ECO-144 accept)= 本行は複数の約束・18 テストを束ねるため、1 vector の治具が不能(Skip)でも行の区分は合格のまま(実行単位の skip 件数にだけ出る— ECO-144 リハーサル実績)。約束単位の測定不能を行で見せるには行の分割か内訳の表示が要る(方法論側で判断)
       classification: surface
       depth: L2
       tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact。(ECO-144)版の一致は文字列 exact"
