@@ -201,9 +201,13 @@ service_bom:
       part_ref: E-THUMB-020
       classification: surface
       external_deps: [{ kbom_ref: K-SKIA, version: "3.119.4" }]
+      # ECO-144(方法論 BomDD ECO-094 の試行・candidate 欄): 上流の保守上の約束(10 の REQ)への参照と、交換の方針の宣言。
+      #   上流= 何を約束するか(REQ)/ 下流(本 item)= 約束を守るために何を監視し何を再検査するか。
+      service_requirement_refs: [REQ-104, REQ-105, REQ-106]
+      replacement_policy: declared-coupling   # 宣言された結合(REQ-104)— 交換しない・版 exact・更新は DEG → reinspect_on_change+K-SKIA affected_parts の再検査
       acceptance_depth: L2
       reinspect_on_change:
-        - { cp_ref: CP-THUMB-007, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007) — 1920x1080 jpg/100x50 png/壊れ jpg/gif/bmp/webp。寸法±1px・形式・キャッシュ再生成" }
+        - { cp_ref: CP-THUMB-007, fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007) — 1920x1080 jpg/100x50 png/壊れ jpg/gif/bmp/webp。寸法±1px・形式・キャッシュ再生成・(ECO-144)版の一致" }
       ai_model_drift: "再製造時はフィット丸め・最小 1px・拡大禁止・Dispose を要再確認"
       replacement_decision_vocabulary: 交換不要 / K-BOM更新のみ(再認証) / 再製造必要
 

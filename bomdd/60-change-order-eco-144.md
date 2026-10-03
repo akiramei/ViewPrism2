@@ -73,6 +73,14 @@ R を maintainer 原文で固定できない(ECO-143 と同型)。機会あり�
 
 ②③ は §1 の叩き台のまま REQ 化する。MODIFY があれば文言を差し替える。
 
+### 4.2' gate① 裁定(maintainer・2026-10-03)— **1:A 2:OK**
+
+- ① = **A**(SkiaSharp は交換しない部品= 宣言された結合。版 exact・更新は DEG として再検査)/ ②③ = 叩き台のまま確定。
+- **承認済み E/S 版の固定(同日・`decide(eco-144)` commit・tag `bom-v4.1`)**: REQ-104(①)・REQ-105(②)・REQ-106(③)を 10-requirements に追加(`classification_hint: maintainability`・受入の深さと落ちたときの振り分けを rationale に明記)/
+  E-THUMB-020 の `requirement_refs` に REQ-104〜106・invariants に REQ の対応 / SB-THUMB-020 に `service_requirement_refs: [REQ-104, REQ-105, REQ-106]`・`replacement_policy: declared-coupling`(candidate 欄)/
+  00-manifest `bom_version: v4.1`。src・tests・33・41 は本 commit で不変(導出は fix で)。
+- 人へ戻した判断の記録(BomDD 事前登録 M1): 1 件目= ① の文言(種別: 新しい保守の約束)。②③ は確認のみ(戻した判断に数えない)。
+
 ### 4.3 実装(案・① が A の場合・/eco-fix で実施)
 
 1. **REQ 追加**(10-requirements・REQ-104〜106・`classification_hint: maintainability`・rationale は根拠精度 G1〔受入の深さと許容差〕まで): ① ② ③。

@@ -406,14 +406,15 @@ ebom:
       name: サムネイル生成サービス(+EXIF Orientation 正立化・実効寸法 — ECO-049)
       classification: surface
       rationale_type: external-knowledge
-      requirement_refs: [REQ-040, REQ-085]
+      requirement_refs: [REQ-040, REQ-085, REQ-104, REQ-105, REQ-106]   # ECO-144: 保守上の約束(宣言された結合 / キャッシュ継続 / 壊れた画像での継続)を上流 REQ へ
       external_source_ref: K-SKIA
       kbom_refs: [K-SKIA]
       depends_on: [E-HASH-006]
       invariants:
         - INV-009 元画像へ書き込まない
-        - 失敗時もスキャン・一覧を停止させない
-        - since ECO-049(REQ-085) サムネは EXIF 正立で生成・寸法は実効値(5〜8 で W/H 入替)。キャッシュファイル名は生成規則の世代サフィックス付き(-v2)=旧世代を参照しない
+        - 失敗時もスキャン・一覧を停止させない(REQ-106)
+        - since ECO-049(REQ-085) サムネは EXIF 正立で生成・寸法は実効値(5〜8 で W/H 入替)。キャッシュファイル名は生成規則の世代サフィックス付き(-v2)=旧世代を参照しない(REQ-105 で上流化)
+        - (ECO-144/REQ-104) SkiaSharp は交換しない部品(宣言された結合)— 版は exact・台帳と実装の版は一致・更新は DEG として再検査を通す
       acceptance_refs: [CP-THUMB-007]
 
     - id: E-UI-SHELL-021

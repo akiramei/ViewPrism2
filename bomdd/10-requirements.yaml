@@ -1485,3 +1485,54 @@ requirements:
       - "確認中に暫定件数で自動裁定ボタンが押せる(未確定件数の提示)"
       - "読み取り失敗した reappeared が自動対象に混入する"
       - "hash 確認が images 行を書き換える(確認と裁定の混同)"
+
+  # ============================================================
+  # 保守上の約束(maintainability)REQ-104〜106 — ECO-144(方法論 BomDD ECO-094 の試行)
+  #   上流の保守性要求: 人(maintainer)が gate① で裁定した約束を要求として固定し、E-BOM(30)・Service BOM(53)・
+  #   Control Plan(33)へ結線する。classification_hint: maintainability は本系列で新設(core/surface と別軸)。
+  # ============================================================
+  - id: REQ-104
+    statement: "画像処理部品 SkiaSharp は交換しない部品(宣言された結合)として扱う: 版は exact(3.119.4)で固定し、調達台帳(32 procurement)・Service BOM(53 watched_externals K-SKIA)・実装の参照(Infrastructure csproj)の版は常に一致する。版の更新は劣化イベント(53 DEG)として受理し、CP-THUMB-007 と K-SKIA の affected_parts の再検査(CP-DUPQUALITY-030 全 fixture を含む)を通してから採用する"
+    rationale: |
+      ECO-144 gate① 裁定 1:A(maintainer 2026-10-03)。叩き台の初版「同等の寸法・形式を出す部品へ交換できる」は現状と食い違った:
+      32 procurement は substitutable: false(ADR-0004)、SkiaSharp 固有識別子は Core 4 / Infrastructure 7 / App 3 ファイルと契約層
+      (10:5・20:5・30:1・31:11・33:1)に出現し、20-spec §2.10 は「版差で出力が変わり得るため版を exact ピン」「hash_adapter= decode 経路/
+      SkiaSharp 版の世代識別子(P-09)」を宣言済み(方法論 s-bom-template の交換クラス= oracle-coupled)。交換可能性を目標にする案(B)は
+      抽象境界の導入= 機能追加で別 ECO。本 REQ は「交換しない」という境界の言明と、更新時の再検査経路を約束として固定する。
+      受入: (a) 版の一致= Infrastructure csproj の PackageReference と 32 procurement・53 の版が同一文字列で exact(範囲指定・ワイルドカードなし)
+      であることを unit exact(CP-THUMB-007 vector)。不一致= 製品修正(台帳と実体のどちらが正かは DEG 手順で裁定)。
+      (b) 更新の経路= 53 の watched_externals K-SKIA(reinspect_depth L2・affected_parts)と degradation_events への記録(人の承認で検査・depth G)。
+    rationale_precision: ok
+    classification_hint: maintainability
+    external_source: "ECO-144 gate① 裁定(2026-10-03)/ 20-spec §2.10 / 32 procurement ADR-0004 / 53 watched_externals K-SKIA"
+    counterexamples:
+      - "csproj の版だけ上げて 32/53 が旧版のまま(台帳が実体を証明しない)"
+      - "版を範囲指定(3.119.*)にして再現性が崩れる(pHash・サムネ寸法の版差)"
+      - "SkiaSharp の更新を通常の依存更新として CP-THUMB-007 だけ回し、pHash 系(CP-DUPQUALITY-030)を再認証しない"
+
+  - id: REQ-105
+    statement: "画像処理部品の交換・更新後も、キャッシュ済みサムネイルは再生成なしで使い続けられる。生成規則(寸法・形式・正立化)が変わるときはキャッシュ名の世代サフィックスを進めて新旧を共存させ、旧世代のファイルは参照しない"
+    rationale: |
+      ECO-144 gate① 裁定 2:OK(maintainer 2026-10-03)。-v2 世代サフィックスはECO-049(欠陥是正)の中で決まり、E-THUMB-020 invariants にのみ
+      書かれていた(REQ-040/085 に無い)— 下流で決まった約束を上流へ置き直す。
+      受入: キャッシュヒット時に 2 回目の呼び出しでファイル mtime 不変(再生成なし)・世代移行時に旧 {md5}.{ext} を参照しない・新世代で生成、を
+      L2(出力ファイルの実在と mtime)で検査(CP-THUMB-007 vector「キャッシュヒット」「キャッシュ世代移行」)。落ちたら製品修正。
+    rationale_precision: ok
+    classification_hint: maintainability
+    external_source: "ECO-144 gate① 裁定(2026-10-03)/ ECO-049(-v2 の由来)"
+    counterexamples:
+      - "生成規則を変えたのにキャッシュ名が同じで、旧サムネが恒久的に stale(ECO-049 で実測された実績)"
+      - "更新のたびに全キャッシュを無効化し、起動直後の一覧が空になる(継続の破れ)"
+
+  - id: REQ-106
+    statement: "壊れた画像・読めない画像があっても、スキャンと一覧は停止しない。その画像のサムネイルだけ null(キャッシュファイルなし・例外なし)とし、他の画像の処理と表示は続く"
+    rationale: |
+      ECO-144 gate① 裁定 2:OK(maintainer 2026-10-03)。E-THUMB-020 invariants「失敗時もスキャン・一覧を停止させない」と FMEA-012 の約束を要求として固定する。
+      受入: 壊れた jpg → null 返却・キャッシュファイルなし・例外なし、キャッシュファイル破損(0 バイト化)→ 削除+再生成、を L2 で検査
+      (CP-THUMB-007 vector)。落ちたら製品修正。
+    rationale_precision: ok
+    classification_hint: maintainability
+    external_source: "ECO-144 gate① 裁定(2026-10-03)/ FMEA-012 / K-SKIA managed_knowledge「null= 壊れた画像」"
+    counterexamples:
+      - "壊れた画像で例外が伝播しスキャンが中断する(FMEA-012)"
+      - "null をキャッシュに記録して以後その画像を二度と試さない(修復後も表示されない)"
