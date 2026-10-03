@@ -275,23 +275,27 @@ control_plan:
         - "sync_folders.path UNIQUE(case-insensitive): 'C:/a' と 'c:/A' で 2 件目拒否"
 
     - id: CP-THUMB-007
-      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす
+      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす。(ECO-144)保守上の約束 REQ-104(宣言された結合= 版の一致)・REQ-105(キャッシュ継続・世代移行)・REQ-106(壊れた画像での継続)を本行の vector で検査する
       classification: surface
       depth: L2
-      tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact"
-      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp / EXIF Orientation 付き jpg=APP1 手書き挿入の合成)"
-      oracle: 出力ファイルのデコード結果(寸法・形式)とファイル存在・再生成有無
+      tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact。(ECO-144)版の一致は文字列 exact"
+      fixture: "tests/ViewPrism2.Tests(Trait cp=CP-THUMB-007。画像フィクスチャ: 1920x1080 jpg / 100x50 png / 壊れた jpg / gif / bmp / webp / EXIF Orientation 付き jpg=APP1 手書き挿入の合成。(ECO-144)版の一致= Infrastructure csproj・32 procurement・53 external_deps の実ファイル)"
+      oracle: 出力ファイルのデコード結果(寸法・形式)とファイル存在・再生成有無。(ECO-144)台帳と実装の版文字列
       approver: automated
+      # ECO-144(方法論 BomDD ECO-094 の試行)— 承認済み E/S 版(tag bom-v4.1)から導出。各 vector の末尾に「対応する REQ」と
+      # 「落ちたときの振り分け」(製品修正= 製品側の違反 / 測定系復旧= 治具・環境の不能)を書く。cp_results の区分: Fail= 違反 → 製品修正へ、
+      # 全件 Skip/未実行= 測定不能 → 測定系復旧へ(人の承認では判定しない)。
       test_vectors:
         - "1920x1080 jpg → 256x144 jpg(±1px)"
         - "100x50 png → 100x50 png(拡大なし・PNG のまま)(FMEA-012)"
         - "gif/bmp/webp → jpg 出力"
-        - "キャッシュヒット: 2 回目呼び出しでファイル mtime 不変(再生成なし)"
+        - "キャッシュヒット: 2 回目呼び出しでファイル mtime 不変(再生成なし)【REQ-105・落ちたら製品修正】"
         - "(ECO-049/REQ-085)EXIF=6 の jpg → サムネは正立(実効縦横比)・GetDimensions は実効寸法(5〜8 で W/H 入替)。V1〜v4.0 は全経路非適用=横倒しが仕様だった実績(沈黙次元裁定の解除)"
-        - "(ECO-049)キャッシュ世代移行: キャッシュ名は -v2 世代サフィックス・旧 {md5}.{ext} は参照しない(パスキーのみのキャッシュは生成規則変更で恒久 stale になる実績)"
+        - "(ECO-049)キャッシュ世代移行: キャッシュ名は -v2 世代サフィックス・旧 {md5}.{ext} は参照しない(パスキーのみのキャッシュは生成規則変更で恒久 stale になる実績)【REQ-105・落ちたら製品修正】"
         - "(ECO-049)EXIF なし(TopLeft)は従来出力と同一(回帰)・正立ローダは TopLeft で null=従来直読の高速経路"
-        - "壊れた jpg → null 返却・キャッシュファイルなし・例外なし(FMEA-012)"
-        - "キャッシュファイル破損(0 バイト化)→ 削除+再生成"
+        - "壊れた jpg → null 返却・キャッシュファイルなし・例外なし(FMEA-012)【REQ-106・落ちたら製品修正】"
+        - "キャッシュファイル破損(0 バイト化)→ 削除+再生成【REQ-106・落ちたら製品修正】"
+        - "(ECO-144/REQ-104)版の一致: src/ViewPrism2.Infrastructure/ViewPrism2.Infrastructure.csproj の PackageReference SkiaSharp Version・bomdd/32-mbom.yaml procurement の SkiaSharp version・bomdd/53-service-bom.yaml SB-THUMB-020 external_deps の version が同一文字列で、exact(^\\d+\\.\\d+\\.\\d+$・範囲/ワイルドカードなし)【REQ-104・落ちたら製品修正(台帳と実体のどちらが正かは 53 DEG 手順で裁定)。ファイルが読めない/見つからない= 測定系復旧(治具のパス解決)— この振り分けはテストの失敗メッセージ先頭「測定系復旧:」で行う。cp_results の区分は Pass/Fail/Skip の件数のみで判定しメッセージを読まないため、治具の不能も行では『違反』に計上される(fail-closed・R8 所見 1・リハーサル M3 と同根= 行と vector の粒度差)】"
 
     - id: CP-CACHE-008
       characteristic: 画像メモリキャッシュの LRU・TTL・上限が REQ-045 と一致する

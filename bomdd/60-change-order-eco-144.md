@@ -112,8 +112,50 @@ M1 人へ戻った判断(種別)/ M2 追跡の 5 辺 / M3 振り分け 2/2 / M4 
 | src | **0**(① が A の場合) |
 | 既存固定オラクル(41) | 変更しない(R6) |
 
+## §7 実施記録(/eco-fix・2026-10-03)
+
+**役割**: 約束の確定= maintainer(gate① 1:A 2:OK)/ 導出(33 の vector・53 の方針欄・M の対応確認)= 統括 AI(BomDD 側 producer・claude-fable-5-1)/ 検査の製造= 工場 Codex(gpt-5.6-sol・ブリーフと報告は
+BomDD `bomdd/reports/eco-094-upstream-sbom-trial/factory-brief-eco-144.md`・`factory-report-eco-144.md`)/ 受理(機械受入・リハーサル・R8)= 統括 AI。
+
+**diff**(fix commit): `bomdd/33-control-plan.yaml`(CP-THUMB-007: characteristic・tolerance・fixture・oracle に約束 3 件の対応、既存 vector 4 本に【REQ・振り分け】の付記、新規 vector 1 本「版の一致」)・
+`tests/ViewPrism2.Tests/CpThumb144VersionPinTests.cs`(新規 130 行・3 Fact・trait cp=CP-THUMB-007)・本 order・register。**src・既存テスト・41・csproj は無変更**(R6)。
+承認済み E/S 版(10・30・53・manifest)は decide commit 9f32ef4(tag bom-v4.1)で先に固定済み。
+
+**導出の記録**(BomDD `derivation.md`): 人へ戻した判断= 1 件(① の文言・新しい保守の約束)・機械的派生 0。導出 D1〜D6(M unit の新設なし・CP 行は既存行に vector を足す形・53 に `replacement_policy`)。
+
+**工場の報告**: BLOCKED(sandbox の NuGet 接続拒否 NU1301 でフィルタ実行が走らず)— ただし build 0 error / 0 warning・生成済みアセンブリでの同一クラス検査 3/3 合格・`git status` は製造物 1 本+受理側の 33 のみ。
+ずる報告(慣習で補完した判断・全件): 抽出正規表現の具体形 / 3 Fact への分割 / メソッド名 / 定数・Versions record・共通抽出ヘルパの構成 / 失敗メッセージの文言 / 読み取り例外を IOException・UnauthorizedAccessException に限定。
+受理側の判定: いずれもブリーフが「慣習で埋めてよい」範囲(実装の形)— 契約(3 ファイル・同一・exact・測定系復旧の分離・期待値リテラルを書かない)は満たしている(読解+下記の実測)。
+
+**R5(プローブ先行)**: 本 ECO は欠陥是正ではなく検査の追加(拡張)— R5 対象外を宣言し、代替= リハーサル(下記)で「赤になるべき入力で赤になる」ことを実測した。
+
+**機械受入(4 点)**(受理側・2026-10-03): `dotnet build` 0 エラー / 0 警告 / `dotnet test tests/ViewPrism2.Tests` **977/977**(974+新規 3・skip 0)/ `dotnet test tests/ViewPrism2.Oracle` 109 合格+skip 4(ECO-143 と同数・無接触)/
+`python bomdd/validate_bom.py` 0-0。
+
+**CP 行ごとの表(eco-fix 3.1)**: 結果ファイル cp-results.xml(sha256 7533cb8e40cb)・実行の素性= Debug・終了 2026-10-03T19:40:01+09:00・総数 977(dotnet test の合計と一致)。
+**区分: 違反 0 / 測定不能 0 / 未実行(検査なし)4 / 未実行(人の承認で検査)3 / 合格 57**(ECO-143 の初回と同じ区分・件数。CP-THUMB-007 は合格・18 テスト〔15+3〕)。別欄: retired 1・台帳に無い ID 2(同前)。
+
+**振り分けのリハーサル(M3・BomDD `rehearsal.md`)**: ①53 の版だけ 3.119.5 にして全件実行 → 違反 1(`CP-THUMB-007 | L2 | 18(17/1/0)`)→ 製品修正へ(文言どおり)= 成立 ②新規 3 Fact を Skip にして全件実行 → 区分は違反 0・測定不能 0・**CP-THUMB-007 は合格一覧に `(18)` のまま**(skip 3 は実行単位の行にだけ出る)= **行の区分では捕まらない**。
+M3= **1/2**。原因= CP 行と vector の粒度の差(1 行= 複数の約束・複数の vector・測定不能は「行の全テスト Skip」の定義)。製品・cp_results の欠陥ではなく、導出が既存行に vector を足す形(D2)を選んだ帰結。対処候補は方法論側の評価(EXP-20261003-01)へ。
+一時変更は実行後に復元(`git status` 前後同一)。
+
+**追跡表(M2・BomDD `trace.md`)**: REQ-104/105/106 → E-THUMB-020 → M-THUMB-008 → CP-THUMB-007(vector)→ テスト(trait)→ 実行証拠(上記の表)= **5/5 到達**。欄の不足= CP 行→vector→テストの対応は文言でしか結べない(vector に ID が無い・trait は行単位)/ 53 の上流参照欄・10 の保守性種別は本 ECO で新設(candidate)。
+M4(参照方向)= E → M 0 件・REQ → M 0 件(成立)。
+
+**R8 セルフレビュー**(fix を書いた文脈と別の fresh context・読み取りのみ・実測つき): **blocking 0・non-blocking 3・info 5**。処置:
+1. [non-blocking・設計] 「測定系復旧」の振り分けはテストの失敗メッセージ先頭でのみ行われ、cp_results は Pass/Fail/Skip の件数しか読まないため、治具の不能も行では「違反」に計上される(fail-closed・`Assert.Skip` は混在行で fail-open)→ **現状維持(fail-closed)**+33 の vector にその旨を明記(スコープ内・文書)。リハーサル M3 の所見と同根(行と vector の粒度差)。
+2. [non-blocking] `RepoRoot()` が try の外で、sln 不発見の `DirectoryNotFoundException`(IOException 派生)が「測定系復旧」接頭辞なしで素通り → **是正**(try 内へ移動・スコープ内・tests 2 行)。
+3. [non-blocking] 32 の正規表現 `SkiaSharp\b` は将来 `package: SkiaSharp.NativeAssets.*` 行が上に来ると誤一致 → **是正**(`SkiaSharp\s*,` でカンマ固定・スコープ内・tests 1 行)。
+4〜8. [info] 53 の正規表現は flow 形式・先頭 `{}` 前提(外れると測定系復旧= 安全側)/ ブロック正規表現は L200〜214 で正しく終端・CRLF でも同一 / `Assert.Fail` 後の `return` は到達性解析上必要 / Fact 1 の空検査は重複(害なし)/ 読む対象は 3 ファイルのみ・書き込みなし。
+レビューの根拠(検査官の実測): .NET 正規表現で 3 パターンを実ファイルに適用し各 1 件= 3.119.4・リハーサル中(53 が一時的に 3.119.5)の実行で `Assert.Equal` 不一致= 製品修正経路で落ち測定系復旧と分離されていることを確認。
+是正 2・3 の後に機械受入 4 点と表を**再実行**(結果は下記)。未処置のスコープ内所見= **0**。
+
+**機械受入の再実行(R8 是正後・2026-10-03)**: `dotnet build` 0 エラー / 0 警告 / `dotnet test tests/ViewPrism2.Tests` **977/977**(skip 0)/ Oracle は是正前の実行(109+skip 4・tests のみの変更で無接触)/ `python bomdd/validate_bom.py` 0-0。
+CP 行ごとの表(本 fix の正本): cp-results.xml **sha256 793554f877aa**・素性 Debug・終了 2026-10-03T19:44:54+09:00・総数 977(dotnet test の合計と一致)・**区分: 違反 0 / 測定不能 0 / 未実行(検査なし)4 / 未実行(人の承認で検査)3 / 合格 57**・CP-THUMB-007 合格(18)・別欄 retired 1・台帳に無い ID 2。
+
 ## §6 残ゲート
 
-- **gate①(maintainer)**: 4.1 の ①(A / B)の裁定と 4.2 の ②③ の文言確認。
-- fix(/eco-fix): 4.3 の 1〜7 → 機械受入 4 点+CP 行ごとの表 → R8 セルフレビュー(tests に触れる場合)→ 停止。
-- gate②: 視覚・挙動の変更なし= golden n/a 候補(ECO-143 と同型)。承認の場で表に触れたかを記録。
+- ~~gate①(maintainer)~~: 2026-10-03 裁定 1:A 2:OK(§4.2'・decide 9f32ef4・tag bom-v4.1)。
+- ~~fix(/eco-fix)~~: 2026-10-03 実施(§7)— 導出・検査の製造(工場)・機械受入 4 点・CP 行ごとの表・リハーサル・R8・追跡表。
+- **gate②(maintainer)**: 視覚・挙動の変更なし= **golden n/a の受理**(ECO-143 と同型)を依頼する。クローズ条件= 機械受入 4 点+CP 行ごとの表+追跡表(BomDD `trace.md`)の**意味の審査欄**(REQ-104〜106 の vector が約束を検査しているか: 合 / 否 / 条件付き)の記入。
+  承認の場で表のどの行に触れたか(触れなければ「言及なし」)を register 注記に残す(ECO-143 §4.4 の 1 件目)。
