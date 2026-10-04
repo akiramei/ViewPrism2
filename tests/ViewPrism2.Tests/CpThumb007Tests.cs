@@ -49,6 +49,7 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
     public async Task Jpg1920x1080は256x144のJpegになる()
     {
         var source = Path.Combine(_root, "wide.jpg");
@@ -66,6 +67,7 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
     public async Task Png100x50は拡大されずPngのまま_FMEA012()
     {
         var source = Path.Combine(_root, "small.png");
@@ -82,6 +84,7 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
     public async Task GifBmpWebpはJpeg出力になる()
     {
         var gif = Path.Combine(_root, "a.gif");
@@ -102,6 +105,7 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
     public async Task 縦横比維持で縮小し丸めはHalfAwayFromZero最小1px()
     {
         // 2000x1 → scale=0.128 → 高さ 0.128 → round 0 → 最小 1px(K-SKIA)
@@ -126,6 +130,8 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
+    [Trait("req", "REQ-105")]
     public async Task キャッシュヒットで再生成しない()
     {
         var source = Path.Combine(_root, "cached.jpg");
@@ -143,6 +149,7 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
     public async Task キャッシュキーはMD5小文字絶対パスで大文字小文字を同一視する()
     {
         var source = Path.Combine(_root, "Key.JPG");
@@ -156,6 +163,8 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
+    [Trait("req", "REQ-106")]
     public async Task 壊れたJpgはNullでキャッシュ記録なし_FMEA012()
     {
         var source = Path.Combine(_root, "broken.jpg");
@@ -171,6 +180,7 @@ public sealed class CpThumb007Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-040")]
     public async Task 破損キャッシュは削除して再生成する()
     {
         var source = Path.Combine(_root, "regen.jpg");

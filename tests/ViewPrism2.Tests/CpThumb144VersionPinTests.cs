@@ -25,6 +25,7 @@ public sealed class CpThumb144VersionPinTests
     }
 
     [Fact]
+    [Trait("req", "REQ-104")]
     public void SkiaSharp版を三つの実ファイルから抽出できる()
     {
         var versions = ReadVersions();
@@ -35,6 +36,7 @@ public sealed class CpThumb144VersionPinTests
     }
 
     [Fact]
+    [Trait("req", "REQ-104")]
     public void SkiaSharp版は実装と二つの台帳で一致する()
     {
         var versions = ReadVersions();
@@ -44,6 +46,7 @@ public sealed class CpThumb144VersionPinTests
     }
 
     [Fact]
+    [Trait("req", "REQ-104")]
     public void SkiaSharp版は三箇所ともExactである()
     {
         var versions = ReadVersions();

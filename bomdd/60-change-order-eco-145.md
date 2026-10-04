@@ -1,7 +1,7 @@
-# ECO-145 — M-BOM / Control Plan の欄の所有を「人の裁定層」と「AI の導出層」に分ける試行(2 製造単位・方法論 BomDD ECO-097)(staged)
+# ECO-145 — M-BOM / Control Plan の欄の所有を「人の裁定層」と「AI の導出層」に分ける試行(2 製造単位・方法論 BomDD ECO-097)(implemented)
 
 - 種別: 工程拡張(M-BOM・Control Plan の欄、テストの trait、承認に添える表。製品コード src は無変更)
-- status: **staged**(2026-10-05 起票)
+- status: **implemented**(2026-10-05 起票 `9f239a8` → 同日 fix〔導出・工場 3 round・機械受入・リハーサル・R8・検査官 r1 REJECT → r2 ACCEPT〕→ gate② 待ち)
 - baseline: main `f622c3c`
 - 出典: 方法論リポ BomDD ECO-097(maintainer 2026-10-05「M-BOM / Control Plan 再設計に着手して。E-BOM は人間の裁定を行う場所、M-BOM / Control Plan はその裁定に基づいて AI が判断する場所」→ 設計の扱い「A」)。
   事前登録= `../BomDD/bomdd/reports/eco-097-mbom-cp-redesign/preregistration.md`(指標 R1〜R7・停止条件 S1〜S4・本起票より前の commit)。
@@ -117,5 +117,51 @@ R1 M の行の分類 / R2 人へ戻した判断 / R3 ID ごとの可視性(赤 1
 ## §6 残ゲート
 
 - gate①(maintainer): **決める設計の内容なし**(§3 ①: 人へ戻す 0 行・裁定層は不変)。方法論側の設計の採用は BomDD ECO-097 の「A」(2026-10-05)で済んでいる → /eco-fix へ進む。
-- fix(/eco-fix): 導出(32・33)→ 工場の製造(trait・cp_results)→ 機械受入 4 点+表 → リハーサル → R8 → 異系統の検査官の審査。
+- ~~fix(/eco-fix)~~: 2026-10-05 実施(§7)。
 - gate②(maintainer): 視覚・挙動の変更なし= golden n/a の受理を依頼する。添えるもの= 機械受入 4 点・CP 行ごとの表・**裁定層の ID ごとの表**・検査官の判定。
+
+## §7 実施記録(/eco-fix・2026-10-05)
+
+**役割**: 裁定層= 不変(maintainer が裁定済みの版)/ 導出(32・33・テスト → ID の対応・表の仕様)= 統括 AI(BomDD producer・claude-fable-5-1)/ 製造(trait の付与・cp_results)= 工場 Codex(gpt-5.6-sol・3 round)/
+導出の意味の審査= 異系統の検査官(Codex・EQ-002・製造者の導出記録を見せない)/ 独立レビュー(R8)= 別文脈の Claude(読み取りのみ)。ブリーフ・報告・導出記録・リハーサルは BomDD `bomdd/reports/eco-097-mbom-cp-redesign/`。
+
+**diff**(fix commit): `bomdd/32-mbom.yaml`(M-THUMB-008・M-DB-007 の invariants 6 行を削除・M-DB-007 に manufacturing_decisions 1 行)/ `bomdd/33-control-plan.yaml`(CP-THUMB-007・CP-DB-006 に requirement_refs / invariant_refs / when / on_fail・
+CP-DB-006 の characteristic・CP-THUMB-007 の vector 1 本の対応を REQ-040 へ)/ `bomdd/cp_results.py`(裁定層の ID ごとの表・selftest)/ テスト 4 ファイル(メソッドに trait `req` 29 個・本体不変)/ `.claude/skills/eco-fix/SKILL.md`(手順 3.1 に 3 行)/ 本 order・register。
+**src・10・20・30・31・53・00-manifest・41 は無変更**(R6)。
+
+**導出の記録**(BomDD `derivation.md`): M の invariants 6 行= 参照化 5・製造手段 1・人へ戻す 0・分類不能 0。人へ戻さず統括 AI が決めた判断 9 種を列挙。
+
+**工場の報告**: r1(trait 28・表の拡張)DONE — selftest OK・build とフィルタ実行は sandbox の NuGet 拒否(NU1301)で走らず(受理側で全件実行)/ r2(表の ID の集合に E 品目が負う ID を足す— 受理側の発見: 行の refs に入れなかった要求が表から消える)DONE /
+r3(R8 所見の是正)DONE・自己受入で F2 の変異が FAILED になることを確認。ずる報告= 実装の形のみ(関数の分け方・JSON の細部)。
+
+**R5(プローブ先行)**: 欠陥是正ではなく工程の拡張 — R5 対象外を宣言し、代替= リハーサル(下記)で「測定不能・違反になるべき入力で、表の ID の区分が変わる」ことを実測した。
+
+**機械受入(4 点)**(受理側・最終版): `dotnet build` 0 エラー / 0 警告 / `dotnet test tests/ViewPrism2.Tests` **977/977**(skip 0)/ `dotnet test tests/ViewPrism2.Oracle` 109 合格+skip 4 / `python bomdd/validate_bom.py` 0-0。`python bomdd/cp_results.py --selftest` OK。
+
+**表(eco-fix 3.1)**: cp-results.xml **sha256 bfc6aa81e93d**・Debug・終了 2026-10-05T05:27:03+09:00・総数 977(dotnet test の合計と一致)。
+- CP 行ごと: **違反 0 / 測定不能 0 / 未実行(検査なし)4 / 未実行(人の承認で検査)3 / 合格 57**(ECO-143・144 と同じ区分・件数。別欄: retired 1・台帳に無い ID 2)。
+- **裁定層の ID ごと: 違反 0 / 測定不能 0 / 未実行(検査なし)6 / 人の承認 0 / 合格 10**。
+  合格= REQ-003(1)・REQ-004(3)・REQ-010(3)・REQ-014(1)・REQ-028(1)・REQ-040(8)・REQ-085(6)・REQ-104(3)・REQ-105(2)・REQ-106(1)。
+  検査なし= INV-009(CP-THUMB-007 の refs・サムネイル生成が元画像へ書き込まないことを検査するテストが本行に無い)/ REQ-005・INV-W1(E-DB-010 が負うが CP-DB-006 のテストは検査しない)/
+  REQ-063・REQ-084・REQ-090(E-SIMCACHE-033 が CP-DB-006 を acceptance_refs に持つため表に入る。他の行のテストが検査している可能性があるが trait `req` が無いので見えない)。
+
+**リハーサル(BomDD `rehearsal.md`・最終版で再実行)**: ①trait `req` を持つ 25 テストを Skip → CP 行ごとの表= CP-THUMB-007 は合格のまま(18 本中 1 本が残る)・CP-DB-006 は測定不能(8 本すべて)/ **ID ごとの表= 10 ID すべて測定不能**
+②10 ID を覆う 9 テストに Assert.Fail+53 の版を 3.119.5 → **ID ごとの表= 10 ID すべて違反**。BomDD 事前登録 R3= 10/10 の ID で 2/2(ECO-144 は行の区分で 1/2)。
+限界= ID のテストの一部だけが Skip のときは合格のまま(行と同じ定義)。一時変更は実行後に復元(`git diff` の sha256 前後同一)・結果ファイルは最終の受入実行のものへ戻した(sha256 bfc6aa81e93d)。
+
+**検査官の意味の審査(BomDD 事前登録 R6・`inspection-report-eco-145*.md`)**: r1 **REJECT IA-01**(blocking: 「破損キャッシュは削除して再生成する」の REQ-106 trait は REQ-106 の statement と対応しない= 検査しているのは REQ-040)・
+non-blocking(COLLATE のテストは REQ-010・REQ-014 に対応・CP-DB-006 の refs に REQ-014 が無い)→ **是正**(受理側・属性 3 行と 33)→ r2 **ACCEPT**(所見なし)。ID ごとの判定(r2)= 合 5(REQ-003・004・028・040・105)・条件付き 5(REQ-010・014・085・104・106)・否 0。
+M の 6 行の削除は「裁定層に同内容あり・意味の喪失なし」と確認(所在つき)。
+**maintainer へ戻す 1 件(裁定層の文の食い違い・AI は直さない)**: REQ-106 の rationale の受入記載(ECO-144 gate① で確定)は「キャッシュファイル破損 → 削除+再生成」を REQ-106 の受入に挙げるが、statement(壊れた画像があってもスキャンと一覧は止まらない)はそれを述べない。
+検査官は statement を基準に「対応しない」と判定した。今回は statement に合わせて trait を外した(検査自体は REQ-040 の検査として残る)。rationale を直すか・statement を広げるかは maintainer の裁定。
+**検査官が列挙した「届いているが一部しか測っていない」**(表では合格と出る): REQ-106 の「スキャンと一覧の継続・他の画像の処理と表示の継続」(trait を持つテストは「壊れた jpg → null・例外なし」の 1 本)/ REQ-085 の Orientation 2〜5・7・8 とビューア表示 / REQ-104 の更新時の再検査(人の承認)/ REQ-010・REQ-014 の本行で扱わない部分。
+
+**R8 セルフレビュー**(別文脈・読み取りのみ・実行による再現つき・BomDD `review-and-inspection.md`): **blocking 2・non-blocking 6・info 5**。処置:
+1. [blocking] ID ごとの表の経路の例外で、既存の行ごとの表まで出なくなる・終了コードが変わる(list を含む acceptance_refs・UTF-8 として不正な 30・整数の id)→ **是正**(工場 r3: ID ごとの表の全体を保護)。受理側の再現 4 入力すべて 終了 0・行ごとの表あり。
+2. [blocking] selftest に「行は合格だが ID は測定不能」の腕が無かった(本拡張の目的の腕が空)→ **是正**(合格の行に同居)。受理側の変異(ID の測定不能 → 合格)で selftest FAILED。
+3〜7. [non-blocking] selftest の抜け / refs を持つ行が無いとき別欄が隠れる / `INV-\d+` が INV-W1 を拾わない / ID の前後の空白 / ebom_path なしの作り物のパス → **是正**(r3)。
+8. [non-blocking] `lifecycle_state` の除外は本リポの 30 では効かない(欄が無い)→ 現状維持(害なし)・記録のみ。
+9〜13. [info] fail-open の経路なし / 行ごとの出力は HEAD 版と先頭一致 / テストは Trait 行の追加のみ / YAML 正常 / E 品目経由の ID の表示 → 11 のみ是正(「経由する行」を表示)。
+未処置のスコープ内所見= **0**。是正後に機械受入 4 点と表を再実行(上記が最終)。
+
+**停止条件(BomDD 事前登録)**: S1(一括の書き換え)発生せず / S2 該当行 0 / S3(対象外の行の区分・機械受入の変化)発生せず / S4(検査官の否の是正に対象を超える再裁定)発生せず(IA-01 の是正は対象行の内側・裁定層の食い違いは 1 件を maintainer へ戻す)。

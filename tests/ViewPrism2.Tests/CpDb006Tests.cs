@@ -135,6 +135,7 @@ public sealed class CpDb006Tests : IDisposable
     // ---- REQ-003: PRAGMA ----
 
     [Fact]
+    [Trait("req", "REQ-003")]
     public async Task 新規DBはWALかつFK有効()
     {
         using var db = new TempDb();
@@ -152,6 +153,7 @@ public sealed class CpDb006Tests : IDisposable
     // ---- REQ-004: マイグレーション意味論 ----
 
     [Fact]
+    [Trait("req", "REQ-004")]
     public async Task 新規DBはmigrations行数が定義数と一致し全id記録済み()
     {
         using var db = new TempDb();
@@ -164,6 +166,7 @@ public sealed class CpDb006Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-004")]
     public void v0DBに全マイグレーション適用で新規DBとスキーマ同値()
     {
         // 新規 DB(最新スキーマ+全既適用マーク)
@@ -185,6 +188,7 @@ public sealed class CpDb006Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-004")]
     public void ランナーは未適用分をID昇順で適用し新規DBと同値にする_合成マイグレーション()
     {
         // ランナー機構の実検査(V1 の Migrations が空でも意味論が成立していることの証明)
@@ -225,6 +229,7 @@ public sealed class CpDb006Tests : IDisposable
     // ---- FK 実動(FMEA-003 / FMEA-005) ----
 
     [Fact]
+    [Trait("req", "REQ-028")]
     public async Task タグ削除カスケード_4テーブルの状態が仕様どおり()
     {
         using var db = new TempDb();
@@ -280,6 +285,7 @@ public sealed class CpDb006Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-010")]
     public async Task フォルダ削除でimagesと付与が連鎖削除される()
     {
         using var db = new TempDb();
@@ -305,6 +311,7 @@ public sealed class CpDb006Tests : IDisposable
     // ---- sync_folders.path UNIQUE(case-insensitive) ----
 
     [Fact]
+    [Trait("req", "REQ-010")]
     public async Task パスの大文字小文字違いは重複として拒否される()
     {
         using var db = new TempDb();
@@ -325,6 +332,8 @@ public sealed class CpDb006Tests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-010")]
+    [Trait("req", "REQ-014")]
     public async Task COLLATE_NOCASEが主要列に付与されている()
     {
         using var db = new TempDb();

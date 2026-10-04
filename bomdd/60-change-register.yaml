@@ -2027,7 +2027,7 @@ changes:
   - id: ECO-145
     title: "M-BOM / Control Plan の欄の所有を人の裁定層と AI の導出層に分ける試行(M-THUMB-008・M-DB-007・方法論 BomDD ECO-097)"
     type: "工程拡張(M-BOM・Control Plan の欄、テストの trait、承認に添える表。src 不変・裁定層〔10/20/30/31〕不変)"
-    status: staged   # 2026-10-05 起票(方法論 BomDD ECO-097・maintainer「再設計に着手して」→ 設計の扱い「A」)。gate① で決める設計の内容なし(M の invariants 6 行= 参照化 5・製造手段 1・人へ戻す 0)→ /eco-fix へ
+    status: implemented   # 2026-10-05 是正+機械受入完了・gate② 待ち: 導出(M の invariants 6 行= 参照化 5・製造手段 1・人へ戻す 0)・工場 Codex 3 round・build 0/0 / Tests 977/977 / Oracle 109+skip 4 / validate 0-0・表= 行ごと 違反 0/測定不能 0/検査なし 4/人の承認 3/合格 57(不変)・ID ごと 違反 0/測定不能 0/検査なし 6/合格 10・リハーサル 10/10 の ID で 2/2・R8 blocking 2 是正・検査官 r1 REJECT IA-01 → r2 ACCEPT・maintainer へ戻す 1 件= REQ-106 の statement と rationale の食い違い。以下 起票時の注記: 2026-10-05 起票(方法論 BomDD ECO-097・maintainer「再設計に着手して」→ 設計の扱い「A」)。gate① で決める設計の内容なし(M の invariants 6 行= 参照化 5・製造手段 1・人へ戻す 0)→ /eco-fix へ
     golden: "n/a(視覚・挙動の変更なし= 機械受入 4 点+CP 行ごとの表+裁定層の ID ごとの表+異系統の検査官の判定がクローズ条件)"
     baseline: "main f622c3c"
     findings: "M-BOM の invariants は裁定層(仕様・E-BOM・K-BOM)の言い換えを持つ(対象 2 単位 6 行= 参照化 5・製造手段 1)。Control Plan 65 行は裁定層の ID(requirement_refs / invariant_refs)を 1 つも持たない。承認に添える表のキーは CP 行だけで、1 つの約束の測定不能が行の区分に現れない(ECO-144 リハーサル 1/2)。裁定層(20-spec L1345・30 L379)が M-DB-007 を本文で名指す(記録のみ)"

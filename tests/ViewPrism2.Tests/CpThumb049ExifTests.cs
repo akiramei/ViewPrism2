@@ -35,6 +35,7 @@ public sealed class CpThumb049ExifTests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-085")]
     public async Task 対照_EXIFなしjpgのサムネと寸法は従来どおり()
     {
         var source = Path.Combine(_dir, "plain.jpg");
@@ -49,6 +50,7 @@ public sealed class CpThumb049ExifTests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-085")]
     public async Task EXIF回転6のjpgはサムネが正立_縦長になる()
     {
         var source = Path.Combine(_dir, "exif6.jpg");
@@ -64,6 +66,7 @@ public sealed class CpThumb049ExifTests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-085")]
     public async Task EXIF回転6のjpgの寸法メタは実効寸法を返す()
     {
         var source = Path.Combine(_dir, "exif6-dims.jpg");
@@ -76,6 +79,8 @@ public sealed class CpThumb049ExifTests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-085")]
+    [Trait("req", "REQ-105")]
     public async Task キャッシュ世代移行_旧世代ファイルは参照されず新世代で正立生成される()
     {
         var source = Path.Combine(_dir, "exif6-gen.jpg");
@@ -101,6 +106,7 @@ public sealed class CpThumb049ExifTests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-085")]
     public void 正立ローダ_EXIF回転6は正立ピクセルを返し向きと内容が一致する()
     {
         var source = Path.Combine(_dir, "exif6-loader.jpg");
@@ -119,6 +125,7 @@ public sealed class CpThumb049ExifTests : IDisposable
     }
 
     [Fact]
+    [Trait("req", "REQ-085")]
     public void 正立ローダ_EXIFなしはnull_従来の直読経路を変えない()
     {
         var source = Path.Combine(_dir, "plain-loader.jpg");

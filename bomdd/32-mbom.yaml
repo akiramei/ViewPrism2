@@ -127,10 +127,9 @@ mbom:
         repositories: "IImageRepository, ITagRepository, IViewRepository, ISyncFolderRepository(インターフェースは Core 側)。タグ付与は INSERT INTO image_tags ... ON CONFLICT(image_id,tag_id) DO UPDATE SET value=excluded.value。ECO-064 startup read model=IImageRepository.GetNormalCountsByFolderAsync(集約のみ)/GetNormalByFolderAsync/CountByFolderAndStatusAsync + ITagRepository.GetImageTagsByFolderAsync(選択collection JOIN・normalのみ)、全件APIは後方互換consumer向けに維持するがstartupから呼ばない。ECO-098 image trash read model=GetDeletedByFolderAsync(collection+deleted predicate・file_name安定順)でhidden normal/missingをmaterializeしない。ECO-140 integrity read model=GetIntegrityReviewByFolderAsync/CountIntegrityReviewEventsAsync/GetIntegrityReviewImageTagsByFolderAsync(pending∪missingをDB境界限定)"
         scan_batch: "ImageRepository.ApplyScanBatchAsync — add/update-meta/update-status/deleteを単一明示transactionで原子適用(ECO-059)。ECO-140 UpdateMetaAndPend は旧hashをpending_baseline_hashへ同一UPDATEで保全し、T13/T14/T15/relink確定はNULLクリア。通常の単行repository APIは非スキャンconsumer向けに維持"
         cascade: "タグ削除→image_tags/階層ノード CASCADE・view_conditions.tag_id SET NULL・子タグ parent_id SET NULL(FK で実現、アプリ側で再実装しない)"
-      invariants:
-        - 接続は単一共有+SemaphoreSlim シリアル化(K-SQLITE)
-        - migrations テーブル契約は REQ-004 のとおり
-        - (ECO-059) スキャンバッチの失敗は当該バッチを全ロールバックし、部分適用を残さない
+      # (ECO-145・試行)invariants は持たない — 設計の内容は裁定層が正本(ebom_refs → E-DB-010 の invariants・requirement_refs を引き継ぐ)。作り方の決定だけを下に置く
+      manufacturing_decisions:
+        - 接続戦略は K-SQLITE(ADR-0003)のとおり(単一共有+SemaphoreSlim シリアル化)
       acceptance_refs: [CP-DB-006]
       fmea_refs: [FMEA-003, FMEA-005]
 
@@ -146,10 +145,7 @@ mbom:
         params: "K-SKIA の定型どおり(長辺 256・inside・拡大なし・PNG/JPEG q80)"
         resolution: "Task<(int w,int h)?> GetDimensionsAsync(path)  // SKCodec、フルデコードなし。(ECO-049/REQ-085)Orientation 5〜8 は W/H 入替の実効寸法"
         exif: "(ECO-049)ExifOrientationTransform: ToUprightBgra(bgra,w,h,origin)→(bgra,w,h)= D4 添字置換の正(S-41)・ToUpright(SKBitmap)は同表へ委譲・ToEffectiveDimensions。OrientedImageLoader.LoadOrientedOrNull(path)= TopLeft/判定不能は null(従来直読の高速経路)・正立時のみ BGRA8888(Premul)ピクセル列(App は SkiaSharp 型に触れない — ADR-0002)"
-      invariants:
-        - INV-009 元画像へ書き込まない
-        - 読み取り不能キャッシュは削除して再生成
-        - since ECO-049(REQ-085) EXIF 適用は表示系のみ — pHash 入力(M-SIMSEARCH-021 系)には適用しない(P-09 世代を発動させない)
+      # (ECO-145・試行)invariants は持たない — 設計の内容は裁定層が正本(ebom_refs → E-THUMB-020 の invariants・requirement_refs〔REQ-040/085/104〜106〕・仕様 §2.5 を引き継ぐ)
       acceptance_refs: [CP-THUMB-007]
       fmea_refs: [FMEA-012]
 
