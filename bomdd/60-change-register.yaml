@@ -2024,3 +2024,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)"
     notes: "gate①= ① の文言(A 宣言された結合〔推奨〕/ B 交換可能性を目標= 機能追加・別 ECO)+②③ の確認。導出で人へ戻すのは新しい機能・新しい約束・導出不能の 3 種だけ。試行の評価= BomDD preregistration(M1〜M4)・ECO-143 §4.4 の 3 件の 1 件目。impact-prospective-01= 非適格(AI 提案への選択)。R3 所見= 00-manifest の eco_range/open_eco が乖離(触れない)"
     body: 60-change-order-eco-144.md
+  - id: ECO-145
+    title: "M-BOM / Control Plan の欄の所有を人の裁定層と AI の導出層に分ける試行(M-THUMB-008・M-DB-007・方法論 BomDD ECO-097)"
+    type: "工程拡張(M-BOM・Control Plan の欄、テストの trait、承認に添える表。src 不変・裁定層〔10/20/30/31〕不変)"
+    status: staged   # 2026-10-05 起票(方法論 BomDD ECO-097・maintainer「再設計に着手して」→ 設計の扱い「A」)。gate① で決める設計の内容なし(M の invariants 6 行= 参照化 5・製造手段 1・人へ戻す 0)→ /eco-fix へ
+    golden: "n/a(視覚・挙動の変更なし= 機械受入 4 点+CP 行ごとの表+裁定層の ID ごとの表+異系統の検査官の判定がクローズ条件)"
+    baseline: "main f622c3c"
+    findings: "M-BOM の invariants は裁定層(仕様・E-BOM・K-BOM)の言い換えを持つ(対象 2 単位 6 行= 参照化 5・製造手段 1)。Control Plan 65 行は裁定層の ID(requirement_refs / invariant_refs)を 1 つも持たない。承認に添える表のキーは CP 行だけで、1 つの約束の測定不能が行の区分に現れない(ECO-144 リハーサル 1/2)。裁定層(20-spec L1345・30 L379)が M-DB-007 を本文で名指す(記録のみ)"
+    impacted_bom: ["bomdd/32-mbom.yaml=M-THUMB-008・M-DB-007 の invariants 削除・M-DB-007 に manufacturing_decisions", "bomdd/33-control-plan.yaml=CP-THUMB-007・CP-DB-006 に requirement_refs / invariant_refs / when / on_fail", "bomdd/cp_results.py=裁定層の ID ごとの表・selftest", "tests=4 ファイルのメソッドに trait req(本体不変)", ".claude/skills/eco-fix=手順 3.1 に 1 文", "10/20/30/31/53/00-manifest=0", "src=0"]
+    oracle: "既存固定 Oracle 行は変更しない(R6)"
+    notes: "人へ戻すのは新しい機能・新しい約束・導出不能の 3 種だけ。意味の審査は異系統の検査官(BomDD ECO-097 §1.3)。試行の評価= BomDD preregistration(R1〜R7・停止条件 S1〜S4)・ECO-143 §4.4 の 3 件の 2 件目。impact-prospective-01= 非適格(AI 提案への選択)。R3 所見= 裁定層が M の ID を名指す 2 箇所・00-manifest の eco_range/open_eco の乖離(触れない)"
+    body: 60-change-order-eco-145.md
