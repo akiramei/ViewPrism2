@@ -1528,8 +1528,9 @@ requirements:
     statement: "壊れた画像・読めない画像があっても、スキャンと一覧は停止しない。その画像のサムネイルだけ null(キャッシュファイルなし・例外なし)とし、他の画像の処理と表示は続く"
     rationale: |
       ECO-144 gate① 裁定 2:OK(maintainer 2026-10-03)。E-THUMB-020 invariants「失敗時もスキャン・一覧を停止させない」と FMEA-012 の約束を要求として固定する。
-      受入: 壊れた jpg → null 返却・キャッシュファイルなし・例外なし、キャッシュファイル破損(0 バイト化)→ 削除+再生成、を L2 で検査
-      (CP-THUMB-007 vector)。落ちたら製品修正。
+      受入: 壊れた jpg → null 返却・キャッシュファイルなし・例外なし、を L2 で検査(CP-THUMB-007 vector)。落ちたら製品修正。
+      (ECO-145 gate② 裁定 A・maintainer 2026-10-05)キャッシュファイル破損 → 削除+再生成は本要求の受入から外した — statement が述べない挙動で、
+      REQ-040(読み取り不能なキャッシュファイルは削除して再生成する)の受入として検査する。スキャンと一覧の継続そのものを測る検査は本行に無い(検査官の指摘・未着手)。
     rationale_precision: ok
     classification_hint: maintainability
     external_source: "ECO-144 gate① 裁定(2026-10-03)/ FMEA-012 / K-SKIA managed_knowledge「null= 壊れた画像」"

@@ -284,7 +284,7 @@ control_plan:
       invariant_refs: [INV-009]
       when: acceptance
       on_fail: { red: product-fix, unmeasurable: instrument-recovery, dependency-update: human-approval }
-      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす。(ECO-144)保守上の約束 REQ-104(宣言された結合= 版の一致)・REQ-105(キャッシュ継続・世代移行)・REQ-106(壊れた画像での継続)を本行の vector で検査する。観点(ECO-144 accept)= 本行は複数の約束・18 テストを束ねるため、1 vector の治具が不能(Skip)でも行の区分は合格のまま(実行単位の skip 件数にだけ出る— ECO-144 リハーサル実績)。約束単位の測定不能を行で見せるには行の分割か内訳の表示が要る(方法論側で判断)
+      characteristic: サムネイル生成・キャッシュ・失敗時動作が REQ-040 と一致し、EXIF Orientation の表示系適用(REQ-085/ECO-049)で正立生成・実効寸法・キャッシュ世代移行を満たす。(ECO-144)保守上の約束 REQ-104(宣言された結合= 版の一致)・REQ-105(キャッシュ継続・世代移行)・REQ-106(壊れた画像での継続)を本行の vector で検査する。観点(ECO-144 accept)= 本行は複数の約束・18 テストを束ねるため、1 vector の治具が不能(Skip)でも行の区分は合格のまま(実行単位の skip 件数にだけ出る— ECO-144 リハーサル実績)。約束単位の測定不能を行で見せるには行の分割か内訳の表示が要る(方法論側で判断)。観点(ECO-145 accept)= 行は割らず、cp_results の「裁定層の ID ごとの結果」で見る(テストの trait req・本行の requirement_refs)— trait の対応が誤っていれば表は誤った ID を合格と出す(潜伏実績= 破損キャッシュのテストを REQ-106 に当てた対応を、ECO-144 の人の意味審査は合とし、ECO-145 の異系統の検査官が否とした)。ID のテストの一部だけが Skip のときは合格のまま
       classification: surface
       depth: L2
       tolerance: "出力寸法: 長辺 ≦256・アスペクト比維持(±1px)。形式・キャッシュ動作 exact。(ECO-144)版の一致は文字列 exact"
@@ -303,7 +303,7 @@ control_plan:
         - "(ECO-049)キャッシュ世代移行: キャッシュ名は -v2 世代サフィックス・旧 {md5}.{ext} は参照しない(パスキーのみのキャッシュは生成規則変更で恒久 stale になる実績)【REQ-105・落ちたら製品修正】"
         - "(ECO-049)EXIF なし(TopLeft)は従来出力と同一(回帰)・正立ローダは TopLeft で null=従来直読の高速経路"
         - "壊れた jpg → null 返却・キャッシュファイルなし・例外なし(FMEA-012)【REQ-106・落ちたら製品修正】"
-        - "キャッシュファイル破損(0 バイト化)→ 削除+再生成【REQ-040・落ちたら製品修正。(ECO-145 検査官 IA-01)REQ-106 の statement はこの挙動を述べない — REQ-106 rationale の受入記載との食い違いは maintainer へ戻す】"
+        - "キャッシュファイル破損(0 バイト化)→ 削除+再生成【REQ-040・落ちたら製品修正。(ECO-145 検査官 IA-01)REQ-106 の statement はこの挙動を述べない — gate② 裁定 A で REQ-106 rationale の受入記載からも外した】"
         - "(ECO-144/REQ-104)版の一致: src/ViewPrism2.Infrastructure/ViewPrism2.Infrastructure.csproj の PackageReference SkiaSharp Version・bomdd/32-mbom.yaml procurement の SkiaSharp version・bomdd/53-service-bom.yaml SB-THUMB-020 external_deps の version が同一文字列で、exact(^\\d+\\.\\d+\\.\\d+$・範囲/ワイルドカードなし)【REQ-104・落ちたら製品修正(台帳と実体のどちらが正かは 53 DEG 手順で裁定)。ファイルが読めない/見つからない= 測定系復旧(治具のパス解決)— この振り分けはテストの失敗メッセージ先頭「測定系復旧:」で行う。cp_results の区分は Pass/Fail/Skip の件数のみで判定しメッセージを読まないため、治具の不能も行では『違反』に計上される(fail-closed・R8 所見 1・リハーサル M3 と同根= 行と vector の粒度差)】"
 
     - id: CP-CACHE-008
