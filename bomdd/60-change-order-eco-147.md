@@ -1,7 +1,7 @@
-# ECO-147 — Default dispositions for limits and for self-review findings: R8 stops after 2 reviews, sorts findings into substance, evidence and record, and shows what is left at gate 2 as known defects (method: BomDD ECO-108, distributed by BomDD ECO-109) (implemented)
+# ECO-147 — Default dispositions for limits and for self-review findings: R8 stops after 2 reviews, sorts findings into substance, evidence and record, and shows what is left at gate 2 as known defects (method: BomDD ECO-108, distributed by BomDD ECO-109) (applied)
 
 - Type: process (change-management R4, R5, R8 and scenario 3.3; the eco-fix and eco-accept skills). No change to src, tests, BOM files (10/20/30/31/32/33) or fixed oracles.
-- status: **implemented** (2026-10-13: fix recorded; golden n/a waits for the maintainer). Filed `f697a82`.
+- status: **applied** (2026-10-13: the maintainer accepted golden n/a with known defects N1 and N2, answer "A". Filed `f697a82`, fix `b63897a`).
 - baseline: main `d8735ff`
 - Source: method repository BomDD ECO-108 (verified 2026-10-13) and its distribution ECO-109. The maintainer's manufacture ruling was "A" (2026-10-13): both products now, ViewPrism2 first.
 - Records are English-primary. The rule text stays in Japanese, like the text around it.
@@ -165,4 +165,22 @@ The text is BomDD ECO-108's, fitted to this repository: gate 2 naming, golden n/
 **Template defects found here (R3).** F4, F5, F6 and F8 are also present in the methodology template (BomDD ECO-108); N2's status gap is too. They are reported to the methodology repository, not repaired there from this ECO.
 
 **V5.** BomDD EXP-20260828-03's window opens at this fix commit (recorded on the BomDD side).
+
+## §9 Closure (2026-10-13, applied)
+
+**gate 2.** The maintainer accepted golden n/a with the answer "A" (2026-10-13). The question named two things:
+- the two known defects, VP147-N1 and VP147-N2;
+- the next step: repair the methodology template first (BomDD ECO-110), then distribute to ViewTube.
+
+The acceptance rests on:
+- the mechanical acceptance (4 points, §8);
+- the grep (V1, V2);
+- the independent review (round 2 PASS).
+
+**Accepted known defects (eco-accept 3.5, R3).** N1 and N2 are recorded in `bomdd/51-cheat-log.md` in this accept commit. Their repair goes to BomDD ECO-110 and a later distribution.
+
+**CP characteristic.** None: a process-document change with no product behaviour.
+
+**Lesson.** A grep for the old rule's exact sentence missed the same rule in a shorter form, in the skill's frontmatter. The frontmatter is the text shown in the skill list, which is read before the body. When a rule is replaced, search for its idea in short forms ("所見 0"), not only for its sentence. Also, applying a new rule to its own ECO tests the rule: the 2-review bound ended this ECO's review with two minor findings carried, as designed.
+- Read-across: BomDD ECO-108's template has the defects F4, F5, F6 and F8 found here (ECO-110).
 

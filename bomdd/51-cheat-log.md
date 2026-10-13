@@ -806,3 +806,12 @@ ECO-008(タグ種別は作成後変更不可)が「訂正対象(モック側の�
   (ECO-140 R3 の F-2〔pending 一覧非仮想化〕と同族の DB 境界側)。ECO-142 は切替経路の
   カウント SQL のみを扱い、一覧側の母集合限定・仮想化は混ぜない。起票要否は
   maintainer 判断(起票時は一覧側 UI の仮想化状況とページング要否を合わせて診断する)。
+
+## 2026-10-13 (ECO-147: known defects carried by the new R8 and accepted by the maintainer — R3 record)
+
+- **[minor, methodology] VP147-N1: a late Codex result has no stated round.** R8 says Codex reviews the same diff as its round and the round closes when repair starts, but not what happens to a Codex finding that arrives after the repair started. Carried under the new R8 (round 2 was the last) and accepted with ECO-147 (answer "A", 2026-10-13).
+- **[minor, methodology] VP147-N2: the limit-stop wording and the register state.**
+  - R4's "上限到達の報告で止まる" (an R7 copy error left at the ECO's limit) reads against R8's "上限到達で作業は止まらない" (the review count).
+  - Neither says whether a green diff with an R7 copy error gets a fix commit, or what the register note becomes.
+  - Carried and accepted as above.
+- **Where they are repaired:** in the methodology template by BomDD ECO-110 (to be filed, with the template defects ECO-147's review found), then here by a later distribution ECO. Not repaired in this repository from this record.

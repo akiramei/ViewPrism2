@@ -2049,8 +2049,8 @@ changes:
   - id: ECO-147
     title: "Default dispositions for limits and for self-review findings: R8 stops after 2 reviews, sorts findings into substance, evidence and record, and shows what is left at gate 2 as known defects (method: BomDD ECO-108, distributed by BomDD ECO-109)"
     type: "process (change-management R4, R5, R8 and scenario 3.3; eco-fix and eco-accept skills). src, tests, BOM files and fixed oracles unchanged"
-    status: implemented   # 2026-10-13 fix (BomDD ECO-108/109); mechanical acceptance 4 points green; V1 PASS; independent review round 1 FAIL (9, repaired), round 2 PASS with 2 minor carried as known defects (N1, N2) under the new R8; golden n/a waits for the maintainer
-    golden: "n/a (no visual or behaviour change = mechanical acceptance 4 points + the grep in the order section 6 + the independent review of section 6 V4 are the closing conditions)"
+    status: applied   # 2026-10-13 クローズ (maintainer accepted golden n/a with known defects N1 and N2, answer "A"; build 0/0, Tests 977/977, Oracle 109+skip 4, validate 0-0; 区分: 違反 0 / 測定不能 0 / 未実行(検査なし) 4 / 未実行(人の承認で検査) 3 / 合格 57 — the acceptance touched no CP row (言及なし))
+    golden: "n/a (2026-10-13 maintainer accepted, answer A: no visual or behaviour change = mechanical acceptance 4 points + the grep in the order section 6 + the independent review; accepted with known defects VP147-N1 and VP147-N2, recorded in 51-cheat-log)"
     baseline: "main d8735ff"
     findings: "R8 says 'until in-scope findings are 0' with no bound and no layers (also scenario 3.3); the R4 limit has no default disposition and eco-fix step 2 sends an exceeded limit to an extension ruling. BomDD playbook 8.5 measured 17% against 79% record-layer corrections with and without the default (ViewTube)"
     impacted_bom: []
