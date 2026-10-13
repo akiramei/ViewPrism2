@@ -2035,3 +2035,14 @@ changes:
     oracle: "既存固定 Oracle 行は変更しない(R6)"
     notes: "人へ戻すのは新しい機能・新しい約束・導出不能の 3 種だけ。意味の審査は異系統の検査官(BomDD ECO-097 §1.3)。試行の評価= BomDD preregistration(R1〜R7・停止条件 S1〜S4)・ECO-143 §4.4 の 3 件の 2 件目。impact-prospective-01= 非適格(AI 提案への選択)。R3 所見= 裁定層が M の ID を名指す 2 箇所・00-manifest の eco_range/open_eco の乖離(触れない)"
     body: 60-change-order-eco-145.md
+  - id: ECO-146
+    title: "Who decides derived-layer choices: gate 1 covers the ruling layer only; the AI decides, records and reports M-BOM, Control Plan and Routing choices (method: BomDD ECO-106, distributed by BomDD ECO-107)"
+    type: "process (change-management R4, eco-fix skill, AGENTS.md and CLAUDE.md gate lines). src, tests, BOM files and fixed oracles unchanged"
+    status: staged   # 2026-10-13 filed (BomDD ECO-106/107; maintainer manufacture ruling A: ViewPrism2 and ViewTube now). No gate 1 design content (one option)
+    golden: "n/a (no visual or behaviour change = mechanical acceptance 4 points + the grep in the order section 6 are the closing conditions)"
+    baseline: "main 883cb08"
+    findings: "R4 names no layer for gate 1 (方針・要求・候補の裁定 — 選択肢から選ぶ); eco-fix step 2 does not say who chooses. 21 of 62 measured ruling stops here could have been decided by the AI; ECO-095 and ECO-141 asked derived-layer choices as gate 1"
+    impacted_bom: []
+    oracle: "existing fixed oracle rows unchanged (R6)"
+    notes: "The stop after filing and the explicit-command rule are unchanged (maintainer ruling A in BomDD). Effect measured by BomDD EXP-20261013-01 from the fix commit"
+    body: 60-change-order-eco-146.md
