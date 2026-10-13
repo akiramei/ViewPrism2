@@ -13,7 +13,7 @@ BomDD(BOM 駆動開発)で製造する画像管理デスクトップアプリ(.N
 - **ついで修正禁止**: スコープ外所見は分離起票か 51-cheat-log 記録の二択。
 - **是正はプローブ先行**: 是正前に不合格となる回帰テストで真因を実測裏取りしてから触る。
 - **既存固定オラクル行(tests/ViewPrism2.Oracle)は変更しない**。受入は新規行を追加。
-- **human gate の種類は「gate①=裁定」と「gate②=golden(成果物の承認)」の 2 種類**。gate② は
+- **human gate の種類は「gate①=裁定」(裁定層の選択。M-BOM・Control Plan・Routing の選択は AI が決めて記録する — change-management.md R4)と「gate②=golden(成果物の承認)」の 2 種類**。gate② は
   成果物ごとに複数回発生し得る(UI 変更は CAD/mock golden と実機 golden が別インスタンス)。
   それ以外は AI が進め、gate 到達時に「人間がやること」を明示して停止する。
 

@@ -34,7 +34,7 @@
 
 ## human gate(人間の作業は 2 種類)
 
-1. **gate① 裁定**(方針・要求・候補の裁定 — 選択肢から選ぶ)
+1. **gate① 裁定**(裁定層〔CAD・要求・仕様・E-BOM・K-BOM〕の方針・要求・候補の裁定 — その選択肢から選ぶ。M-BOM・Control Plan・Routing の選択は AI が決めて記録する — change-management.md R4)
 2. **gate② golden**(成果物の golden 承認)
 
 gate② は**成果物ごとに複数回発生し得る**。UI 変更 ECO では **CAD/mock golden** と
