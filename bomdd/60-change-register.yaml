@@ -2038,8 +2038,8 @@ changes:
   - id: ECO-146
     title: "Who decides derived-layer choices: gate 1 covers the ruling layer only; the AI decides, records and reports M-BOM, Control Plan and Routing choices (method: BomDD ECO-106, distributed by BomDD ECO-107)"
     type: "process (change-management R4, eco-fix skill, AGENTS.md and CLAUDE.md gate lines). src, tests, BOM files and fixed oracles unchanged"
-    status: implemented   # 2026-10-13 是正+機械受入完了・golden 待ち (golden n/a; build 0/0, Tests 977/977, Oracle 109+skip 4, validate 0-0; V1 5 phrases 0 -> 1)
-    golden: "n/a (no visual or behaviour change = mechanical acceptance 4 points + the grep in the order section 6 are the closing conditions)"
+    status: applied   # 2026-10-13 クローズ (maintainer accepted golden n/a, answer "A"; build 0/0, Tests 977/977, Oracle 109+skip 4, validate 0-0; V1 5 phrases 0 -> 1)
+    golden: "n/a (2026-10-13 maintainer accepted, answer A: no visual or behaviour change = mechanical acceptance 4 points + the grep in the order section 6)"
     baseline: "main 883cb08"
     findings: "R4 names no layer for gate 1 (方針・要求・候補の裁定 — 選択肢から選ぶ); eco-fix step 2 does not say who chooses. 21 of 62 measured ruling stops here could have been decided by the AI; ECO-095 and ECO-141 asked derived-layer choices as gate 1"
     impacted_bom: []

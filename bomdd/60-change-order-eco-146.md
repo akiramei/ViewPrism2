@@ -1,7 +1,7 @@
-# ECO-146 — Who decides derived-layer choices: gate 1 covers the ruling layer only; the AI decides, records and reports M-BOM, Control Plan and Routing choices (method: BomDD ECO-106, distributed by BomDD ECO-107) (implemented)
+# ECO-146 — Who decides derived-layer choices: gate 1 covers the ruling layer only; the AI decides, records and reports M-BOM, Control Plan and Routing choices (method: BomDD ECO-106, distributed by BomDD ECO-107) (applied)
 
 - Type: process (change-management R4, the eco-fix skill, the gate lines of AGENTS.md and CLAUDE.md). No change to src, tests, BOM files (10/20/30/31/32/33) or fixed oracles.
-- status: **implemented** (filed 2026-10-13 `d20ad6d` → fix the same day; golden n/a waits for the maintainer).
+- status: **applied** (2026-10-13: the maintainer accepted golden n/a, answer "A". Filed `d20ad6d`, fix `c0f6237`).
 - baseline: main `883cb08`
 - Source: method repository BomDD ECO-106 (verified 2026-10-13) and its distribution ECO-107; the maintainer's manufacture ruling "A" of 2026-10-13: ViewPrism2 and ViewTube now, TimetableAdv later.
 - Records are English-primary from 2026-10-12 (the maintainer's ruling under ViewTube ECO-VT-253). The rule text stays in Japanese, like the text around it.
@@ -109,3 +109,19 @@ One option; no fix options to choose among. The text is BomDD ECO-106's, fitted 
 **R8.** Not applicable: documents only, src and tests untouched (eco-fix 3.7).
 
 **V4.** The window of BomDD EXP-20261013-01 opens at this fix commit (recorded on the BomDD side).
+
+## §9 Closure (2026-10-13, applied)
+
+**gate 2.** The maintainer accepted golden n/a with the answer "A" to "accept ViewPrism2 ECO-146 and ViewTube ECO-VT-256" (the alternatives were "ViewPrism2 only" and "hold"). The acceptance rests on:
+- the mechanical acceptance (4 points, §8);
+- the grep (V1 and V2);
+- the text of the four files, read by the maintainer.
+
+**CP characteristic.** No CP row applies: this is a process-document change with no product behaviour.
+
+**Prevention of recurrence.** R4 now names the layer gate 1 rules on, and eco-fix step 2 says the manufacturer chooses. Whether derived-layer choices still reach gate 1 is measured by BomDD EXP-20261013-01, whose window opened at `c0f6237`.
+
+**Lesson.** A gate defined only as "choose among options" sends every option to the human, including the derived-layer ones the method gives the AI. The gate has to name the layer it rules on.
+- Read-across: BomDD ECO-106 changed the product-profile template the same way.
+- ViewTube ECO-VT-256 changed ViewTube in parallel.
+- TimetableAdv follows after its ECO-046.
