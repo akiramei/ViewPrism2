@@ -1,7 +1,7 @@
-# ECO-147 — Default dispositions for limits and for self-review findings: R8 stops after 2 reviews, sorts findings into substance, evidence and record, and shows what is left at gate 2 as known defects (method: BomDD ECO-108, distributed by BomDD ECO-109) (staged)
+# ECO-147 — Default dispositions for limits and for self-review findings: R8 stops after 2 reviews, sorts findings into substance, evidence and record, and shows what is left at gate 2 as known defects (method: BomDD ECO-108, distributed by BomDD ECO-109) (implemented)
 
 - Type: process (change-management R4, R5, R8 and scenario 3.3; the eco-fix and eco-accept skills). No change to src, tests, BOM files (10/20/30/31/32/33) or fixed oracles.
-- status: **staged** (2026-10-13).
+- status: **implemented** (2026-10-13: fix recorded; golden n/a waits for the maintainer). Filed `f697a82`.
 - baseline: main `d8735ff`
 - Source: method repository BomDD ECO-108 (verified 2026-10-13) and its distribution ECO-109. The maintainer's manufacture ruling was "A" (2026-10-13): both products now, ViewPrism2 first.
 - Records are English-primary. The rule text stays in Japanese, like the text around it.
@@ -19,7 +19,7 @@ Give the self-review (R8) and the ECO limit a default disposition, so that revie
 - **eco-fix and eco-accept** follow: the stop lists what is carried, and accepted known defects are recorded and then take R3's two choices.
 
 **Basis (BomDD ECO-108 §0).** BomDD playbook §8.5 holds these defaults, measured in ViewTube:
-- under the default, 17% of record-layer findings went to correction (5 of 29); without it, 79% (49 of 62);
+- in final rounds under the default, 17% of record-layer findings went to correction (5 of 29); in the other rounds, 79% (49 of 62);
 - an unbounded review ran 13 rounds (ViewTube ECO-VT-184).
 
 ViewPrism2's R8 has no bound and no layers.
@@ -31,7 +31,7 @@ ViewPrism2's R8 has no bound and no layers.
 | CAD (ViewPrismUI) | not involved | no UI or visual change |
 | Requirements, specification, E-BOM, K-BOM | sound; unchanged | the rule is about how review findings end |
 | M-BOM, Control Plan | unchanged | — |
-| **Process documents** | **R8 and the limit have no default disposition (this ECO)** | `bomdd/change-management.md:38` R4 limit, `:53-60` R8 ("未処置のスコープ内所見 0 になるまで golden に出さない"), `:108` scenario 3.3; `.claude/skills/eco-fix/SKILL.md:31-32` step 2 (extension ruling), `:58-66` 3.7, `:76-86` stop; `.claude/skills/eco-accept/SKILL.md` steps 2 and 7 |
+| **Process documents** | **R8 and the limit have no default disposition (this ECO)** | `bomdd/change-management.md:38` R4 limit, `:53-60` R8 ("未処置のスコープ内所見 0 になるまで golden に出さない"), `:108` scenario 3.3; `.claude/skills/eco-fix/SKILL.md:31-32` step 2 (extension ruling), `:58-66` 3.7, `:78-87` stop; `.claude/skills/eco-accept/SKILL.md` steps 2 and 7 |
 | Implementation (src) | unchanged | — |
 
 ## §3 Change (frozen at filing)
@@ -91,3 +91,78 @@ The text is BomDD ECO-108's, fitted to this repository: gate 2 naming, golden n/
 ## §7 Remaining gates
 
 - gate 2: the maintainer accepts golden n/a (accept).
+
+## §8 Record of the fix (2026-10-13)
+
+**What was changed** (`git diff --stat` against `f697a82`):
+- `bomdd/change-management.md`:
+  - R4: the limit default, and that R7 wins when a copy error remains;
+  - R5: R8 findings' probes follow R8;
+  - R8: layers, the 2-review bound, the Codex second-opinion rule, the R7 exception and its return path, departures, and the restart;
+  - scenario 3.3.
+- `.claude/skills/eco-fix/SKILL.md`:
+  - the frontmatter description;
+  - step 1 (the probe exception);
+  - step 2 (the limit default);
+  - 3.5 (the R7-exception return path);
+  - 3.7 (layers and bound, each round's diff recorded);
+  - the stop section (what is carried; a refused known defect becomes a GF-*).
+- `.claude/skills/eco-accept/SKILL.md`:
+  - the precondition (accepted known defects are not findings);
+  - step 2 (accepted known defects recorded, including on the n/a path);
+  - a new step 3.5 (cheat-log in the accept commit; a separate filing after step 5);
+  - step 7 (destinations).
+
+**Departures from §3, recorded for V2.**
+- The eco-fix frontmatter description was not among §3's places. Review round 1 found it still stating the old rule (VP147-F1, blocking), and it was rewritten.
+- eco-fix 3.5 and the eco-accept precondition were added by the review's repairs (F6, F8).
+- The order file itself changed for F9.
+
+**The fix option.** Choices were made by the manufacturer (R4), as follows:
+- **The text.** BomDD ECO-108's text is fitted to this repository: gate 2 naming, golden n/a's accept request, validate_bom, and the Codex second opinion.
+- **Equipment independence.** ViewPrism2's R8 has no equipment-independence tier, so the template's "equipment-independent inspection carries the 2" became "Codex is part of its round and adds no round" (F2).
+- **Not carried over:**
+  - the stop word `NONE` (ViewPrism2 has no operator-layer vocabulary);
+  - the last-round REJECT. A Codex finding takes the same layers, so a last-round REJECT ends among the known defects.
+
+**V1: PASS** (`vp147_count.py`, f697a82 against the tree):
+- **New phrases, 0 → 1:**
+  - R4: "上限に達したときの既定の処置";
+  - R8: "**見直しは 2 回まで**" and "**記録**(それ以外";
+  - eco-fix: "R8 の層ごとの既定の処置" and "縮めた主張の範囲を明示する";
+  - eco-accept: "受け入れた既知の欠陥の処置(R8)".
+- **Old phrases, 1 → 0:**
+  - "未処置のスコープ内所見 0 になるまで" (change-management and eco-fix);
+  - "上限の超過は延長の裁定を求める" (eco-fix).
+- **Widened by the review (F1):** "スコープ内所見 0" now appears nowhere outside orders, the register and the excluded `.claude/worktrees`.
+
+**V2: PASS.**
+- Hunks are at §3's places plus the departures above.
+- Line endings are unchanged: change-management.md is CRLF throughout (203 of 203 lines), and the two skills and the order are LF.
+- The frontmatter of eco-fix and eco-accept parses.
+
+**V3: PASS (mechanical acceptance, 4 points, on the final text).** build 0 warnings 0 errors; Tests 977 of 977; Oracle 109 passed, 4 skipped (known); validate_bom 0-0. The CP-row table is unchanged from ECO-146: violation 0, unmeasurable 0, not run (no inspection) 4, not run (human approval) 3, pass 57. The same 4 points were also green before the review's text repairs.
+
+**V4: independent review.** A fresh-context subagent of the same model family was used, which is context independence. The record: this section.
+- **Round 1: FAIL.**
+  - **F1, blocking.** The eco-fix frontmatter still stated "所見 0".
+  - **F2 to F6, material:**
+    - F2: the template's equipment tier, REJECT and `NONE` were dropped without a record;
+    - F3: Codex's round was open to choice;
+    - F4: eco-accept 3.5 filed separately before the accept commit;
+    - F5: the R4 limit default against R7;
+    - F6: no return path for the R7-exception repair.
+  - **F7 to F9, minor:** the golden n/a brackets; destinations and the n/a slot; the order's facts.
+  - All nine were repaired.
+- **Round 2 (the last under the new R8): PASS.** 9 of 9 were resolved. There were two new minor findings, and under the new R8 they are **not repaired: they are carried as known defects**:
+  - **VP147-N1.** A Codex result that arrives after its round has closed (repair started) has no stated round.
+  - **VP147-N2.**
+    - Wording: R4's "上限到達の報告で止まる" (an R7 copy error left at the ECO's limit) reads against R8's "上限到達で作業は止まらない", which is the review count.
+    - Status: neither says whether a green diff with an R7 copy error gets a fix commit and the register note "golden 待ち".
+
+  **The claim is narrowed accordingly:** this ECO does not claim to settle a late Codex result or the register state of a limit stop with a copy error left. Both are shown at the accept request. Under eco-accept 3.5, if the maintainer accepts them, they take R3's two choices after acceptance.
+
+**Template defects found here (R3).** F4, F5, F6 and F8 are also present in the methodology template (BomDD ECO-108); N2's status gap is too. They are reported to the methodology repository, not repaired there from this ECO.
+
+**V5.** BomDD EXP-20260828-03's window opens at this fix commit (recorded on the BomDD side).
+

@@ -16,7 +16,7 @@ description: golden 合格後の ECO クローズ。クローズ 3 点セット(
   git log --format="%h %s" --grep="BomDD-ECO-Fix: ECO-NNN"
   ```
 - register の status が `implemented`(golden 待ち)であること。
-- **golden 不合格(所見あり)の場合はこのスキルを使わない**: 所見を GF-* として ECO 本文へ
+- **golden 不合格(所見あり)の場合はこのスキルを使わない**(R8 の既知の欠陥を人が受け入れたものは所見に数えない): 所見を GF-* として ECO 本文へ
   記録し、/eco-fix(同一欠陥)か /eco-file(別欠陥の分離起票 — R3)へ。
 
 ## 手順(クローズ 3 点セット)
@@ -26,10 +26,14 @@ description: golden 合格後の ECO クローズ。クローズ 3 点セット(
    今回の観点を**潜伏実績つきで**追記する(ECO-037 が CP-UI-G9 に完了パネル観点を刻んだ方式)。
 2. **register 更新**: `status: applied`+承認記録(日付・approver・確認内容)を status 注記へ。
    golden フィールドを `approved(日付 maintainer 実機: <確認内容>)` に書き換える。
+   R8 の既知の欠陥を受け入れて合格とした場合は、受け入れた欠陥も確認内容に書く(golden n/a なら status 注記と golden フィールドの n/a の括弧内に書く — ECO-147)。
    status 注記には、/eco-fix 手順 3.1 の **CP 行ごとの結果の表の区分の件数**(「区分:」の行)を残す(ECO-143)。
    承認がその表のどの行に触れたか(触れなかったなら「言及なし」)も 1 句で残す — ECO-143 の試行評価の観測点。
 3. **ECO 本文クローズ節**: タイトルの (staged)→(applied)、クローズ節に
    実機確認内容・再発防止・**教訓**(一般化できる形で 1 段落。既存教訓との関係=read-across を明記)。
+3.5. **受け入れた既知の欠陥の処置(R8)**: gate②(golden n/a なら accept)で受け入れた既知の欠陥を R3 の二択で処置する。
+   51-cheat-log へ記録するものはここで書き、accept コミットに含める。分離起票にするものは手順 5 の後に /eco-file で行う
+   (その停止点は本スキルを中断しない — 完了報告で一緒に報告する)。
 4. **検証+コミット**: `python bomdd/validate_bom.py` 0-0 → `accept(eco-NNN): golden 合格 — <要約>`。
    **ライフサイクル trailer 必須(ECO-061)**: implemented→applied の遷移コミットには
    `BomDD-ECO-Accept: ECO-NNN` trailer を携行する(commit-msg hook が fail-closed で強制):
@@ -42,7 +46,8 @@ description: golden 合格後の ECO クローズ。クローズ 3 点セット(
    FAIL したらクローズ不成立 — 原因を是正するまで完了報告しない。
 6. **M4 同期の要否判定**: spec §2.6 / E-BOM / M-BOM / 35-dsbom に as-built 乖離が生じた ECO
    (surface 新設・挙動仕様変更)は M4 同期まで行う。VM 内部の欠陥是正のみなら不要(ECO-038 は不要だった)。
-7. **メモリ/残課題**: ECO 中に送付したスコープ外事項(後続裁定など)があれば完了報告に再掲する。
+7. **メモリ/残課題**: ECO 中に送付したスコープ外事項(後続裁定など)と、R8 の上限で持ち越した所見があれば完了報告に再掲する
+   (処置先= 既知の欠陥は手順 3.5 の 51-cheat-log の記録か分離起票の ECO 番号/既知の不正確とプローブで確かめられない所見は ECO の実施記録)。
 
 ## 完了報告
 
